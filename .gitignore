@@ -1,0 +1,46 @@
+# Dependencias
+node_modules/
+.pnp/
+.pnp.js
+
+# Builds / salidas
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# Tests / cobertura
+coverage/
+.vitest/
+
+# Entorno y secretos
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Caché de herramientas
+.cache/
+.vite/
+.eslintcache
+
+# Editor / IDE
+.idea/
+*.swp
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Claude Code (config local/personal de cada máquina)
+.claude/settings.local.json
