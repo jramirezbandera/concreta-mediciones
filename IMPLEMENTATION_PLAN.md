@@ -214,13 +214,13 @@ Cada fase es incremental y deja algo ejecutable. Marca `[ ]` al completar.
 
 ### Fase 0 — Cimientos y shell
 **Objetivo:** proyecto arrancable con el chrome visual y el tema.
-- [ ] Scaffolding Vite + React + TS (strict), ESLint/Prettier, Vitest.
-- [ ] Portar `tokens.css` + `base.css`; copiar fuentes Geist y favicon.
-- [ ] `useBreakpoint`, `useTheme` (data-theme + persist), `useTweaks` (panel dev opcional).
-- [ ] Primitivas: `Icon` (lucide), `Badge`, `Bar`, `EditableNum`, `EditableText`, `InlineCreate`, `IvaSelect`, `ContraChip`.
-- [ ] Layout shell: `TopBar` (marca, breadcrumb, tabs, acciones), `Sidebar` (vacío), `StatusBar`, `BottomTabBar`, `Drawer` móvil.
-- **Entregable:** app con cabecera, tabs que cambian de vista (placeholders), tema claro/oscuro y responsive del chrome.
-- **Aceptación:** alternar tema funciona; tabs cambian `view`; topbar colapsa correctamente en cada breakpoint; primitivas renderizan en Storybook o página sandbox; `npm run build` y `npm test` verdes.
+- [x] Scaffolding Vite 7 + React 19 + TS (strict), ESLint/Prettier, Vitest 4.
+- [x] Portar `tokens.css` (verbatim) + `base.css`; copiar fuentes Geist y favicon.
+- [x] `useBreakpoint`, `useTheme` (data-theme + acento + persist), `useTweaks` (prefs UI local-first).
+- [x] Primitivas: `Icon` (lucide), `Badge`, `Bar`, `EditableNum`, `EditableText`, `InlineCreate`, `IvaSelect`, `ContraChip` (+ `GhostBtn`).
+- [x] Layout shell: `TopBar` (marca, breadcrumb, tabs, acciones), `Sidebar` (vacío), `StatusBar`, `BottomTabBar`, `Drawer` móvil.
+- **Entregable:** app con cabecera, tabs que cambian de vista (placeholders), tema claro/oscuro y responsive del chrome. ✅
+- **Aceptación:** alternar tema funciona; tabs cambian `view`; topbar colapsa correctamente en cada breakpoint; primitivas renderizan en página sandbox (`#sandbox`, en vez de Storybook — ver T9); `npm run build`, `npm test` (15 verdes) y `npm run lint` verdes. ✅
 
 ### Fase 1 — Núcleo de dominio (la base crítica)
 **Objetivo:** motor de cálculo tipado y testeado + store con datos semilla.

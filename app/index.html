@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark light" />
+    <title>Concreta · Mediciones</title>
+    <script>
+      // Anti-FOUC: aplica tema y acento persistidos antes del primer paint.
+      (function () {
+        try {
+          var theme = localStorage.getItem('concreta.theme');
+          if (theme === 'dark' || theme === 'light') {
+            document.documentElement.setAttribute('data-theme', theme);
+          }
+          var accent = localStorage.getItem('concreta.accent');
+          if (accent) document.documentElement.style.setProperty('--accent', accent);
+        } catch (e) {
+          /* localStorage no disponible */
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

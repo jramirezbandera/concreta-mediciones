@@ -1,0 +1,43 @@
+.bar {
+  height: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-main);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.group {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.dim {
+  color: var(--text-disabled);
+}
+
+.strong {
+  color: var(--text-primary);
+}
+
+.label {
+  color: var(--text-secondary);
+}
+
+.devLink {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  color: var(--text-disabled);
+  padding: 0;
+}
+.devLink:hover {
+  color: var(--accent);
+}

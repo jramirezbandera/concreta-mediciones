@@ -1,0 +1,29 @@
+.display {
+  cursor: text;
+  border-radius: 4px;
+}
+.display:hover {
+  background: var(--accent-soft);
+}
+
+.placeholder {
+  color: var(--text-disabled);
+  font-style: italic;
+}
+
+.input {
+  display: block;
+  width: 100%;
+  resize: none;
+  border-radius: 5px;
+  padding: 4px 6px;
+  margin: -3px -6px;
+  outline: none;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  border: 1px solid var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent);
+  font-family: inherit;
+}

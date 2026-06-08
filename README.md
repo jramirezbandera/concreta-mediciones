@@ -26,5 +26,23 @@ Vite · React 18 · TypeScript · Zustand · CSS Modules · IndexedDB (Dexie) ·
 ```
 design_handoff_concreta_mediciones/   Prototipo de diseño (referencia, no producción)
 IMPLEMENTATION_PLAN.md                 Plan de implementación por fases
-app/                                   Aplicación Vite (próximamente)
+app/                                   Aplicación Vite + React + TS (F0 en marcha)
 ```
+
+## Desarrollo
+
+```bash
+cd app
+npm install
+npm run dev      # servidor de desarrollo
+npm run build    # typecheck (tsc) + build de producción
+npm test         # Vitest
+npm run lint     # ESLint
+```
+
+La página sandbox de primitivas está en `/#sandbox`.
+
+**Estado:** F0 (cimientos y shell) completada — scaffolding, sistema visual
+portado (tokens/fuentes), tema claro/oscuro, chrome responsive (TopBar/Sidebar/
+StatusBar/BottomTabBar/Drawer), primitivas de UI y `core/money`. Siguiente: F1
+(núcleo de dominio tipado y testeado).

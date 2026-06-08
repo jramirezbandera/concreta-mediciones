@@ -1,0 +1,14 @@
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+}
+
+.panel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 70;
+  display: flex;
+}
