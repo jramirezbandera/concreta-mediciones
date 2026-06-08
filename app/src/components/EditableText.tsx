@@ -43,8 +43,10 @@ export function EditableText({
 
   function commit() {
     setEditing(false);
+    // Permite vaciar el campo (v === ''): solo se omite cuando no hay cambio.
+    // Esc cancela sin pasar por aquí, así que blur/Enter con vacío = borrar.
     const v = draft.replace(/\s+$/, '');
-    if (v && v !== value) onCommit(v);
+    if (v !== value) onCommit(v);
   }
 
   if (editing) {

@@ -36,3 +36,31 @@ Origen: revisión de ingeniería (`/plan-eng-review`) + voz externa Codex, 2026-
 - **Cons:** generaliza el motor económico (riesgo de sobre-ingeniería si se hace sin datos reales).
 - **Contexto / dónde empezar:** hoy `rates` = {iva, gg, bi} + retención por cert. Explorar con obras reales qué variantes aparecen antes de generalizar. M1 usa el caso base.
 - **Depende de / bloqueado por:** validación con obras reales (la tarea del dogfood). No bloquea M1.
+
+---
+
+> Añadidos en `/plan-eng-review` post-F0 (2026-06-08).
+
+## T-5 · CI/CD (GitHub Actions: build + test + lint en push; deploy en merge a main)
+- **Qué:** workflow de CI que corra `npm ci && npm run build && npm test && npm run lint` en cada push/PR, y un deploy estático (Vercel/Netlify/Cloudflare Pages) al hacer merge a `main`.
+- **Por qué:** el design doc (Distribution Plan) lo pide explícitamente. Para un fundador solo, una CI que rompa el build ante una regresión es la red de seguridad barata; hoy nada verifica el árbol salvo correr los comandos a mano.
+- **Pros:** regresiones detectadas antes de mergear; despliegue reproducible; base para el canal de adopción web.
+- **Cons:** requiere remoto en GitHub configurado (hoy el repo es local) y elegir host de deploy. Trabajo ~30min CC una vez haya remoto.
+- **Contexto / dónde empezar:** `.github/workflows/ci.yml` con node 22, cache de npm, los 4 comandos. El deploy puede esperar a que haya un host elegido; el CI de verificación no.
+- **Depende de / bloqueado por:** tener remoto en GitHub. No bloquea F1 (es infra de distribución, no de dominio).
+
+## T-6 · `parseEsNumber`: ambigüedad del punto como separador
+- **Qué:** `core/money.parseEsNumber` quita TODOS los puntos como separador de miles, así que `14.5` (estilo US, o un usuario despistado) se interpreta como `145`, no `14,5`.
+- **Por qué:** los usuarios objetivo son arquitectos españoles que escriben formato español (coma decimal), así que el impacto es bajo, pero es un footgun silencioso: el número se corrompe sin aviso.
+- **Pros:** entrada numérica más robusta; menos errores de medición por un punto mal puesto.
+- **Cons:** heurística (¿cuándo un punto es decimal vs miles?) puede sorprender; sobre-ingeniería si nadie lo sufre.
+- **Contexto / dónde empezar:** `app/src/core/money.ts:parseEsNumber`. Posible regla: si hay coma, el punto es miles; si NO hay coma y hay un solo punto con ≤2 decimales, tratarlo como decimal. Cubrir con tests.
+- **Depende de / bloqueado por:** nada. Recoger en F2 cuando se editen mediciones reales.
+
+## T-7 · Trap de foco en Drawer/modales (a11y arquitectural)
+- **Qué:** el `Drawer` (y futuros modales de export/obra) cierran con Esc y clic en overlay, pero NO atrapan el foco dentro del panel mientras está abierto.
+- **Por qué:** el design doc §6 marca el trap de foco como **arquitectural, no pulido** ("Modales/drawer: trap de foco + Esc"). Sin él, el teclado se escapa al contenido de detrás; mala a11y y el revisor de diseño lo señaló.
+- **Pros:** navegación por teclado correcta; cumple el criterio AA que el design review fijó desde el inicio.
+- **Cons:** un poco de plomería (focus-trap propio o `focus-trap-react`); en F0 el drawer solo contiene una sidebar vacía, impacto real bajo hoy.
+- **Contexto / dónde empezar:** `app/src/layout/Drawer.tsx`. Al abrir, enfocar el primer foco del panel; ciclar Tab/Shift+Tab dentro; restaurar foco al cerrar. Reutilizable para los modales de F6/F7.
+- **Depende de / bloqueado por:** nada. Hacer cuando el drawer tenga contenido interactivo (F2) o al construir el primer modal real (F6).

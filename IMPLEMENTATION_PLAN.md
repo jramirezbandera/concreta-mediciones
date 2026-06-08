@@ -375,12 +375,13 @@ Sidebar vacío: solo cabecera "Capítulos" + "＋ Añadir capítulo" en `--text-
 |--------|---------|-----|------|--------|----------|
 | CEO Review | `/plan-ceo-review` | Scope & strategy | 0 | — | — |
 | Codex Review | `/codex review` | Independent 2nd opinion | 1 | ISSUES (resueltas) | voz externa: refuerza decisiones + persistencia/BASE_PEM/cert-audit |
-| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | REVIEWED (scope reduced) | 6 issues, 0 críticos, 0 sin resolver, todas decididas |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 2 | REVIEWED (post-F0) | run 1 (plan): 6 issues, scope reducido a M1. run 2 (post-F0, 2026-06-08): 3 decisiones resueltas (D1 gate BC3, D2 borrado de campos, D3 tests de primitivas), 0 críticos, 0 sin resolver |
 | Design Review | `/plan-design-review` | UI/UX gaps | 1 | REVIEWED | sistema visual 10/10; estados nuevos de M1 especificados (import/empty/autosave/loading/a11y); DESIGN.md formalizado |
 | DX Review | `/plan-devex-review` | Developer experience gaps | 0 | — | — |
 
-- **CODEX:** voz externa ejecutada (alta confianza). Confirma integer-cents, BC3 spike-con-librería, cert-first, gate de no-construir. Nuevos: persistencia adelantada a M1, eliminar BASE_PEM, invariante precio/descompUnit, TODOs de audit/PDF/namespace/contrato.
+- **CODEX:** voz externa ejecutada en run 1 (alta confianza). Confirma integer-cents, BC3 spike-con-librería, cert-first, gate de no-construir. Run 2 (post-F0): outside voice no ejecutada (revisión de scaffold, bajo valor marginal).
 - **CROSS-MODEL:** sin tensión — Codex y la revisión coinciden; refuerzo mutuo.
 - **UNRESOLVED:** 0.
-- **DESIGN:** sistema visual completo (10/10) formalizado en `DESIGN.md`; estados nuevos de M1 (import .bc3 + errores, primer arranque vacío, autosave/recuperación, journey dogfood, loading, a11y arquitectural) especificados en "Estados de UI de M1". No se generaron mockups: se evitó la deriva del sistema Concreta aprobado.
-- **VERDICT:** ENG + DESIGN CLEARED (scope reducido a Hito 1) — listo para implementar el corte vertical. Decisiones bloqueadas en §0; trabajo aplazado en `TODOS.md`.
+- **POST-F0 (run 2):** F0 implementada y revisada. Decisiones: **D1** — manda IMPLEMENTATION_PLAN §0, F1 = import-only (round-trip/export = fase posterior); design doc reconciliado. **D2** — `EditableText` permite vaciar campos (corregido + test). **D3** — añadidos tests de primitivas+hooks (EditableNum/EditableText/IvaSelect/InlineCreate/useTheme/useTweaks): 15→46 tests, lint+build verdes. Aplazados a `TODOS.md`: T-5 CI/CD, T-6 footgun de `parseEsNumber`, T-7 trap de foco en Drawer. Nota A2: el motor F1 debe usar céntimos enteros, NO el `round2` float de `core/money` (existe solo para fidelidad de formato).
+- **DESIGN:** sistema visual completo (10/10) formalizado en `DESIGN.md`; estados nuevos de M1 (import .bc3 + errores, primer arranque vacío, autosave/recuperación, journey dogfood, loading, a11y arquitectural) especificados en "Estados de UI de M1".
+- **VERDICT:** ENG + DESIGN CLEARED — F0 cerrada y revisada, lista para F1 (núcleo de dominio). Decisiones bloqueadas en §0; trabajo aplazado en `TODOS.md`.
