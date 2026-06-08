@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Concreta · Mediciones — DOGFOOD obra real</title>
+  <link rel="icon" href="public/favicon.svg" />
+  <link rel="stylesheet" href="../design_handoff_concreta_mediciones/concreta/tokens.css" />
+
+  <!-- React + Babel (mismos pins que el prototipo) -->
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- DATOS: primero el seed del prototipo (helpers + REF_SOURCES), -->
+  <!-- luego data.generated.js SOBRESCRIBE CHAPTERS/PARTIDAS con tu obra real. -->
+  <script src="../design_handoff_concreta_mediciones/concreta/data.js"></script>
+  <script src="../design_handoff_concreta_mediciones/concreta/refdata.js"></script>
+  <script src="import/data.generated.js"></script>
+
+  <!-- componentes (JSX) del prototipo, sin tocar -->
+  <script type="text/babel" src="../design_handoff_concreta_mediciones/concreta/tweaks-panel.jsx"></script>
+  <script type="text/babel" src="../design_handoff_concreta_mediciones/concreta/ui.jsx"></script>
+  <script type="text/babel" src="../design_handoff_concreta_mediciones/concreta/sidebar.jsx"></script>
+  <script type="text/babel" src="../design_handoff_concreta_mediciones/concreta/justif.jsx"></script>
+  <script type="text/babel" src="../design_handoff_concreta_mediciones/concreta/reference.jsx"></script>
+  <script type="text/babel" src="../design_handoff_concreta_mediciones/concreta/table.jsx"></script>
+  <script type="text/babel" src="../design_handoff_concreta_mediciones/concreta/certificaciones.jsx"></script>
+  <script type="text/babel" src="../design_handoff_concreta_mediciones/concreta/resumen.jsx"></script>
+  <script type="text/babel" src="../design_handoff_concreta_mediciones/concreta/app.jsx"></script>
+</body>
+</html>

@@ -65,3 +65,15 @@ Origen: revisión de ingeniería (`/plan-eng-review`) + voz externa Codex, 2026-
 - **Cons:** un poco de plomería (focus-trap propio o `focus-trap-react`); en F0 el drawer solo contiene una sidebar vacía, impacto real bajo hoy.
 - **Contexto / dónde empezar:** `app/src/layout/Drawer.tsx`. Al abrir, enfocar el primer foco del panel; ciclar Tab/Shift+Tab dentro; restaurar foco al cerrar. Reutilizable para los modales de F6/F7.
 - **Depende de / bloqueado por:** nada. Hacer cuando el drawer tenga contenido interactivo (F2) o al construir el primer modal real (F6).
+
+---
+
+> Añadido en el spike §0.5 (2026-06-08) — requisito de dominio del fundador.
+
+## T-8 · Coeficiente K global editable (cuadrar el PEM a una cifra objetivo)
+- **Qué:** un coeficiente global de obra (`coefK`) editable que escala TODOS los precios unitarios (alza o baja: ×1,13, ×0,87, ×0,80…) para cuadrar el PEM a una cifra objetivo. Es el registro `~K` de FIEBDC.
+- **Por qué:** flujo real del arquitecto: aunque los precios salgan de una base de precios, se ajusta la obra entera a un PEM dado (p.ej. el aprobado en el ayuntamiento) o el constructor aplica una baja global. Sin K editable no se puede "cuadrar la cifra global" con facilidad, que es justo lo que pidió el fundador. El .bc3 de prueba trae K=+13% (PEM_base 434.777,78 × 1,13 = 491.298,72 = raíz).
+- **Pros:** encaja con el flujo real de presupuestación; el import .bc3 respeta el K del archivo; cuadrar a un PEM objetivo es un clic.
+- **Cons / decisión abierta:** ¿K se aplica por precio unitario (redondeo por partida) o sobre el PEM? ¿cómo se absorbe el céntimo para cuadrar EXACTO? (Presto deja ~2 cént. de desvío por redondeo; quizá una partida de redondeo, o aplicar K sobre el total). Atado a `core/money` (céntimos enteros, §0 decisión 2).
+- **Contexto / dónde empezar:** modelo en `core/types` (`Rates.coefK`, ver §4 del plan); `partidaImporte` usa `precioK = precio · coefK` (§5); el adaptador `importers/bc3` ya parsea K del `~K` (ver `spike/import/bc3-to-prototype.mjs`). UI: campo editable en datos de obra / resumen.
+- **Depende de / bloqueado por:** F1 (motor) lo modela; UI de edición en F2/F3. No bloquea el dogfood (el spike ya aplica K al importar).

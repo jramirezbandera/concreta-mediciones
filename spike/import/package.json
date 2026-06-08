@@ -1,0 +1,14 @@
+{
+  "name": "spike-bc3-import",
+  "private": true,
+  "type": "module",
+  "description": "Spike desechable: parsea un .bc3 real con ogorhc/bc3 y lo mapea al shape del prototipo para cronometrar una certificación. NO es código de producción.",
+  "scripts": {
+    "inspect": "node bc3-to-prototype.mjs --inspect",
+    "import": "node bc3-to-prototype.mjs"
+  },
+  "dependencies": {
+    "bc3": "^1.1.0",
+    "iconv-lite": "^0.6.3"
+  }
+}

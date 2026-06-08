@@ -189,9 +189,12 @@ interface Chapter { id: string; code: string; title: string; children?: { id: st
 interface Cert { id: string; num: number; period: string; retencion: number; data: Record<string, number>; }
 //   data[partidaId] = cantidad ejecutada A ORIGEN
 
-interface Rates { iva: number; gg: number; bi: number; }   // p.ej. 0.10, 0.13, 0.06
+interface Rates { iva: number; gg: number; bi: number; coefK: number; }   // p.ej. 0.10, 0.13, 0.06, 1.0
 interface Obra { denominacion: string; direccion: string; localidad: string; /* … promotor, constructor, redactor */ }
 ```
+
+**Coeficiente K global (`coefK`) — requisito de dominio (fundador arquitecto, spike §0.5).**
+Aunque los precios vengan de una base de precios, arquitecto/constructor ajustan TODA la obra con un coeficiente global para **cuadrar el PEM a una cifra objetivo** (alza o baja: ×1,13, ×0,87, ×0,80…). Caso real: un PEM aprobado en el ayuntamiento al que hay que cuadrar; o una baja de adjudicación del constructor. Es el registro **`~K`** de FIEBDC (el .bc3 de prueba trae K=+13%: `PEM_base 434.777,78 × 1,13 = 491.298,72` = precio raíz). **`coefK` debe ser editable** y aplicarse a los precios unitarios. Decisión abierta de F1: si K se aplica por precio unitario (con redondeo por partida) o sobre el PEM, y cómo se absorbe el céntimo para **cuadrar exacto** (Presto deja ~2 cént. de desvío por redondeo). Ver `core/money` (céntimos enteros) + `TODOS.md` T-8.
 
 **Estado global** (slices Zustand): `view`, `active` (capítulo/sub o `'__ALL__'`), `expanded`,
 `expandedRows`, `partidas` (mapa chId→Partida[]), `chapters`, `recursos` (banco), `certs` + `curCert`,
@@ -213,6 +216,7 @@ Estas son las reglas que el `core/` debe cumplir **exactamente** (extraídas del
 - `parcial(l) = round2(dim(uds) · dim(largo) · dim(ancho) · dim(alto))`
 - `medTotal = round2(Σ parcial)`
 - `partidaCantidad(p) = p.med.length ? medTotal(p.med) : (p.cantidad ?? 0)`
+- **Coeficiente K:** el precio efectivo de la partida es `precioK(p) = precio · coefK` (ver §4). `partidaImporte` usa `precioK`. Regla de redondeo de K (por precio vs sobre PEM) = decisión de F1 (T-8).
 - `partidaImporte(p) = round2(partidaCantidad(p) · (p.precio ?? 0))`
 
 **Banco / justificación** (precio se lee del banco por `code`, fallback a `it.precio`)

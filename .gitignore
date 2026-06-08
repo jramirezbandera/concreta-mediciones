@@ -44,3 +44,7 @@ Desktop.ini
 
 # Claude Code (config local/personal de cada máquina)
 .claude/settings.local.json
+
+# Spike §0.5 — datos reales de obra (NO subir: pueden llevar datos de cliente)
+spike/samples/
+spike/import/data.generated.js
