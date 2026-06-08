@@ -20,7 +20,11 @@
 **Orden de construcción ≠ orden de validación.** Construcción de abajo arriba (core→presupuesto→certificación); validación certificación-primero (dogfood con .bc3 real).
 
 **Decisiones técnicas (override del texto antiguo):**
-1. **FIEBDC-3 (.bc3): spike día-cero con librería existente.** Antes de F1: conseguir 5–10 .bc3 reales de Presto y Arquímedes + la spec; probar una librería FIEBDC-3 en import+export. **Gate (parte de F1):** reabre en Presto/Arquímedes sin error · PEM/total cuadra al céntimo · árbol preservado · registros no soportados preservados (passthrough). Construir parser propio **solo** si la librería falla el gate. (Anula el "parser propio en F7".)
+1. **FIEBDC-3 (.bc3) — IMPORT con la librería `bc3` (npm); EXPORT propio, fase posterior.** Evaluada `bc3` (v1.1.0, MIT, **cero dependencias**, corre en navegador): parser FIEBDC-3 2002–2020 testeado contra ficheros reales de Presto/ARQUIMEDES/TCQ, con modos lenient/strict + diagnostics. Maneja los baches duros (multilínea `~D` de ARQUIMEDES, códigos hijo con puntos, `~O`/`~K`). **Es parser-only: no serializa .bc3.**
+   - **Import (M1):** usar `bc3` + un **adaptador** `BC3Document → {chapters, partidas, recursos}` en `importers/bc3`. El `core/` de cálculo queda puro (la dependencia vive solo en el límite de import). Los diagnostics alimentan los estados de error/parcial de import.
+   - **Gate de M1 = fidelidad de import** (no round-trip aún): parsear .bc3 reales propios de Presto y Arquímedes, mapear, y que **PEM/total cuadre al céntimo** con lo que muestra Presto; registros no modelados conservados por la librería.
+   - **Export a .bc3 (serializador):** **propio, fase posterior** (cuando importe el puente de salida constructora→arquitecto). Opción elegante: escribirlo y contribuirlo upstream (MIT). El round-trip completo se valida entonces.
+   - **Riesgo bus-factor** (autor único): mitigado por MIT + cero deps → vendoreable/forkeable. (Anula el "parser propio en F7".)
 2. **Dinero en enteros de céntimos (exacto), no float.** `core/money` modela importes en céntimos enteros, aplicando las **mismas reglas de redondeo por paso** que el prototipo (round-per-line). Cero error de representación de float. (Anula el "round2 sobre float es suficiente".)
 3. **Eliminar `BASE_PEM`.** `PEM = Σ importes de partidas reales`. Sin cubos ocultos. Un capítulo "alzado / a justificar" se modela como una partida normal con precio fijo (el modelo ya lo soporta). Ajustar el test semilla: PEM = Σ partidas, no la constante 28.420,18.
 4. **Persistencia desde M1.** Dexie con autosave y campo `schemaVersion` + ruta de migración desde el día uno (no en F6). Diseñar el shape serializable pronto.
@@ -67,7 +71,8 @@ agnóstico de React, blindado con tests unitarios. Si el cálculo es correcto, e
 | Persistencia | Dexie (IndexedDB) | Autosave; export/import JSON de proyecto |
 | Formato nº | `Intl.NumberFormat('es-ES')` | Miles con punto, decimales con coma |
 | Tests | Vitest + @testing-library/react | Cobertura obligatoria del `core/` |
-| Exportadores | `exceljs` (XLSX), `docx` (DOCX), print CSS (PDF) | BC3 = parser propio |
+| Import BC3 | **`bc3`** (npm, MIT, cero deps) + adaptador propio | Parser FIEBDC-3 real-world tested; solo lectura |
+| Exportadores | `exceljs` (XLSX), `docx` (DOCX), print CSS (PDF) | Export .bc3 = serializador propio (fase posterior) |
 | Lint/format | ESLint + Prettier | |
 
 ---
@@ -274,7 +279,7 @@ Cada fase es incremental y deja algo ejecutable. Marca `[ ]` al completar.
 - [ ] **PDF** vía print CSS (`.no-print` oculto, estado final visible). Listados: presupuesto y mediciones, CP nº1/nº2, resumen, justificación, mediciones detalladas; y por certificación.
 - [ ] **XLSX** (exceljs) — resumen y listados tabulares.
 - [ ] **DOCX** (docx) — documentos con datos de obra en cabecera.
-- [ ] **BC3 (FIEBDC-3)** — subproyecto: parser de importación + serializador de exportación (registros `~V`, `~C`, `~D`, `~T`, `~M`, conceptos, descomposición, mediciones). Empezar por **lectura** (Importar) y luego escritura (obra completa).
+- [ ] **BC3 export (FIEBDC-3)** — serializador **propio** (`~V/~C/~D/~T/~M`…, conceptos, descomposición, mediciones) para escribir el .bc3 de la obra completa. El **import ya está hecho en M1** vía la librería `bc3`; aquí solo la escritura (puente de salida constructora→arquitecto). Entonces se valida el round-trip completo. Considerar contribuir el writer upstream (MIT).
 - **Aceptación:** PDF imprime sin controles UI; XLSX abre en Excel con números es-ES correctos; un .bc3 de ejemplo (CYPE/BDT) se importa a chapters+partidas+banco y al re-exportarse mantiene coherencia básica (round-trip de los campos soportados).
 
 ### Fase 8 — Pulido
@@ -290,8 +295,7 @@ API + auth + sync. La arquitectura local-first permite añadirlo como capa de sy
 
 ## 8. Riesgos y notas de implementación
 
-- **BC3/FIEBDC-3** es el mayor riesgo técnico: es un estándar con codificación y gramática propias.
-  Tratarlo como subproyecto con su propio set de tests round-trip; no bloquear el resto de fases por él.
+- **BC3/FIEBDC-3 — riesgo reducido.** El IMPORT se resuelve con la librería `bc3` (npm, MIT, cero deps, real-world tested); ver §0 decisión 1. Riesgo residual: fidelidad del **adaptador** `BC3Document → modelo` (cubrir con tests sobre .bc3 reales) y el **serializador de export**, que es propio y de fase posterior.
 - **Banco de recursos compartido**: el invariante más fácil de romper. Modelarlo explícitamente
   (recursos por código en el store; `Item` solo guarda `code/type/cantidad`) y cubrirlo con tests.
 - **Tasas como estado, no globals**: eliminar `window.IVA_RATE/GGBI_RATE`. El `core/` recibe `Rates`
@@ -318,7 +322,7 @@ Las fases 1 y 2 son el grueso del esfuerzo y el corazón del producto. Conviene 
 ## Implementation Tasks (revisión de ingeniería 2026-06-08)
 Sintetizadas de los hallazgos de `/plan-eng-review` + Codex. P1 bloquea; P2 misma rama; P3 follow-up.
 
-- [ ] **T1 (P1, human ~2d / CC ~3h)** — core/bc3 — Spike día-cero: conseguir 5-10 .bc3 reales (Presto+Arquímedes) + spec y probar librería FIEBDC-3 contra el gate round-trip. Construir bespoke solo si falla.
+- [ ] **T1 (P1, human ~1d / CC ~1h)** — importers/bc3 — Adoptar `bc3` (npm, MIT): validar con .bc3 reales propios (Presto+Arquímedes) + escribir adaptador `BC3Document → modelo` y confirmar totales al céntimo. (Serializador .bc3 = fase posterior; riesgo nº1 reducido al ser solo adaptador.)
 - [ ] **T2 (P1, human ~3h / CC ~20min)** — core/money — Dinero en enteros de céntimos (reglas round-per-line del prototipo, sin float).
 - [ ] **T3 (P1, human ~1h / CC ~10min)** — core/totales — Eliminar `BASE_PEM`; `PEM = Σ partidas`; ajustar test semilla.
 - [ ] **T4 (P1, human ~0 / CC ~0)** — proceso — Gate de scope Hito 1 (ver §0); NO construir F3/F5/F7-extra/drag&drop/tweaks hasta validar.
