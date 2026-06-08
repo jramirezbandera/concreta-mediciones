@@ -1,7 +1,7 @@
 # Plan de implementación — Concreta · Mediciones
 
 > Reconstrucción del prototipo de diseño (`design_handoff_concreta_mediciones/`) como
-> aplicación de producción en **Vite + React 18 + TypeScript**, con fidelidad
+> aplicación de producción en **Vite 7 + React 19 + TypeScript**, con fidelidad
 > pixel-perfect al sistema visual Concreta y un motor de cálculo tipado y testeado.
 
 **Estado del documento:** v2 — revisado en `/plan-eng-review` (2026-06-08).
@@ -30,10 +30,47 @@
 4. **Persistencia desde M1.** Dexie con autosave y campo `schemaVersion` + ruta de migración desde el día uno (no en F6). Diseñar el shape serializable pronto.
 5. **Sin duplicar fila desktop/móvil.** Un hook/selector calcula los valores derivados de cada fila una vez; `<Row>` (tabla) y `<Card>` (móvil) solo presentan.
 6. **`precio` de partida = override manual, NO autocalculado de la descomposición.** `descompUnit(items)` es informativo (se muestra como "precio descompuesto"); editar `items` no pisa `precio`. Hacer este invariante explícito en el tipo y en los tests.
-7. **Tests:** `core/` al 100% de ramas + E2E clave (recalc vivo, recurso compartido, mover/borrar, toggle cert, **gate round-trip BC3**, dogfood). Escritos junto al código, no diferidos. Ver `Javier-main-eng-review-test-plan-*.md`.
+7. **Tests (refinado en `/plan-ceo-review` 2026-06-08, D6):** **100% de ramas en la matemática de dinero/cert** (`money`, `medicion`, `banco`, `totales`, `certificacion`) + **fixtures `.bc3` reales** + tests de regresión; cobertura sensata (no obligada al 100%) en el pegamento (`numbering`, `seed`, UI). E2E clave: recalc vivo, recurso compartido, mover/borrar, toggle cert, **gate de import BC3 = PEM al céntimo sobre .bc3 reales** (NO round-trip: el export es fase posterior, ver decisión 1), dogfood. Escritos junto al código, no diferidos.
 8. **Versiones:** usar Vite y React **actuales** (Vite 7, React 19) en vez de pinear majors viejos sin motivo. Si F0 lista Storybook en aceptación, debe ser también una tarea (o quitarlo del criterio).
 
 **Aplazado y capturado en `TODOS.md`:** clave de banco consciente de fuente (T-1) · inmutabilidad/auditoría de certificaciones (T-2) · PDF de certificación profesional (T-3) · variantes de contrato españolas (T-4).
+
+---
+
+## 0.5. Spike de validación + legal — GATE antes de F1 (revisión CEO 2026-06-08)
+
+> Salida de `/plan-ceo-review` (modo HOLD SCOPE) + voz externa Codex. Antes de construir
+> F1 en producción se ejecuta un spike barato que ataca las dos incógnitas que pueden
+> invalidar el producto. Decisión del fundador (D1).
+
+**Por qué:** la demanda es débil (fundador + un colega, nadie paga aún) y hay un
+**BLOQUEANTE legal** sin resolver. Construir F1–F4 (semanas) antes de tocar esas dudas es
+el riesgo nº1. El prototipo hi-fi ya corre el flujo entero en el navegador: sirve de banco
+de pruebas sin esperar al `core/` de producción.
+
+**Tareas del spike:**
+1. **Validez legal de la certificación (research, el fundador es el experto de dominio).**
+   Resolver **por escrito**: ¿la certificación que emite Concreta es legalmente utilizable
+   en España (e-firma / AutoFirma / aprobación de la Dirección Facultativa / formato oficial)
+   o es solo un documento de trabajo interno? **Done =** respuesta escrita (e-firma sí/no +
+   formato) antes de empezar F4. Esta respuesta **decide T-2** (ver abajo) y puede reformar
+   el alcance de F4.
+2. **Dogfood cronometrado (The Assignment del design doc, elevado a gate).** Coger una obra
+   real propia, **medir primero cuánto tardas hoy en certificarla en Excel** (línea base),
+   importar su `.bc3` ya presupuestado en el **prototipo existente** (hack mínimo, mapping
+   a mano) y certificarla dentro del prototipo. Cronometrar vs Excel y anotar **cada momento
+   en que dan ganas de huir a Excel** (qué falta, qué es lento). Capturar una **señal de pago**
+   ("esto lo pagaría"). Bonus: que el colega lo haga y observarle sin ayudar.
+
+**Criterios kill/go:** **se deciden tras ver el resultado del spike** (D5), no se prefijan
+aquí. Codex (#16) recomienda fijarlos antes; el fundador opta por juzgar con la evidencia
+en mano. Riesgo asumido y registrado: el sesgo de "seguir construyendo por inercia" queda
+explícito para vigilarlo.
+
+**Dependencia con T-2 (inmutabilidad de certificaciones, D3):** el resultado de la tarea 1
+gobierna la prioridad de T-2. **Si la cert es un documento legal de cobro** → T-2 (estado
+emitida/borrador + snapshot al emitir, sin retro-edición silenciosa) **entra en F4**. **Si es
+un documento de trabajo** → T-2 sigue aplazado. No pre-comprometer hasta cerrar el spike.
 
 ---
 
@@ -64,7 +101,7 @@ agnóstico de React, blindado con tests unitarios. Si el cálculo es correcto, e
 | Capa | Elección | Notas |
 |---|---|---|
 | Build | Vite (actual, v7) | SPA, sin SSR |
-| UI | React 18 + TypeScript (strict) | |
+| UI | React 19 + TypeScript (strict) | F0 implementada en React 19 (ver §0 decisión 8) |
 | Estado | Zustand + Immer | Store global con slices por dominio |
 | Estilos | CSS Modules + `tokens.css` portado | Variables CSS = única fuente de verdad del design system |
 | Iconos | `lucide-react` | Sustituye el set propio `ICONS` |
@@ -225,13 +262,13 @@ Cada fase es incremental y deja algo ejecutable. Marca `[ ]` al completar.
 ### Fase 1 — Núcleo de dominio (la base crítica)
 **Objetivo:** motor de cálculo tipado y testeado + store con datos semilla.
 - [ ] `core/types.ts`, `money.ts`, `medicion.ts`, `banco.ts`, `totales.ts`, `certificacion.ts`, `numbering.ts`.
-- [ ] `core/seed.ts` (port de `data.js` + `refdata.js`), con `BASE_PEM`.
+- [ ] `core/seed.ts` (port de `data.js` + `refdata.js`), **sin `BASE_PEM`** (ver §0 decisión 3: `PEM = Σ partidas`).
 - [ ] Store Zustand con slices y selectores memoizados (chapterTotals, pem, pec, counts).
 - [ ] **Tests unitarios** de §5 (ver criterios).
 - **Entregable:** módulo `core/` reutilizable + store que expone los mismos números que el prototipo.
 - **Aceptación (tests obligatorios):**
   - `partidaCantidad` con dimensión vacía = factor 1 (p.ej. arena 0/5: `1·14,20 = 14,20`).
-  - PEM con seed = **28 420,18 €** (Σ partidas 26 196,66 + BASE_PEM 2 223,52).
+  - PEM con seed = **Σ partidas = 26 196,66 €** (sin `BASE_PEM`; ver §0 decisión 3. La antigua constante 28.420,18 incluía el cubo oculto, ya eliminado).
   - `descompUnit` de la partida `p111` (excavación zanjas) coincide con su `precio` mostrado.
   - Editar el precio de `mo001` recalcula **todas** las partidas que lo usan; `recursoUsage('mo001') ≥ 4`.
   - Certificación: `estaCert = aOrigen − anterior`; editar en modo "esta cert." guarda `max(0, prev+v)` a origen.
@@ -373,15 +410,16 @@ Sidebar vacío: solo cabecera "Capítulos" + "＋ Añadir capítulo" en `--text-
 
 | Review | Trigger | Why | Runs | Status | Findings |
 |--------|---------|-----|------|--------|----------|
-| CEO Review | `/plan-ceo-review` | Scope & strategy | 0 | — | — |
-| Codex Review | `/codex review` | Independent 2nd opinion | 1 | ISSUES (resueltas) | voz externa: refuerza decisiones + persistencia/BASE_PEM/cert-audit |
-| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 2 | REVIEWED (post-F0) | run 1 (plan): 6 issues, scope reducido a M1. run 2 (post-F0, 2026-06-08): 3 decisiones resueltas (D1 gate BC3, D2 borrado de campos, D3 tests de primitivas), 0 críticos, 0 sin resolver |
+| CEO Review | `/plan-ceo-review` | Scope & strategy | 1 | REVIEWED (HOLD SCOPE) | spike validación+legal como GATE pre-F1 (§0.5); 6 decisiones; 0 críticos, 0 sin resolver; defectos de plan corregidos (BASE_PEM/React/round-trip) |
+| Codex Review | `/codex review` | Independent 2nd opinion | 2 | REVIEWED | run 1: refuerza integer-cents/BC3/cert-first. run 2 (voz externa CEO): 18 puntos; consenso en cert-immutability y spike-first; tensiones kill-criteria/coverage resueltas por el fundador |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 2 | REVIEWED (post-F0) | run 1 (plan): 6 issues, scope reducido a M1. run 2 (post-F0): 3 decisiones (D1 gate BC3, D2 borrado de campos, D3 tests de primitivas), 0 críticos, 0 sin resolver |
 | Design Review | `/plan-design-review` | UI/UX gaps | 1 | REVIEWED | sistema visual 10/10; estados nuevos de M1 especificados (import/empty/autosave/loading/a11y); DESIGN.md formalizado |
 | DX Review | `/plan-devex-review` | Developer experience gaps | 0 | — | — |
 
-- **CODEX:** voz externa ejecutada en run 1 (alta confianza). Confirma integer-cents, BC3 spike-con-librería, cert-first, gate de no-construir. Run 2 (post-F0): outside voice no ejecutada (revisión de scaffold, bajo valor marginal).
-- **CROSS-MODEL:** sin tensión — Codex y la revisión coinciden; refuerzo mutuo.
+- **CODEX:** voz externa ejecutada en eng-run-1 y en la revisión CEO (2026-06-08). En CEO: 18 puntos de reto. **Consenso cross-model** (refuerza decisiones): cert-immutability (D3), spike-first sobre el prototipo (D1). **Tensiones resueltas por el fundador:** kill/go criteria del spike → decidir TRAS el spike, no prefijar (D5); cobertura → 100% en la matemática de dinero/cert + fixtures, pragmático en glue (D6). Defectos de plan que Codex cazó y se han **corregido**: #9 `BASE_PEM` (F1 alineado a §0: PEM = Σ partidas = 26.196,66), #10 React 18→19, #8 wording "round-trip" (M1 = fidelidad de import, no round-trip).
+- **CROSS-MODEL:** 2 consensos (cert-audit, spike-first), 2 tensiones (kill-criteria, coverage) decididas por el usuario. 0 sin resolver.
 - **UNRESOLVED:** 0.
-- **POST-F0 (run 2):** F0 implementada y revisada. Decisiones: **D1** — manda IMPLEMENTATION_PLAN §0, F1 = import-only (round-trip/export = fase posterior); design doc reconciliado. **D2** — `EditableText` permite vaciar campos (corregido + test). **D3** — añadidos tests de primitivas+hooks (EditableNum/EditableText/IvaSelect/InlineCreate/useTheme/useTweaks): 15→46 tests, lint+build verdes. Aplazados a `TODOS.md`: T-5 CI/CD, T-6 footgun de `parseEsNumber`, T-7 trap de foco en Drawer. Nota A2: el motor F1 debe usar céntimos enteros, NO el `round2` float de `core/money` (existe solo para fidelidad de formato).
-- **DESIGN:** sistema visual completo (10/10) formalizado en `DESIGN.md`; estados nuevos de M1 (import .bc3 + errores, primer arranque vacío, autosave/recuperación, journey dogfood, loading, a11y arquitectural) especificados en "Estados de UI de M1".
-- **VERDICT:** ENG + DESIGN CLEARED — F0 cerrada y revisada, lista para F1 (núcleo de dominio). Decisiones bloqueadas en §0; trabajo aplazado en `TODOS.md`.
+- **POST-CEO (HOLD SCOPE, 2026-06-08):** **D1** spike de validación+legal como gate pre-F1 (§0.5). **D2** HOLD SCOPE (el foso es simple+bonito+flujo, no paridad). **D3** T-2 (inmutabilidad cert) condicional al resultado del spike legal. **D5** criterios kill/go del spike = juicio post-spike. **D6** 100% ramas en `money/medicion/banco/totales/certificacion` + fixtures `.bc3` reales; glue pragmático.
+- **POST-F0 (eng run 2):** F0 implementada/revisada; `EditableText` permite vaciar (D2-eng); 15→46 tests. Aplazados en `TODOS.md`: T-5 CI/CD (remoto GitHub ya existe → accionable), T-6 footgun `parseEsNumber`, T-7 trap de foco en Drawer. El motor F1 usa céntimos enteros, NO el `round2` float de `core/money`.
+- **DESIGN:** sistema visual completo (10/10) formalizado en `DESIGN.md`; estados de M1 especificados.
+- **VERDICT:** CEO + ENG + DESIGN CLEARED. **Próximo paso ≠ F1 directamente: el spike de validación+legal (§0.5) es el gate.** F0 cerrada; trabajo aplazado en `TODOS.md`.

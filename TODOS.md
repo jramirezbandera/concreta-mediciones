@@ -20,6 +20,7 @@ Origen: revisión de ingeniería (`/plan-eng-review`) + voz externa Codex, 2026-
 - **Cons:** cambia el modelo de datos de `Cert` (estado emitida/borrador, snapshot de cantidades y precios al emitir).
 - **Contexto / dónde empezar:** hoy `Cert.data[partidaId]` es editable libremente y `prevData` es la cert previa de la lista. Añadir estado `draft|issued`, congelar precios/cantidades al pasar a `issued`, y decidir qué pasa al editar una emitida (bloquear o versionar).
 - **Depende de / bloqueado por:** decidir antes de usuarios externos. Para el dogfood en solitario (tú, una obra) la edición libre vale.
+- **Prioridad CONDICIONAL al spike legal (revisión CEO 2026-06-08, D3 + Codex #13):** el resultado de la tarea 1 del spike (§0.5 del plan) gobierna esto. **Si la cert es un documento legal de cobro** → T-2 deja de estar aplazado y **entra en F4** (estado emitida/borrador + snapshot, sin retro-edición silenciosa). **Si es documento de trabajo** → sigue aplazado. No pre-comprometer hasta cerrar el spike. Dos modelos (revisión + Codex) coinciden en que editar certs históricas sin inmutabilidad invalida la cert para uso real.
 
 ## T-3 · PDF de certificación de calidad profesional
 - **Qué:** el documento de cobro vía `window.print()` (print CSS) puede fallar en paginación, cabeceras de tabla repetidas y saltos de página.
