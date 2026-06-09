@@ -233,10 +233,13 @@ let kPct = NaN;
   const parts = (doc.coefficients?.raw || '').replace(/\r?\n/g, '').split('|');
   kPct = parseFloat(parts[2]); // p.ej. "13" → +13%
 }
+// K viene del registro ~K declarado, NO del ratio empírico (si no, el desvío
+// de céntimos por redondeo se confundiría con un coeficiente, p.ej. 1,00001).
+const empiricalK = rootPEM && pemBase ? Math.round((rootPEM / pemBase) * 1e6) / 1e6 : null;
 const coefMult = coefArg
   ? Number(coefArg)
-  : rootPEM && pemBase
-    ? Math.round((rootPEM / pemBase) * 1e6) / 1e6 // empírico: cuadra al precio raíz
+  : !Number.isNaN(kPct) && kPct !== 0
+    ? Math.round((1 + kPct / 100) * 1e6) / 1e6
     : 1;
 if (coefMult && coefMult !== 1) {
   for (const id in PARTIDAS)
@@ -281,7 +284,8 @@ for (const c of perChapter) {
 console.log('  ' + '-'.repeat(78));
 const refPEM = rootPEM != null ? round2(rootPEM) : null;
 console.log(`  PEM base (Σ partidas, precio de base de precios) = ${fmtEur(pemBase)}`);
-console.log(`  Coeficiente K global                            = ×${coefMult}${Number.isNaN(kPct) ? '' : `  (~K declara ${kPct} → ${kPct >= 0 ? '+' : ''}${kPct}%)`}`);
+console.log(`  Coeficiente K global                            = ×${coefMult}${Number.isNaN(kPct) || kPct === 0 ? '  (sin ~K → K=1)' : `  (~K declara ${kPct} → ${kPct >= 0 ? '+' : ''}${kPct}%)`}`);
+if (empiricalK != null) console.log(`  (ratio raíz/base = ×${empiricalK} — sanity check; ~1,0 = sin K, sólo redondeo)`);
 console.log(`  PEM ajustado (precios × K)                      = ${fmtEur(pemCalc)}`);
 if (refPEM != null) {
   console.log(`  PEM objetivo en el .bc3 (precio raíz)           = ${fmtEur(refPEM)}   Δ = ${fmtEur(round2(pemCalc - refPEM))}`);

@@ -3,10 +3,12 @@
 Gate definido en `IMPLEMENTATION_PLAN.md` §0.5 (revisión CEO 2026-06-08). Ataca las dos
 incógnitas que pueden invalidar el producto **antes** de construir F1 en producción.
 
-| Track | Doc | Estado | Done = |
-|-------|-----|--------|--------|
-| 1 · Validez legal de la certificación | [`01-validez-legal-certificacion.md`](01-validez-legal-certificacion.md) | 🟡 hipótesis del fundador (a confirmar por escrito) | respuesta escrita: ¿documento de cobro legal o de trabajo? + público/privado + e-firma sí/no |
-| 2 · Dogfood cronometrado vs Excel | [`02-dogfood-cronometrado.md`](02-dogfood-cronometrado.md) | 🟢 import resuelto · `dogfood.html` listo · falta cronometrar | tabla con tiempos (Excel vs prototipo) + fricciones + señal de pago |
+| Track | Doc | Estado | Resultado |
+|-------|-----|--------|-----------|
+| 1 · Validez legal de la certificación | [`01-validez-legal-certificacion.md`](01-validez-legal-certificacion.md) | ✅ resuelto (de momento) | **documento de trabajo, sin e-firma** → T-2 (inmutabilidad) sigue aplazado |
+| 2 · Dogfood cronometrado vs Excel | [`02-dogfood-cronometrado.md`](02-dogfood-cronometrado.md) | ✅ **GATE SUPERADO** | **10 min más rápido que Excel · todo cuadró · ~15 €/mes** de pago |
+
+> **D5 (kill/go) = GO a F1.** Feedback de uso → requisitos de F4 (% editable, desplegable desc+mediciones, certificar marcando líneas). Ver IMPLEMENTATION_PLAN §0.5 + Fase 4 + memoria del proyecto.
 
 ## Hallazgos del import (track 2, 2026-06-08)
 `obra ejemplo.bc3` (Presto 8.7, FIEBDC-3/2002, ANSI) → **19 capítulos · 167 partidas · 497 recursos**, mapeado con `ogorhc/bc3`.

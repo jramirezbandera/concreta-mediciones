@@ -72,6 +72,14 @@ gobierna la prioridad de T-2. **Si la cert es un documento legal de cobro** → 
 emitida/borrador + snapshot al emitir, sin retro-edición silenciosa) **entra en F4**. **Si es
 un documento de trabajo** → T-2 sigue aplazado. No pre-comprometer hasta cerrar el spike.
 
+### Resultado del spike (2026-06-09) — GATE SUPERADO ✅ → GO a F1
+Dogfood sobre obra real (`obra ejemplo.bc3` Presto + `2025-011 MED Romeral.bc3` FIEBDC-2016, ambas importadas con `ogorhc/bc3`, PEM cuadrado salvo céntimos de redondeo, K global resuelto):
+- ⏱️ **Certificar en Concreta: 10 min MÁS RÁPIDO que en Excel.** 🎯 **Todo cuadró.** → bate a Excel, el criterio de éxito del dogfood se cumple.
+- 💶 **Señal de pago: ~15 €/mes** (SaaS por puesto, coherente con la hipótesis de pricing del arquitecto).
+- ⚖️ **Legal (tarea 1) — CONFIRMADO (2026-06-09):** el fundador opta, **de momento**, por **certificación = documento de trabajo, SIN e-firma**. → **T-2 (inmutabilidad) SIGUE APLAZADO**. (Revisitar antes de uso externo / cobro formal; sigue en `TODOS.md` T-2.)
+- **D5 (kill/go) resuelto = GO.** El spike valida la apuesta; se arranca F1. Riesgo "construir por inercia" mitigado: la evidencia es positiva y concreta.
+- 📋 **Feedback de uso → requisitos de F4** (lo que falta para que sea útil de verdad): `%` editable que autocompleta lo ejecutado; descripción + líneas de medición accesibles en modo certificar (desplegable, sin saturar); certificar marcando líneas de medición. **Incorporados a la Fase 4** (abajo) y a la memoria del proyecto.
+
 ---
 
 ## 1. Resumen ejecutivo
@@ -301,7 +309,12 @@ Cada fase es incremental y deja algo ejecutable. Marca `[ ]` al completar.
 - [ ] Tabla por partida con `PctBar`, ejecutada editable (semántica según modo), importe a abonar.
 - [ ] Precios contradictorios: botón por capítulo → partida con badge ámbar P.C., código "P.C."/pos "C…", campos editables (título/ud/cantidad/precio) en la propia cert.
 - [ ] `CertSummary` (retención % editable, base, IVA, líquido) + `CertChapterSummary` (barras de avance).
-- **Aceptación:** el toggle cambia importe mostrado y significado del input; añadir contradictorio aparece marcado y suma al líquido; editar retención recalcula base/IVA/líquido; cert. nº2 usa nº1 como "anterior".
+
+**Requisitos del dogfood (2026-06-09) — validados en obra real, son lo que falta para que sea útil:**
+- [ ] **`%` editable por partida que autocompleta lo ejecutado.** Poder teclear "50%" en una partida y que calcule solo la cantidad/importe ejecutado **a origen** o **en esta certificación** (según el modo). Bidireccional: editar % ↔ editar cantidad. (Hoy solo se edita la cantidad; el % es derivado de solo lectura.)
+- [ ] **Descripción + líneas de medición accesibles EN modo certificar** (hoy se pierden y son importantes): la descripción para saber **qué** es la partida; las líneas de medición para ver **cuáles están hechas**. Incorporadas como **desplegable por partida** (colapsado por defecto) — que no sature ni ocupe espacio salvo que se use.
+- [ ] **Certificar marcando líneas de medición.** Interacción en las líneas (p.ej. un botón/checkbox por línea) para marcarlas como ejecutadas; la suma de las líneas marcadas alimenta la cantidad ejecutada de la partida. Certificar "por trozos medibles" en vez de teclear una cantidad. *(Implica modelar el estado ejecutado a nivel de línea de medición, no solo un total por partida — decisión de modelo de F4; ver `TODOS.md`/memoria.)*
+- **Aceptación:** el toggle cambia importe mostrado y significado del input; añadir contradictorio aparece marcado y suma al líquido; editar retención recalcula base/IVA/líquido; cert. nº2 usa nº1 como "anterior"; **teclear un % rellena la cantidad ejecutada al céntimo; el desplegable por partida muestra descripción + líneas de medición sin saturar; marcar líneas suma a lo ejecutado.**
 
 ### Fase 5 — Referencia + Importar
 - [ ] Panel Referencia: split redimensionable (320–640) si ventana ≥1100, si no overlay. Selector de fuente, buscador, interruptor "Copiar como precio contradictorio".
