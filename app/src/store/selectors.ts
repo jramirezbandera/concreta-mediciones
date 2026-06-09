@@ -10,6 +10,12 @@
    renders espurios y bucles con selectores que devuelven objetos).
    =========================================================================== */
 import { recursoUsage } from '../core/banco';
+import {
+  certChapterRows as certChapterRowsCore,
+  certTotals as certTotalsCore,
+  type CertChapterRow,
+  type CertTotals,
+} from '../core/certificacion';
 import type { Cents } from '../core/money';
 import type { Chapter, PartidasMap, Rates } from '../core/types';
 import { chapterTotals as chapterTotalsCore, pec as pecCore, pem as pemCore, totalConIva as totalConIvaCore } from '../core/totales';
@@ -75,3 +81,40 @@ const _usage = memo1((partidas: PartidasMap) => recursoUsage(partidas));
 
 /** Cuántas partidas usan cada recurso (para el chip "compartido" de la justificación). */
 export const selectRecursoUsage = (s: ObraState): Record<string, number> => _usage(s.partidas);
+
+/* ---- selectores de certificación (F4) ---- */
+
+/** Referencia estable para "sin datos previos" (no romper la memoización). */
+const EMPTY_DATA: Record<string, number> = {};
+
+const _certTotals = memo1(
+  (
+    partidas: PartidasMap,
+    curData: Record<string, number>,
+    prevData: Record<string, number>,
+    rates: Rates,
+    retencion: number,
+  ): CertTotals =>
+    certTotalsCore(Object.values(partidas).flat(), curData, prevData, rates, retencion, rates.coefK),
+);
+const _certChapterRows = memo1(
+  (
+    chapters: Chapter[],
+    partidas: PartidasMap,
+    curData: Record<string, number>,
+    prevData: Record<string, number>,
+    coefK: number,
+  ): CertChapterRow[] => certChapterRowsCore(chapters, partidas, curData, prevData, coefK),
+);
+
+const curCertData = (s: ObraState): Record<string, number> => s.certs[s.curCert]?.data ?? EMPTY_DATA;
+const prevCertData = (s: ObraState): Record<string, number> =>
+  s.curCert > 0 ? (s.certs[s.curCert - 1]?.data ?? EMPTY_DATA) : EMPTY_DATA;
+
+/** Totales económicos de la certificación en curso (céntimos). */
+export const selectCertTotals = (s: ObraState): CertTotals =>
+  _certTotals(s.partidas, curCertData(s), prevCertData(s), s.rates, s.certs[s.curCert]?.retencion ?? 0);
+
+/** Avance certificado por capítulo de la cert en curso. */
+export const selectCertChapterRows = (s: ObraState): CertChapterRow[] =>
+  _certChapterRows(s.chapters, s.partidas, curCertData(s), prevCertData(s), s.rates.coefK);

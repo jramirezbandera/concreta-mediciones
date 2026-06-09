@@ -9,6 +9,12 @@ export type ResourceType = 'MO' | 'MQ' | 'MAT' | '%CI';
 
 /** Línea de medición: uds × largo × ancho × alto. Dimensión vacía = factor 1. */
 export interface MedLine {
+  /**
+   * Id estable de la línea (F4): la certificación por líneas guarda un SNAPSHOT
+   * de cantidad por `id` (`Cert.lineQty`), así que el id debe sobrevivir a editar
+   * otras líneas. Lo asigna `addMedLine` (store) y el normalizador del seed.
+   */
+  id: string;
   comment: string;
   uds: number | '';
   largo: number | '';
@@ -85,6 +91,15 @@ export interface Cert {
   period: string;
   retencion: number; // 0..1
   data: Record<string, number>;
+  /**
+   * Certificación por líneas (F4.3): cantidad ejecutada por línea de medición,
+   * CONGELADA al marcar (snapshot). `lineQty[partidaId][lineId]` = cantidad de
+   * esa línea hecha en ESTA cert (= su parcial si entera, o menos si parcial).
+   * `data[partidaId]` = Σ lineQty cuando la partida se certifica por líneas;
+   * teclear la cantidad a mano borra `lineQty[partidaId]` (override). Estable
+   * frente a editar la medición después (la cert no cambia sola).
+   */
+  lineQty?: Record<string, Record<string, number>>;
 }
 
 /** Tasas económicas. Estado del store, NUNCA globals mutados (§8 riesgos). */

@@ -75,6 +75,19 @@ describe('parseEsNumber', () => {
     expect(parseEsNumber('abc')).toBeNull();
     expect(parseEsNumber('-')).toBeNull();
   });
+
+  it('T-6: rechaza entrada malformada en vez de tragarla (parseFloat)', () => {
+    expect(parseEsNumber('12abc')).toBeNull(); // antes → 12
+    expect(parseEsNumber('1,2,3')).toBeNull(); // antes → 1.2
+    expect(parseEsNumber('12,')).toBeNull(); // coma sin decimales
+    expect(parseEsNumber('1,5e3')).toBeNull(); // notación rara
+    expect(parseEsNumber('10%')).toBeNull(); // símbolo pegado
+  });
+
+  it('T-6: permite negativos (corrección "esta certificación")', () => {
+    expect(parseEsNumber('-12,5')).toBe(-12.5);
+    expect(parseEsNumber('-1.234,56')).toBe(-1234.56);
+  });
 });
 
 describe('dinero en céntimos', () => {

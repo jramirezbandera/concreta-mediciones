@@ -1,4 +1,10 @@
-import type { Chapter, Partida, SubChapter } from '../../core/types';
+/* ===========================================================================
+   core/grouping — agrupación de partidas por subcapítulo (puro, sin React).
+   Compartido por la vista Presupuesto (F2) y Certificaciones (F4): misma
+   estructura de grupos en ambas. Movido aquí desde features/presupuesto en F4
+   para no acoplar las features entre sí (DRY, eng-review F4).
+   =========================================================================== */
+import type { Chapter, Partida, SubChapter } from './types';
 
 export interface Group {
   sub: SubChapter | null;
@@ -7,8 +13,7 @@ export interface Group {
 
 /**
  * Agrupa las partidas de un capítulo por subcapítulo; las huérfanas (sin sub o
- * con un sub inexistente) van a un grupo inicial sin subcabecera. Compartido por
- * la tabla (desktop) y las tarjetas (móvil) — misma estructura en ambas.
+ * con un sub inexistente) van a un grupo inicial sin subcabecera.
  */
 export function groupBySub(chapter: Chapter, partidas: Partida[]): Group[] {
   const children = chapter.children ?? [];

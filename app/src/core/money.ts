@@ -41,9 +41,12 @@ export function fmtEur(n: number | null | undefined, dec = 2): string {
 export function parseEsNumber(input: string): number | null {
   const norm = input
     .replace(/\s/g, '')
-    .replace(/\./g, '')
-    .replace(',', '.');
-  if (norm === '' || norm === '-') return null;
+    .replace(/\./g, '') // separador de miles
+    .replace(',', '.'); // coma decimal → punto
+  // T-6: validar la cadena COMPLETA. `parseFloat` tragaba entrada malformada
+  // ("12abc"→12, "1,2,3"→1.2), corrompiendo cantidades de dinero en silencio.
+  // Se permite el signo: una corrección "esta certificación" puede ser negativa.
+  if (!/^-?\d+(\.\d+)?$/.test(norm)) return null;
   const n = Number.parseFloat(norm);
   return Number.isNaN(n) ? null : n;
 }

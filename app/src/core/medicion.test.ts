@@ -8,7 +8,7 @@ const ml = (
   largo: MedLine['largo'],
   ancho: MedLine['ancho'],
   alto: MedLine['alto'],
-): MedLine => ({ comment: '', uds, largo, ancho, alto });
+): MedLine => ({ id: '', comment: '', uds, largo, ancho, alto });
 
 const partida = (over: Partial<Partida>): Partida => ({
   id: 'p',

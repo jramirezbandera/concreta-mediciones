@@ -441,6 +441,44 @@ describe('acciones F2.4 (CRUD estructural + renumeración)', () => {
   });
 });
 
+describe('acciones F4 (certificaciones)', () => {
+  it('addCert añade al final, hereda data/retención de la última y queda en curso', () => {
+    const s = state();
+    const n0 = s.certs.length; // 3 sembradas
+    const last = s.certs[n0 - 1]!;
+    state().addCert();
+    const r = state();
+    expect(r.certs).toHaveLength(n0 + 1);
+    expect(r.curCert).toBe(n0); // la nueva, en curso
+    const nueva = r.certs[n0]!;
+    expect(nueva.num).toBe(last.num + 1);
+    expect(nueva.period).toBe('');
+    expect(nueva.retencion).toBe(last.retencion);
+    expect(nueva.data).toEqual(last.data); // hereda a-origen…
+  });
+
+  it('la cert nueva es un clon independiente (no comparte data con la previa)', () => {
+    const s = state();
+    const prevIdx = s.certs.length - 1;
+    state().addCert();
+    const antes = state().certs[prevIdx]!.data.p111;
+    state().onCertEdit('p111', 999, 'origen'); // edita la nueva (en curso)
+    expect(state().certs[state().curCert]!.data.p111).toBe(999);
+    expect(state().certs[prevIdx]!.data.p111).toBe(antes); // la previa intacta
+  });
+
+  it('setCertField edita periodo y clampa la retención a [0,1]', () => {
+    state().setCertField('period', 'Julio 2026');
+    expect(state().certs[state().curCert]!.period).toBe('Julio 2026');
+    state().setCertField('retencion', 0.05);
+    expect(state().certs[state().curCert]!.retencion).toBe(0.05);
+    state().setCertField('retencion', 2); // > 1 → clamp
+    expect(state().certs[state().curCert]!.retencion).toBe(1);
+    state().setCertField('retencion', -0.5); // < 0 → clamp
+    expect(state().certs[state().curCert]!.retencion).toBe(0);
+  });
+});
+
 describe('reset', () => {
   it('restaura datos y UI tras editar', () => {
     const s = state();

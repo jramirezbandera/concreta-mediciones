@@ -3,8 +3,8 @@ import { Icon } from '../../components';
 import { partidaImporte } from '../../core/medicion';
 import { fmtNum, sumCents, toEur, type Cents } from '../../core/money';
 import type { Chapter, Partida, SubChapter } from '../../core/types';
+import { groupBySub } from '../../core/grouping';
 import { useObraStore } from '../../store';
-import { groupBySub } from './grouping';
 import { PartidaRow } from './PartidaRow';
 import styles from './Presupuesto.module.css';
 

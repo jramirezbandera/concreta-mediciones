@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
+  cantidadToPct,
   certCalc,
+  certChapterRows,
   certTotals,
   estaCertDisplay,
   estaCertToOrigen,
   prevDataOf,
+  pctToCantidad,
 } from './certificacion';
-import { toEur } from './money';
-import type { Cert, Partida, Rates } from './types';
+import { toCents, toEur } from './money';
+import type { Cert, Chapter, Partida, PartidasMap, Rates } from './types';
 
 const partida = (over: Partial<Partida>): Partida => ({
   id: 'p',
@@ -94,5 +97,34 @@ describe('prevDataOf', () => {
   it('la primera no tiene anterior; la segunda usa la primera', () => {
     expect(prevDataOf(certs, 0)).toEqual({});
     expect(prevDataOf(certs, 1)).toEqual({ p1: 10 });
+  });
+});
+
+describe('certChapterRows (avance por capítulo, F4)', () => {
+  const chapters: Chapter[] = [
+    { id: '01', code: '1', title: 'Cap uno' },
+    { id: '02', code: '2', title: 'Cap dos (vacío)' },
+  ];
+  const partidas: PartidasMap = {
+    '01': [partida({ id: 'p1', cantidad: 100, precio: 10 })], // importe 1.000 €
+    '02': [],
+  };
+
+  it('suma presupuesto y certificado por capítulo y descarta los de 0', () => {
+    const rows = certChapterRows(chapters, partidas, { p1: 50 }, {});
+    expect(rows).toHaveLength(1); // el cap 02 (budget 0) se filtra
+    const r = rows[0]!;
+    expect(r.id).toBe('01');
+    expect(r.budget).toBe(toCents(1000)); // 100 · 10
+    expect(r.cert).toBe(toCents(500)); // 50 · 10 a origen
+    expect(r.pct).toBeCloseTo(50);
+  });
+});
+
+describe('% editable (F4, dogfood #1) — cantidad, no dinero', () => {
+  it('pctToCantidad/cantidadToPct son inversos sobre la ofertada', () => {
+    expect(pctToCantidad(124.65, 50)).toBe(62.33); // round2(62.325)
+    expect(cantidadToPct(100, 50)).toBe(50);
+    expect(cantidadToPct(0, 5)).toBe(0); // sin ofertada → 0, no NaN
   });
 });

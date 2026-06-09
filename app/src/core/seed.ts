@@ -3,7 +3,7 @@
    "Reforma vivienda C/ Mayor 14". Fuente de verdad de los números de prueba.
    §0 decisión 3: PEM = Σ importes de partidas reales (sin cubo oculto).
    =========================================================================== */
-import type { Cert, Chapter, Obra, PartidasMap, Rates } from './types';
+import type { Cert, Chapter, MedLine, Obra, Partida, PartidasMap, Rates } from './types';
 import { round2 } from './money';
 import { partidaCantidad } from './medicion';
 
@@ -27,7 +27,21 @@ export const CHAPTERS: Chapter[] = [
   { id: '08', code: '8', title: 'Instalaciones' },
 ];
 
-export const PARTIDAS: PartidasMap = {
+/** Partida del seed sin `id` en sus líneas de medición (los pone `withMedIds`). */
+type SeedPartida = Omit<Partida, 'med'> & { med: Omit<MedLine, 'id'>[] };
+
+/** Asigna ids deterministas a las líneas de medición del seed (`<pid>-m<n>`). */
+function withMedIds(raw: Record<string, SeedPartida[]>): PartidasMap {
+  const out: PartidasMap = {};
+  for (const ch in raw)
+    out[ch] = raw[ch]!.map((p) => ({
+      ...p,
+      med: p.med.map((l, i) => ({ ...l, id: `${p.id}-m${i + 1}` })),
+    }));
+  return out;
+}
+
+const RAW_PARTIDAS: Record<string, SeedPartida[]> = {
   '01': [
     {
       id: 'p111',
@@ -193,6 +207,9 @@ export const PARTIDAS: PartidasMap = {
   '07': [],
   '08': [],
 };
+
+/** Partidas de ejemplo, con ids de línea de medición ya asignados. */
+export const PARTIDAS: PartidasMap = withMedIds(RAW_PARTIDAS);
 
 /** Tasas por defecto (reforma 10% IVA; GG 13% + BI 6%; sin coeficiente K). */
 export const DEFAULT_RATES: Rates = { iva: 0.1, gg: 0.13, bi: 0.06, coefK: 1 };

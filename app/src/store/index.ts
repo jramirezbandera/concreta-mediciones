@@ -9,6 +9,8 @@ export {
 } from './obraStore';
 export type { CertMode, ObraData, ObraState } from './obraStore';
 export {
+  selectCertChapterRows,
+  selectCertTotals,
   selectChapterTotals,
   selectCounts,
   selectPec,

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Icon } from './components/Icon';
+import { CertificacionesView } from './features/certificaciones';
 import { PresupuestoView } from './features/presupuesto';
 import { PlaceholderView } from './features/PlaceholderView';
 import { Sandbox } from './features/sandbox/Sandbox';
@@ -102,6 +103,8 @@ export default function App() {
         <main className={styles.main}>
           {view === 'presupuesto' ? (
             <PresupuestoView compact={bp.isMobile} />
+          ) : view === 'certificaciones' ? (
+            <CertificacionesView />
           ) : (
             <PlaceholderView view={view} compact={bp.isMobile} />
           )}

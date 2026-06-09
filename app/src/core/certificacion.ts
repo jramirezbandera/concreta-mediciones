@@ -4,7 +4,7 @@
    Importes en CÉNTIMOS. El coeficiente K (§4) se aplica al precio, igual que
    en el presupuesto.
    =========================================================================== */
-import type { Cert, Partida, Rates } from './types';
+import type { Cert, Chapter, Partida, PartidasMap, Rates } from './types';
 import { type Cents, importeCents, round2, scaleCents } from './money';
 import { partidaCantidad, partidaImporte } from './medicion';
 
@@ -98,6 +98,59 @@ export function certTotals(
 /** Datos de la certificación anterior de la lista ({} si es la primera). */
 export function prevDataOf(certs: Cert[], index: number): Record<string, number> {
   return index > 0 ? (certs[index - 1]?.data ?? {}) : {};
+}
+
+/* ---- Avance por capítulo (para CertChapterSummary) ------------------------ */
+
+export interface CertChapterRow {
+  id: string;
+  code: string;
+  title: string;
+  budget: Cents; // importe presupuestado del capítulo
+  cert: Cents; // importe certificado a origen del capítulo
+  pct: number; // cert / budget · 100
+}
+
+/** Avance certificado por capítulo (céntimos). Filtra los de presupuesto 0. */
+export function certChapterRows(
+  chapters: Chapter[],
+  partidas: PartidasMap,
+  curData: Record<string, number>,
+  prevData: Record<string, number>,
+  coefK = 1,
+): CertChapterRow[] {
+  return chapters
+    .map((ch) => {
+      let budget = 0;
+      let cert = 0;
+      for (const p of partidas[ch.id] ?? []) {
+        budget += partidaImporte(p, coefK);
+        cert += certCalc(p, curData, prevData, coefK).aOrigen;
+      }
+      return {
+        id: ch.id,
+        code: ch.code,
+        title: ch.title,
+        budget,
+        cert,
+        pct: budget > 0 ? (cert / budget) * 100 : 0,
+      };
+    })
+    .filter((r) => r.budget > 0);
+}
+
+/* ---- % de ejecución editable (dogfood #1) --------------------------------
+   El % y la cantidad NO son dinero: se redondean a precisión de CANTIDAD
+   (2 decimales), no a céntimos (eng-review F4, Codex #10). */
+
+/** Cantidad ejecutada que corresponde a un % de la ofertada. */
+export function pctToCantidad(ofertada: number, pct: number): number {
+  return round2((ofertada * pct) / 100);
+}
+
+/** % de ejecución de una cantidad sobre la ofertada (0 si no hay ofertada). */
+export function cantidadToPct(ofertada: number, cantidad: number): number {
+  return ofertada > 0 ? round2((cantidad / ofertada) * 100) : 0;
 }
 
 /* ---- Edición en modo "esta certificación" --------------------------------

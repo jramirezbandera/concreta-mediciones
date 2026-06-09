@@ -30,7 +30,8 @@ describe('App shell (F0)', () => {
     expect(screen.getByText('Fase F3 · Resumen')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Certificaciones' }));
-    expect(screen.getByRole('heading', { name: 'Certificaciones' })).toBeInTheDocument();
+    // F4.1: la pestaña Certificaciones muestra la vista real (no el placeholder).
+    expect(screen.getByText('Ejecución global')).toBeInTheDocument();
   });
 
   it('el toggle de tema alterna data-theme', () => {

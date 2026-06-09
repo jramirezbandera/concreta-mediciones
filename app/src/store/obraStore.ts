@@ -53,6 +53,13 @@ function nextPartidaId(): string {
   return `p·${partidaSeq}`;
 }
 
+/** Secuencia para ids de línea de medición (F4). `m·N` no colisiona con el seed (`<pid>-m<n>`). */
+let medLineSeq = 0;
+function nextMedLineId(): string {
+  medLineSeq += 1;
+  return `m·${medLineSeq}`;
+}
+
 /**
  * Renumera `pos` de una lista de partidas EN SITIO (Immer-friendly), reusando la
  * regla pura de `core/numbering`. Sólo escribe `pos` sobre los drafts; descarta
@@ -106,6 +113,15 @@ export interface ObraState extends ObraData {
    * `core/certificacion.estaCertToOrigen` = round2(max(0, anterior + v)).
    */
   onCertEdit: (partidaId: string, value: number, mode: CertMode) => void;
+  /**
+   * Crea una certificación nueva al final y la deja en curso. Hereda de la
+   * ÚLTIMA cronológica (no de la actual): `data` y `lineQty` a-origen (la
+   * ejecución es acumulativa), la `retencion` y el periodo en blanco. Así "esta
+   * certificación" arranca en 0 sobre lo ya certificado (eng-review F4 / Codex #6/#7).
+   */
+  addCert: () => void;
+  /** Edita el periodo (texto) o la retención (0..1, se clampa) de la cert en curso. */
+  setCertField: (field: 'period' | 'retencion', value: string | number) => void;
 
   /* ---- acciones F2 (edición in-situ de partidas) ---- */
   /** Edita un campo de texto de la partida (title/ud/code/desc) y quita el chip BASE. */
@@ -295,6 +311,41 @@ export const useObraStore = create<ObraState>()(
           }
         }),
 
+      addCert: () =>
+        set((s) => {
+          const last = s.certs.at(-1);
+          const num = (last?.num ?? 0) + 1;
+          // Clonado superficial por nivel (no `structuredClone`: los valores son
+          // drafts de Immer y el proxy no es clonable). data es plano; lineQty
+          // tiene un nivel de anidación.
+          const data: Record<string, number> = { ...(last?.data ?? {}) };
+          let lineQty: Record<string, Record<string, number>> | undefined;
+          if (last?.lineQty) {
+            lineQty = {};
+            for (const pid in last.lineQty) lineQty[pid] = { ...last.lineQty[pid] };
+          }
+          s.certs.push({
+            id: `c${num}`,
+            num,
+            period: '',
+            retencion: last?.retencion ?? 0,
+            data,
+            lineQty,
+          });
+          s.curCert = s.certs.length - 1;
+        }),
+
+      setCertField: (field, value) =>
+        set((s) => {
+          const cert = s.certs[s.curCert];
+          if (!cert) return;
+          if (field === 'period') {
+            if (typeof value === 'string') cert.period = value;
+          } else if (typeof value === 'number' && Number.isFinite(value)) {
+            cert.retencion = Math.min(1, Math.max(0, value)); // retención ∈ [0,1]
+          }
+        }),
+
       editPartidaField: (chapterId, partidaId, field, value) =>
         set((s) => {
           const p = s.partidas[chapterId]?.find((x) => x.id === partidaId);
@@ -318,7 +369,7 @@ export const useObraStore = create<ObraState>()(
         set((s) => {
           const p = s.partidas[chapterId]?.find((x) => x.id === partidaId);
           if (!p) return;
-          p.med.push({ comment: '', uds: '', largo: '', ancho: '', alto: '' });
+          p.med.push({ id: nextMedLineId(), comment: '', uds: '', largo: '', ancho: '', alto: '' });
           p.fromBase = false;
         }),
 
