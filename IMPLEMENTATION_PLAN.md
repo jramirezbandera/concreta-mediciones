@@ -280,7 +280,7 @@ Cada fase es incremental y deja algo ejecutable. Marca `[ ]` al completar.
 - **Entregable:** módulo `core/` reutilizable + store que expone los mismos números que el prototipo.
 - **Aceptación (tests obligatorios):**
   - `partidaCantidad` con dimensión vacía = factor 1 (p.ej. arena 0/5: `1·14,20 = 14,20`).
-  - PEM con seed = **Σ partidas = 26 196,66 €** (sin `BASE_PEM`; ver §0 decisión 3. La antigua constante 28.420,18 incluía el cubo oculto, ya eliminado).
+  - PEM con seed = **Σ partidas = 26.291,91 €** (sin `BASE_PEM`; ver §0 decisión 3). NOTA: el comentario de `data.js` decía 26.196,66 pero NO cuadraba con sus propios datos (las partidas suman 26.291,91); el motor reproduce la fórmula del prototipo al céntimo sobre los datos reales → la fuente de verdad son los datos, no el comentario. La antigua constante 28.420,18 incluía el cubo oculto, ya eliminado.
   - `descompUnit` se calcula bien (informativo). En el seed la descomposición demo NO suma al precio (p111: descompUnit 9,27 € vs precio 18,42 €) → la **señal de override** salta (`precio ≠ descompUnit`). En una partida construida desde recursos, `precio` = `descompUnit` hasta que se hace override manual.
   - Editar el precio de `mo001` recalcula **todas** las partidas que lo usan; `recursoUsage('mo001') ≥ 4`.
   - Certificación: `estaCert = aOrigen − anterior`; editar en modo "esta cert." guarda `max(0, prev+v)` a origen.
