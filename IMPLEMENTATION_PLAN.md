@@ -29,7 +29,7 @@
 3. **Eliminar `BASE_PEM`.** `PEM = Σ importes de partidas reales`. Sin cubos ocultos. Un capítulo "alzado / a justificar" se modela como una partida normal con precio fijo (el modelo ya lo soporta). Ajustar el test semilla: PEM = Σ partidas, no la constante 28.420,18.
 4. **Persistencia desde M1.** Dexie con autosave y campo `schemaVersion` + ruta de migración desde el día uno (no en F6). Diseñar el shape serializable pronto.
 5. **Sin duplicar fila desktop/móvil.** Un hook/selector calcula los valores derivados de cada fila una vez; `<Row>` (tabla) y `<Card>` (móvil) solo presentan.
-6. **`precio` de partida = override manual, NO autocalculado de la descomposición.** `descompUnit(items)` es informativo (se muestra como "precio descompuesto"); editar `items` no pisa `precio`. Hacer este invariante explícito en el tipo y en los tests.
+6. **Precio de partida = descompuesto por defecto, con OVERRIDE manual señalizado** (revisado 2026-06-09 con el fundador; corrige la versión absoluta anterior). Por defecto el `precio` de una partida ES la suma de su descomposición (`descompUnit`): editar sus recursos **recalcula el precio**, así que coinciden de inicio. El usuario PUEDE escribir el precio a mano → queda fijo (`precioManual = true`) y se muestra una **señal en la justificación** de que el precio ya NO se calcula de los descompuestos sumados (estado entendible). La señal es data-driven: salta cuando `precio ≠ descompUnit`. Partidas importadas/semilla traen el precio de la fuente (autoridad). El `precio` guardado es siempre el **efectivo** (lo usa `partidaImporte`); el store lo mantiene sincronizado con `descompUnit` mientras no haya override.
 7. **Tests (refinado en `/plan-ceo-review` 2026-06-08, D6):** **100% de ramas en la matemática de dinero/cert** (`money`, `medicion`, `banco`, `totales`, `certificacion`) + **fixtures `.bc3` reales** + tests de regresión; cobertura sensata (no obligada al 100%) en el pegamento (`numbering`, `seed`, UI). E2E clave: recalc vivo, recurso compartido, mover/borrar, toggle cert, **gate de import BC3 = PEM al céntimo sobre .bc3 reales** (NO round-trip: el export es fase posterior, ver decisión 1), dogfood. Escritos junto al código, no diferidos.
 8. **Versiones:** usar Vite y React **actuales** (Vite 7, React 19) en vez de pinear majors viejos sin motivo. Si F0 lista Storybook en aceptación, debe ser también una tarea (o quitarlo del criterio).
 
@@ -281,7 +281,7 @@ Cada fase es incremental y deja algo ejecutable. Marca `[ ]` al completar.
 - **Aceptación (tests obligatorios):**
   - `partidaCantidad` con dimensión vacía = factor 1 (p.ej. arena 0/5: `1·14,20 = 14,20`).
   - PEM con seed = **Σ partidas = 26 196,66 €** (sin `BASE_PEM`; ver §0 decisión 3. La antigua constante 28.420,18 incluía el cubo oculto, ya eliminado).
-  - `descompUnit` de la partida `p111` (excavación zanjas) coincide con su `precio` mostrado.
+  - `descompUnit` se calcula bien (informativo). En el seed la descomposición demo NO suma al precio (p111: descompUnit 9,27 € vs precio 18,42 €) → la **señal de override** salta (`precio ≠ descompUnit`). En una partida construida desde recursos, `precio` = `descompUnit` hasta que se hace override manual.
   - Editar el precio de `mo001` recalcula **todas** las partidas que lo usan; `recursoUsage('mo001') ≥ 4`.
   - Certificación: `estaCert = aOrigen − anterior`; editar en modo "esta cert." guarda `max(0, prev+v)` a origen.
   - `liquido` de la cert. nº actual reproduce el valor del prototipo con las mismas tasas.
@@ -383,7 +383,7 @@ Sintetizadas de los hallazgos de `/plan-eng-review` + Codex. P1 bloquea; P2 mism
 - [ ] **T5 (P2, human ~4h / CC ~30min)** — persistence — Dexie + `schemaVersion` + autosave desde M1 (no F6).
 - [ ] **T6 (P2, human ~4h / CC ~30min)** — components — Hook de datos de fila compartido; `Row`/`Card` solo presentan (DRY).
 - [ ] **T7 (P1, human ~1d / CC ~1h)** — core/__tests__ — Tests core 100% ramas + E2E clave (recalc, recurso compartido, mover/borrar, toggle cert, gate BC3, dogfood).
-- [ ] **T8 (P2, human ~1h / CC ~10min)** — core/types — Invariante explícito `precio = override manual` (no autocalculado de items).
+- [ ] **T8 (P2, human ~1h / CC ~10min)** — core/types + store + F2 — Modelo de precio descompuesto/override: `precioManual` en `Partida`; el store recalcula `precio = descompUnit` al editar recursos en partidas no-override; editar el precio a mano fija `precioManual=true`; **señal UI** en la justificación cuando `precio ≠ descompUnit` (estado override entendible). Helpers en `core/banco` (`precioDescompuesto`, `precioCuadraDescompuesto`).
 - [ ] **T9 (P3, human ~30min / CC ~5min)** — F0 — Storybook como tarea o fuera del criterio; usar Vite 7 / React 19.
 
 ## Estados de UI de M1 (revisión de diseño 2026-06-08)

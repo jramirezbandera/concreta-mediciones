@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { fmtEur, fmtNum, parseEsNumber, round2 } from './money';
+import {
+  fmtCents,
+  fmtEur,
+  fmtNum,
+  importeCents,
+  parseEsNumber,
+  pctCents,
+  round2,
+  scaleCents,
+  sumCents,
+  toCents,
+  toEur,
+} from './money';
 
 describe('round2', () => {
   it('redondea a 2 decimales', () => {
@@ -62,5 +74,42 @@ describe('parseEsNumber', () => {
     expect(parseEsNumber('')).toBeNull();
     expect(parseEsNumber('abc')).toBeNull();
     expect(parseEsNumber('-')).toBeNull();
+  });
+});
+
+describe('dinero en céntimos', () => {
+  it('toCents/toEur ida y vuelta', () => {
+    expect(toCents(18.42)).toBe(1842);
+    expect(toCents(0)).toBe(0);
+    expect(toEur(1842)).toBe(18.42);
+    expect(toEur(toCents(28420.18))).toBe(28420.18);
+  });
+
+  it('sumCents acumula sin error de float (0,1 + 0,2 = 0,3)', () => {
+    // El clásico: en float 0.1 + 0.2 = 0.30000000000000004.
+    expect(toEur(sumCents([toCents(0.1), toCents(0.2)]))).toBe(0.3);
+    expect(sumCents([1842, 2418, 1275])).toBe(5535);
+    expect(sumCents([])).toBe(0);
+  });
+
+  it('importeCents = round2(cantidad · precio) en céntimos', () => {
+    expect(importeCents(14.2, 11.4)).toBe(16188); // 161,88 €
+    expect(importeCents(573.95, 18.42)).toBe(1057216); // 10.572,16 €
+    expect(importeCents(0, 99)).toBe(0);
+  });
+
+  it('scaleCents = round2(importe · factor) — PEC = PEM · (1+gg+bi)', () => {
+    expect(scaleCents(toCents(26196.66), 1.19)).toBe(toCents(31174.03)); // round2(31174.0254)
+    expect(scaleCents(toCents(100), 1.13)).toBe(11300); // coefK +13%
+  });
+
+  it('pctCents = round2(importe · pct/100) — %CI, retención', () => {
+    expect(pctCents(toCents(1000), 5)).toBe(toCents(50)); // 5% de 1000
+    expect(pctCents(toCents(9), 3)).toBe(toCents(0.27)); // 3% de 9 = 0,27
+  });
+
+  it('fmtCents formatea en euros español', () => {
+    expect(fmtCents(2842018)).toBe('28.420,18 €');
+    expect(fmtCents(0)).toBe('0,00 €');
   });
 });

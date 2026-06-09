@@ -47,3 +47,55 @@ export function parseEsNumber(input: string): number | null {
   const n = Number.parseFloat(norm);
   return Number.isNaN(n) ? null : n;
 }
+
+/* ===========================================================================
+   Dinero en céntimos enteros (§0 decisión 2).
+   ---------------------------------------------------------------------------
+   Los IMPORTES se modelan como enteros de céntimos: la ACUMULACIÓN (Σ) es
+   exacta (sin error de float), mientras que cada paso se redondea igual que el
+   prototipo (`round2`) al convertir a céntimos. Las CANTIDADES (medición,
+   rendimiento, ejecutada) y los PRECIOS unitarios siguen en euros/decimales:
+   son entradas de 2 decimales; el error de float sólo mordía en la suma, y
+   eso es lo que arregla trabajar en céntimos. Cada función es idéntica al
+   `round2(...)` del prototipo, sólo que devuelve/acumula céntimos.
+   =========================================================================== */
+
+/** Importe en céntimos enteros. */
+export type Cents = number;
+
+/** Euros (float) → céntimos enteros, con la regla `round2` del prototipo. */
+export function toCents(eur: number): Cents {
+  return Math.round((eur + Number.EPSILON) * 100);
+}
+
+/** Céntimos → euros. */
+export function toEur(c: Cents): number {
+  return c / 100;
+}
+
+/** Suma exacta de céntimos (sin error de representación). */
+export function sumCents(xs: Cents[]): Cents {
+  let s = 0;
+  for (const x of xs) s += x;
+  return s;
+}
+
+/** `round2(cantidad · precioEur)` expresado en céntimos. Idéntico al prototipo. */
+export function importeCents(cantidad: number, precioEur: number): Cents {
+  return toCents(round2(cantidad * precioEur));
+}
+
+/** `round2(importeEur · factor)` en céntimos (p.ej. coefK, 1 + gg + bi). */
+export function scaleCents(c: Cents, factor: number): Cents {
+  return toCents(round2(toEur(c) * factor));
+}
+
+/** `round2(importeEur · pct / 100)` en céntimos (p.ej. %CI, retención). */
+export function pctCents(c: Cents, pct: number): Cents {
+  return toCents(round2((toEur(c) * pct) / 100));
+}
+
+/** Formato español en euros desde un importe en céntimos. */
+export function fmtCents(c: Cents, dec = 2): string {
+  return fmtEur(toEur(c), dec);
+}
