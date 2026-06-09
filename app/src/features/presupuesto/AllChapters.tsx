@@ -1,3 +1,4 @@
+import { Icon } from '../../components';
 import { fmtCents, fmtNum, type Cents } from '../../core/money';
 import { selectChapterTotals, selectPem, selectTotalConIva, useObraStore } from '../../store';
 import { PartidasTable } from './PartidasTable';
@@ -14,6 +15,7 @@ export function AllChapters({ compact }: { compact: boolean }) {
   const chapterTotals = useObraStore(selectChapterTotals);
   const pem = useObraStore(selectPem);
   const total = useObraStore(selectTotalConIva);
+  const addPartida = useObraStore((s) => s.addPartida);
 
   return (
     <>
@@ -56,7 +58,15 @@ export function AllChapters({ compact }: { compact: boolean }) {
             {ps.length > 0 ? (
               <PartidasTable chapter={ch} partidas={ps} chapterTotal={imp} sticky={false} />
             ) : (
-              <div className={styles.bandEmpty}>Capítulo sin partidas.</div>
+              <div className={styles.bandEmpty}>
+                <button
+                  type="button"
+                  className={`tcol add-partida ${styles.addBtn}`}
+                  onClick={() => addPartida(ch.id, null)}
+                >
+                  <Icon name="plus" size={13} /> Añadir primera partida
+                </button>
+              </div>
             )}
           </section>
         );

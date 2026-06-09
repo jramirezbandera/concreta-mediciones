@@ -85,6 +85,21 @@
   justify-content: space-between;
   padding: 16px 14px 8px;
 }
+.headAdd {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-disabled);
+}
+.headAdd:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
 
 /* ---------- nav scrollable ----------------------------------------------- */
 .nav {
@@ -167,6 +182,36 @@
   font-weight: 600;
   color: var(--text-primary);
 }
+.chapActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.chapAction {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-disabled);
+  opacity: 0;
+}
+.chap:hover .chapAction,
+.chap.on .chapAction {
+  opacity: 1;
+}
+.chapAction:hover {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+}
+.chapDel:hover {
+  background: color-mix(in srgb, var(--state-warn) 16%, transparent);
+  color: var(--state-warn);
+}
 .chapK {
   font-size: 11px;
   font-weight: 500;
@@ -240,6 +285,34 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 12.5px;
+}
+.subDel {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-disabled);
+  flex-shrink: 0;
+  opacity: 0;
+}
+.subRow:hover .subDel,
+.subRow.on .subDel {
+  opacity: 1;
+}
+.subDel:hover {
+  background: color-mix(in srgb, var(--state-warn) 16%, transparent);
+  color: var(--state-warn);
+}
+.createSub {
+  margin-left: 26px;
+  margin-top: 2px;
+}
+.createChapter {
+  margin-top: 4px;
 }
 
 /* ---------- pie con tarjeta Resumen -------------------------------------- */

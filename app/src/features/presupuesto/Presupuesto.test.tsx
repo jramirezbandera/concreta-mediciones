@@ -42,4 +42,20 @@ describe('PresupuestoView (F2.1 lectura + F2.2 detalle)', () => {
     // p111 es override en el seed (precio 18,42 ≠ descompuesto 9,27) → señal.
     expect(screen.getByText(/fijado a mano/)).toBeInTheDocument();
   });
+
+  it('"Añadir partida" inserta una fila en el subcapítulo (F2.4)', () => {
+    render(<PresupuestoView compact={false} />);
+    const before = useObraStore.getState().partidas['01']!.length;
+    fireEvent.click(screen.getAllByText(/Añadir partida/)[0]!);
+    expect(useObraStore.getState().partidas['01']!).toHaveLength(before + 1);
+  });
+
+  it('el menú ⋮ mueve la partida a otro capítulo (F2.4)', () => {
+    render(<PresupuestoView compact={false} />);
+    fireEvent.click(screen.getAllByTitle('Más acciones')[0]!); // menú de p111
+    fireEvent.click(screen.getByText('Cimentación')); // capítulo 02
+    const s = useObraStore.getState();
+    expect(s.partidas['01']!.some((p) => p.id === 'p111')).toBe(false);
+    expect(s.partidas['02']!.some((p) => p.id === 'p111')).toBe(true);
+  });
 });

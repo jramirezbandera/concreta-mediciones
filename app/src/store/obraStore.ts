@@ -14,10 +14,11 @@
    =========================================================================== */
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import type { Banco, Cert, Chapter, MedLine, Obra, PartidasMap, Rates } from '../core/types';
+import type { Banco, Cert, Chapter, MedLine, Obra, Partida, PartidasMap, Rates } from '../core/types';
 import { buildRecursos, precioCuadraDescompuesto, precioSegunModo } from '../core/banco';
 import { estaCertToOrigen, prevDataOf } from '../core/certificacion';
 import { round2 } from '../core/money';
+import { renumberChapter } from '../core/numbering';
 import { CHAPTERS, DEFAULT_OBRA, DEFAULT_RATES, PARTIDAS, makeCertsInit } from '../core/seed';
 import type { View } from '../layout/types';
 
@@ -43,6 +44,23 @@ let recursoSeq = 0;
 function nextRecursoCode(): string {
   recursoSeq += 1;
   return `r·${recursoSeq}`;
+}
+
+/** Secuencia para ids de partida nuevas (F2.4). `p·N` no colisiona con el seed (p111…). */
+let partidaSeq = 0;
+function nextPartidaId(): string {
+  partidaSeq += 1;
+  return `p·${partidaSeq}`;
+}
+
+/**
+ * Renumera `pos` de una lista de partidas EN SITIO (Immer-friendly), reusando la
+ * regla pura de `core/numbering`. Sólo escribe `pos` sobre los drafts; descarta
+ * los objetos intermedios → no contamina el árbol de Immer con copias.
+ */
+function renumberInPlace(ch: Chapter | undefined, list: Partida[]): void {
+  const fresh = renumberChapter(ch, list);
+  for (let i = 0; i < list.length; i++) list[i]!.pos = fresh[i]!.pos;
 }
 
 /** Estado de dominio de la obra (lo que persistiría en F6). Serializable. */
@@ -135,6 +153,22 @@ export interface ObraState extends ObraData {
   addItem: (chapterId: string, partidaId: string) => void;
   /** Elimina un concepto de la justificación y resincroniza el precio. */
   deleteItem: (chapterId: string, partidaId: string, itemIndex: number) => void;
+
+  /* ---- acciones F2.4 (CRUD estructural + renumeración) ---- */
+  /** Añade un capítulo (código = max+1) y lo deja activo en la vista Presupuesto. */
+  addChapter: (title: string) => void;
+  /** Añade un subcapítulo al capítulo (código `<cap>.<n>`) y despliega el padre. */
+  addSubchapter: (chapterId: string, title: string) => void;
+  /** Elimina un capítulo y sus partidas; si estaba activo, salta a "Toda la obra". */
+  deleteChapter: (chapterId: string) => void;
+  /** Elimina un subcapítulo; sus partidas suben al capítulo (renumeradas). */
+  deleteSubchapter: (chapterId: string, subId: string) => void;
+  /** Añade una partida vacía al capítulo/subcapítulo, con su `pos` correlativa. */
+  addPartida: (chapterId: string, subId: string | null) => void;
+  /** Elimina una partida y renumera su capítulo. */
+  deletePartida: (chapterId: string, partidaId: string) => void;
+  /** Mueve una partida a otro capítulo/subcapítulo y renumera origen y destino. */
+  movePartida: (fromChapterId: string, partidaId: string, toChapterId: string, toSubId: string | null) => void;
 
   /** Restaura el estado sembrado (datos + UI). Útil en tests y para "nueva obra". */
   reset: () => void;
@@ -353,6 +387,116 @@ export const useObraStore = create<ObraState>()(
           p.items.splice(itemIndex, 1);
           p.fromBase = false;
           p.precio = precioSegunModo(p, s.recursos);
+        }),
+
+      addChapter: (title) =>
+        set((s) => {
+          const num = s.chapters.reduce((m, c) => Math.max(m, parseInt(c.code, 10) || 0), 0) + 1;
+          const code = String(num);
+          const id = code.padStart(2, '0');
+          s.chapters.push({ id, code, title, children: [] });
+          s.partidas[id] = [];
+          s.view = 'presupuesto';
+          s.active = id;
+        }),
+
+      addSubchapter: (chapterId, title) =>
+        set((s) => {
+          const c = s.chapters.find((ch) => ch.id === chapterId);
+          if (!c) return;
+          if (!c.children) c.children = [];
+          const n =
+            c.children.reduce(
+              (m, sub) => Math.max(m, parseInt(String(sub.code).split('.')[1] ?? '', 10) || 0),
+              0,
+            ) + 1;
+          c.children.push({
+            id: `${c.id}.${String(n).padStart(2, '0')}`,
+            code: `${c.code}.${n}`,
+            title,
+          });
+          s.expanded[chapterId] = true;
+        }),
+
+      deleteChapter: (chapterId) =>
+        set((s) => {
+          const i = s.chapters.findIndex((c) => c.id === chapterId);
+          if (i < 0) return;
+          const ch = s.chapters[i]!;
+          const affectsActive =
+            s.active === chapterId || !!ch.children?.some((sc) => sc.id === s.active);
+          s.chapters.splice(i, 1);
+          delete s.partidas[chapterId];
+          if (affectsActive) s.active = ALL;
+        }),
+
+      deleteSubchapter: (chapterId, subId) =>
+        set((s) => {
+          const ch = s.chapters.find((c) => c.id === chapterId);
+          const si = ch?.children?.findIndex((sc) => sc.id === subId) ?? -1;
+          if (!ch?.children || si < 0) return;
+          ch.children.splice(si, 1);
+          // Las partidas del sub borrado suben al capítulo (sub = undefined).
+          const list = s.partidas[chapterId] ?? [];
+          for (const p of list) if (p.sub === subId) p.sub = undefined;
+          renumberInPlace(ch, list);
+          if (s.active === subId) s.active = chapterId;
+        }),
+
+      addPartida: (chapterId, subId) =>
+        set((s) => {
+          const ch = s.chapters.find((c) => c.id === chapterId);
+          if (!ch) return;
+          const list = (s.partidas[chapterId] ??= []);
+          const sub = subId && ch.children ? ch.children.find((x) => x.id === subId) : undefined;
+          const base = sub ? sub.code : ch.code;
+          const sameSub = list.filter((p) => (subId ? p.sub === subId : !p.sub)).length;
+          list.push({
+            id: nextPartidaId(),
+            sub: subId || undefined,
+            pos: `${base}.${sameSub + 1}`,
+            code: '——',
+            title: '',
+            ud: 'ud',
+            precio: 0,
+            desc: '',
+            med: [],
+            items: [],
+          });
+        }),
+
+      deletePartida: (chapterId, partidaId) =>
+        set((s) => {
+          const list = s.partidas[chapterId];
+          const idx = list?.findIndex((p) => p.id === partidaId) ?? -1;
+          if (!list || idx < 0) return;
+          list.splice(idx, 1);
+          renumberInPlace(
+            s.chapters.find((c) => c.id === chapterId),
+            list,
+          );
+        }),
+
+      movePartida: (fromChapterId, partidaId, toChapterId, toSubId) =>
+        set((s) => {
+          const fromList = s.partidas[fromChapterId];
+          const idx = fromList?.findIndex((p) => p.id === partidaId) ?? -1;
+          if (!fromList || idx < 0) return;
+          const [moving] = fromList.splice(idx, 1);
+          if (!moving) return;
+          moving.sub = toSubId || undefined;
+          moving.fromBase = false;
+          const toList = (s.partidas[toChapterId] ??= []);
+          toList.push(moving);
+          renumberInPlace(
+            s.chapters.find((c) => c.id === fromChapterId),
+            fromList,
+          );
+          renumberInPlace(
+            s.chapters.find((c) => c.id === toChapterId),
+            toList,
+          );
+          s.expanded[toChapterId] = true;
         }),
 
       reset: () =>

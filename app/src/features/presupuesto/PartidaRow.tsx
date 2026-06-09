@@ -5,6 +5,7 @@ import type { Partida } from '../../core/types';
 import { usePartidaRow } from '../../hooks/usePartidaRow';
 import { useObraStore } from '../../store';
 import { DetailPanel } from './DetailPanel';
+import { PartidaMenu } from './PartidaMenu';
 import styles from './Presupuesto.module.css';
 
 /** Chip "BASE": partida copiada de una base de precios hasta que se edita. */
@@ -92,7 +93,9 @@ export function PartidaRow({
             <div className={styles.weightFill} style={{ width: `${Math.max(3, pct)}%` }} />
           </div>
         </td>
-        <td className={styles.cMenu} />
+        <td className={styles.cMenu} onClick={stop}>
+          <PartidaMenu p={p} chapterId={chapterId} />
+        </td>
       </tr>
       {expanded && (
         <tr>

@@ -7,8 +7,9 @@ import { ChapterHeader } from './ChapterHeader';
 import { PartidasTable } from './PartidasTable';
 import styles from './Presupuesto.module.css';
 
-/** Estado vacío de un capítulo sin partidas (lectura; el alta llega en F2.4). */
+/** Estado vacío de un capítulo sin partidas, con alta directa de la primera. */
 function EmptyChapter({ chapter }: { chapter: Chapter }) {
+  const addPartida = useObraStore((s) => s.addPartida);
   return (
     <div className={`dot-grid ${styles.empty}`}>
       <div className={styles.emptyCard}>
@@ -17,8 +18,12 @@ function EmptyChapter({ chapter }: { chapter: Chapter }) {
         </div>
         <div className={styles.emptyTitle}>Capítulo sin partidas</div>
         <p className={styles.emptyText}>
-          «{chapter.title}» aún no tiene partidas medidas. El alta de partidas llega en F2.4.
+          «{chapter.title}» aún no tiene partidas medidas. Añade la primera o crea un subcapítulo
+          desde el árbol.
         </p>
+        <button type="button" className={styles.emptyAdd} onClick={() => addPartida(chapter.id, null)}>
+          <Icon name="plus" size={15} /> Añadir partida
+        </button>
       </div>
     </div>
   );

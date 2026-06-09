@@ -1,4 +1,5 @@
-import { Bar, Icon, IvaSelect } from '../components';
+import { useState } from 'react';
+import { Bar, Icon, InlineCreate, IvaSelect } from '../components';
 import { fmtCents, fmtNum, toEur, type Cents } from '../core/money';
 import type { Chapter, SubChapter } from '../core/types';
 import {
@@ -94,18 +95,34 @@ function ResumenCard() {
 /* ---------- Fila de subcapítulo ------------------------------------------- */
 function SubRow({
   sub,
+  chId,
   active,
   onSelect,
+  onDelete,
 }: {
   sub: SubChapter;
+  chId: string;
   active: string;
   onSelect: (id: string) => void;
+  onDelete: (chId: string, subId: string) => void;
 }) {
   const on = active === sub.id;
   return (
     <button type="button" className={`tcol ${styles.subRow} ${on ? styles.on : ''}`} onClick={() => onSelect(sub.id)}>
       <span className={`mono ${styles.subCode}`}>{sub.code}</span>
       <span className={styles.subTitle}>{sub.title}</span>
+      <span
+        role="button"
+        tabIndex={-1}
+        aria-label="Eliminar subcapítulo"
+        className={`tcol ${styles.subDel}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(chId, sub.id);
+        }}
+      >
+        <Icon name="trash" size={12} />
+      </span>
     </button>
   );
 }
@@ -119,6 +136,8 @@ function ChapterCard({
   pct,
   onSelect,
   onToggle,
+  onAddSub,
+  onDelete,
 }: {
   ch: Chapter;
   active: string;
@@ -127,6 +146,8 @@ function ChapterCard({
   pct: number;
   onSelect: (id: string) => void;
   onToggle: (id: string) => void;
+  onAddSub: (id: string) => void;
+  onDelete: (id: string) => void;
 }) {
   const isActive = active === ch.id || !!ch.children?.some((c) => c.id === active);
   const hasChildren = !!ch.children?.length;
@@ -155,6 +176,32 @@ function ChapterCard({
         )}
         <span className={`mono ${styles.chapCode}`}>{ch.code}</span>
         <span className={styles.chapTitle}>{ch.title}</span>
+        <span className={styles.chapActions}>
+          <span
+            role="button"
+            tabIndex={-1}
+            aria-label="Añadir subcapítulo"
+            className={`tcol ${styles.chapAction}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddSub(ch.id);
+            }}
+          >
+            <Icon name="plus" size={13} />
+          </span>
+          <span
+            role="button"
+            tabIndex={-1}
+            aria-label="Eliminar capítulo"
+            className={`tcol ${styles.chapAction} ${styles.chapDel}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(ch.id);
+            }}
+          >
+            <Icon name="trash" size={13} />
+          </span>
+        </span>
         {importe > 0 && <span className={`mono ${styles.chapK}`}>{k(importe)}</span>}
       </div>
       {importe > 0 && (
@@ -170,10 +217,10 @@ function ChapterCard({
 }
 
 /**
- * Sidebar de capítulos (F2.1): "Toda la obra", árbol de capítulos/subcapítulos
- * con importe `{k}` y barra de % PEM, y la tarjeta Resumen al pie. Suscrito al
- * store (navegación con `setActive`, despliegue con `toggleExpanded`). El alta y
- * borrado de capítulos llega en F2.4.
+ * Sidebar de capítulos (F2.1 + F2.4): "Toda la obra", árbol de capítulos/
+ * subcapítulos con importe `{k}` y barra de % PEM, alta inline de capítulos y
+ * subcapítulos, papelera con confirmación, y la tarjeta Resumen al pie. Suscrito
+ * al store (navegación, despliegue y CRUD estructural).
  */
 export function Sidebar({ drawer = false, onAfterSelect }: SidebarProps) {
   const active = useObraStore((s) => s.active);
@@ -184,11 +231,32 @@ export function Sidebar({ drawer = false, onAfterSelect }: SidebarProps) {
   const setActive = useObraStore((s) => s.setActive);
   const setView = useObraStore((s) => s.setView);
   const toggleExpanded = useObraStore((s) => s.toggleExpanded);
+  const addChapter = useObraStore((s) => s.addChapter);
+  const addSubchapter = useObraStore((s) => s.addSubchapter);
+  const deleteChapter = useObraStore((s) => s.deleteChapter);
+  const deleteSubchapter = useObraStore((s) => s.deleteSubchapter);
+
+  const [creatingChapter, setCreatingChapter] = useState(false);
+  const [creatingSubFor, setCreatingSubFor] = useState<string | null>(null);
 
   const select = (id: string) => {
     setActive(id);
     setView('presupuesto');
     onAfterSelect?.();
+  };
+  const onAddSub = (id: string) => {
+    toggleExpanded(id, true);
+    setCreatingSubFor(id);
+  };
+  const onDeleteChapter = (id: string) => {
+    const ch = chapters.find((c) => c.id === id);
+    if (window.confirm(`¿Eliminar el capítulo «${ch?.title}» y todas sus partidas?`))
+      deleteChapter(id);
+  };
+  const onDeleteSub = (chId: string, subId: string) => {
+    const sub = chapters.find((c) => c.id === chId)?.children?.find((s) => s.id === subId);
+    if (window.confirm(`¿Eliminar el subcapítulo «${sub?.title}»? Sus partidas pasan al capítulo.`))
+      deleteSubchapter(chId, subId);
   };
 
   return (
@@ -212,6 +280,15 @@ export function Sidebar({ drawer = false, onAfterSelect }: SidebarProps) {
 
       <div className={styles.head}>
         <span className="sec-head">Capítulos</span>
+        <button
+          type="button"
+          className={styles.headAdd}
+          title="Añadir capítulo"
+          aria-label="Añadir capítulo"
+          onClick={() => setCreatingChapter(true)}
+        >
+          <Icon name="plus" size={15} />
+        </button>
       </div>
 
       <nav className={`scroll-thin ${styles.nav}`}>
@@ -225,16 +302,49 @@ export function Sidebar({ drawer = false, onAfterSelect }: SidebarProps) {
               pct={pem ? ((chapterTotals[ch.id] ?? 0) / pem) * 100 : 0}
               onSelect={select}
               onToggle={toggleExpanded}
+              onAddSub={onAddSub}
+              onDelete={onDeleteChapter}
             />
             {ch.children && expanded[ch.id] && (
               <div className={styles.subList}>
                 {ch.children.map((sub) => (
-                  <SubRow key={sub.id} sub={sub} active={active} onSelect={select} />
+                  <SubRow
+                    key={sub.id}
+                    sub={sub}
+                    chId={ch.id}
+                    active={active}
+                    onSelect={select}
+                    onDelete={onDeleteSub}
+                  />
                 ))}
+              </div>
+            )}
+            {creatingSubFor === ch.id && (
+              <div className={styles.createSub}>
+                <InlineCreate
+                  placeholder="Nombre del subcapítulo…"
+                  onCommit={(t) => {
+                    addSubchapter(ch.id, t);
+                    setCreatingSubFor(null);
+                  }}
+                  onCancel={() => setCreatingSubFor(null)}
+                />
               </div>
             )}
           </div>
         ))}
+        {creatingChapter && (
+          <div className={styles.createChapter}>
+            <InlineCreate
+              placeholder="Nombre del capítulo…"
+              onCommit={(t) => {
+                addChapter(t);
+                setCreatingChapter(false);
+              }}
+              onCancel={() => setCreatingChapter(false)}
+            />
+          </div>
+        )}
       </nav>
 
       <div className={styles.footer}>

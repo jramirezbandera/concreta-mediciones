@@ -1,4 +1,5 @@
 import { Fragment, useMemo } from 'react';
+import { Icon } from '../../components';
 import { partidaImporte } from '../../core/medicion';
 import { fmtNum, sumCents, toEur, type Cents } from '../../core/money';
 import type { Chapter, Partida, SubChapter } from '../../core/types';
@@ -56,6 +57,7 @@ export function PartidasTable({
   sticky?: boolean;
 }) {
   const coefK = useObraStore((s) => s.rates.coefK);
+  const addPartida = useObraStore((s) => s.addPartida);
   const groups = useMemo(() => groupBySub(chapter, partidas), [chapter, partidas]);
   const subTotal = (items: Partida[]): Cents => sumCents(items.map((p) => partidaImporte(p, coefK)));
 
@@ -80,6 +82,17 @@ export function PartidasTable({
               {g.items.map((p) => (
                 <PartidaRow key={p.id} p={p} chapterId={chapter.id} chapterTotal={chapterTotal} />
               ))}
+              <tr className={styles.addRow}>
+                <td colSpan={7}>
+                  <button
+                    type="button"
+                    className={`tcol add-partida ${styles.addBtn}`}
+                    onClick={() => addPartida(chapter.id, g.sub?.id ?? null)}
+                  >
+                    <Icon name="plus" size={13} /> Añadir partida{g.sub ? ` a ${g.sub.code}` : ''}
+                  </button>
+                </td>
+              </tr>
             </Fragment>
           ))}
         </tbody>

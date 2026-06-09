@@ -359,6 +359,88 @@ describe('acciones F2.3 (banco compartido / justificación, T9)', () => {
   });
 });
 
+describe('acciones F2.4 (CRUD estructural + renumeración)', () => {
+  const ch01 = () => state().partidas['01']!;
+  const findP = (id: string) => allPartidas().find((p) => p.id === id);
+
+  it('addChapter: código max+1, id con padding, queda activo en Presupuesto', () => {
+    state().setView('resumen');
+    state().addChapter('Acabados');
+    const s = state();
+    expect(s.chapters).toHaveLength(9);
+    const nuevo = s.chapters.at(-1)!;
+    expect(nuevo.code).toBe('9');
+    expect(nuevo.id).toBe('09');
+    expect(s.partidas['09']).toEqual([]);
+    expect(s.active).toBe('09');
+    expect(s.view).toBe('presupuesto');
+  });
+
+  it('addSubchapter: código <cap>.<n> y despliega el padre', () => {
+    state().addSubchapter('02', 'Losas'); // cap 02 no tenía subcapítulos
+    const c2 = state().chapters.find((c) => c.id === '02')!;
+    expect(c2.children).toHaveLength(1);
+    expect(c2.children![0]).toMatchObject({ id: '02.01', code: '2.1', title: 'Losas' });
+    expect(state().expanded['02']).toBe(true);
+    // en un capítulo con subs existentes, sigue la serie (01.01..01.03 → 1.4).
+    state().addSubchapter('01', 'Entibaciones');
+    const c1 = state().chapters.find((c) => c.id === '01')!;
+    expect(c1.children!.at(-1)).toMatchObject({ id: '01.04', code: '1.4' });
+  });
+
+  it('addPartida: pos correlativa, en capítulo vacío y en subcapítulo', () => {
+    state().addPartida('05', null); // capítulo sin partidas
+    expect(state().partidas['05']).toHaveLength(1);
+    expect(state().partidas['05']![0]!.pos).toBe('5.1');
+    state().addPartida('01', '01.01'); // sub con 3 partidas → la 4ª
+    const nueva = ch01().find((p) => p.sub === '01.01' && p.pos === '1.1.4');
+    expect(nueva).toBeDefined();
+  });
+
+  it('deletePartida renumera el resto del capítulo', () => {
+    state().deletePartida('01', 'p111'); // era 1.1.1
+    expect(ch01()).toHaveLength(4);
+    expect(findP('p112')!.pos).toBe('1.1.1'); // sube
+    expect(findP('p113')!.pos).toBe('1.1.2');
+  });
+
+  it('movePartida mueve, renumera origen y destino y conserva el PEM', () => {
+    const pem0 = toEur(selectPem(state()));
+    const ct0 = selectChapterTotals(state());
+    state().movePartida('01', 'p111', '02', null);
+    const s = state();
+    expect(s.partidas['01']!.some((p) => p.id === 'p111')).toBe(false);
+    expect(s.partidas['02']!.some((p) => p.id === 'p111')).toBe(true);
+    expect(findP('p111')!.sub).toBeUndefined();
+    expect(findP('p112')!.pos).toBe('1.1.1'); // origen renumerado
+    expect(s.expanded['02']).toBe(true);
+    // el importe sólo cambia de capítulo: el PEM total se conserva.
+    expect(toEur(selectPem(s))).toBe(pem0);
+    expect(selectChapterTotals(s)['01']).toBeLessThan(ct0['01']!);
+    expect(selectChapterTotals(s)['02']).toBeGreaterThan(ct0['02']!);
+  });
+
+  it('deleteChapter borra capítulo + partidas; si estaba activo, salta a "Toda la obra"', () => {
+    state().setActive('01');
+    state().deleteChapter('01');
+    const s = state();
+    expect(s.chapters.some((c) => c.id === '01')).toBe(false);
+    expect(s.partidas['01']).toBeUndefined();
+    expect(s.active).toBe(ALL);
+  });
+
+  it('deleteSubchapter sube las partidas al capítulo (renumeradas) y reubica el activo', () => {
+    state().setActive('01.01');
+    state().deleteSubchapter('01', '01.01');
+    const c1 = state().chapters.find((c) => c.id === '01')!;
+    expect(c1.children!.some((sc) => sc.id === '01.01')).toBe(false);
+    // p111/p112/p113 pierden el sub y renumeran bajo el código del capítulo.
+    expect(findP('p111')!.sub).toBeUndefined();
+    expect(findP('p111')!.pos).toBe('1.1');
+    expect(state().active).toBe('01'); // el sub activo salta a su capítulo
+  });
+});
+
 describe('reset', () => {
   it('restaura datos y UI tras editar', () => {
     const s = state();
