@@ -60,6 +60,12 @@ export interface ObraState extends ObraData {
   /* ---- acciones (F1) ---- */
   setView: (v: View) => void;
   setActive: (id: string) => void;
+  /**
+   * Despliega/colapsa un capítulo en el árbol del sidebar (estado de UI).
+   * `force` fija el estado (true = desplegar) en vez de alternar; lo usa
+   * "añadir subcapítulo" para abrir el padre antes de crear (F2.4).
+   */
+  toggleExpanded: (chId: string, force?: boolean) => void;
   /** Edita una o varias tasas (iva/gg/bi/coefK) sin tocar globals. */
   setRates: (patch: Partial<Rates>) => void;
   /** Selecciona la certificación en curso por índice. */
@@ -154,6 +160,11 @@ export const useObraStore = create<ObraState>()(
       setActive: (id) =>
         set((s) => {
           s.active = id;
+        }),
+
+      toggleExpanded: (chId, force) =>
+        set((s) => {
+          s.expanded[chId] = force ?? !s.expanded[chId];
         }),
 
       setRates: (patch) =>

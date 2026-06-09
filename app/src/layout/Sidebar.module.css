@@ -1,3 +1,8 @@
+/* ===========================================================================
+   layout/Sidebar — árbol de capítulos + tarjeta Resumen (F2).
+   Estructura/tipografía en CSS Modules sobre tokens.css; los estados activos y
+   los valores dinámicos (ancho de barra de composición) van inline/por clase.
+   =========================================================================== */
 .sidebar {
   width: 286px;
   flex-shrink: 0;
@@ -7,71 +12,317 @@
   background: var(--bg-surface);
   border-right: 1px solid var(--border-main);
   overflow: hidden;
+  min-height: 0;
 }
 .sidebar.drawer {
+  width: min(88vw, 308px);
+  border-right: 0;
   box-shadow: var(--shadow-float);
 }
 
-.scroll {
-  flex: 1;
-  overflow-y: auto;
-  padding: 10px 8px;
+/* ---------- "Toda la obra" ----------------------------------------------- */
+.allWrap {
+  padding: 12px 10px 0;
 }
-
 .allRow {
+  position: relative;
+  width: 100%;
   display: flex;
   align-items: center;
-  gap: 9px;
-  width: 100%;
-  padding: 9px 10px;
+  gap: 10px;
+  padding: 9px 12px;
+  text-align: left;
   border-radius: 7px;
-  border: 0;
+  border: 1px solid transparent;
   cursor: pointer;
   background: transparent;
-  color: var(--text-secondary);
   font-family: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  text-align: left;
 }
 .allRow:hover {
   background: var(--bg-elevated);
+}
+.allRow.on {
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.allIcon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+.allRow.on .allIcon {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.allLabel {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
   color: var(--text-primary);
 }
+.allRow.on .allLabel {
+  font-weight: 600;
+  color: var(--accent);
+}
+.allK {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-disabled);
+}
+.allRow.on .allK {
+  color: var(--accent);
+}
 
+/* ---------- cabecera de capítulos ---------------------------------------- */
 .head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 10px 8px;
+  padding: 16px 14px 8px;
 }
 
-.addBtn {
-  display: inline-flex;
+/* ---------- nav scrollable ----------------------------------------------- */
+.nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ---------- tarjeta de capítulo ------------------------------------------ */
+.chap {
+  position: relative;
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  border-radius: 6px;
+  font-family: inherit;
+  background: transparent;
+}
+.chap:hover {
+  background: var(--bg-elevated);
+}
+.chap.on {
+  background: var(--accent-soft);
+}
+.chap.on::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 7px;
+  bottom: 7px;
+  width: 2.5px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+.chapTop {
+  display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
+}
+.chev {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-left: -2px;
   border: 0;
   background: transparent;
-  cursor: not-allowed;
-  font-family: inherit;
-  font-size: 11.5px;
-  font-weight: 500;
+  cursor: pointer;
   color: var(--text-disabled);
-  padding: 2px 4px;
-  border-radius: 5px;
+  flex-shrink: 0;
 }
-
-.empty {
-  padding: 14px 12px;
-  font-size: 12.5px;
-  font-style: italic;
-  color: var(--text-disabled);
-  line-height: 1.5;
+.chevSpacer {
+  width: 16px;
+  flex-shrink: 0;
 }
-
-.footnote {
-  padding: 10px 12px;
-  border-top: 1px solid var(--border-sub);
+.chapCode {
   font-size: 11px;
+  flex-shrink: 0;
   color: var(--text-disabled);
+}
+.chap.on .chapCode {
+  color: var(--accent);
+}
+.chapTitle {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.chap.on .chapTitle {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.chapK {
+  font-size: 11px;
+  font-weight: 500;
+  flex-shrink: 0;
+  color: var(--text-disabled);
+}
+.chap.on .chapK {
+  color: var(--accent);
+}
+.chapBarRow {
+  margin-top: 7px;
+  padding-left: 26px;
+  padding-right: 2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.chapBar {
+  flex: 1;
+}
+.chapPct {
+  font-size: 10px;
+  flex-shrink: 0;
+  color: var(--text-disabled);
+}
+.chap.on .chapPct {
+  color: var(--accent);
+}
+
+/* ---------- subcapítulos -------------------------------------------------- */
+.subList {
+  margin: 2px 0 4px 26px;
+  padding-left: 10px;
+  border-left: 1px solid var(--border-main);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.subRow {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 8px;
+  text-align: left;
+  border: 1px solid transparent;
+  cursor: pointer;
+  border-radius: 5px;
+  font-family: inherit;
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+.subRow:hover {
+  background: var(--bg-elevated);
+}
+.subRow.on {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 500;
+}
+.subCode {
+  font-size: 10.5px;
+  opacity: 0.8;
+}
+.subTitle {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+}
+
+/* ---------- pie con tarjeta Resumen -------------------------------------- */
+.footer {
+  padding: 10px;
+  border-top: 1px solid var(--border-main);
+  background: var(--bg-surface);
+}
+
+.resumen {
+  border-radius: 10px;
+  border: 1px solid var(--border-main);
+  background: var(--bg-elevated);
+  padding: 14px;
+  box-shadow: var(--shadow-panel);
+}
+.resHead {
+  margin-bottom: 11px;
+}
+.compBar {
+  display: flex;
+  width: 100%;
+  height: 9px;
+  border-radius: 999px;
+  overflow: hidden;
+  gap: 2px;
+  margin-bottom: 12px;
+}
+.compSeg {
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+.resRows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.resRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.resLabel {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--text-secondary);
+}
+.resDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.resVal {
+  font-size: 12px;
+  flex-shrink: 0;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.resVal.strong {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.resTotal {
+  margin-top: 13px;
+  padding-top: 13px;
+  border-top: 1px solid var(--border-main);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+.resTotalLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.resTotalVal {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
 }

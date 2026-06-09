@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Icon } from './components/Icon';
+import { PresupuestoView } from './features/presupuesto';
 import { PlaceholderView } from './features/PlaceholderView';
 import { Sandbox } from './features/sandbox/Sandbox';
 import { useBreakpoint } from './hooks/useBreakpoint';
 import { useTheme } from './hooks/useTheme';
 import { BottomTabBar, Drawer, Sidebar, StatusBar, TopBar, type View } from './layout';
+import { selectCounts, selectPec, selectPem, useObraStore } from './store';
 import styles from './App.module.css';
-
-const OBRA_NAME = 'Obra sin título';
 
 /** ¿La ruta actual es el sandbox de primitivas? (`#sandbox`) */
 function isSandboxHash(): boolean {
@@ -18,7 +18,14 @@ export default function App() {
   const { theme, toggleTheme } = useTheme();
   const bp = useBreakpoint();
 
-  const [view, setView] = useState<View>('presupuesto');
+  // La vista activa vive en el store (única fuente; el sandbox sigue local).
+  const view = useObraStore((s) => s.view);
+  const setView = useObraStore((s) => s.setView);
+  const obraName = useObraStore((s) => s.obra.denominacion);
+  const counts = useObraStore(selectCounts);
+  const pem = useObraStore(selectPem);
+  const pec = useObraStore(selectPec);
+
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sandbox, setSandbox] = useState(isSandboxHash);
   const [flash, setFlash] = useState<string | null>(null);
@@ -56,20 +63,17 @@ export default function App() {
     [],
   );
 
-  const changeView = useCallback((v: View) => {
-    setView(v);
-    setDrawerOpen(false);
-  }, []);
+  const changeView = useCallback(
+    (v: View) => {
+      setView(v);
+      setDrawerOpen(false);
+    },
+    [setView],
+  );
 
   if (sandbox) return <Sandbox onBack={leaveSandbox} />;
 
-  const sidebar = (
-    <Sidebar
-      drawer={!bp.isDesktop}
-      onSelectAll={() => setView('presupuesto')}
-      onAfterSelect={() => setDrawerOpen(false)}
-    />
-  );
+  const sidebar = <Sidebar drawer={!bp.isDesktop} onAfterSelect={() => setDrawerOpen(false)} />;
 
   return (
     <div className={styles.app}>
@@ -80,7 +84,7 @@ export default function App() {
         onToggleTheme={toggleTheme}
         bp={bp}
         onMenu={() => setDrawerOpen(true)}
-        obraName={OBRA_NAME}
+        obraName={obraName}
         onToggleRef={() => placeholder('El panel de Referencia')}
         onExport={() => placeholder('La exportación de listados')}
         onObra={() => placeholder('Los datos de la obra')}
@@ -96,14 +100,18 @@ export default function App() {
         )}
 
         <main className={styles.main}>
-          <PlaceholderView view={view} compact={bp.isMobile} />
+          {view === 'presupuesto' ? (
+            <PresupuestoView compact={bp.isMobile} />
+          ) : (
+            <PlaceholderView view={view} compact={bp.isMobile} />
+          )}
         </main>
       </div>
 
       {bp.isMobile ? (
         <BottomTabBar view={view} onView={changeView} />
       ) : (
-        <StatusBar counts={{ chapters: 0, partidas: 0, lineas: 0 }} pem={0} pec={0} onSandbox={goSandbox} />
+        <StatusBar counts={counts} pem={pem} pec={pec} onSandbox={goSandbox} />
       )}
 
       {flash && (

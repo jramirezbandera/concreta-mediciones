@@ -1,4 +1,4 @@
-import { fmtEur } from '../core/money';
+import { fmtCents, type Cents } from '../core/money';
 import styles from './StatusBar.module.css';
 
 export interface Counts {
@@ -9,8 +9,9 @@ export interface Counts {
 
 export interface StatusBarProps {
   counts: Counts;
-  pem: number;
-  pec: number;
+  /** PEM y PEC en céntimos enteros (mismos valores que los selectores). */
+  pem: Cents;
+  pec: Cents;
   /** Acceso al sandbox de primitivas (dev). */
   onSandbox?: () => void;
 }
@@ -42,11 +43,11 @@ export function StatusBar({ counts, pem, pec, onSandbox }: StatusBarProps) {
           </>
         )}
         <span>
-          <span className={styles.label}>PEM</span> {fmtEur(pem)}
+          <span className={styles.label}>PEM</span> {fmtCents(pem)}
         </span>
         <span>·</span>
         <span>
-          <span className={styles.label}>PEC</span> {fmtEur(pec)}
+          <span className={styles.label}>PEC</span> {fmtCents(pec)}
         </span>
       </div>
     </footer>

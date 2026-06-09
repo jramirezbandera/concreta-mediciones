@@ -1,0 +1,89 @@
+import { Fragment, useMemo } from 'react';
+import { partidaImporte } from '../../core/medicion';
+import { fmtNum, sumCents, toEur, type Cents } from '../../core/money';
+import type { Chapter, Partida, SubChapter } from '../../core/types';
+import { useObraStore } from '../../store';
+import { PartidaRow } from './PartidaRow';
+import styles from './Presupuesto.module.css';
+
+interface Group {
+  sub: SubChapter | null;
+  items: Partida[];
+}
+
+/** Agrupa las partidas por subcapítulo; las huérfanas van a un grupo sin sub. */
+function groupBySub(chapter: Chapter, partidas: Partida[]): Group[] {
+  const children = chapter.children ?? [];
+  if (!children.length) return [{ sub: null, items: partidas }];
+  const used: Group[] = children.map((sub) => ({
+    sub,
+    items: partidas.filter((p) => p.sub === sub.id),
+  }));
+  const orphan = partidas.filter((p) => !p.sub || !children.some((s) => s.id === p.sub));
+  if (orphan.length) used.unshift({ sub: null, items: orphan });
+  return used.filter((g) => g.items.length > 0 || g.sub);
+}
+
+/** Fila separadora de subcapítulo con su subtotal. */
+function SubHeaderRow({ sub, importe }: { sub: SubChapter; importe: Cents }) {
+  return (
+    <tr className={styles.subRow}>
+      <td colSpan={5}>
+        <div className={styles.subLabel}>
+          <span className={`mono ${styles.subCode}`}>{sub.code}</span>
+          <span className={`caps ${styles.subTitle}`}>{sub.title}</span>
+        </div>
+      </td>
+      <td className={`mono ${styles.subImporte}`}>{fmtNum(toEur(importe))}</td>
+      <td className={styles.cMenu} />
+    </tr>
+  );
+}
+
+/**
+ * Tabla de partidas de un capítulo (F2.1, lectura): cabecera + grupos por
+ * subcapítulo. La cantidad/importe de cada fila los calcula `usePartidaRow`.
+ */
+export function PartidasTable({
+  chapter,
+  partidas,
+  chapterTotal,
+  sticky = true,
+}: {
+  chapter: Chapter;
+  partidas: Partida[];
+  chapterTotal: Cents;
+  sticky?: boolean;
+}) {
+  const coefK = useObraStore((s) => s.rates.coefK);
+  const groups = useMemo(() => groupBySub(chapter, partidas), [chapter, partidas]);
+  const subTotal = (items: Partida[]): Cents => sumCents(items.map((p) => partidaImporte(p, coefK)));
+
+  return (
+    <div className={styles.tableWrap}>
+      <table className={`ctable ${styles.table}`}>
+        <thead className={sticky ? styles.sticky : undefined}>
+          <tr>
+            <th className={styles.thNum}>Nº · Código</th>
+            <th className={styles.thDesc}>Descripción</th>
+            <th className={styles.thUd}>Ud.</th>
+            <th className={styles.thQty}>Cantidad</th>
+            <th className={styles.thPrice}>Precio</th>
+            <th className={styles.thImporte}>Importe</th>
+            <th className={styles.thMenu} />
+          </tr>
+        </thead>
+        <tbody>
+          {groups.map((g, gi) => (
+            <Fragment key={g.sub?.id ?? `orphan-${gi}`}>
+              {g.sub && <SubHeaderRow sub={g.sub} importe={subTotal(g.items)} />}
+              {g.items.map((p) => (
+                <PartidaRow key={p.id} p={p} chapterTotal={chapterTotal} />
+              ))}
+            </Fragment>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}

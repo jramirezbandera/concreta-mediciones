@@ -1,11 +1,14 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import App from './App';
+import { useObraStore } from './store';
 
 beforeEach(() => {
   localStorage.clear();
   document.documentElement.removeAttribute('data-theme');
   window.location.hash = '';
+  // El store es un singleton de módulo: aíslalo entre casos (vista/activo).
+  useObraStore.getState().reset();
 });
 
 afterEach(() => {
@@ -13,9 +16,11 @@ afterEach(() => {
 });
 
 describe('App shell (F0)', () => {
-  it('arranca en la vista Presupuesto', () => {
+  it('arranca en la vista Presupuesto con el primer capítulo cargado', () => {
     render(<App />);
-    expect(screen.getByRole('heading', { name: 'Presupuesto' })).toBeInTheDocument();
+    // Sin placeholder: la vista real muestra la cabecera del capítulo activo (01).
+    expect(screen.getByRole('heading', { name: 'Movimiento de tierras' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Toda la obra/ })).toBeInTheDocument();
   });
 
   it('las tabs cambian de vista', () => {
