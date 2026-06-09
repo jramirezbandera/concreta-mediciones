@@ -56,6 +56,7 @@ Origen: revisión de ingeniería (`/plan-eng-review`) + voz externa Codex, 2026-
 - **Pros:** entrada numérica más robusta; menos errores de medición por un punto mal puesto.
 - **Cons:** heurística (¿cuándo un punto es decimal vs miles?) puede sorprender; sobre-ingeniería si nadie lo sufre.
 - **Contexto / dónde empezar:** `app/src/core/money.ts:parseEsNumber`. Posible regla: si hay coma, el punto es miles; si NO hay coma y hay un solo punto con ≤2 decimales, tratarlo como decimal. Cubrir con tests.
+- **Ampliación (voz externa Codex, 2026-06-09):** además del punto, `parseEsNumber` usa `parseFloat`, que **acepta entrada parcial malformada**: `"12abc" → 12`, `"1,2,3" → 1.23` o parciales. Para campos de dinero/tasas eso corrompe en silencio. Endurecer: validar con regex la cadena normalizada completa (`/^-?\d+(\.\d+)?$/`) y devolver `null` si no casa entera, en vez de fiarse de `parseFloat`. Mismo sitio, mismos tests.
 - **Depende de / bloqueado por:** nada. Recoger en F2 cuando se editen mediciones reales.
 
 ## T-7 · Trap de foco en Drawer/modales (a11y arquitectural)
@@ -76,4 +77,13 @@ Origen: revisión de ingeniería (`/plan-eng-review`) + voz externa Codex, 2026-
 - **Pros:** encaja con el flujo real de presupuestación; el import .bc3 respeta el K del archivo; cuadrar a un PEM objetivo es un clic.
 - **Cons / decisión abierta:** ¿K se aplica por precio unitario (redondeo por partida) o sobre el PEM? ¿cómo se absorbe el céntimo para cuadrar EXACTO? (Presto deja ~2 cént. de desvío por redondeo; quizá una partida de redondeo, o aplicar K sobre el total). Atado a `core/money` (céntimos enteros, §0 decisión 2).
 - **Contexto / dónde empezar:** modelo en `core/types` (`Rates.coefK`, ver §4 del plan); `partidaImporte` usa `precioK = precio · coefK` (§5); el adaptador `importers/bc3` ya parsea K del `~K` (ver `spike/import/bc3-to-prototype.mjs`). UI: campo editable en datos de obra / resumen.
+- **Estado tras F1 (eng-review 2026-06-09):** F1 implementó K **como multiplicador del precio unitario** (decisión consciente; el comentario de `core/medicion.ts` lo marca). **Sigue ABIERTO** lo de "cuadrar a un PEM objetivo exacto" (target + absorción del céntimo). Codex (voz externa) lo confirmó como hueco esperado, no bug. Resolver al construir la UI de K en F2/F3.
 - **Depende de / bloqueado por:** F1 (motor) lo modela; UI de edición en F2/F3. No bloquea el dogfood (el spike ya aplica K al importar).
+
+## T-9 · F2: sincronización recurso→precio→PEM + test al céntimo de la cadena compartida
+- **Qué:** la acción `editRecurso(code)` de F2 debe actualizar `recursos[code]` y **resincronizar** `partida.precio = descompUnit` en las partidas que lo usan **sin** `precioManual` (vía `core/banco.precioSegunModo`), recalculando importes→capítulo→PEM en vivo. Acompañar con un test E2E al céntimo: "editar el precio de `mo001` cambia el importe de las ≥4 partidas que lo comparten y el PEM resultante".
+- **Por qué:** es el invariante #1 del plan (banco compartido por código) y la aceptación de F2 ("editar un recurso cambia el importe en otra partida que lo comparte"). Hoy NADIE prueba la cadena recurso→PEM: F1 dejó el motor (`descompUnit`/`precioSegunModo`) y el store, pero la acción de edición y su test son F2. La voz externa Codex (2026-06-09, #1) lo marcó como el hueco principal.
+- **Pros:** red de regresión sobre el invariante más fácil de romper; cierra el bucle "editar recurso recalcula todo".
+- **Cons:** requiere la acción de edición de recursos de F2 (no existe aún).
+- **Contexto / dónde empezar:** `core/banco` ya tiene `precioSegunModo`/`precioCuadraDescompuesto` (este último ya compara en céntimos tras la eng-review). El seed marca `precioManual` donde el precio es autoridad (no se colapsa). Falta: acción `editRecurso` en `store/obraStore` + test en `store/`. 
+- **Depende de / bloqueado por:** F2 (vista Presupuesto). Relacionado con T-8 (K) y la decisión §0.6 (override).

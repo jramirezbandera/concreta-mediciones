@@ -9,7 +9,7 @@
    céntimos en `core/totales`, sobre `partida.precio`.
    =========================================================================== */
 import type { Banco, Item, Partida, PartidasMap } from './types';
-import { round2 } from './money';
+import { round2, toCents } from './money';
 
 /** Importe de una línea de justificación con su propio `precio` (datos semilla). */
 export function itemImporte(it: Item): number {
@@ -90,10 +90,16 @@ export function precioDescompuesto(p: Partida, banco: Banco): number {
  * ¿El `precio` efectivo cuadra con su descompuesto? Sin items, se considera que
  * sí (no hay descomposición que contrastar). Cuando es `false`, la UI muestra la
  * SEÑAL de override: el precio no es la suma de los descompuestos.
+ *
+ * La comparación es en CÉNTIMOS, no en floats: un precio importado (p.ej. 18,42)
+ * y un `descompUnit` recalculado por otra ruta pueden diferir en el último bit
+ * binario aun siendo el mismo céntimo; `===` sobre float daría una señal de
+ * override fantasma. `toCents` los normaliza al mismo entero (coherente con el
+ * resto del motor, que acumula y compara en céntimos).
  */
 export function precioCuadraDescompuesto(p: Partida, banco: Banco): boolean {
   if (!p.items || !p.items.length) return true;
-  return p.precio === descompUnit(p.items, banco);
+  return toCents(p.precio) === toCents(descompUnit(p.items, banco));
 }
 
 /**

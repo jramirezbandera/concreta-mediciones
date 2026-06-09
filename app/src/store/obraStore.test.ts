@@ -1,15 +1,19 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { certTotals, estaCertToOrigen, prevDataOf } from '../core/certificacion';
 import { toEur } from '../core/money';
+import { precioCuadraDescompuesto, precioSegunModo } from '../core/banco';
 import { DEFAULT_RATES, PARTIDAS } from '../core/seed';
 import {
   ALL,
+  SCHEMA_VERSION,
+  fromSerializable,
   seedObraData,
   selectChapterTotals,
   selectCounts,
   selectPec,
   selectPem,
   selectTotalConIva,
+  toSerializable,
   useObraStore,
 } from './index';
 
@@ -52,6 +56,40 @@ describe('estado sembrado', () => {
     a.partidas['01']![0]!.precio = 999;
     expect(b.partidas['01']![0]!.precio).toBe(18.42);
     expect(PARTIDAS['01']![0]!.precio).toBe(18.42);
+  });
+
+  it('marca precioManual en seed donde precio≠descompUnit (autoridad de fuente)', () => {
+    const p111 = state().partidas['01']!.find((p) => p.id === 'p111')!;
+    // p111: precio 18,42 con descompuesto 9,27 → override, precio fijo y seguro.
+    expect(precioCuadraDescompuesto(p111, state().recursos)).toBe(false);
+    expect(p111.precioManual).toBe(true);
+    // precioSegunModo NO lo colapsa al descompuesto (el sync de F2 sería seguro).
+    expect(precioSegunModo(p111, state().recursos)).toBe(18.42);
+    // y el PEM sigue cuadrando exacto.
+    expect(toEur(selectPem(state()))).toBe(26291.91);
+  });
+
+  it('NO marca precioManual en partidas sin descomposición (items vacíos)', () => {
+    const p122 = state().partidas['01']!.find((p) => p.id === 'p122')!; // items: []
+    expect(p122.items).toHaveLength(0);
+    expect(p122.precioManual).toBeUndefined();
+  });
+});
+
+describe('shape serializable (§0 decisión 4)', () => {
+  it('el estado sembrado nace versionado', () => {
+    expect(state().schemaVersion).toBe(SCHEMA_VERSION);
+    expect(seedObraData().schemaVersion).toBe(SCHEMA_VERSION);
+  });
+
+  it('toSerializable → fromSerializable conserva el PEM', () => {
+    const data = fromSerializable(toSerializable(state()));
+    expect(data.schemaVersion).toBe(SCHEMA_VERSION);
+    expect(toEur(selectPem({ ...state(), ...data }))).toBe(26291.91);
+  });
+
+  it('fromSerializable rechaza una versión no soportada', () => {
+    expect(() => fromSerializable({ ...toSerializable(state()), schemaVersion: 99 })).toThrow();
   });
 });
 
@@ -125,6 +163,22 @@ describe('setRates (tasas como estado, no globals)', () => {
     expect(state().rates.gg).toBe(DEFAULT_RATES.gg); // patch parcial
     expect(state().rates.bi).toBe(DEFAULT_RATES.bi);
   });
+
+  it('ignora valores no finitos y fuera de rango (no envenena los totales)', () => {
+    state().setRates({ iva: NaN }); // NaN ignorado
+    expect(state().rates.iva).toBe(DEFAULT_RATES.iva);
+    state().setRates({ gg: -0.5 }); // negativo ignorado
+    expect(state().rates.gg).toBe(DEFAULT_RATES.gg);
+    state().setRates({ coefK: 0 }); // coefK debe ser > 0
+    expect(state().rates.coefK).toBe(DEFAULT_RATES.coefK);
+    state().setRates({ coefK: -1 });
+    expect(state().rates.coefK).toBe(DEFAULT_RATES.coefK);
+    // el PEM sigue siendo un número válido tras los intentos basura
+    expect(Number.isFinite(toEur(selectPem(state())))).toBe(true);
+    // un valor válido sí entra
+    state().setRates({ coefK: 1.13 });
+    expect(state().rates.coefK).toBe(1.13);
+  });
 });
 
 describe('onCertEdit', () => {
@@ -144,9 +198,23 @@ describe('onCertEdit', () => {
     expect(state().certs[state().curCert]!.data[p.id]).toBe(estaCertToOrigen(prev, 5));
   });
 
-  it('no peta si el índice de cert es inválido', () => {
-    state().setCurCert(99);
-    expect(() => state().onCertEdit('p111', 1, 'origen')).not.toThrow();
+  it('setCurCert clampa al rango y la edición va a esa cert', () => {
+    state().setCurCert(0);
+    expect(state().curCert).toBe(0);
+    state().onCertEdit('p111', 7, 'origen');
+    expect(state().certs[0]!.data.p111).toBe(7);
+    state().setCurCert(99); // fuera de rango → clampa a la última (2)
+    expect(state().curCert).toBe(2);
+    state().setCurCert(-5); // negativo → clampa a 0
+    expect(state().curCert).toBe(0);
+  });
+
+  it('sólo muta la cert en curso, no las demás (aislamiento estructural)', () => {
+    const s = state(); // curCert = 2 por defecto
+    const otraAntes = s.certs[0]!.data.p111;
+    s.onCertEdit('p111', 12345, 'origen');
+    expect(state().certs[2]!.data.p111).toBe(12345);
+    expect(state().certs[0]!.data.p111).toBe(otraAntes); // cert 0 intacta
   });
 });
 

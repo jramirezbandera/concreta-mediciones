@@ -122,6 +122,14 @@ describe('precio descompuesto vs override manual (§0 decisión 6)', () => {
     expect(precioCuadraDescompuesto(partida({ items: [], precio: 18.42 }), banco)).toBe(true);
   });
 
+  it('compara en céntimos: ruido binario de float NO dispara override fantasma', () => {
+    // descompUnit(items111) = 9,27. Un precio con ruido de float en el último bit
+    // (lo que produciría un import/recalc por otra ruta) sigue cuadrando al céntimo.
+    const ruidoso = 9.27 + 1e-12; // sub-céntimo: mismo céntimo, distinto binario
+    expect(ruidoso).not.toBe(9.27); // de verdad difiere como float (=== daría override)…
+    expect(precioCuadraDescompuesto(partida({ items: items111, precio: ruidoso }), banco)).toBe(true); // …pero cuadra
+  });
+
   it('precioSegunModo: descompuesto si no hay override, fijo si lo hay', () => {
     expect(precioSegunModo(partida({ items: items111, precio: 18.42 }), banco)).toBe(9.27);
     expect(precioSegunModo(partida({ items: items111, precio: 18.42, precioManual: true }), banco)).toBe(18.42);

@@ -1,5 +1,12 @@
 /* Barrel del store de la obra: estado + acciones + selectores derivados. */
-export { ALL, useObraStore, seedObraData } from './obraStore';
+export {
+  ALL,
+  SCHEMA_VERSION,
+  useObraStore,
+  seedObraData,
+  toSerializable,
+  fromSerializable,
+} from './obraStore';
 export type { CertMode, ObraData, ObraState } from './obraStore';
 export {
   selectChapterTotals,
