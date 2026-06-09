@@ -9,7 +9,7 @@ import { PartidaMenu } from './PartidaMenu';
 import styles from './Presupuesto.module.css';
 
 /** Chip "BASE": partida copiada de una base de precios hasta que se edita. */
-function BaseChip({ source }: { source?: string }) {
+export function BaseChip({ source }: { source?: string }) {
   return (
     <span className={styles.baseChip} title={`Copiada de ${source || 'una base'} · edítala para confirmarla`}>
       BASE

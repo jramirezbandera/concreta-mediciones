@@ -4,26 +4,9 @@ import { partidaImporte } from '../../core/medicion';
 import { fmtNum, sumCents, toEur, type Cents } from '../../core/money';
 import type { Chapter, Partida, SubChapter } from '../../core/types';
 import { useObraStore } from '../../store';
+import { groupBySub } from './grouping';
 import { PartidaRow } from './PartidaRow';
 import styles from './Presupuesto.module.css';
-
-interface Group {
-  sub: SubChapter | null;
-  items: Partida[];
-}
-
-/** Agrupa las partidas por subcapítulo; las huérfanas van a un grupo sin sub. */
-function groupBySub(chapter: Chapter, partidas: Partida[]): Group[] {
-  const children = chapter.children ?? [];
-  if (!children.length) return [{ sub: null, items: partidas }];
-  const used: Group[] = children.map((sub) => ({
-    sub,
-    items: partidas.filter((p) => p.sub === sub.id),
-  }));
-  const orphan = partidas.filter((p) => !p.sub || !children.some((s) => s.id === p.sub));
-  if (orphan.length) used.unshift({ sub: null, items: orphan });
-  return used.filter((g) => g.items.length > 0 || g.sub);
-}
 
 /** Fila separadora de subcapítulo con su subtotal. */
 function SubHeaderRow({ sub, importe }: { sub: SubChapter; importe: Cents }) {

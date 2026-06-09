@@ -6,7 +6,7 @@ import { selectRecursoUsage, useObraStore } from '../../store';
 import styles from './Presupuesto.module.css';
 
 /** Indicador de concepto compartido (editar afecta a N partidas). */
-function SharedChip({ n }: { n?: number }) {
+export function SharedChip({ n }: { n?: number }) {
   if (!n || n < 2) return null;
   return (
     <span className={styles.jShared} title={`Compartido: editar este concepto afecta a ${n} partidas`}>

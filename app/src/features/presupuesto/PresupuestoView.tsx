@@ -1,11 +1,15 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { Icon } from '../../components';
 import type { Chapter } from '../../core/types';
+import { useElementWidth } from '../../hooks/useElementWidth';
 import { ALL, selectChapterTotals, selectPem, useObraStore } from '../../store';
 import { AllChapters } from './AllChapters';
 import { ChapterHeader } from './ChapterHeader';
-import { PartidasTable } from './PartidasTable';
+import { Partidas } from './Partidas';
 import styles from './Presupuesto.module.css';
+
+/** Por debajo de este ancho ÚTIL la tabla conmuta a tarjetas (prototipo: 780). */
+const COMPACT_WIDTH = 780;
 
 /** Estado vacío de un capítulo sin partidas, con alta directa de la primera. */
 function EmptyChapter({ chapter }: { chapter: Chapter }) {
@@ -30,12 +34,16 @@ function EmptyChapter({ chapter }: { chapter: Chapter }) {
 }
 
 /**
- * Vista Presupuesto (F2.1, lectura). Enruta según la selección del sidebar:
- * "Toda la obra" → `AllChapters`; un capítulo/subcapítulo → su cabecera + tabla.
- * Seleccionar un subcapítulo resuelve a su capítulo padre y muestra todas sus
- * partidas (agrupadas por subcapítulo dentro de la tabla).
+ * Vista Presupuesto. Enruta según la selección del sidebar: "Toda la obra" →
+ * `AllChapters`; un capítulo/subcapítulo → su cabecera + tabla/tarjetas. El modo
+ * compacto se decide por el ANCHO ÚTIL real del área (no el viewport): con la
+ * sidebar fija el contenido puede ser estrecho aunque la ventana sea ancha.
  */
-export function PresupuestoView({ compact }: { compact: boolean }) {
+export function PresupuestoView({ compact: mobile }: { compact: boolean }) {
+  const viewRef = useRef<HTMLDivElement>(null);
+  const width = useElementWidth(viewRef);
+  const compact = mobile || (width > 0 && width < COMPACT_WIDTH);
+
   const active = useObraStore((s) => s.active);
   const chapters = useObraStore((s) => s.chapters);
   const partidas = useObraStore((s) => s.partidas);
@@ -51,29 +59,27 @@ export function PresupuestoView({ compact }: { compact: boolean }) {
 
   const cls = `${styles.view}${compact ? ` ${styles.compact}` : ''}`;
 
+  let content = null;
   if (active === ALL) {
-    return (
-      <div className={cls}>
-        <AllChapters compact={compact} />
-      </div>
+    content = <AllChapters compact={compact} />;
+  } else if (activeChapter) {
+    const ps = partidas[activeChapter.id] ?? [];
+    const importe = chapterTotals[activeChapter.id] ?? 0;
+    content = (
+      <>
+        <ChapterHeader chapter={activeChapter} importe={importe} count={ps.length} pem={pem} />
+        {ps.length > 0 ? (
+          <Partidas compact={compact} chapter={activeChapter} partidas={ps} chapterTotal={importe} />
+        ) : (
+          <EmptyChapter chapter={activeChapter} />
+        )}
+      </>
     );
   }
 
-  if (!activeChapter) {
-    return <div className={cls} />;
-  }
-
-  const ps = partidas[activeChapter.id] ?? [];
-  const importe = chapterTotals[activeChapter.id] ?? 0;
-
   return (
-    <div className={cls}>
-      <ChapterHeader chapter={activeChapter} importe={importe} count={ps.length} pem={pem} />
-      {ps.length > 0 ? (
-        <PartidasTable chapter={activeChapter} partidas={ps} chapterTotal={importe} />
-      ) : (
-        <EmptyChapter chapter={activeChapter} />
-      )}
+    <div ref={viewRef} className={cls}>
+      {content}
     </div>
   );
 }

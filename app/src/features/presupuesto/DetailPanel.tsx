@@ -4,24 +4,30 @@ import { lineParcial, medTotal } from '../../core/medicion';
 import { fmtNum } from '../../core/money';
 import type { Partida } from '../../core/types';
 import { useObraStore } from '../../store';
+import { decOf } from './format';
+import { MedCards } from './MedCards';
 import { MedComment, MedNum } from './MedCells';
 import { PriceJustif } from './PriceJustif';
+import { PriceJustifCards } from './PriceJustifCards';
 import styles from './Presupuesto.module.css';
 
 type Tab = 'medicion' | 'descripcion' | 'justif';
 
-/** ¿Conviene 0 decimales? (uds entera se ve "8", no "8,00"). */
-function decOf(v: number | ''): number {
-  return v !== '' && Number.isInteger(Number(v)) ? 0 : 2;
-}
-
 /**
- * Panel de detalle de una partida (F2.2): toggle segmentado Medición /
- * Descripción. La Medición edita líneas (uds·largo·ancho·alto → parcial) y el
- * total alimenta la cantidad de la partida en vivo. La Justificación del precio
- * (banco compartido) llega en F2.3. Las tarjetas móviles, en F2.5.
+ * Panel de detalle de una partida: toggle segmentado Medición / Descripción /
+ * Justificación del precio. La Medición edita líneas (uds·largo·ancho·alto →
+ * parcial) y el total alimenta la cantidad de la partida en vivo. En modo
+ * `compact` (<780, F2.5) la medición y la justificación pasan a tarjetas.
  */
-export function DetailPanel({ p, chapterId }: { p: Partida; chapterId: string }) {
+export function DetailPanel({
+  p,
+  chapterId,
+  compact = false,
+}: {
+  p: Partida;
+  chapterId: string;
+  compact?: boolean;
+}) {
   const [tab, setTab] = useState<Tab>('medicion');
   const editPartidaField = useObraStore((s) => s.editPartidaField);
   const addMedLine = useObraStore((s) => s.addMedLine);
@@ -32,7 +38,7 @@ export function DetailPanel({ p, chapterId }: { p: Partida; chapterId: string })
   const total = medTotal(med);
 
   return (
-    <div className={styles.detail}>
+    <div className={`${styles.detail} ${compact ? styles.compact : ''}`}>
       <div className={styles.detailBar}>
         <div className={styles.seg}>
           <button
@@ -59,16 +65,24 @@ export function DetailPanel({ p, chapterId }: { p: Partida; chapterId: string })
             {p.items.length > 0 && <span className={`mono ${styles.segCount}`}>{p.items.length}</span>}
           </button>
         </div>
-        <div className={styles.detailQty} style={{ visibility: tab === 'medicion' ? 'hidden' : 'visible' }}>
-          <span className={`caps ${styles.detailQtyLabel}`}>Cantidad total</span>
-          <span className={`mono ${styles.detailQtyVal}`}>{fmtNum(total)}</span>
-          <span className={styles.detailQtyUd}>{p.ud}</span>
-        </div>
+        {!compact && (
+          <div
+            className={styles.detailQty}
+            style={{ visibility: tab === 'medicion' ? 'hidden' : 'visible' }}
+          >
+            <span className={`caps ${styles.detailQtyLabel}`}>Cantidad total</span>
+            <span className={`mono ${styles.detailQtyVal}`}>{fmtNum(total)}</span>
+            <span className={styles.detailQtyUd}>{p.ud}</span>
+          </div>
+        )}
       </div>
 
       {tab === 'medicion' && (
         <div>
-          <div className={styles.medWrap}>
+          {compact ? (
+            <MedCards p={p} chapterId={chapterId} />
+          ) : (
+            <div className={styles.medWrap}>
             <table className={styles.medTable}>
               <thead>
                 <tr>
@@ -142,14 +156,15 @@ export function DetailPanel({ p, chapterId }: { p: Partida; chapterId: string })
                 )}
               </tbody>
             </table>
-          </div>
-          <div className={styles.medFoot}>
+            </div>
+          )}
+          <div className={`${styles.medFoot} ${compact ? styles.medFootCompact : ''}`}>
             <button
               type="button"
               className={`tcol add-partida ${styles.medAddBtn}`}
               onClick={() => addMedLine(chapterId, p.id)}
             >
-              <Icon name="plus" size={14} /> Añadir línea de medición
+              <Icon name="plus" size={14} /> Añadir línea{compact ? '' : ' de medición'}
             </button>
             <div className={styles.detailQty}>
               <span className={`caps ${styles.detailQtyLabel}`}>Cantidad total</span>
@@ -172,7 +187,12 @@ export function DetailPanel({ p, chapterId }: { p: Partida; chapterId: string })
         </div>
       )}
 
-      {tab === 'justif' && <PriceJustif p={p} chapterId={chapterId} />}
+      {tab === 'justif' &&
+        (compact ? (
+          <PriceJustifCards p={p} chapterId={chapterId} />
+        ) : (
+          <PriceJustif p={p} chapterId={chapterId} />
+        ))}
     </div>
   );
 }

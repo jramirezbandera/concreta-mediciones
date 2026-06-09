@@ -58,4 +58,16 @@ describe('PresupuestoView (F2.1 lectura + F2.2 detalle)', () => {
     expect(s.partidas['01']!.some((p) => p.id === 'p111')).toBe(false);
     expect(s.partidas['02']!.some((p) => p.id === 'p111')).toBe(true);
   });
+
+  it('en compacto (<780) la tabla conmuta a tarjetas (F2.5)', () => {
+    render(<PresupuestoView compact={true} />);
+    expect(screen.queryByText('Nº · Código')).toBeNull(); // sin cabecera de tabla
+    expect(screen.getByText('E02EM030')).toBeInTheDocument(); // la partida sigue ahí
+    expect(screen.getAllByText('Cantidad').length).toBeGreaterThan(0); // tarjetas con stats
+  });
+
+  it('escritorio mantiene la tabla (cabecera de columnas presente)', () => {
+    render(<PresupuestoView compact={false} />);
+    expect(screen.getByText('Nº · Código')).toBeInTheDocument();
+  });
 });

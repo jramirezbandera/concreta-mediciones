@@ -1,7 +1,7 @@
 import { Icon } from '../../components';
 import { fmtCents, fmtNum, type Cents } from '../../core/money';
 import { selectChapterTotals, selectPem, selectTotalConIva, useObraStore } from '../../store';
-import { PartidasTable } from './PartidasTable';
+import { Partidas } from './Partidas';
 import styles from './Presupuesto.module.css';
 
 /**
@@ -56,7 +56,7 @@ export function AllChapters({ compact }: { compact: boolean }) {
               </div>
             </div>
             {ps.length > 0 ? (
-              <PartidasTable chapter={ch} partidas={ps} chapterTotal={imp} sticky={false} />
+              <Partidas compact={compact} chapter={ch} partidas={ps} chapterTotal={imp} sticky={false} />
             ) : (
               <div className={styles.bandEmpty}>
                 <button
