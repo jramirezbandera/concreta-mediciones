@@ -3,7 +3,9 @@
    "Reforma vivienda C/ Mayor 14". Fuente de verdad de los números de prueba.
    §0 decisión 3: PEM = Σ importes de partidas reales (sin cubo oculto).
    =========================================================================== */
-import type { Chapter, PartidasMap, Rates } from './types';
+import type { Cert, Chapter, Obra, PartidasMap, Rates } from './types';
+import { round2 } from './money';
+import { partidaCantidad } from './medicion';
 
 export const CHAPTERS: Chapter[] = [
   {
@@ -194,3 +196,41 @@ export const PARTIDAS: PartidasMap = {
 
 /** Tasas por defecto (reforma 10% IVA; GG 13% + BI 6%; sin coeficiente K). */
 export const DEFAULT_RATES: Rates = { iva: 0.1, gg: 0.13, bi: 0.06, coefK: 1 };
+
+/** Datos de obra por defecto (port de app.jsx; F6 amplía promotor/constructor/DF). */
+export const DEFAULT_OBRA: Obra = {
+  denominacion: 'Reforma vivienda C/ Mayor 14',
+  direccion: 'Calle Mayor 14, 3º B',
+  localidad: 'Madrid',
+};
+
+/* ===========================================================================
+   Histórico de certificaciones semilla (port verbatim de `makeCertsInit` de
+   data.js). Lista ordenada; cada cert guarda la cantidad ejecutada A ORIGEN por
+   partida. La "anterior" de una cert es la inmediatamente previa de la lista.
+   Factores estables por id de partida → el demo tiene variedad realista.
+   =========================================================================== */
+export function makeCertsInit(partidas: PartidasMap): Cert[] {
+  const periods = ['Abril 2026', 'Mayo 2026', 'Junio 2026'];
+  const fracs = [0.4, 0.72, 1.0]; // fracción del avance final alcanzada en cada cert.
+  const certs: Cert[] = periods.map((per, i) => ({
+    id: `c${i + 1}`,
+    num: i + 1,
+    period: per,
+    retencion: 0.05,
+    data: {},
+  }));
+  for (const ch in partidas) {
+    for (const p of partidas[ch] ?? []) {
+      const qty = partidaCantidad(p);
+      const seed = String(p.id)
+        .split('')
+        .reduce((a, c) => a + c.charCodeAt(0), 0);
+      const fo = 0.35 + ((seed * 37) % 66) / 100; // avance final 0,35 .. 1,0
+      certs.forEach((c, i) => {
+        c.data[p.id] = round2(qty * fo * (fracs[i] ?? 1));
+      });
+    }
+  }
+  return certs;
+}

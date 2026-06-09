@@ -271,13 +271,13 @@ Cada fase es incremental y deja algo ejecutable. Marca `[ ]` al completar.
 - **Entregable:** app con cabecera, tabs que cambian de vista (placeholders), tema claro/oscuro y responsive del chrome. ✅
 - **Aceptación:** alternar tema funciona; tabs cambian `view`; topbar colapsa correctamente en cada breakpoint; primitivas renderizan en página sandbox (`#sandbox`, en vez de Storybook — ver T9); `npm run build`, `npm test` (15 verdes) y `npm run lint` verdes. ✅
 
-### Fase 1 — Núcleo de dominio (la base crítica)
+### Fase 1 — Núcleo de dominio (la base crítica) ✅ COMPLETA (2026-06-09)
 **Objetivo:** motor de cálculo tipado y testeado + store con datos semilla.
-- [ ] `core/types.ts`, `money.ts`, `medicion.ts`, `banco.ts`, `totales.ts`, `certificacion.ts`, `numbering.ts`.
-- [ ] `core/seed.ts` (port de `data.js` + `refdata.js`), **sin `BASE_PEM`** (ver §0 decisión 3: `PEM = Σ partidas`).
-- [ ] Store Zustand con slices y selectores memoizados (chapterTotals, pem, pec, counts).
-- [ ] **Tests unitarios** de §5 (ver criterios).
-- **Entregable:** módulo `core/` reutilizable + store que expone los mismos números que el prototipo.
+- [x] `core/types.ts`, `money.ts`, `medicion.ts`, `banco.ts`, `totales.ts`, `certificacion.ts`, `numbering.ts`.
+- [x] `core/seed.ts` (port de `data.js` + `refdata.js`), **sin `BASE_PEM`** (ver §0 decisión 3: `PEM = Σ partidas`). Incluye `makeCertsInit` + `DEFAULT_OBRA` (port verbatim).
+- [x] Store Zustand (+ Immer) con estado de obra sembrado + UI y **selectores memoizados** (chapterTotals, pem, pec, totalConIva, counts) en `store/`. Acciones F1: setView/setActive/setRates/setCurCert/onCertEdit/reset. CRUD completo de partidas/recursos = F2 (store preparado).
+- [x] **Tests unitarios** de §5 (116 verdes; 18 del store). Build + lint OK.
+- **Entregable:** módulo `core/` reutilizable + store que expone los mismos números que el prototipo. ✅ PEM = 26.291,91 € desde el selector.
 - **Aceptación (tests obligatorios):**
   - `partidaCantidad` con dimensión vacía = factor 1 (p.ej. arena 0/5: `1·14,20 = 14,20`).
   - PEM con seed = **Σ partidas = 26.291,91 €** (sin `BASE_PEM`; ver §0 decisión 3). NOTA: el comentario de `data.js` decía 26.196,66 pero NO cuadraba con sus propios datos (las partidas suman 26.291,91); el motor reproduce la fórmula del prototipo al céntimo sobre los datos reales → la fuente de verdad son los datos, no el comentario. La antigua constante 28.420,18 incluía el cubo oculto, ya eliminado.
