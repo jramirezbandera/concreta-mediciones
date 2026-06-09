@@ -78,7 +78,7 @@ export function PartidasTable({
             <Fragment key={g.sub?.id ?? `orphan-${gi}`}>
               {g.sub && <SubHeaderRow sub={g.sub} importe={subTotal(g.items)} />}
               {g.items.map((p) => (
-                <PartidaRow key={p.id} p={p} chapterTotal={chapterTotal} />
+                <PartidaRow key={p.id} p={p} chapterId={chapter.id} chapterTotal={chapterTotal} />
               ))}
             </Fragment>
           ))}

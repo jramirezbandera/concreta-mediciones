@@ -14,7 +14,7 @@
    =========================================================================== */
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import type { Banco, Cert, Chapter, Obra, PartidasMap, Rates } from '../core/types';
+import type { Banco, Cert, Chapter, MedLine, Obra, PartidasMap, Rates } from '../core/types';
 import { buildRecursos, precioCuadraDescompuesto } from '../core/banco';
 import { estaCertToOrigen, prevDataOf } from '../core/certificacion';
 import { round2 } from '../core/money';
@@ -77,6 +77,34 @@ export interface ObraState extends ObraData {
    * `core/certificacion.estaCertToOrigen` = round2(max(0, anterior + v)).
    */
   onCertEdit: (partidaId: string, value: number, mode: CertMode) => void;
+
+  /* ---- acciones F2 (edición in-situ de partidas) ---- */
+  /** Edita un campo de texto de la partida (title/ud/code/desc) y quita el chip BASE. */
+  editPartidaField: (
+    chapterId: string,
+    partidaId: string,
+    field: 'title' | 'ud' | 'code' | 'desc',
+    value: string,
+  ) => void;
+  /**
+   * Fija el precio unitario A MANO: lo marca como override (`precioManual`) para
+   * que el sync de recursos (F2.3) no lo colapse al descompuesto, y quita el chip
+   * BASE. Ignora valores no finitos o negativos (frontera de invariantes).
+   */
+  setPrecio: (chapterId: string, partidaId: string, value: number) => void;
+  /** Añade una línea de medición vacía (dimensiones en blanco = factor 1). */
+  addMedLine: (chapterId: string, partidaId: string) => void;
+  /** Edita un campo de una línea de medición (comentario o dimensión). */
+  editMedLine: <K extends keyof MedLine>(
+    chapterId: string,
+    partidaId: string,
+    index: number,
+    field: K,
+    value: MedLine[K],
+  ) => void;
+  /** Elimina una línea de medición. */
+  deleteMedLine: (chapterId: string, partidaId: string, index: number) => void;
+
   /** Restaura el estado sembrado (datos + UI). Útil en tests y para "nueva obra". */
   reset: () => void;
 }
@@ -200,6 +228,50 @@ export const useObraStore = create<ObraState>()(
             // que también redondean la cantidad a origen.
             cert.data[partidaId] = round2(Math.max(0, value));
           }
+        }),
+
+      editPartidaField: (chapterId, partidaId, field, value) =>
+        set((s) => {
+          const p = s.partidas[chapterId]?.find((x) => x.id === partidaId);
+          if (!p) return;
+          p[field] = value;
+          p.fromBase = false; // editar confirma la partida: se va el chip BASE
+        }),
+
+      setPrecio: (chapterId, partidaId, value) =>
+        set((s) => {
+          // El precio envenena el importe/PEM: ignora NaN/±∞ y negativos.
+          if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return;
+          const p = s.partidas[chapterId]?.find((x) => x.id === partidaId);
+          if (!p) return;
+          p.precio = value;
+          p.precioManual = true; // override: el precio deja de seguir al descompuesto
+          p.fromBase = false;
+        }),
+
+      addMedLine: (chapterId, partidaId) =>
+        set((s) => {
+          const p = s.partidas[chapterId]?.find((x) => x.id === partidaId);
+          if (!p) return;
+          p.med.push({ comment: '', uds: '', largo: '', ancho: '', alto: '' });
+          p.fromBase = false;
+        }),
+
+      editMedLine: (chapterId, partidaId, index, field, value) =>
+        set((s) => {
+          const p = s.partidas[chapterId]?.find((x) => x.id === partidaId);
+          const line = p?.med[index];
+          if (!p || !line) return;
+          line[field] = value;
+          p.fromBase = false;
+        }),
+
+      deleteMedLine: (chapterId, partidaId, index) =>
+        set((s) => {
+          const p = s.partidas[chapterId]?.find((x) => x.id === partidaId);
+          if (!p || index < 0 || index >= p.med.length) return;
+          p.med.splice(index, 1);
+          p.fromBase = false;
         }),
 
       reset: () =>

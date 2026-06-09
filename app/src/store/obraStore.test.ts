@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { certTotals, estaCertToOrigen, prevDataOf } from '../core/certificacion';
+import { partidaCantidad } from '../core/medicion';
 import { toEur } from '../core/money';
 import { precioCuadraDescompuesto, precioSegunModo } from '../core/banco';
 import { DEFAULT_RATES, PARTIDAS } from '../core/seed';
@@ -226,6 +227,58 @@ describe('cableado con el motor de certificación', () => {
     const t = certTotals(allPartidas(), cur.data, prev, s.rates, cur.retencion, s.rates.coefK);
     expect(t.budgetPEM).toBe(selectPem(s));
     expect(toEur(t.liquido)).toBeGreaterThan(0);
+  });
+});
+
+describe('acciones F2 (edición in-situ)', () => {
+  const p111 = () => state().partidas['01']!.find((p) => p.id === 'p111')!;
+
+  it('editPartidaField cambia el campo y limpia el chip BASE', () => {
+    useObraStore.setState((s) => {
+      s.partidas['01']!.find((p) => p.id === 'p111')!.fromBase = true;
+    });
+    state().editPartidaField('01', 'p111', 'title', 'Excavación revisada');
+    expect(p111().title).toBe('Excavación revisada');
+    expect(p111().fromBase).toBe(false);
+  });
+
+  it('setPrecio fija precio + precioManual y recalcula el PEM en vivo', () => {
+    const before = selectPem(state());
+    state().setPrecio('01', 'p111', 100);
+    expect(p111().precio).toBe(100);
+    expect(p111().precioManual).toBe(true);
+    expect(p111().fromBase).toBe(false);
+    expect(selectPem(state())).not.toBe(before); // cadena precio→importe→PEM viva
+  });
+
+  it('setPrecio ignora valores no finitos o negativos', () => {
+    state().setPrecio('01', 'p111', 100);
+    state().setPrecio('01', 'p111', NaN);
+    expect(p111().precio).toBe(100);
+    state().setPrecio('01', 'p111', -5);
+    expect(p111().precio).toBe(100);
+  });
+
+  it('add/edit/deleteMedLine recalculan la cantidad y limpian BASE', () => {
+    // p111 arranca con 2 líneas → cantidad 124,65.
+    expect(partidaCantidad(p111())).toBe(124.65);
+    const i = p111().med.length;
+    state().addMedLine('01', 'p111');
+    expect(p111().med).toHaveLength(i + 1);
+    expect(p111().fromBase).toBe(false);
+    // nueva línea: uds 2 × largo 3 (ancho/alto vacíos = factor 1) → parcial 6.
+    state().editMedLine('01', 'p111', i, 'uds', 2);
+    state().editMedLine('01', 'p111', i, 'largo', 3);
+    expect(partidaCantidad(p111())).toBe(130.65); // 124,65 + 6
+    state().deleteMedLine('01', 'p111', i);
+    expect(p111().med).toHaveLength(i);
+    expect(partidaCantidad(p111())).toBe(124.65);
+  });
+
+  it('las acciones no rompen si la partida o el índice no existen', () => {
+    expect(() => state().editPartidaField('99', 'nope', 'title', 'x')).not.toThrow();
+    expect(() => state().deleteMedLine('01', 'p111', 99)).not.toThrow();
+    expect(p111().med).toHaveLength(2);
   });
 });
 
