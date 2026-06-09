@@ -13,6 +13,7 @@ export {
   selectCounts,
   selectPec,
   selectPem,
+  selectRecursoUsage,
   selectTotalConIva,
 } from './selectors';
 export type { Counts } from './selectors';

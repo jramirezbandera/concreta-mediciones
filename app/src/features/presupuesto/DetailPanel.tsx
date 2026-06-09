@@ -5,9 +5,10 @@ import { fmtNum } from '../../core/money';
 import type { Partida } from '../../core/types';
 import { useObraStore } from '../../store';
 import { MedComment, MedNum } from './MedCells';
+import { PriceJustif } from './PriceJustif';
 import styles from './Presupuesto.module.css';
 
-type Tab = 'medicion' | 'descripcion';
+type Tab = 'medicion' | 'descripcion' | 'justif';
 
 /** ¿Conviene 0 decimales? (uds entera se ve "8", no "8,00"). */
 function decOf(v: number | ''): number {
@@ -48,6 +49,14 @@ export function DetailPanel({ p, chapterId }: { p: Partida; chapterId: string })
             onClick={() => setTab('descripcion')}
           >
             Descripción
+          </button>
+          <button
+            type="button"
+            className={`tcol ${styles.segBtn} ${tab === 'justif' ? styles.on : ''}`}
+            onClick={() => setTab('justif')}
+          >
+            Justificación del precio
+            {p.items.length > 0 && <span className={`mono ${styles.segCount}`}>{p.items.length}</span>}
           </button>
         </div>
         <div className={styles.detailQty} style={{ visibility: tab === 'medicion' ? 'hidden' : 'visible' }}>
@@ -162,6 +171,8 @@ export function DetailPanel({ p, chapterId }: { p: Partida; chapterId: string })
           />
         </div>
       )}
+
+      {tab === 'justif' && <PriceJustif p={p} chapterId={chapterId} />}
     </div>
   );
 }

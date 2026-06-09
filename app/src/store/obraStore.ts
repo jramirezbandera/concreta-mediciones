@@ -15,7 +15,7 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import type { Banco, Cert, Chapter, MedLine, Obra, PartidasMap, Rates } from '../core/types';
-import { buildRecursos, precioCuadraDescompuesto } from '../core/banco';
+import { buildRecursos, precioCuadraDescompuesto, precioSegunModo } from '../core/banco';
 import { estaCertToOrigen, prevDataOf } from '../core/certificacion';
 import { round2 } from '../core/money';
 import { CHAPTERS, DEFAULT_OBRA, DEFAULT_RATES, PARTIDAS, makeCertsInit } from '../core/seed';
@@ -33,6 +33,17 @@ export const SCHEMA_VERSION = 1;
 
 /** Modo de edición de una certificación: importe a origen vs. de esta cert. */
 export type CertMode = 'origen' | 'esta';
+
+/**
+ * Secuencia para códigos de recurso nuevos (F2.3, "añadir concepto"). Monótona
+ * por sesión; el prefijo `r·` no colisiona con los códigos de banco del seed
+ * (mo001/mq…/E…). La generación robusta de ids es competencia de F6 (persistencia).
+ */
+let recursoSeq = 0;
+function nextRecursoCode(): string {
+  recursoSeq += 1;
+  return `r·${recursoSeq}`;
+}
 
 /** Estado de dominio de la obra (lo que persistiría en F6). Serializable. */
 export interface ObraData {
@@ -104,6 +115,26 @@ export interface ObraState extends ObraData {
   ) => void;
   /** Elimina una línea de medición. */
   deleteMedLine: (chapterId: string, partidaId: string, index: number) => void;
+
+  /* ---- acciones F2.3 (justificación del precio / banco compartido, T9) ---- */
+  /**
+   * Edita un concepto del banco POR CÓDIGO (desc/ud/precio): afecta a TODAS las
+   * partidas que lo usan. Al cambiar el `precio`, resincroniza `precio =
+   * descompUnit` en las partidas SIN override (`precioManual` falso) → la cadena
+   * recurso→importe→PEM (T9). `desc`/`ud` no alteran el descompuesto.
+   */
+  editRecurso: (code: string, field: 'desc' | 'ud' | 'precio', value: string | number) => void;
+  /** Edita el rendimiento (cantidad propia de la partida) de un concepto y resincroniza el precio. */
+  editItemCantidad: (
+    chapterId: string,
+    partidaId: string,
+    itemIndex: number,
+    value: number,
+  ) => void;
+  /** Añade un concepto MAT vacío (con su entrada nueva en el banco) y resincroniza. */
+  addItem: (chapterId: string, partidaId: string) => void;
+  /** Elimina un concepto de la justificación y resincroniza el precio. */
+  deleteItem: (chapterId: string, partidaId: string, itemIndex: number) => void;
 
   /** Restaura el estado sembrado (datos + UI). Útil en tests y para "nueva obra". */
   reset: () => void;
@@ -272,6 +303,56 @@ export const useObraStore = create<ObraState>()(
           if (!p || index < 0 || index >= p.med.length) return;
           p.med.splice(index, 1);
           p.fromBase = false;
+        }),
+
+      editRecurso: (code, field, value) =>
+        set((s) => {
+          const r = s.recursos[code];
+          if (!r) return;
+          if (field === 'precio') {
+            if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return;
+            r.precio = value;
+            // T9: el cambio de precio del banco se propaga a TODAS las partidas
+            // sin override (precioManual). precioSegunModo deja fijas las override
+            // y las sin items; el resto pasan a su descompuesto recalculado.
+            for (const ch in s.partidas)
+              for (const p of s.partidas[ch] ?? []) p.precio = precioSegunModo(p, s.recursos);
+          } else {
+            // desc/ud: no alteran el descompuesto → no hay resync.
+            if (typeof value !== 'string') return;
+            r[field] = value;
+          }
+        }),
+
+      editItemCantidad: (chapterId, partidaId, itemIndex, value) =>
+        set((s) => {
+          if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return;
+          const p = s.partidas[chapterId]?.find((x) => x.id === partidaId);
+          const it = p?.items[itemIndex];
+          if (!p || !it) return;
+          it.cantidad = value;
+          p.fromBase = false;
+          p.precio = precioSegunModo(p, s.recursos);
+        }),
+
+      addItem: (chapterId, partidaId) =>
+        set((s) => {
+          const p = s.partidas[chapterId]?.find((x) => x.id === partidaId);
+          if (!p) return;
+          const code = nextRecursoCode();
+          s.recursos[code] = { type: 'MAT', desc: '', ud: 'ud', precio: 0 };
+          p.items.push({ code, type: 'MAT', cantidad: 1 });
+          p.fromBase = false;
+          p.precio = precioSegunModo(p, s.recursos); // precio 0 → descompuesto sin cambio
+        }),
+
+      deleteItem: (chapterId, partidaId, itemIndex) =>
+        set((s) => {
+          const p = s.partidas[chapterId]?.find((x) => x.id === partidaId);
+          if (!p || itemIndex < 0 || itemIndex >= p.items.length) return;
+          p.items.splice(itemIndex, 1);
+          p.fromBase = false;
+          p.precio = precioSegunModo(p, s.recursos);
         }),
 
       reset: () =>

@@ -9,6 +9,7 @@
    basta para no recalcular ni romper la igualdad `Object.is` de Zustand (evita
    renders espurios y bucles con selectores que devuelven objetos).
    =========================================================================== */
+import { recursoUsage } from '../core/banco';
 import type { Cents } from '../core/money';
 import type { Chapter, PartidasMap, Rates } from '../core/types';
 import { chapterTotals as chapterTotalsCore, pec as pecCore, pem as pemCore, totalConIva as totalConIvaCore } from '../core/totales';
@@ -69,3 +70,8 @@ export const selectTotalConIva = (s: ObraState): Cents => _total(selectPem(s), s
 
 /** Conteos para la StatusBar (capítulos · partidas · líneas de medición). */
 export const selectCounts = (s: ObraState): Counts => _counts(s.partidas, s.chapters);
+
+const _usage = memo1((partidas: PartidasMap) => recursoUsage(partidas));
+
+/** Cuántas partidas usan cada recurso (para el chip "compartido" de la justificación). */
+export const selectRecursoUsage = (s: ObraState): Record<string, number> => _usage(s.partidas);

@@ -32,4 +32,14 @@ describe('PresupuestoView (F2.1 lectura + F2.2 detalle)', () => {
     render(<PresupuestoView compact={false} />);
     expect(screen.getByText('Capítulo sin partidas')).toBeInTheDocument();
   });
+
+  it('la pestaña Justificación muestra el banco compartido y la señal de override', () => {
+    render(<PresupuestoView compact={false} />);
+    fireEvent.click(screen.getByText('E02EM030')); // despliega p111
+    fireEvent.click(screen.getByText('Justificación del precio'));
+    // conceptos del banco visibles (mo001 lo comparten ≥4 partidas → SharedChip).
+    expect(screen.getByText('mo001')).toBeInTheDocument();
+    // p111 es override en el seed (precio 18,42 ≠ descompuesto 9,27) → señal.
+    expect(screen.getByText(/fijado a mano/)).toBeInTheDocument();
+  });
 });

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { certTotals, estaCertToOrigen, prevDataOf } from '../core/certificacion';
 import { partidaCantidad } from '../core/medicion';
 import { toEur } from '../core/money';
-import { precioCuadraDescompuesto, precioSegunModo } from '../core/banco';
+import { descompUnit, precioCuadraDescompuesto, precioSegunModo } from '../core/banco';
 import { DEFAULT_RATES, PARTIDAS } from '../core/seed';
 import {
   ALL,
@@ -279,6 +279,83 @@ describe('acciones F2 (edición in-situ)', () => {
     expect(() => state().editPartidaField('99', 'nope', 'title', 'x')).not.toThrow();
     expect(() => state().deleteMedLine('01', 'p111', 99)).not.toThrow();
     expect(p111().med).toHaveLength(2);
+  });
+});
+
+describe('acciones F2.3 (banco compartido / justificación, T9)', () => {
+  const p111 = () => state().partidas['01']!.find((p) => p.id === 'p111')!;
+  const p112 = () => state().partidas['01']!.find((p) => p.id === 'p112')!;
+
+  /** Quita el override de una partida y sincroniza su precio al descompuesto. */
+  function makeSynced(id: string) {
+    useObraStore.setState((s) => {
+      const p = s.partidas['01']!.find((x) => x.id === id)!;
+      p.precioManual = false;
+      p.precio = descompUnit(p.items, s.recursos);
+    });
+  }
+
+  it('editRecurso(precio) recalcula TODAS las partidas sin override + el PEM (T9)', () => {
+    makeSynced('p111'); // ambas comparten mo001 (Peón ordinario)
+    makeSynced('p112');
+    expect(p111().precio).toBe(9.27); // descompuesto original
+    const pem0 = selectPem(state());
+
+    state().editRecurso('mo001', 'precio', 50); // 17,52 → 50
+
+    // p111: base round2(0,25·50)+round2(0,12·38,5)=12,5+4,62=17,12; %CI 3%→0,51 ⇒ 17,63
+    expect(p111().precio).toBe(17.63);
+    expect(p111().precio).toBe(descompUnit(p111().items, state().recursos)); // sigue cuadrando
+    expect(p112().precio).not.toBe(9.27); // la OTRA partida que lo comparte también cambia
+    expect(selectPem(state())).not.toBe(pem0); // cadena recurso→importe→PEM
+    expect(state().recursos['mo001']!.precio).toBe(50);
+  });
+
+  it('editRecurso(precio) NO toca las partidas con override (precio fijo)', () => {
+    // seed: p111 es override (precioManual, 18,42 ≠ descompuesto).
+    expect(p111().precioManual).toBe(true);
+    state().editRecurso('mo001', 'precio', 50);
+    expect(p111().precio).toBe(18.42); // el override aguanta
+    // pero su descompuesto informativo sí refleja el recurso nuevo.
+    expect(descompUnit(p111().items, state().recursos)).toBe(17.63);
+  });
+
+  it('editRecurso(desc/ud) cambia el banco sin tocar precios', () => {
+    const pem0 = selectPem(state());
+    state().editRecurso('mo001', 'desc', 'Peón especialista');
+    expect(state().recursos['mo001']!.desc).toBe('Peón especialista');
+    expect(selectPem(state())).toBe(pem0); // desc no altera el descompuesto
+  });
+
+  it('editItemCantidad (rendimiento) resincroniza el precio sin override', () => {
+    makeSynced('p111');
+    state().editItemCantidad('01', 'p111', 0, 0.5); // mo001 0,25 → 0,5
+    // base round2(0,5·17,52)+4,62=8,76+4,62=13,38; %CI 3%→0,40 ⇒ 13,78
+    expect(p111().precio).toBe(13.78);
+    expect(p111().fromBase).toBe(false);
+  });
+
+  it('addItem añade concepto al banco y a la partida; deleteItem lo quita', () => {
+    const n = p111().items.length;
+    state().addItem('01', 'p111');
+    expect(p111().items).toHaveLength(n + 1);
+    const nuevo = p111().items[n]!;
+    expect(nuevo.type).toBe('MAT');
+    expect(state().recursos[nuevo.code]).toBeDefined(); // entró en el banco
+    expect(p111().fromBase).toBe(false);
+    state().deleteItem('01', 'p111', n);
+    expect(p111().items).toHaveLength(n);
+  });
+
+  it('guardas: ignora precio no finito/negativo, índices fuera de rango y códigos inexistentes', () => {
+    makeSynced('p111');
+    const precio = p111().precio;
+    state().editRecurso('mo001', 'precio', NaN);
+    state().editRecurso('mo001', 'precio', -1);
+    state().editRecurso('zzz', 'precio', 5); // recurso inexistente
+    expect(p111().precio).toBe(precio);
+    expect(() => state().editItemCantidad('01', 'p111', 99, 1)).not.toThrow();
+    expect(() => state().deleteItem('01', 'p111', 99)).not.toThrow();
   });
 });
 
