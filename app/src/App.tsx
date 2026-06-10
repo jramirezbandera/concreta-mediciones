@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Icon } from './components/Icon';
 import { CertificacionesView } from './features/certificaciones';
+import { ExportModal } from './features/exportar';
 import { ImportarView } from './features/importar';
 import { ObraModal } from './features/obra';
 import { PresupuestoView } from './features/presupuesto';
-import { PlaceholderView } from './features/PlaceholderView';
+import { PrintDoc, type PrintTarget } from './features/print';
 import { ReferenciaPanel, refStyles } from './features/referencia';
+import { ResumenView } from './features/resumen';
 import { Sandbox } from './features/sandbox/Sandbox';
 import { PersistUI, flushPending } from './persist';
 import { useBreakpoint } from './hooks/useBreakpoint';
@@ -62,8 +63,10 @@ export default function App() {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [obraOpen, setObraOpen] = useState(false);
+  // F7.1: chooser de export + doc de impresión montado BAJO DEMANDA (portal).
+  const [exportOpen, setExportOpen] = useState(false);
+  const [printTarget, setPrintTarget] = useState<PrintTarget | null>(null);
   const [sandbox, setSandbox] = useState(isSandboxHash);
-  const [flash, setFlash] = useState<string | null>(null);
 
   // Ruta sandbox sincronizada con el hash (deep-link + botón atrás).
   useEffect(() => {
@@ -76,13 +79,6 @@ export default function App() {
   useEffect(() => {
     if (bp.isDesktop) setDrawerOpen(false);
   }, [bp.isDesktop]);
-
-  // Auto-oculta el toast de placeholder.
-  useEffect(() => {
-    if (!flash) return;
-    const id = window.setTimeout(() => setFlash(null), 2600);
-    return () => window.clearTimeout(id);
-  }, [flash]);
 
   // F6.1: al ocultar la pestaña, fuerza el guardado pendiente (no perder la última
   // edición por el debounce). `pagehide` es el evento más fiable para esto.
@@ -104,10 +100,9 @@ export default function App() {
     setSandbox(false);
   }, []);
 
-  const placeholder = useCallback(
-    (label: string) => setFlash(`${label} llegará en una fase posterior.`),
-    [],
-  );
+  // El doc de impresión se desmonta al terminar (afterprint / fallback).
+  const closePrint = useCallback(() => setPrintTarget(null), []);
+  const exportPdf = useCallback((target: PrintTarget) => setPrintTarget(target), []);
 
   const changeView = useCallback(
     (v: View) => {
@@ -133,7 +128,7 @@ export default function App() {
         obraName={obraName}
         refOpen={refOpen}
         onToggleRef={() => setRefOpen()}
-        onExport={() => placeholder('La exportación de listados')}
+        onExport={() => setExportOpen(true)}
         onObra={() => setObraOpen(true)}
       />
 
@@ -174,7 +169,7 @@ export default function App() {
           ) : view === 'import' ? (
             <ImportarView compact={bp.isMobile} />
           ) : (
-            <PlaceholderView view={view} compact={bp.isMobile} />
+            <ResumenView compact={bp.isMobile} />
           )}
           {overlayOpen && (
             <div className={`no-print ${refStyles.overlay}`}>
@@ -204,16 +199,15 @@ export default function App() {
         <StatusBar counts={counts} pem={pem} pec={pec} onSandbox={goSandbox} />
       )}
 
-      {flash && (
-        <div className={styles.toast} role="status">
-          <span className={styles.ic}>
-            <Icon name="command" size={15} />
-          </span>
-          {flash}
-        </div>
-      )}
-
       <ObraModal open={obraOpen} onClose={() => setObraOpen(false)} compact={bp.isMobile} />
+
+      <ExportModal
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        compact={bp.isMobile}
+        onExportPdf={exportPdf}
+      />
+      {printTarget && <PrintDoc target={printTarget} onDone={closePrint} />}
 
       <PersistUI />
     </div>

@@ -31,7 +31,8 @@ Origen: revisión de ingeniería (`/plan-eng-review`) + voz externa Codex, 2026-
 - **Cons:** introducir una lib de PDF (react-pdf / pdfmake) o usar make-pdf de gstack es más trabajo que print CSS.
 - **Contexto / dónde empezar:** Hito 1 usa PDF por print (suficiente para validar el dogfood). Antes de entrega externa, evaluar lib de PDF con plantilla de certificación oficial.
 - **CONFIRMADO (eng-review F7, 2026-06-10):** F7.1 ship = `window.print()` → "Guardar como PDF" del navegador (documento imprimible, no exportador PDF real; márgenes/nombre/paginación dependen del navegador). Lib de PDF real (react-pdf/pdfmake) sigue APLAZADA aquí, para entrega externa. La paginación/CSS de impresión se valida con QA en navegador real (no jsdom).
-- **Depende de / bloqueado por:** F7.1 (exporters). Aplazado.
+- **F7.1 SHIPEADA (2026-06-11):** doc de impresión dedicado (`features/print/`, no la vista viva), QA en Chromium real: paginación A4 con `<thead>` repetido y PEM/líquido al céntimo. Lo que queda aquí: lib de PDF real para entrega externa (márgenes/nombre de archivo controlados, cabecera/pie corporativos).
+- **Depende de / bloqueado por:** F7.1 (exporters) ✓ hecha. Aplazado (entrega externa).
 
 ## T-4 · Variantes de contrato españolas
 - **Qué:** baja de adjudicación, liquidación final, y variantes de retención/IVA por tipo de contrato. El prototipo hornea un solo conjunto de supuestos.

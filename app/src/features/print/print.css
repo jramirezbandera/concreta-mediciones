@@ -1,0 +1,240 @@
+/* ===========================================================================
+   features/print — documento de impresión dedicado (F7.1).
+   El doc vive en un portal bajo <body> (hermano de #root), invisible en
+   pantalla; al imprimir SUSTITUYE a la app (eng-review F7 §2). Global a
+   propósito: @page y los page-breaks no caben en un CSS module. El doc se
+   monta con data-theme="light", así los tokens resuelven SIEMPRE al tema
+   claro aunque la app esté en oscuro (papel blanco).
+   =========================================================================== */
+
+.print-doc {
+  display: none;
+}
+
+@media print {
+  body.printing #root {
+    display: none !important;
+  }
+  .print-doc {
+    display: block;
+    background: #fff;
+    color: var(--text-primary);
+    font-size: 10pt;
+  }
+}
+
+@page {
+  size: A4;
+  margin: 14mm 12mm 16mm;
+}
+
+/* ---- cabecera del documento ---- */
+.pd-head {
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--text-primary);
+}
+.pd-kicker {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.11em;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+.pd-obra {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0;
+  color: var(--text-primary);
+}
+.pd-dir {
+  font-size: 10.5px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+.pd-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin-top: 8px;
+  font-size: 9.5px;
+  color: var(--text-secondary);
+}
+.pd-meta b {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* ---- banda de capítulo ---- */
+.pd-band {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 0 5px;
+  border-bottom: 1.5px solid var(--text-primary);
+  break-after: avoid-page;
+  margin-top: 12px;
+}
+.pd-band-code {
+  font-size: 10px;
+  color: var(--text-disabled);
+}
+.pd-band-title {
+  font-size: 12px;
+  font-weight: 600;
+  flex: 1;
+}
+.pd-band-total {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ---- tabla de listado ---- */
+.pd-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9.5px;
+}
+.pd-table thead {
+  display: table-header-group; /* la cabecera se repite en cada página */
+}
+.pd-table th {
+  text-align: left;
+  font-size: 8.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-disabled);
+  padding: 5px 5px 4px;
+  border-bottom: 1px solid var(--border-main);
+}
+.pd-table td {
+  padding: 5px;
+  vertical-align: top;
+  border-bottom: 0.5px solid var(--border-sub);
+}
+.pd-table tr {
+  break-inside: avoid;
+}
+.pd-num {
+  text-align: right;
+  white-space: nowrap;
+}
+.pd-sub td {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+}
+.pd-code {
+  color: var(--text-disabled);
+  font-size: 8.5px;
+}
+.pd-title {
+  font-weight: 500;
+}
+.pd-desc {
+  margin-top: 2px;
+  color: var(--text-secondary);
+  font-size: 8.5px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+.pd-pc {
+  display: inline-block;
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--state-warn);
+  border: 0.5px solid var(--state-warn);
+  border-radius: 3px;
+  padding: 0 3px;
+  margin-right: 4px;
+}
+
+/* mediciones embebidas en la partida (doc combinado, §7) */
+.pd-med {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 4px;
+  font-size: 8.5px;
+  color: var(--text-secondary);
+}
+.pd-med td {
+  padding: 1px 4px 1px 0;
+  border-bottom: 0;
+}
+.pd-med .pd-med-parcial {
+  text-align: right;
+  white-space: nowrap;
+}
+.pd-med-label {
+  font-size: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-disabled);
+}
+
+/* totales */
+.pd-chaptotal td {
+  font-weight: 600;
+  border-top: 1px solid var(--border-main);
+  border-bottom: 0;
+  padding-top: 6px;
+}
+.pd-grand {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 14px;
+  padding-top: 8px;
+  border-top: 2px solid var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  break-inside: avoid;
+}
+
+/* resumen económico (cert) */
+.pd-summary {
+  margin-top: 16px;
+  max-width: 360px;
+  margin-left: auto;
+  break-inside: avoid;
+}
+.pd-summary-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 4px 0;
+  border-bottom: 0.5px solid var(--border-sub);
+  font-size: 10px;
+}
+.pd-summary-row b {
+  font-weight: 600;
+}
+.pd-summary-big {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 0 0;
+  border-top: 1.5px solid var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* pie de firma */
+.pd-sign {
+  margin-top: 36px;
+  text-align: right;
+  font-size: 10.5px;
+  color: var(--text-secondary);
+  break-inside: avoid;
+}
+.pd-sign-name {
+  margin-top: 44px;
+  font-weight: 600;
+  color: var(--text-primary);
+}

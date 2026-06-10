@@ -48,3 +48,4 @@ Desktop.ini
 # Spike §0.5 — datos reales de obra (NO subir: pueden llevar datos de cliente)
 spike/samples/
 spike/import/data.generated.js
+.gstack/

@@ -153,6 +153,8 @@ export interface Obra {
   denominacion: string;
   direccion: string;
   localidad: string;
+  /** Observaciones y notas de la hoja Resumen (F7.1, design review D1). */
+  notes?: string;
   [k: string]: unknown; // promotor/constructor/redactor… se completan en F6
 }
 

@@ -25,9 +25,10 @@ describe('App shell (F0)', () => {
 
   it('las tabs cambian de vista', () => {
     render(<App />);
+    // F7.1: la pestaña Resumen muestra la hoja real (deja de ser placeholder).
     fireEvent.click(screen.getByRole('button', { name: 'Resumen' }));
-    expect(screen.getByRole('heading', { name: 'Resumen' })).toBeInTheDocument();
-    expect(screen.getByText('Fase F3 · Resumen')).toBeInTheDocument();
+    expect(screen.getByText('Desglose por capítulos')).toBeInTheDocument();
+    expect(screen.getByText('Presupuesto base de licitación')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Certificaciones' }));
     // F4.1: la pestaña Certificaciones muestra la vista real (no el placeholder).
@@ -47,9 +48,11 @@ describe('App shell (F0)', () => {
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
   });
 
-  it('las acciones no implementadas muestran un aviso de fase posterior', () => {
+  it('Exportar abre el chooser de listados (F7.1)', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Exportar' }));
-    expect(screen.getByRole('status')).toHaveTextContent(/fase posterior/i);
+    const modal = screen.getByRole('dialog', { name: 'Exportar' });
+    expect(modal).toBeInTheDocument();
+    expect(screen.getByText('Presupuesto y mediciones')).toBeInTheDocument();
   });
 });

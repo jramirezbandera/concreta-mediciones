@@ -1,0 +1,302 @@
+/* Resumen de presupuesto (F7.1) — hoja editable, port de resumen.jsx. */
+
+.view {
+  flex: 1;
+  overflow-y: auto;
+}
+.page {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 24px 32px;
+}
+.compact .page {
+  padding: 16px;
+}
+
+.kicker {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.11em;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+.title {
+  font-size: 25px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  margin: 0 0 18px;
+}
+.compact .title {
+  font-size: 20px;
+}
+
+.sheet {
+  border-radius: 12px;
+  border: 1px solid var(--border-main);
+  background: var(--bg-surface);
+  padding: 22px 26px;
+  box-shadow: var(--shadow-panel);
+}
+.compact .sheet {
+  padding: 16px;
+}
+
+/* desglose por capítulos */
+.chapRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-sub);
+}
+.chapCode {
+  font-size: 11.5px;
+  color: var(--text-disabled);
+  width: 24px;
+  flex-shrink: 0;
+}
+.chapTitle {
+  font-size: 13px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
+  max-width: 52%;
+}
+.leader {
+  flex: 1;
+  border-bottom: 1px dotted var(--border-main);
+  margin: 0 4px;
+  transform: translateY(-3px);
+}
+.chapPct {
+  font-size: 11px;
+  color: var(--text-disabled);
+  flex-shrink: 0;
+  width: 44px;
+  text-align: right;
+}
+.compact .chapPct {
+  display: none;
+}
+.chapImp {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  flex-shrink: 0;
+  width: 104px;
+  text-align: right;
+}
+
+/* totales */
+.totals {
+  margin-top: 16px;
+}
+.pemRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 2px solid var(--border-main);
+}
+.pemLabel {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.pemVal {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.pctRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--border-sub);
+}
+.pctLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.pctLabel {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.pctEdit {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 6px 1px 4px;
+  border-radius: 6px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-main);
+}
+.pctEditNum {
+  width: 42px;
+  display: inline-block;
+}
+.pctUnit {
+  font-size: 11.5px;
+  color: var(--text-disabled);
+}
+.pctStatic {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+.pctVal {
+  margin-left: auto;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+.totalRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--border-sub);
+}
+.totalRow.strong {
+  border-top: 1px solid var(--border-main);
+}
+.totalLabel {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.strong .totalLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.totalVal {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.strong .totalVal {
+  font-weight: 600;
+}
+
+.bigRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0 2px;
+  border-top: 1px solid var(--border-main);
+}
+.bigLabel {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.bigVal {
+  font-size: 23px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+/* observaciones */
+.notesCard {
+  margin-top: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border-main);
+  background: var(--bg-surface);
+  padding: 18px 22px;
+  box-shadow: var(--shadow-panel);
+}
+.compact .notesCard {
+  padding: 14px 16px;
+}
+.notesArea {
+  width: 100%;
+  min-height: 130px;
+  resize: vertical;
+  border-radius: 8px;
+  padding: 11px 13px;
+  outline: none;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-main);
+  font-family: inherit;
+  box-sizing: border-box;
+}
+.notesArea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.spacer {
+  height: 40px;
+}
+
+/* estado vacío (sin capítulos) — patrón de "Estados de UI de M1" */
+.emptyWrap {
+  display: grid;
+  place-items: center;
+}
+.emptyCard {
+  text-align: center;
+  max-width: 320px;
+}
+.emptyIcon {
+  margin: 0 auto 12px;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-main);
+  display: grid;
+  place-items: center;
+  color: var(--text-disabled);
+}
+.emptyTitle {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.emptyText {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+.emptyBtn {
+  margin-top: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 13px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--on-accent);
+  background: var(--accent);
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+.emptyBtn:hover {
+  background: var(--accent-hover);
+}

@@ -17,6 +17,7 @@ import {
   type CertChapterRow,
   type CertTotals,
 } from '../core/certificacion';
+import { buildResumen, type ResumenListado } from '../core/listado';
 import type { Cents } from '../core/money';
 import type { CertExtra, Chapter, PartidasMap, Rates } from '../core/types';
 import { chapterTotals as chapterTotalsCore, pec as pecCore, pem as pemCore, totalConIva as totalConIvaCore } from '../core/totales';
@@ -169,6 +170,16 @@ export const selectCertChapterRows = (s: ObraState): CertChapterRow[] =>
     s.certs[s.curCert]?.priceSnapshot,
     s.certs[s.curCert]?.coefK,
   );
+
+/* ---- selector de la hoja Resumen (F7.1) ---- */
+
+const _resumen = memo1((chapters: Chapter[], partidas: PartidasMap, rates: Rates) =>
+  buildResumen(chapters, partidas, rates),
+);
+
+/** Hoja resumen (desglose por capítulos + PEM/GG/BI/PEC/IVA/total, céntimos). */
+export const selectResumen = (s: ObraState): ResumenListado =>
+  _resumen(s.chapters, s.partidas, s.rates);
 
 /* ---- selector de destino de copia (F5, panel Referencia) ---- */
 
