@@ -12,3 +12,12 @@ export {
 } from './persist';
 export { usePersistStore, type SaveStatus } from './persistStore';
 export { PersistUI } from './PersistUI';
+export {
+  buildExportText,
+  exportObraJson,
+  parseObraJson,
+  readFileText,
+  ImportError,
+  type ObraExport,
+  type ImportErrorKind,
+} from './transfer';

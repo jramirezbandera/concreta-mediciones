@@ -1,6 +1,7 @@
 import { Icon, type IconName } from '../../components/Icon';
 import { Modal } from '../../components/Modal';
 import { useObraStore } from '../../store';
+import { ProjectBackup } from './ProjectBackup';
 import styles from './ObraModal.module.css';
 
 /** [ruta, etiqueta, ancho completo en grid]. Ruta anidada → `setObraPath`. */
@@ -118,6 +119,7 @@ export function ObraModal({ open, onClose, compact }: ObraModalProps) {
           </div>
         </section>
       ))}
+      <ProjectBackup onImported={onClose} />
     </Modal>
   );
 }
