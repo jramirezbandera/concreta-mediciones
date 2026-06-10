@@ -3,12 +3,16 @@ import { Icon } from './components/Icon';
 import { CertificacionesView } from './features/certificaciones';
 import { PresupuestoView } from './features/presupuesto';
 import { PlaceholderView } from './features/PlaceholderView';
+import { ReferenciaPanel, refStyles } from './features/referencia';
 import { Sandbox } from './features/sandbox/Sandbox';
 import { useBreakpoint } from './hooks/useBreakpoint';
 import { useTheme } from './hooks/useTheme';
 import { BottomTabBar, Drawer, Sidebar, StatusBar, TopBar, type View } from './layout';
 import { selectCounts, selectPec, selectPem, useObraStore } from './store';
 import styles from './App.module.css';
+
+/** Por encima de este ancho de ventana el panel Referencia abre en split; si no, overlay. */
+const SPLIT_WIDTH = 1100;
 
 /** ¿La ruta actual es el sandbox de primitivas? (`#sandbox`) */
 function isSandboxHash(): boolean {
@@ -26,6 +30,29 @@ export default function App() {
   const counts = useObraStore(selectCounts);
   const pem = useObraStore(selectPem);
   const pec = useObraStore(selectPec);
+
+  const refOpen = useObraStore((s) => s.refOpen);
+  const refWidth = useObraStore((s) => s.refWidth);
+  const setRefOpen = useObraStore((s) => s.setRefOpen);
+  const setRefWidth = useObraStore((s) => s.setRefWidth);
+
+  // Redimensionar el panel en split: se arrastra el tirador (320–640 lo clampa el store).
+  const startRefResize = useCallback(
+    (e: React.PointerEvent) => {
+      e.preventDefault();
+      const onMove = (ev: PointerEvent) => setRefWidth(window.innerWidth - ev.clientX);
+      const onUp = () => {
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+      };
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+    },
+    [setRefWidth],
+  );
+
+  const splitOpen = refOpen && bp.w >= SPLIT_WIDTH;
+  const overlayOpen = refOpen && bp.w < SPLIT_WIDTH;
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sandbox, setSandbox] = useState(isSandboxHash);
@@ -86,7 +113,8 @@ export default function App() {
         bp={bp}
         onMenu={() => setDrawerOpen(true)}
         obraName={obraName}
-        onToggleRef={() => placeholder('El panel de Referencia')}
+        refOpen={refOpen}
+        onToggleRef={() => setRefOpen()}
         onExport={() => placeholder('La exportación de listados')}
         onObra={() => placeholder('Los datos de la obra')}
       />
@@ -108,7 +136,26 @@ export default function App() {
           ) : (
             <PlaceholderView view={view} compact={bp.isMobile} />
           )}
+          {overlayOpen && (
+            <div className={`no-print ${refStyles.overlay}`}>
+              <ReferenciaPanel />
+            </div>
+          )}
         </main>
+
+        {splitOpen && (
+          <>
+            <div
+              className={`no-print ${refStyles.divider}`}
+              onPointerDown={startRefResize}
+              role="separator"
+              aria-orientation="vertical"
+            />
+            <aside className={refStyles.aside} style={{ width: refWidth }}>
+              <ReferenciaPanel />
+            </aside>
+          </>
+        )}
       </div>
 
       {bp.isMobile ? (

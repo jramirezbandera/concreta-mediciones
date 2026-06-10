@@ -6,12 +6,14 @@ export {
   seedObraData,
   toSerializable,
   fromSerializable,
+  copyTargetOf,
 } from './obraStore';
-export type { CertMode, ObraData, ObraState } from './obraStore';
+export type { CertMode, CopyTarget, ObraData, ObraState } from './obraStore';
 export {
   selectCertChapterRows,
   selectCertTotals,
   selectChapterTotals,
+  selectCopyTarget,
   selectCounts,
   selectPec,
   selectPem,

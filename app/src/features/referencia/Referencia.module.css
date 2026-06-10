@@ -1,0 +1,570 @@
+/* ===========================================================================
+   Panel de Referencia (F5) — portado de reference.jsx (estilos inline → módulo).
+   =========================================================================== */
+.panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-surface);
+  min-width: 0;
+}
+
+/* ---- cabecera ---- */
+.head {
+  flex-shrink: 0;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-main);
+}
+.headTop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 9px;
+}
+.headTitle {
+  flex: 1;
+}
+.closeBtn {
+  width: 26px;
+  height: 26px;
+}
+
+/* ---- selector de fuente ---- */
+.srcWrap {
+  position: relative;
+  min-width: 0;
+}
+.srcBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 38px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-main);
+  background: var(--bg-surface);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+.srcIcon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  flex-shrink: 0;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.srcText {
+  flex: 1;
+  min-width: 0;
+}
+.srcName {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.srcName.on {
+  color: var(--accent);
+}
+.srcOrg {
+  display: block;
+  font-size: 10.5px;
+  color: var(--text-disabled);
+}
+.srcMenu {
+  position: absolute;
+  top: 44px;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  padding: 6px;
+  border-radius: 11px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-main);
+  box-shadow: var(--shadow-float);
+}
+.srcOpt {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 9px;
+  border-radius: 8px;
+  border: 0;
+  cursor: pointer;
+  background: transparent;
+  text-align: left;
+  font-family: inherit;
+}
+.srcOpt.on {
+  background: var(--accent-soft);
+}
+.srcOpt:hover {
+  background: var(--bg-elevated);
+}
+.srcOpt.on:hover {
+  background: var(--accent-soft);
+}
+.srcOptIcon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  flex-shrink: 0;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+}
+.srcOptIcon.on {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.srcDivider {
+  height: 1px;
+  background: var(--border-sub);
+  margin: 5px 8px;
+}
+
+/* ---- buscador ---- */
+.search {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-main);
+}
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 13px;
+  color: var(--text-primary);
+  font-family: inherit;
+}
+.searchClear {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-disabled);
+  padding: 2px;
+  display: inline-flex;
+}
+
+/* ---- toggle "copiar como contradictorio" ---- */
+.contraBtn {
+  margin-top: 8px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  border: 1px solid var(--border-main);
+  background: transparent;
+}
+.contraBtn.on {
+  border-color: color-mix(in srgb, var(--state-warn) 50%, var(--border-main));
+  background: color-mix(in srgb, var(--state-warn) 10%, transparent);
+}
+.contraTrack {
+  display: flex;
+  align-items: center;
+  width: 30px;
+  height: 18px;
+  border-radius: 20px;
+  flex-shrink: 0;
+  padding: 2px;
+  justify-content: flex-start;
+  background: var(--border-main);
+  transition: background 0.15s;
+}
+.contraTrack.on {
+  justify-content: flex-end;
+  background: var(--state-warn);
+}
+.contraKnob {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  display: block;
+}
+.contraLabel {
+  flex: 1;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.contraBtn.on .contraLabel {
+  color: var(--state-warn);
+}
+
+/* ---- árbol ---- */
+.tree {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 8px 12px;
+}
+.chap {
+  margin-bottom: 2px;
+}
+.chapRow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 8px;
+  border-radius: 7px;
+  cursor: grab;
+}
+.chapRow:hover {
+  background: var(--bg-elevated);
+}
+.chapChev {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-disabled);
+  flex-shrink: 0;
+  padding: 0;
+}
+.chapCode {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.chapTitle {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chapCount {
+  font-size: 11px;
+  color: var(--text-disabled);
+  flex-shrink: 0;
+}
+.chapCopy,
+.partCopy {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 0;
+  background: var(--bg-elevated);
+  color: var(--accent);
+}
+.chapCopy {
+  width: 24px;
+  height: 24px;
+}
+.chapCopy:hover,
+.partCopy:hover {
+  background: var(--accent-soft);
+}
+
+.partList {
+  padding-left: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: 1px;
+}
+
+/* ---- fila de partida ---- */
+.part {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  overflow: hidden;
+}
+.part.open {
+  border-color: var(--border-main);
+  background: var(--bg-elevated);
+}
+.partRow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 8px 7px 6px;
+  border-radius: 7px;
+  cursor: grab;
+  border: 1px solid transparent;
+}
+.partRow:hover {
+  background: var(--bg-elevated);
+}
+.partRow.selected {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border-main));
+  background: var(--accent-soft);
+}
+.partChev {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-disabled);
+  padding: 0;
+}
+.partChev.on {
+  color: var(--accent);
+}
+.partCheck {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border-radius: 5px;
+  cursor: pointer;
+  border: 1.5px solid var(--border-main);
+  background: transparent;
+  color: var(--on-accent);
+  padding: 0;
+}
+.partCheck.on {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.partCode {
+  font-size: 11px;
+  color: var(--text-disabled);
+  width: 58px;
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.partTitleWrap {
+  flex: 1;
+  min-width: 0;
+}
+.partTitle {
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--text-primary);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+.partTitle.open {
+  font-weight: 600;
+  overflow: visible;
+  white-space: normal;
+  line-height: 1.35;
+}
+.partUd {
+  font-size: 11px;
+  color: var(--text-disabled);
+  flex-shrink: 0;
+}
+.partPrecio {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  width: 64px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.partCopy {
+  width: 26px;
+  height: 26px;
+}
+
+/* ---- detalle de partida (descripción + descomposición) ---- */
+.partDetail {
+  padding: 4px 12px 12px 32px;
+}
+.partDesc {
+  margin: 4px 0 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+.descomp {
+  border-radius: 7px;
+  border: 1px solid var(--border-main);
+  background: var(--bg-surface);
+  overflow: hidden;
+}
+.descompHead {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-disabled);
+  padding: 7px 10px 5px;
+}
+.descompRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  border-top: 1px solid var(--border-sub);
+}
+.descompDesc {
+  flex: 1;
+  min-width: 0;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.descompCant {
+  font-size: 11px;
+  color: var(--text-disabled);
+  flex-shrink: 0;
+}
+.descompImp {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  width: 56px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.partDetailActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+.partCopyBig {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 7px;
+  border: 0;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--on-accent);
+  background: var(--accent);
+  font-family: inherit;
+}
+
+/* ---- barra de acción ---- */
+.actionBar {
+  flex-shrink: 0;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border-main);
+  background: var(--bg-elevated);
+}
+.selBox {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.selInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.selText {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.selCount {
+  color: var(--accent);
+  font-weight: 600;
+}
+.selClear {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-disabled);
+  font-family: inherit;
+}
+.copyToBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 13px;
+  border-radius: 7px;
+  border: 0;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--on-accent);
+  background: var(--accent);
+  font-family: inherit;
+}
+.copyToLabel {
+  min-width: 0;
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.9;
+}
+.hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--text-disabled);
+  line-height: 1.4;
+}
+.hintTarget {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* ---- contenedor split/overlay (en App) ---- */
+.divider {
+  width: 6px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background: var(--border-main);
+}
+.divider:hover {
+  background: color-mix(in srgb, var(--accent) 50%, var(--border-main));
+}
+.aside {
+  flex-shrink: 0;
+  min-width: 0;
+  border-left: 1px solid var(--border-main);
+}
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-float);
+}

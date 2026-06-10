@@ -19,7 +19,7 @@ import {
 import type { Cents } from '../core/money';
 import type { CertExtra, Chapter, PartidasMap, Rates } from '../core/types';
 import { chapterTotals as chapterTotalsCore, pec as pecCore, pem as pemCore, totalConIva as totalConIvaCore } from '../core/totales';
-import type { ObraState } from './obraStore';
+import { copyTargetOf, type CopyTarget, type ObraState } from './obraStore';
 
 /** Memoiza la última llamada por identidad de argumentos (memoize-one). */
 function memo1<A extends unknown[], R>(fn: (...args: A) => R): (...args: A) => R {
@@ -142,3 +142,12 @@ export const selectCertTotals = (s: ObraState): CertTotals =>
 /** Avance certificado por capítulo de la cert en curso. */
 export const selectCertChapterRows = (s: ObraState): CertChapterRow[] =>
   _certChapterRows(s.chapters, s.partidas, curCertData(s), prevCertData(s), s.rates.coefK, curCertExtras(s));
+
+/* ---- selector de destino de copia (F5, panel Referencia) ---- */
+
+const _copyTarget = memo1((chapters: Chapter[], active: string): CopyTarget =>
+  copyTargetOf(chapters, active),
+);
+
+/** Capítulo/sub destino de "Copiar a …" según la selección del sidebar. */
+export const selectCopyTarget = (s: ObraState): CopyTarget => _copyTarget(s.chapters, s.active);

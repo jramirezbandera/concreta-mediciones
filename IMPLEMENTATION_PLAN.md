@@ -329,11 +329,15 @@ Cada fase es incremental y deja algo ejecutable. Marca `[ ]` al completar.
 - **Aceptación:** el toggle cambia importe mostrado y significado del input; añadir contradictorio aparece marcado y suma al líquido; editar retención recalcula base/IVA/líquido; cert. nº2 usa nº1 como "anterior"; **teclear un % rellena la cantidad ejecutada al céntimo; el desplegable por partida muestra descripción + líneas de medición sin saturar; marcar líneas suma a lo ejecutado.** **TODO ✓ — F4 cerrada en 5 commits (F4.1 `11d2326` · F4.2 `a10f6c6` · F4.3 `e8be65b` · F4.4 `ffc6bf9` · F4.5 pendiente).**
 
 ### Fase 5 — Referencia + Importar
-- [ ] Panel Referencia: split redimensionable (320–640) si ventana ≥1100, si no overlay. Selector de fuente, buscador, interruptor "Copiar como precio contradictorio".
-- [ ] Árbol solo-lectura con checkbox multiselección, desplegar descripción larga + descomposición, botón "←", copiar capítulo entero.
-- [ ] Copia: por botón, por **drag&drop** (sobre capítulo/sub del sidebar o área de presupuesto = capítulo activo), por multiselección + "Copiar a {capítulo}". Integra recursos en el banco **sin pisar** los existentes; marca BASE (o P.C.).
-- [ ] Vista Importar: zona drop .bc3 + selección + tarjetas de bases compatibles.
-- **Aceptación:** copiar una partida con descomposición crea la partida con `med:[]`, items por código, chip BASE, y sus recursos nuevos entran al banco sin sobreescribir los homónimos; drag&drop al sidebar funciona; en <1100 abre overlay.
+
+> **Alcance acordado (2026-06-10):** esta fase = SOLO el **panel Referencia** (copiar partidas de bases al presupuesto). La **vista Importar .bc3** (integrar la librería `bc3`, subproyecto de mayor riesgo) se difiere a una slice posterior (F5.x) con su propia preparación. Panel con **fidelidad del prototipo** (split redimensionable 320–640 en ≥1100, overlay en <1100). Troceado: **F5.1** panel + copia (botón/capítulo/multiselección) · **F5.2** drag&drop.
+
+- [x] Panel Referencia (F5.1, commit pendiente): split redimensionable (320–640) si ventana ≥1100, si no overlay. Selector de fuente, buscador, interruptor "Copiar como precio contradictorio". Datos portados a `core/refdata.ts` tipado (3 fuentes: BDT Andalucía, Reforma Goya, CYPE GP) + `REF_DESC`.
+- [x] Árbol solo-lectura (F5.1) con checkbox multiselección, desplegar descripción larga + descomposición, botón "←", copiar capítulo entero.
+- [x] Copia por **botón** y por **multiselección + "Copiar a {capítulo}"** (F5.1): acción `copyRefPartidas` integra recursos en el banco **sin pisar** los homónimos; crea partida con `med:[]`, items por código, marca BASE (o P.C. si contradictorio). `precio` de la base = autoridad (no recomputa). Destino = capítulo/sub activo (`copyTargetOf`/`selectCopyTarget`) o explícito. Estado de UI en store (`refOpen`/`refSourceId`/`refWidth`); split/overlay + tirador en `App`.
+- [ ] **Copia por drag&drop** (F5.2): sobre capítulo/sub del sidebar o área de presupuesto = capítulo activo. (`onDragStart` ya publica los items; falta el drop.)
+- [ ] **(diferido) Vista Importar .bc3**: zona drop + selección + tarjetas de bases compatibles; integrar librería `bc3`.
+- **Aceptación:** copiar una partida con descomposición crea la partida con `med:[]`, items por código, chip BASE, y sus recursos nuevos entran al banco sin sobreescribir los homónimos ✓; drag&drop al sidebar (F5.2); en <1100 abre overlay ✓.
 
 ### Fase 6 — Persistencia + Datos de obra
 - [ ] Dexie: esquema de proyecto (chapters, partidas, recursos, certs, rates, notes, obra); autosave con debounce.

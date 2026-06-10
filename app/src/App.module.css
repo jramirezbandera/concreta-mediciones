@@ -20,6 +20,7 @@
   flex-direction: column;
   min-width: 0;
   background: var(--bg-primary);
+  position: relative; /* contexto para el overlay del panel Referencia (<1100) */
 }
 
 .toast {

@@ -19,6 +19,7 @@ import { buildRecursos, precioCuadraDescompuesto, precioSegunModo } from '../cor
 import { estaCertToOrigen, prevDataOf, sumLineQty } from '../core/certificacion';
 import { round2 } from '../core/money';
 import { renumberChapter } from '../core/numbering';
+import { REF_DESC, REF_SOURCES, type RefCopyItem } from '../core/refdata';
 import { CHAPTERS, DEFAULT_OBRA, DEFAULT_RATES, PARTIDAS, makeCertsInit } from '../core/seed';
 import type { View } from '../layout/types';
 
@@ -77,6 +78,25 @@ function renumberInPlace(ch: Chapter | undefined, list: Partida[]): void {
   for (let i = 0; i < list.length; i++) list[i]!.pos = fresh[i]!.pos;
 }
 
+/** Destino de copia (F5): capítulo/sub seleccionado, o el primer capítulo si la
+ *  selección es "Toda la obra"/vacía. `label` para la barra "Copiar a …". */
+export interface CopyTarget {
+  chId: string;
+  subId: string | null;
+  label: string;
+}
+export function copyTargetOf(chapters: Chapter[], active: string): CopyTarget {
+  if (active !== ALL) {
+    for (const ch of chapters) {
+      if (ch.id === active) return { chId: ch.id, subId: null, label: `${ch.code} · ${ch.title}` };
+      for (const sub of ch.children ?? [])
+        if (sub.id === active) return { chId: ch.id, subId: sub.id, label: `${sub.code} · ${sub.title}` };
+    }
+  }
+  const c = chapters[0];
+  return c ? { chId: c.id, subId: null, label: `${c.code} · ${c.title}` } : { chId: '', subId: null, label: '' };
+}
+
 /** Estado de dominio de la obra (lo que persistiría en F6). Serializable. */
 export interface ObraData {
   /** Versión del shape (para migración al cargar; ver SCHEMA_VERSION). */
@@ -99,6 +119,12 @@ export interface ObraState extends ObraData {
   expanded: Record<string, boolean>;
   /** Índice de la certificación en curso dentro de `certs`. */
   curCert: number;
+  /** Panel de Referencia abierto (F5). */
+  refOpen: boolean;
+  /** Fuente de referencia seleccionada (id de `REF_SOURCES`). */
+  refSourceId: string;
+  /** Ancho del panel en modo split (px, clamp 320–640). */
+  refWidth: number;
 
   /* ---- acciones (F1) ---- */
   setView: (v: View) => void;
@@ -151,6 +177,26 @@ export interface ObraState extends ObraData {
   ) => void;
   /** Elimina un contradictorio de la cert en curso. */
   deleteContradictorio: (extraId: string) => void;
+
+  /* ---- acciones F5 (panel Referencia) ---- */
+  /** Abre/cierra el panel de Referencia; sin argumento alterna. */
+  setRefOpen: (open?: boolean) => void;
+  /** Selecciona la fuente de referencia activa (id de `REF_SOURCES`). */
+  setRefSource: (id: string) => void;
+  /** Fija el ancho del panel en split (se clampa a 320–640). */
+  setRefWidth: (w: number) => void;
+  /**
+   * Copia partidas de una fuente de referencia al presupuesto (F5). Integra los
+   * recursos de su descomposición en el banco SIN pisar los homónimos (coherencia);
+   * crea cada partida con `med:[]`, items por código y marca `fromBase` (chip BASE)
+   * o `contradictorio` (chip P.C.) según `contra`. `target` = capítulo/sub destino;
+   * `null` = el capítulo/sub activo (`copyTargetOf`). Despliega el capítulo destino.
+   */
+  copyRefPartidas: (
+    items: RefCopyItem[],
+    target: { chId: string; subId: string | null } | null,
+    contra: boolean,
+  ) => void;
 
   /* ---- acciones F2 (edición in-situ de partidas) ---- */
   /** Edita un campo de texto de la partida (title/ud/code/desc) y quita el chip BASE. */
@@ -280,6 +326,9 @@ function seedUi(certs: Cert[]) {
     active: '01',
     expanded: { '01': true } as Record<string, boolean>,
     curCert: Math.max(0, certs.length - 1), // la última cert queda en curso
+    refOpen: false,
+    refSourceId: REF_SOURCES[0]?.id ?? '',
+    refWidth: 400,
   };
 }
 
@@ -442,6 +491,74 @@ export const useObraStore = create<ObraState>()(
           if (!cert?.extras) return;
           cert.extras = cert.extras.filter((e) => e.id !== extraId);
           if (cert.extras.length === 0) cert.extras = undefined;
+        }),
+
+      setRefOpen: (open) =>
+        set((s) => {
+          s.refOpen = open ?? !s.refOpen;
+        }),
+
+      setRefSource: (id) =>
+        set((s) => {
+          s.refSourceId = id;
+        }),
+
+      setRefWidth: (w) =>
+        set((s) => {
+          s.refWidth = Math.max(320, Math.min(640, Math.round(w)));
+        }),
+
+      copyRefPartidas: (items, target, contra) =>
+        set((s) => {
+          if (!items.length) return;
+          const t = target ?? copyTargetOf(s.chapters, s.active);
+          const ch = s.chapters.find((c) => c.id === t.chId);
+          if (!ch) return;
+          const subId = t.subId;
+          const sub = subId && ch.children ? ch.children.find((x) => x.id === subId) : undefined;
+          const base = sub ? sub.code : ch.code;
+          const list = (s.partidas[t.chId] ??= []);
+          // 1) recursos al banco SIN pisar los homónimos (coherencia, §0).
+          for (const it of items)
+            for (const r of it.partida.items) {
+              if (r.type === '%CI') continue;
+              if (!s.recursos[r.code])
+                s.recursos[r.code] = {
+                  type: r.type,
+                  desc: r.desc ?? '',
+                  ud: r.ud ?? '',
+                  precio: r.precio ?? 0,
+                };
+            }
+          // 2) partidas nuevas (pos correlativa dentro del sub destino; el precio
+          //    de la base es autoridad, igual que la semilla, sin recomputar).
+          let sameSub = list.filter((p) => (subId ? p.sub === subId : !p.sub)).length;
+          for (const it of items) {
+            const p = it.partida;
+            sameSub += 1;
+            const newItems = p.items.map((r) =>
+              r.type === '%CI'
+                ? { code: '%CI', type: '%CI' as const, cantidad: r.cantidad }
+                : { code: r.code, type: r.type, cantidad: r.cantidad },
+            );
+            list.push({
+              id: nextPartidaId(),
+              sub: subId || undefined,
+              pos: `${base}.${sameSub}`,
+              code: p.code,
+              title: p.title,
+              ud: p.ud,
+              precio: p.precio,
+              mainType: p.mainType,
+              desc: REF_DESC[p.code] ?? '',
+              med: [],
+              items: newItems,
+              fromBase: !contra,
+              contradictorio: contra || undefined,
+              baseSource: it.sourceName,
+            });
+          }
+          s.expanded[t.chId] = true;
         }),
 
       editPartidaField: (chapterId, partidaId, field, value) =>

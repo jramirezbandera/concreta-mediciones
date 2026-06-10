@@ -3,6 +3,7 @@ import { certTotals, estaCertToOrigen, prevDataOf } from '../core/certificacion'
 import { partidaCantidad } from '../core/medicion';
 import { toEur } from '../core/money';
 import { descompUnit, precioCuadraDescompuesto, precioSegunModo } from '../core/banco';
+import { REF_SOURCES, type RefCopyItem } from '../core/refdata';
 import { DEFAULT_RATES, PARTIDAS } from '../core/seed';
 import {
   ALL,
@@ -558,6 +559,73 @@ describe('acciones F4 (certificaciones)', () => {
     // editar la nueva (en curso) no toca la cert previa (clon independiente)
     state().editContradictorio(id, 'cantidad', 9);
     expect(state().certs[prevIdx]!.extras![0]!.cantidad).toBe(4);
+  });
+});
+
+describe('acciones F5 (panel Referencia · copiar)', () => {
+  const bdt = REF_SOURCES.find((s) => s.id === 'base-bdt')!;
+  const pADE = bdt.partidas.A!.find((p) => p.code === 'ADE010')!; // items: mo113, mq01ret020, %CI
+  const item = (): RefCopyItem => ({ sourceName: bdt.name, partida: pADE });
+
+  it('integra recursos nuevos en el banco SIN pisar los homónimos existentes', () => {
+    // mq01ret020 ya está en el banco (seed p111) con su desc propia; mo113 es nuevo.
+    const before = state().recursos['mq01ret020']!.desc;
+    expect(before).toBe('Retrocargadora neumáticos 75 CV');
+    state().copyRefPartidas([item()], null, false);
+    const r = state();
+    expect(r.recursos['mo113']?.desc).toBe('Peón ordinario construcción'); // nuevo
+    expect(r.recursos['mq01ret020']!.desc).toBe(before); // NO pisado por refdata
+    expect(r.recursos['%CI']).toBeUndefined(); // %CI no entra al banco
+  });
+
+  it('crea la partida con med:[], items por código, chip BASE y baseSource', () => {
+    state().copyRefPartidas([item()], null, false); // destino = activo (cap 01)
+    const list = state().partidas['01']!;
+    const nueva = list.at(-1)!;
+    expect(nueva.code).toBe('ADE010');
+    expect(nueva.fromBase).toBe(true);
+    expect(nueva.contradictorio).toBeUndefined();
+    expect(nueva.baseSource).toBe(bdt.name);
+    expect(nueva.med).toEqual([]);
+    expect(nueva.desc).toContain('Excavación'); // REF_DESC copiada
+    // items mapeados a {code,type,cantidad}; el %CI sin precio
+    expect(nueva.items.map((i) => i.code)).toEqual(['mo113', 'mq01ret020', '%CI']);
+    expect(nueva.items.find((i) => i.code === '%CI')!.precio).toBeUndefined();
+    expect(state().expanded['01']).toBe(true);
+  });
+
+  it('como contradictorio marca P.C. (no BASE)', () => {
+    state().copyRefPartidas([item()], null, true);
+    const nueva = state().partidas['01']!.at(-1)!;
+    expect(nueva.contradictorio).toBe(true);
+    expect(nueva.fromBase).toBeFalsy();
+  });
+
+  it('respeta el destino explícito (capítulo distinto del activo)', () => {
+    const n02 = state().partidas['02']?.length ?? 0;
+    state().copyRefPartidas([item()], { chId: '02', subId: null }, false);
+    expect(state().partidas['02']).toHaveLength(n02 + 1);
+  });
+
+  it('copiar varias crea una partida por cada una con pos correlativa', () => {
+    const list0 = state().partidas['01']!.length;
+    const dos = bdt.partidas.A!.slice(0, 2).map((p) => ({ sourceName: bdt.name, partida: p }));
+    state().copyRefPartidas(dos, null, false);
+    expect(state().partidas['01']).toHaveLength(list0 + 2);
+  });
+
+  it('setRefOpen alterna, setRefSource cambia fuente, setRefWidth clampa 320–640', () => {
+    expect(state().refOpen).toBe(false);
+    state().setRefOpen();
+    expect(state().refOpen).toBe(true);
+    state().setRefOpen(false);
+    expect(state().refOpen).toBe(false);
+    state().setRefSource('cype-gp');
+    expect(state().refSourceId).toBe('cype-gp');
+    state().setRefWidth(9999);
+    expect(state().refWidth).toBe(640);
+    state().setRefWidth(10);
+    expect(state().refWidth).toBe(320);
   });
 });
 
