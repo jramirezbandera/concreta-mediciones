@@ -1,17 +1,22 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { EditableText, Icon } from '../../components';
 import { certCalc, extraCalc, extrasCantidad } from '../../core/certificacion';
 import { fmtCents, fmtNum, sumCents, toEur, type Cents } from '../../core/money';
+import { useElementWidth } from '../../hooks/useElementWidth';
 import {
   selectCertChapterRows,
   selectCertTotals,
   useObraStore,
   type CertMode,
 } from '../../store';
+import { CertChapterCards } from './CertChapterCards';
 import { CertChapterTable, CertHead } from './CertTable';
 import { CertChapterSummary, CertSummary } from './CertSummary';
 import { CertSelector } from './CertSelector';
 import styles from './Certificaciones.module.css';
+
+/** Por debajo de este ancho ÚTIL la tabla conmuta a tarjetas (igual que F2.5). */
+const COMPACT_WIDTH = 780;
 
 const MODES: [CertMode, string][] = [
   ['origen', 'A origen'],
@@ -23,10 +28,13 @@ const MODES: [CertMode, string][] = [
  * "líquido a abonar" grande, toggle A origen / Esta certificación, tabla por
  * capítulo con la cantidad ejecutada editable, y resúmenes (económico + por
  * capítulos). El cálculo es el motor de F1; el % editable + desplegable (F4.2),
- * marcar líneas (F4.3) y los precios contradictorios cert-local (F4.4) ya están;
- * el móvil llega en F4.5.
+ * marcar líneas (F4.3), contradictorios cert-local (F4.4) y tarjetas móvil (F4.5,
+ * conmuta por ancho útil <780, igual que F2.5). F4 completa.
  */
-export function CertificacionesView() {
+export function CertificacionesView({ compact: mobile }: { compact: boolean }) {
+  const viewRef = useRef<HTMLDivElement>(null);
+  const width = useElementWidth(viewRef);
+  const compact = mobile || (width > 0 && width < COMPACT_WIDTH);
   const [mode, setMode] = useState<CertMode>('origen');
   const certs = useObraStore((s) => s.certs);
   const curCert = useObraStore((s) => s.curCert);
@@ -46,7 +54,7 @@ export function CertificacionesView() {
   const prevExtraCant = extrasCantidad(prevExtras);
 
   return (
-    <div className={styles.view}>
+    <div ref={viewRef} className={`${styles.view}${compact ? ` ${styles.compact}` : ''}`}>
       <div className={styles.header}>
         <div className={styles.headerTop}>
           <div className={styles.headerLeft}>
@@ -86,7 +94,7 @@ export function CertificacionesView() {
         </div>
       </div>
 
-      <CertHead mode={mode} />
+      {!compact && <CertHead mode={mode} />}
 
       {chapters.map((ch) => {
         const ps = partidas[ch.id] ?? [];
@@ -116,8 +124,8 @@ export function CertificacionesView() {
                 <span className={`mono ${styles.chapImporte}`}>{fmtNum(toEur(totalByMode))}</span>
               </div>
             </div>
-            <div className={styles.tableWrap}>
-              <CertChapterTable
+            {compact ? (
+              <CertChapterCards
                 chapter={ch}
                 partidas={ps}
                 curData={curData}
@@ -127,7 +135,20 @@ export function CertificacionesView() {
                 extras={extras}
                 prevExtras={prevExtras}
               />
-            </div>
+            ) : (
+              <div className={styles.tableWrap}>
+                <CertChapterTable
+                  chapter={ch}
+                  partidas={ps}
+                  curData={curData}
+                  prevData={prevData}
+                  mode={mode}
+                  coefK={coefK}
+                  extras={extras}
+                  prevExtras={prevExtras}
+                />
+              </div>
+            )}
           </section>
         );
       })}

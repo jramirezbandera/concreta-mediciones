@@ -104,7 +104,7 @@ export default function App() {
           {view === 'presupuesto' ? (
             <PresupuestoView compact={bp.isMobile} />
           ) : view === 'certificaciones' ? (
-            <CertificacionesView />
+            <CertificacionesView compact={bp.isMobile} />
           ) : (
             <PlaceholderView view={view} compact={bp.isMobile} />
           )}

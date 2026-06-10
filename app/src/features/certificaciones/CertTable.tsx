@@ -30,8 +30,9 @@ function dimsOf(l: MedLine): string {
 }
 
 /** Desplegable por partida (F4.2 lectura + F4.3 marcar líneas): descripción +
- *  líneas de medición, cada una con casilla para certificarla "por trozos". */
-function CertDetail({ p }: { p: Partida }) {
+ *  líneas de medición, cada una con casilla para certificarla "por trozos".
+ *  Reutilizado por la fila (desktop) y la tarjeta (compacto). */
+export function CertDetail({ p }: { p: Partida }) {
   const med = p.med ?? [];
   const lineQty = useObraStore((s) => s.certs[s.curCert]?.lineQty?.[p.id]);
   const setCertLine = useObraStore((s) => s.setCertLine);
