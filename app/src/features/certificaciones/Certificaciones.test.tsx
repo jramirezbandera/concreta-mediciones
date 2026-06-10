@@ -32,4 +32,23 @@ describe('CertificacionesView (F4.1)', () => {
     fireEvent.click(screen.getByText('Nueva certificación'));
     expect(useObraStore.getState().certs).toHaveLength(n0 + 1);
   });
+
+  it('el desplegable por partida muestra descripción y líneas (F4.2 #2)', () => {
+    render(<CertificacionesView />);
+    expect(screen.queryByText('Zanjas de saneamiento')).toBeNull();
+    fireEvent.click(screen.getByText('E02EM030')); // celda Nº de p111 → despliega
+    expect(screen.getByText('Mediciones')).toBeInTheDocument();
+    expect(screen.getByText('Zanjas de saneamiento')).toBeInTheDocument(); // línea de p111
+  });
+
+  it('teclear un % rellena la cantidad ejecutada a origen (F4.2 #1)', () => {
+    render(<CertificacionesView />);
+    // p111: ofertada 124,65; su % es el primero de la tabla.
+    fireEvent.click(screen.getAllByLabelText('% de ejecución')[0]!);
+    const input = screen.getAllByLabelText('% de ejecución')[0] as HTMLInputElement;
+    fireEvent.change(input, { target: { value: '100' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    const s = useObraStore.getState();
+    expect(s.certs[s.curCert]!.data.p111).toBe(124.65); // 100% de la ofertada
+  });
 });

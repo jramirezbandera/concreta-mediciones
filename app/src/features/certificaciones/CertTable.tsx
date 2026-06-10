@@ -1,12 +1,53 @@
-import { Fragment } from 'react';
-import { Badge, EditableNum } from '../../components';
-import { certCalc, estaCertDisplay } from '../../core/certificacion';
+import { Fragment, useState, type MouseEvent } from 'react';
+import { Badge, EditableNum, Icon } from '../../components';
+import { cantidadToPct, certCalc, estaCertDisplay, pctToCantidad } from '../../core/certificacion';
 import { groupBySub } from '../../core/grouping';
+import { lineParcial } from '../../core/medicion';
 import { fmtNum, round2, sumCents, toEur, type Cents } from '../../core/money';
-import type { Chapter, Partida } from '../../core/types';
+import type { MedLine, Partida, Chapter } from '../../core/types';
 import { useObraStore, type CertMode } from '../../store';
 import { PctBar } from './PctBar';
 import styles from './Certificaciones.module.css';
+
+/** No propagar el click al `<tr>` (que despliega) desde las celdas editables. */
+function stop(e: MouseEvent) {
+  e.stopPropagation();
+}
+
+/** Factores no vacíos de una línea, en formato "1 × 85,00 × 0,60". */
+function dimsOf(l: MedLine): string {
+  return [l.uds, l.largo, l.ancho, l.alto]
+    .filter((v) => v !== '' && v != null)
+    .map((v) => fmtNum(Number(v)))
+    .join(' × ');
+}
+
+/** Desplegable por partida (F4.2, lectura): descripción + líneas de medición. */
+function CertDetail({ p }: { p: Partida }) {
+  const med = p.med ?? [];
+  return (
+    <div className={styles.detail}>
+      <div className={styles.detailLabel}>Descripción</div>
+      <p className={styles.detailDesc}>{p.desc || '—'}</p>
+      <div className={styles.detailLabel}>Mediciones</div>
+      {med.length > 0 ? (
+        <div className={styles.detailMed}>
+          {med.map((l) => (
+            <div key={l.id} className={styles.detailMedRow}>
+              <span className={`${styles.detailMedComment} ${l.comment ? '' : styles.empty}`}>
+                {l.comment || 'Sin comentario'}
+              </span>
+              <span className={`mono ${styles.detailMedDims}`}>{dimsOf(l) || '—'}</span>
+              <span className={`mono ${styles.detailMedParcial}`}>{fmtNum(lineParcial(l))}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className={styles.detailEmpty}>Sin líneas de medición.</p>
+      )}
+    </div>
+  );
+}
 
 type Data = Record<string, number>;
 
@@ -54,39 +95,70 @@ function CertRow({
   coefK: number;
 }) {
   const onCertEdit = useObraStore((s) => s.onCertEdit);
+  const [expanded, setExpanded] = useState(false);
   const k = certCalc(p, curData, prevData, coefK);
   const abono = mode === 'origen' ? k.aOrigen : k.estaCert;
+  // La cantidad editable (y su %) son las del MODO en curso (a origen / esta cert).
   const execValue = mode === 'origen' ? k.ejecutada : estaCertDisplay(k.ejecutada, k.prev);
+  const execPct = cantidadToPct(k.ofertada, execValue);
   const precioK = round2((p.precio ?? 0) * coefK);
   return (
-    <tr>
-      <td className={`${styles.cell} ${styles.cNum}`}>
-        <div className={`mono ${styles.pos}`}>{p.pos}</div>
-        <div className={`mono ${styles.code}`}>{p.code}</div>
-      </td>
-      <td className={`${styles.cell} ${styles.cDesc}`}>
-        <div className={styles.descInner}>
-          {p.mainType && <Badge type={p.mainType} />}
-          <span className={styles.title}>{p.title}</span>
-        </div>
-      </td>
-      <td className={`mono ${styles.cell} ${styles.cUd}`}>{p.ud}</td>
-      <td className={`mono ${styles.cell} ${styles.cNum2}`}>{fmtNum(k.ofertada)}</td>
-      <td className={`${styles.cell} ${styles.cExec}`}>
-        <EditableNum
-          value={execValue}
-          dec={2}
-          accent
-          ariaLabel="Cantidad ejecutada"
-          onCommit={(v) => onCertEdit(p.id, v, mode)}
-        />
-      </td>
-      <td className={`${styles.cell} ${styles.cPct}`}>
-        {k.ofertada > 0 ? <PctBar pct={k.pct} /> : <span className={styles.pctDash}>—</span>}
-      </td>
-      <td className={`mono ${styles.cell} ${styles.cPrice}`}>{fmtNum(precioK)}</td>
-      <td className={`mono ${styles.cell} ${styles.cAbono}`}>{fmtNum(toEur(abono))}</td>
-    </tr>
+    <>
+      <tr
+        className={`tcol ${styles.row} ${expanded ? styles.expanded : ''}`}
+        onClick={() => setExpanded((v) => !v)}
+      >
+        <td className={`${styles.cell} ${styles.cNum}`}>
+          <div className={styles.numFlex}>
+            <Icon
+              name={expanded ? 'chevronDown' : 'chevron'}
+              size={13}
+              className={`${styles.chev} ${expanded ? styles.open : ''}`}
+            />
+            <div>
+              <div className={`mono ${styles.pos}`}>{p.pos}</div>
+              <div className={`mono ${styles.code}`}>{p.code}</div>
+            </div>
+          </div>
+        </td>
+        <td className={`${styles.cell} ${styles.cDesc}`}>
+          <div className={styles.descInner}>
+            {p.mainType && <Badge type={p.mainType} />}
+            <span className={styles.title}>{p.title}</span>
+          </div>
+        </td>
+        <td className={`mono ${styles.cell} ${styles.cUd}`}>{p.ud}</td>
+        <td className={`mono ${styles.cell} ${styles.cNum2}`}>{fmtNum(k.ofertada)}</td>
+        <td className={`${styles.cell} ${styles.cExec}`} onClick={stop}>
+          <EditableNum
+            value={execValue}
+            dec={2}
+            accent
+            ariaLabel="Cantidad ejecutada"
+            onCommit={(v) => onCertEdit(p.id, v, mode)}
+          />
+        </td>
+        <td className={`${styles.cell} ${styles.cPct}`} onClick={stop}>
+          {k.ofertada > 0 ? (
+            <PctBar
+              pct={execPct}
+              onCommitPct={(pct) => onCertEdit(p.id, pctToCantidad(k.ofertada, pct), mode)}
+            />
+          ) : (
+            <span className={styles.pctDash}>—</span>
+          )}
+        </td>
+        <td className={`mono ${styles.cell} ${styles.cPrice}`}>{fmtNum(precioK)}</td>
+        <td className={`mono ${styles.cell} ${styles.cAbono}`}>{fmtNum(toEur(abono))}</td>
+      </tr>
+      {expanded && (
+        <tr>
+          <td colSpan={8} className={styles.detailCell}>
+            <CertDetail p={p} />
+          </td>
+        </tr>
+      )}
+    </>
   );
 }
 
