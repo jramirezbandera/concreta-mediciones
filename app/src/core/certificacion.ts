@@ -18,18 +18,52 @@ export interface CertRow {
   estaCert: Cents; // importe de esta certificación = aOrigen − anterior
 }
 
+/* ---- Snapshot de precios (F7.0) --------------------------------------------
+   Este módulo leía `p.precio` EN VIVO: editar un recurso/precio/K reescribía
+   importes ya certificados (residuo de precio de T-2). La cert congela el
+   precio unitario (y el K) al certificar (`Cert.priceSnapshot`/`Cert.coefK`);
+   aquí se VALORA con lo congelado si existe, en vivo si no (certs legadas). */
+
+/** Precios congelados de una cert: euros SIN K por partida + K congelado. */
+export interface CertSnapshot {
+  precios: Record<string, number>;
+  coefK: number;
+}
+
+/** Snapshot con el que valorar una cert (`undefined` si es legada → en vivo).
+ *  `liveCoefK` = fallback si la cert congeló precios pero no K (defensivo). */
+export function certSnapshotOf(
+  cert: Pick<Cert, 'priceSnapshot' | 'coefK'> | undefined,
+  liveCoefK = 1,
+): CertSnapshot | undefined {
+  if (!cert?.priceSnapshot) return undefined;
+  return { precios: cert.priceSnapshot, coefK: cert.coefK ?? liveCoefK };
+}
+
+/** Precio unitario efectivo (euros) con el que la cert valora la partida:
+ *  congelado × K congelado si está en el snapshot; vivo × K vivo si no
+ *  (partida añadida al presupuesto después de congelar, o cert legada). */
+export function certPrecioK(p: Partida, coefK = 1, snap?: CertSnapshot): number {
+  if (snap) {
+    const congelado = snap.precios[p.id];
+    if (congelado != null) return congelado * snap.coefK;
+  }
+  return (p.precio ?? 0) * coefK;
+}
+
 /** Cálculo por partida. `curData`/`prevData` = cantidades ejecutadas a origen. */
 export function certCalc(
   p: Partida,
   curData: Record<string, number>,
   prevData: Record<string, number>,
   coefK = 1,
+  snap?: CertSnapshot,
 ): CertRow {
   const ofertada = partidaCantidad(p);
   const ejecutada = curData[p.id] ?? 0;
   const prev = prevData[p.id] ?? 0;
   const pct = ofertada > 0 ? (ejecutada / ofertada) * 100 : 0;
-  const precio = (p.precio ?? 0) * coefK;
+  const precio = certPrecioK(p, coefK, snap);
   const aOrigen = importeCents(ejecutada, precio);
   const anterior = importeCents(prev, precio);
   const estaCert = aOrigen - anterior; // ambos en céntimos → resta exacta
@@ -86,13 +120,16 @@ export function certTotals(
   coefK = 1,
   extras: CertExtra[] = [],
   prevExtras: CertExtra[] = [],
+  snap?: CertSnapshot,
 ): CertTotals {
   let budgetPEM = 0;
   let certPEM = 0;
   let prevPEM = 0;
   for (const p of partidas) {
+    // budgetPEM es la referencia del % global → SIEMPRE el presupuesto vivo
+    // (el snapshot congela lo certificado, no el presupuesto).
     budgetPEM += partidaImporte(p, coefK);
-    const k = certCalc(p, curData, prevData, coefK);
+    const k = certCalc(p, curData, prevData, coefK, snap);
     certPEM += k.aOrigen;
     prevPEM += k.anterior;
   }
@@ -154,6 +191,7 @@ export function certChapterRows(
   prevData: Record<string, number>,
   coefK = 1,
   extras: CertExtra[] = [],
+  snap?: CertSnapshot,
 ): CertChapterRow[] {
   return chapters
     .map((ch) => {
@@ -161,7 +199,7 @@ export function certChapterRows(
       let cert = 0;
       for (const p of partidas[ch.id] ?? []) {
         budget += partidaImporte(p, coefK);
-        cert += certCalc(p, curData, prevData, coefK).aOrigen;
+        cert += certCalc(p, curData, prevData, coefK, snap).aOrigen;
       }
       // Contradictorios del capítulo: certifican pero no aumentan el presupuesto.
       for (const e of extras) {

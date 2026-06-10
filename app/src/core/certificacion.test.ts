@@ -3,6 +3,8 @@ import {
   cantidadToPct,
   certCalc,
   certChapterRows,
+  certPrecioK,
+  certSnapshotOf,
   certTotals,
   estaCertDisplay,
   estaCertToOrigen,
@@ -171,6 +173,59 @@ describe('% editable (F4, dogfood #1) — cantidad, no dinero', () => {
     expect(pctToCantidad(124.65, 50)).toBe(62.33); // round2(62.325)
     expect(cantidadToPct(100, 50)).toBe(50);
     expect(cantidadToPct(0, 5)).toBe(0); // sin ofertada → 0, no NaN
+  });
+});
+
+describe('snapshot de precios por cert (F7.0, residuo de precio de T-2)', () => {
+  // El presupuesto "vivo" tiene la partida a 20 €; la cert la congeló a 10 €.
+  const vivo = partida({ id: 'p1', cantidad: 100, precio: 20 });
+  const snap = { precios: { p1: 10 }, coefK: 1 };
+
+  it('certPrecioK: congelado×K congelado si está en el snapshot; vivo×K vivo si no', () => {
+    expect(certPrecioK(vivo, 1.5, { precios: { p1: 8 }, coefK: 1.13 })).toBeCloseTo(9.04);
+    expect(certPrecioK(vivo, 1.5, { precios: {}, coefK: 1.13 })).toBe(30); // ausente → vivo
+    expect(certPrecioK(vivo, 1.5)).toBe(30); // cert legada (sin snapshot) → vivo
+  });
+
+  it('certCalc valora con el precio congelado aunque el vivo cambie', () => {
+    const r = certCalc(vivo, { p1: 50 }, { p1: 20 }, 1, snap);
+    expect(toEur(r.aOrigen)).toBe(500); // 50 × 10 congelado, no × 20 vivo
+    expect(toEur(r.anterior)).toBe(200);
+    expect(toEur(r.estaCert)).toBe(300);
+  });
+
+  it('certCalc con snapshot ignora el K vivo (usa el K congelado)', () => {
+    const r = certCalc(vivo, { p1: 50 }, {}, 2 /* K vivo */, snap); // K congelado = 1
+    expect(toEur(r.aOrigen)).toBe(500);
+  });
+
+  it('certTotals: certPEM congelado, budgetPEM sigue vivo (referencia del % global)', () => {
+    const t = certTotals([vivo], { p1: 50 }, {}, rates, 0, 1, [], [], snap);
+    expect(toEur(t.certPEM)).toBe(500); // 50 × 10 congelado
+    expect(toEur(t.budgetPEM)).toBe(2000); // 100 × 20 vivo
+    expect(t.pctGlobal).toBe(25); // 500 / 2000
+  });
+
+  it('certChapterRows valora `cert` con el snapshot y `budget` en vivo', () => {
+    const chapters: Chapter[] = [{ id: '01', code: '1', title: 'Uno' }];
+    const map: PartidasMap = { '01': [vivo] };
+    const rows = certChapterRows(chapters, map, { p1: 50 }, {}, 1, [], snap);
+    expect(rows[0]!.cert).toBe(toCents(500));
+    expect(rows[0]!.budget).toBe(toCents(2000));
+  });
+
+  it('certSnapshotOf: undefined para certs legadas; K congelado o fallback al vivo', () => {
+    const legada: Cert = { id: 'c1', num: 1, period: '', retencion: 0, data: {} };
+    expect(certSnapshotOf(legada, 1.13)).toBeUndefined();
+    expect(certSnapshotOf(undefined, 1.13)).toBeUndefined();
+    expect(certSnapshotOf({ priceSnapshot: { p1: 10 }, coefK: 1.05 }, 1.13)).toEqual({
+      precios: { p1: 10 },
+      coefK: 1.05,
+    });
+    expect(certSnapshotOf({ priceSnapshot: { p1: 10 } }, 1.13)).toEqual({
+      precios: { p1: 10 },
+      coefK: 1.13, // sin K congelado (defensivo) → el vivo
+    });
   });
 });
 

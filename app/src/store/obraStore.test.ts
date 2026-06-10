@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { certTotals, estaCertToOrigen, prevDataOf } from '../core/certificacion';
+import {
+  certCalc,
+  certSnapshotOf,
+  certTotals,
+  estaCertToOrigen,
+  prevDataOf,
+} from '../core/certificacion';
 import { partidaCantidad } from '../core/medicion';
 import { toEur } from '../core/money';
 import { descompUnit, precioCuadraDescompuesto, precioSegunModo } from '../core/banco';
@@ -10,6 +16,7 @@ import {
   SCHEMA_VERSION,
   fromSerializable,
   seedObraData,
+  selectCertTotals,
   selectChapterTotals,
   selectCounts,
   selectPec,
@@ -584,6 +591,75 @@ describe('acciones F4 (certificaciones)', () => {
     // editar la nueva (en curso) no toca la cert previa (clon independiente)
     state().editContradictorio(id, 'cantidad', 9);
     expect(state().certs[prevIdx]!.extras![0]!.cantidad).toBe(4);
+  });
+});
+
+describe('snapshot de precios al certificar (F7.0, residuo de precio de T-2)', () => {
+  it('addCert nace congelada: editar recurso/precio/K NO cambia su certPEM ni el líquido', () => {
+    state().addCert(); // la nueva (en curso) congela TODOS los precios vivos
+    const antes = selectCertTotals(state());
+    expect(antes.certPEM).toBeGreaterThan(0); // hereda data de la última seed
+    state().setPrecio('01', 'p111', 99); // precio a mano
+    state().editRecurso('mo001', 'precio', 50); // recurso compartido
+    state().setRates({ coefK: 1.5 }); // K global
+    const despues = selectCertTotals(state());
+    expect(despues.certPEM).toBe(antes.certPEM); // congelado
+    expect(despues.liquido).toBe(antes.liquido);
+    expect(despues.budgetPEM).not.toBe(antes.budgetPEM); // el presupuesto sí vive
+  });
+
+  it('cert legada (seed, sin snapshot) sigue valorándose en vivo', () => {
+    expect(state().certs[2]!.priceSnapshot).toBeUndefined();
+    const antes = selectCertTotals(state()); // curCert = 2 (seed)
+    state().setPrecio('01', 'p111', 99);
+    expect(selectCertTotals(state()).certPEM).not.toBe(antes.certPEM);
+  });
+
+  it('addCert congela el K vivo y la siguiente lo HEREDA (no re-congela)', () => {
+    state().setRates({ coefK: 1.13 });
+    state().addCert();
+    expect(state().certs.at(-1)!.coefK).toBe(1.13);
+    expect(state().certs.at(-1)!.snapshotAt).toBeTruthy();
+    state().setRates({ coefK: 1.5 });
+    state().addCert();
+    expect(state().certs.at(-1)!.coefK).toBe(1.13); // heredado de la anterior
+  });
+
+  it('addCert hereda los precios congelados y congela al vivo los que falten', () => {
+    state().addCert(); // cert A congela p111 a su precio vivo (18,42)
+    expect(state().certs.at(-1)!.priceSnapshot!.p111).toBe(18.42);
+    state().setPrecio('01', 'p111', 99); // el vivo cambia DESPUÉS de congelar
+    state().addPartida('01', null); // partida nueva: no estaba en el snapshot de A
+    const nueva = state().partidas['01']!.at(-1)!;
+    state().setPrecio('01', nueva.id, 5);
+    state().addCert(); // cert B
+    const snapB = state().certs.at(-1)!.priceSnapshot!;
+    expect(snapB.p111).toBe(18.42); // heredado (el "anterior" reproduce lo certificado)
+    expect(snapB[nueva.id]).toBe(5); // congelado al precio vivo actual
+  });
+
+  it('onCertEdit congela esa partida en una cert legada (y sólo la primera vez)', () => {
+    state().setCurCert(0);
+    expect(state().certs[0]!.priceSnapshot).toBeUndefined();
+    state().onCertEdit('p111', 10, 'origen');
+    const c = state().certs[0]!;
+    expect(c.priceSnapshot).toEqual({ p111: 18.42 });
+    expect(c.coefK).toBe(1); // K vivo congelado junto al primer precio
+    expect(c.snapshotAt).toBeTruthy();
+    // editar el presupuesto después no mueve la valoración de esa partida…
+    state().setPrecio('01', 'p111', 99);
+    const p = state().partidas['01']!.find((x) => x.id === 'p111')!;
+    const snap = certSnapshotOf(state().certs[0]!, state().rates.coefK);
+    expect(toEur(certCalc(p, state().certs[0]!.data, {}, 1, snap).aOrigen)).toBe(184.2); // 10 × 18,42
+    // …y re-certificarla NO re-congela (el primer precio queda).
+    state().onCertEdit('p111', 20, 'origen');
+    expect(state().certs[0]!.priceSnapshot!.p111).toBe(18.42);
+  });
+
+  it('setCertLine (marcar línea) también congela el precio de la partida', () => {
+    state().setCurCert(0);
+    state().setCertLine('p111', 'p111-m1', 61.2);
+    expect(state().certs[0]!.priceSnapshot!.p111).toBe(18.42);
   });
 });
 

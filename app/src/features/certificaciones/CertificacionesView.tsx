@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { EditableText, Icon } from '../../components';
-import { certCalc, extraCalc, extrasCantidad } from '../../core/certificacion';
+import { certCalc, certSnapshotOf, extraCalc, extrasCantidad } from '../../core/certificacion';
 import { fmtCents, fmtNum, sumCents, toEur, type Cents } from '../../core/money';
 import { useElementWidth } from '../../hooks/useElementWidth';
 import {
@@ -52,6 +52,8 @@ export function CertificacionesView({ compact: mobile }: { compact: boolean }) {
   const extras = cur.extras ?? [];
   const prevExtras = curCert > 0 ? (certs[curCert - 1]?.extras ?? []) : [];
   const prevExtraCant = extrasCantidad(prevExtras);
+  // F7.0: precios congelados de la cert (undefined si es legada → en vivo).
+  const snap = certSnapshotOf(cur, coefK);
 
   return (
     <div ref={viewRef} className={`${styles.view}${compact ? ` ${styles.compact}` : ''}`}>
@@ -102,7 +104,7 @@ export function CertificacionesView({ compact: mobile }: { compact: boolean }) {
         const chExtras = extras.filter((e) => e.chapterId === ch.id);
         const totalByMode: Cents = sumCents([
           ...ps.map((p) => {
-            const k = certCalc(p, curData, prevData, coefK);
+            const k = certCalc(p, curData, prevData, coefK, snap);
             return mode === 'origen' ? k.aOrigen : k.estaCert;
           }),
           ...chExtras.map((e) => {
@@ -132,6 +134,7 @@ export function CertificacionesView({ compact: mobile }: { compact: boolean }) {
                 prevData={prevData}
                 mode={mode}
                 coefK={coefK}
+                snap={snap}
                 extras={extras}
                 prevExtras={prevExtras}
               />
@@ -144,6 +147,7 @@ export function CertificacionesView({ compact: mobile }: { compact: boolean }) {
                   prevData={prevData}
                   mode={mode}
                   coefK={coefK}
+                  snap={snap}
                   extras={extras}
                   prevExtras={prevExtras}
                 />

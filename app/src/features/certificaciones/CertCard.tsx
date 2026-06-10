@@ -1,6 +1,14 @@
 import { useState } from 'react';
 import { Badge, EditableNum, EditableText, Icon } from '../../components';
-import { cantidadToPct, certCalc, estaCertDisplay, extraCalc, pctToCantidad } from '../../core/certificacion';
+import {
+  cantidadToPct,
+  certCalc,
+  certPrecioK,
+  estaCertDisplay,
+  extraCalc,
+  pctToCantidad,
+  type CertSnapshot,
+} from '../../core/certificacion';
 import { fmtNum, round2, toEur } from '../../core/money';
 import type { CertExtra, Partida } from '../../core/types';
 import { useObraStore, type CertMode } from '../../store';
@@ -21,20 +29,23 @@ export function CertCard({
   prevData,
   mode,
   coefK,
+  snap,
 }: {
   p: Partida;
   curData: Data;
   prevData: Data;
   mode: CertMode;
   coefK: number;
+  snap?: CertSnapshot;
 }) {
   const onCertEdit = useObraStore((s) => s.onCertEdit);
   const [expanded, setExpanded] = useState(false);
-  const k = certCalc(p, curData, prevData, coefK);
+  const k = certCalc(p, curData, prevData, coefK, snap);
   const abono = mode === 'origen' ? k.aOrigen : k.estaCert;
   const execValue = mode === 'origen' ? k.ejecutada : estaCertDisplay(k.ejecutada, k.prev);
   const execPct = cantidadToPct(k.ofertada, execValue);
-  const precioK = round2((p.precio ?? 0) * coefK);
+  // Precio mostrado = el de la valoración (congelado si la cert lo tiene, F7.0).
+  const precioK = round2(certPrecioK(p, coefK, snap));
 
   return (
     <div className={`${styles.card} ${expanded ? styles.open : ''}`}>

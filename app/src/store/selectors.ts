@@ -12,6 +12,7 @@
 import { recursoUsage } from '../core/banco';
 import {
   certChapterRows as certChapterRowsCore,
+  certSnapshotOf,
   certTotals as certTotalsCore,
   type CertChapterRow,
   type CertTotals,
@@ -97,6 +98,9 @@ const _certTotals = memo1(
     retencion: number,
     extras: CertExtra[],
     prevExtras: CertExtra[],
+    // F7.0: snapshot de precios de la cert (campos sueltos → memo por identidad).
+    priceSnapshot: Record<string, number> | undefined,
+    certK: number | undefined,
   ): CertTotals =>
     certTotalsCore(
       Object.values(partidas).flat(),
@@ -107,6 +111,7 @@ const _certTotals = memo1(
       rates.coefK,
       extras,
       prevExtras,
+      certSnapshotOf({ priceSnapshot, coefK: certK }, rates.coefK),
     ),
 );
 const _certChapterRows = memo1(
@@ -117,7 +122,18 @@ const _certChapterRows = memo1(
     prevData: Record<string, number>,
     coefK: number,
     extras: CertExtra[],
-  ): CertChapterRow[] => certChapterRowsCore(chapters, partidas, curData, prevData, coefK, extras),
+    priceSnapshot: Record<string, number> | undefined,
+    certK: number | undefined,
+  ): CertChapterRow[] =>
+    certChapterRowsCore(
+      chapters,
+      partidas,
+      curData,
+      prevData,
+      coefK,
+      extras,
+      certSnapshotOf({ priceSnapshot, coefK: certK }, coefK),
+    ),
 );
 
 const curCertData = (s: ObraState): Record<string, number> => s.certs[s.curCert]?.data ?? EMPTY_DATA;
@@ -137,11 +153,22 @@ export const selectCertTotals = (s: ObraState): CertTotals =>
     s.certs[s.curCert]?.retencion ?? 0,
     curCertExtras(s),
     prevCertExtras(s),
+    s.certs[s.curCert]?.priceSnapshot,
+    s.certs[s.curCert]?.coefK,
   );
 
 /** Avance certificado por capítulo de la cert en curso. */
 export const selectCertChapterRows = (s: ObraState): CertChapterRow[] =>
-  _certChapterRows(s.chapters, s.partidas, curCertData(s), prevCertData(s), s.rates.coefK, curCertExtras(s));
+  _certChapterRows(
+    s.chapters,
+    s.partidas,
+    curCertData(s),
+    prevCertData(s),
+    s.rates.coefK,
+    curCertExtras(s),
+    s.certs[s.curCert]?.priceSnapshot,
+    s.certs[s.curCert]?.coefK,
+  );
 
 /* ---- selector de destino de copia (F5, panel Referencia) ---- */
 

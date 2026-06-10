@@ -119,6 +119,21 @@ export interface Cert {
   lineQty?: Record<string, Record<string, number>>;
   /** Precios contradictorios de ESTA cert (F4.4). Ver `CertExtra`. */
   extras?: CertExtra[];
+  /**
+   * Snapshot de precios (F7.0, cierra el residuo de precio de T-2): precio
+   * unitario en EUROS (SIN K) por partida, CONGELADO al certificarla (espeja
+   * `lineQty`, que congela cantidades al marcar). `certCalc` valora la partida
+   * con este precio × `coefK` congelado si existe; en vivo si no (certs
+   * legadas anteriores a F7.0). `addCert` hereda los precios de la última cert
+   * (su "anterior" reproduce lo ya certificado) y congela al precio vivo los
+   * que falten. Editar el presupuesto (recurso/precio/K) ya no reescribe
+   * certificaciones → el documento exportado (F7.1) es reproducible.
+   */
+  priceSnapshot?: Record<string, number>;
+  /** Coeficiente K congelado junto al snapshot (valora las partidas congeladas). */
+  coefK?: number;
+  /** Fecha ISO del último precio congelado (trazabilidad del doc, design review F7.1). */
+  snapshotAt?: string;
 }
 
 /** Tasas económicas. Estado del store, NUNCA globals mutados (§8 riesgos). */

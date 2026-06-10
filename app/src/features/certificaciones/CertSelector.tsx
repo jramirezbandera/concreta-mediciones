@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '../../components';
-import { certTotals, prevDataOf } from '../../core/certificacion';
+import { certSnapshotOf, certTotals, prevDataOf } from '../../core/certificacion';
 import { fmtCents, fmtNum } from '../../core/money';
 import { useObraStore } from '../../store';
 import styles from './Certificaciones.module.css';
@@ -39,7 +39,19 @@ export function CertSelector() {
         <div className={styles.selPop}>
           <div className={`sec-head ${styles.selHead}`}>Histórico de certificaciones</div>
           {certs.map((c, i) => {
-            const tot = certTotals(flat, c.data, prevDataOf(certs, i), rates, c.retencion, rates.coefK);
+            // Cada cert del histórico se valora con SU snapshot (F7.0) y con sus
+            // contradictorios (antes faltaban → el líquido no cuadraba con la vista).
+            const tot = certTotals(
+              flat,
+              c.data,
+              prevDataOf(certs, i),
+              rates,
+              c.retencion,
+              rates.coefK,
+              c.extras ?? [],
+              certs[i - 1]?.extras ?? [],
+              certSnapshotOf(c, rates.coefK),
+            );
             const on = i === curCert;
             return (
               <button

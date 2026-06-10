@@ -71,6 +71,31 @@ function renumberInPlace(ch: Chapter | undefined, list: Partida[]): void {
   for (let i = 0; i < list.length; i++) list[i]!.pos = fresh[i]!.pos;
 }
 
+/**
+ * F7.0: congela en la cert el precio unitario VIGENTE de la partida al
+ * certificarla (espeja `Cert.lineQty`, que congela la cantidad al marcar): el
+ * precio que el usuario ve al certificar es el que queda en el documento;
+ * editar después el presupuesto (recurso/precio/K) ya no lo reescribe. Sólo
+ * congela la primera vez (el snapshot no se refresca); el K se congela con el
+ * primer precio. `snapshotAt` estampa el último congelado (trazabilidad F7.1).
+ */
+function freezePrecio(
+  partidas: PartidasMap,
+  rates: Rates,
+  cert: Cert,
+  partidaId: string,
+): void {
+  if (cert.priceSnapshot?.[partidaId] != null) return;
+  for (const chId in partidas) {
+    const p = partidas[chId]?.find((x) => x.id === partidaId);
+    if (!p) continue;
+    (cert.priceSnapshot ??= {})[partidaId] = p.precio;
+    cert.coefK ??= rates.coefK;
+    cert.snapshotAt = new Date().toISOString();
+    return;
+  }
+}
+
 /** Destino de copia (F5): capítulo/sub seleccionado, o el primer capítulo si la
  *  selección es "Toda la obra"/vacía. `label` para la barra "Copiar a …". */
 export interface CopyTarget {
@@ -408,6 +433,7 @@ export const useObraStore = create<ObraState>()(
             delete cert.lineQty[partidaId];
             if (Object.keys(cert.lineQty).length === 0) cert.lineQty = undefined;
           }
+          freezePrecio(s.partidas, s.rates, cert, partidaId); // F7.0
         }),
 
       setCertLine: (partidaId, lineId, qty) =>
@@ -428,6 +454,7 @@ export const useObraStore = create<ObraState>()(
             if (Object.keys(lineQty).length === 0) cert.lineQty = undefined;
           } else {
             cert.data[partidaId] = sumLineQty(lines);
+            freezePrecio(s.partidas, s.rates, cert, partidaId); // F7.0
           }
         }),
 
@@ -446,6 +473,14 @@ export const useObraStore = create<ObraState>()(
           }
           // Los contradictorios se heredan a-origen (mismo id → "anterior" cuadra).
           const extras = last?.extras?.map((e) => ({ ...e }));
+          // F7.0: la cert nace con TODOS los precios congelados ("hereda/congela").
+          // Hereda los de la última cert (así su "anterior" reproduce al céntimo lo
+          // ya certificado) y congela al precio vivo los que falten (partidas nuevas
+          // o última cert legada sin snapshot). El K congelado se hereda igual.
+          const precios: Record<string, number> = {};
+          for (const chId in s.partidas)
+            for (const p of s.partidas[chId] ?? [])
+              precios[p.id] = last?.priceSnapshot?.[p.id] ?? p.precio;
           s.certs.push({
             id: `c${num}`,
             num,
@@ -454,6 +489,9 @@ export const useObraStore = create<ObraState>()(
             data,
             lineQty,
             extras,
+            priceSnapshot: precios,
+            coefK: last?.coefK ?? s.rates.coefK,
+            snapshotAt: new Date().toISOString(),
           });
           s.curCert = s.certs.length - 1;
         }),

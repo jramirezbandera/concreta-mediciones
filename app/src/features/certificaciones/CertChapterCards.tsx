@@ -1,6 +1,6 @@
 import { Fragment, useMemo } from 'react';
 import { Icon } from '../../components';
-import { certCalc, extrasCantidad } from '../../core/certificacion';
+import { certCalc, extrasCantidad, type CertSnapshot } from '../../core/certificacion';
 import { groupBySub } from '../../core/grouping';
 import { fmtNum, sumCents, toEur, type Cents } from '../../core/money';
 import type { CertExtra, Chapter, Partida } from '../../core/types';
@@ -19,6 +19,7 @@ export function CertChapterCards({
   prevData,
   mode,
   coefK,
+  snap,
   extras,
   prevExtras,
 }: {
@@ -28,6 +29,7 @@ export function CertChapterCards({
   prevData: Data;
   mode: CertMode;
   coefK: number;
+  snap?: CertSnapshot;
   extras: CertExtra[];
   prevExtras: CertExtra[];
 }) {
@@ -41,7 +43,7 @@ export function CertChapterCards({
   const subTotal = (items: Partida[]): Cents =>
     sumCents(
       items.map((p) => {
-        const k = certCalc(p, curData, prevData, coefK);
+        const k = certCalc(p, curData, prevData, coefK, snap);
         return mode === 'origen' ? k.aOrigen : k.estaCert;
       }),
     );
@@ -65,6 +67,7 @@ export function CertChapterCards({
               prevData={prevData}
               mode={mode}
               coefK={coefK}
+              snap={snap}
             />
           ))}
         </Fragment>

@@ -3,10 +3,12 @@ import { Badge, EditableNum, EditableText, Icon } from '../../components';
 import {
   cantidadToPct,
   certCalc,
+  certPrecioK,
   estaCertDisplay,
   extraCalc,
   extrasCantidad,
   pctToCantidad,
+  type CertSnapshot,
 } from '../../core/certificacion';
 import { groupBySub } from '../../core/grouping';
 import { lineParcial } from '../../core/medicion';
@@ -112,21 +114,24 @@ function CertRow({
   prevData,
   mode,
   coefK,
+  snap,
 }: {
   p: Partida;
   curData: Data;
   prevData: Data;
   mode: CertMode;
   coefK: number;
+  snap?: CertSnapshot;
 }) {
   const onCertEdit = useObraStore((s) => s.onCertEdit);
   const [expanded, setExpanded] = useState(false);
-  const k = certCalc(p, curData, prevData, coefK);
+  const k = certCalc(p, curData, prevData, coefK, snap);
   const abono = mode === 'origen' ? k.aOrigen : k.estaCert;
   // La cantidad editable (y su %) son las del MODO en curso (a origen / esta cert).
   const execValue = mode === 'origen' ? k.ejecutada : estaCertDisplay(k.ejecutada, k.prev);
   const execPct = cantidadToPct(k.ofertada, execValue);
-  const precioK = round2((p.precio ?? 0) * coefK);
+  // Precio mostrado = el de la valoración (congelado si la cert lo tiene, F7.0).
+  const precioK = round2(certPrecioK(p, coefK, snap));
   return (
     <>
       <tr
@@ -282,6 +287,7 @@ export function CertChapterTable({
   prevData,
   mode,
   coefK,
+  snap,
   extras,
   prevExtras,
 }: {
@@ -291,6 +297,7 @@ export function CertChapterTable({
   prevData: Data;
   mode: CertMode;
   coefK: number;
+  snap?: CertSnapshot;
   extras: CertExtra[];
   prevExtras: CertExtra[];
 }) {
@@ -301,7 +308,7 @@ export function CertChapterTable({
   const subTotal = (items: Partida[]): Cents =>
     sumCents(
       items.map((p) => {
-        const k = certCalc(p, curData, prevData, coefK);
+        const k = certCalc(p, curData, prevData, coefK, snap);
         return mode === 'origen' ? k.aOrigen : k.estaCert;
       }),
     );
@@ -330,6 +337,7 @@ export function CertChapterTable({
                 prevData={prevData}
                 mode={mode}
                 coefK={coefK}
+                snap={snap}
               />
             ))}
           </Fragment>
