@@ -4,7 +4,7 @@
    Importes en CÉNTIMOS. El coeficiente K (§4) se aplica al precio, igual que
    en el presupuesto.
    =========================================================================== */
-import type { Cert, Chapter, Partida, PartidasMap, Rates } from './types';
+import type { Cert, CertExtra, Chapter, Partida, PartidasMap, Rates } from './types';
 import { type Cents, importeCents, round2, scaleCents } from './money';
 import { partidaCantidad, partidaImporte } from './medicion';
 
@@ -36,6 +36,31 @@ export function certCalc(
   return { ofertada, ejecutada, prev, pct, aOrigen, anterior, estaCert };
 }
 
+/* ---- Precios contradictorios (F4.4) --------------------------------------
+   El contradictorio se certifica como una partida más DENTRO de la cert, pero
+   su precio NO lleva coeficiente K (es precio efectivo pactado). `aOrigen` /
+   `anterior` / `estaCert` con la misma doble semántica que `certCalc`. */
+
+export interface CertExtraRow {
+  aOrigen: Cents; // importe a origen = cantidad · precio
+  anterior: Cents; // importe certificado hasta la cert anterior
+  estaCert: Cents; // aOrigen − anterior
+}
+
+/** Mapa id→cantidad a-origen de una lista de contradictorios (para el "anterior"). */
+export function extrasCantidad(extras: CertExtra[] = []): Record<string, number> {
+  const m: Record<string, number> = {};
+  for (const e of extras) m[e.id] = e.cantidad;
+  return m;
+}
+
+/** Cálculo de un contradictorio. `prevCantidad` = su cantidad en la cert anterior (0 si nuevo). */
+export function extraCalc(e: CertExtra, prevCantidad: number): CertExtraRow {
+  const aOrigen = importeCents(e.cantidad, e.precio);
+  const anterior = importeCents(prevCantidad, e.precio);
+  return { aOrigen, anterior, estaCert: aOrigen - anterior };
+}
+
 export interface CertTotals {
   budgetPEM: Cents; // PEM del presupuesto (para el % global)
   certPEM: Cents; // PEM certificado a origen (Σ aOrigen)
@@ -59,6 +84,8 @@ export function certTotals(
   rates: Rates,
   retencion: number,
   coefK = 1,
+  extras: CertExtra[] = [],
+  prevExtras: CertExtra[] = [],
 ): CertTotals {
   let budgetPEM = 0;
   let certPEM = 0;
@@ -66,6 +93,14 @@ export function certTotals(
   for (const p of partidas) {
     budgetPEM += partidaImporte(p, coefK);
     const k = certCalc(p, curData, prevData, coefK);
+    certPEM += k.aOrigen;
+    prevPEM += k.anterior;
+  }
+  // Contradictorios: suman al certificado/anterior pero NO al PEM de presupuesto
+  // (no están en el contrato base → el % global puede pasar de 100%).
+  const prevExtraCant = extrasCantidad(prevExtras);
+  for (const e of extras) {
+    const k = extraCalc(e, prevExtraCant[e.id] ?? 0);
     certPEM += k.aOrigen;
     prevPEM += k.anterior;
   }
@@ -118,6 +153,7 @@ export function certChapterRows(
   curData: Record<string, number>,
   prevData: Record<string, number>,
   coefK = 1,
+  extras: CertExtra[] = [],
 ): CertChapterRow[] {
   return chapters
     .map((ch) => {
@@ -126,6 +162,10 @@ export function certChapterRows(
       for (const p of partidas[ch.id] ?? []) {
         budget += partidaImporte(p, coefK);
         cert += certCalc(p, curData, prevData, coefK).aOrigen;
+      }
+      // Contradictorios del capítulo: certifican pero no aumentan el presupuesto.
+      for (const e of extras) {
+        if (e.chapterId === ch.id) cert += extraCalc(e, 0).aOrigen;
       }
       return {
         id: ch.id,
@@ -136,7 +176,7 @@ export function certChapterRows(
         pct: budget > 0 ? (cert / budget) * 100 : 0,
       };
     })
-    .filter((r) => r.budget > 0);
+    .filter((r) => r.budget > 0 || r.cert > 0);
 }
 
 /* ---- % de ejecución editable (dogfood #1) --------------------------------

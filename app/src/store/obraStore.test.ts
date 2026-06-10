@@ -510,6 +510,55 @@ describe('acciones F4 (certificaciones)', () => {
     state().setCertField('retencion', -0.5); // < 0 → clamp
     expect(state().certs[state().curCert]!.retencion).toBe(0);
   });
+
+  it('addContradictorio cuelga una línea P.C. del capítulo en la cert en curso', () => {
+    state().setCurCert(0);
+    state().addContradictorio('01');
+    state().addContradictorio('01');
+    state().addContradictorio('02');
+    const extras = state().certs[0]!.extras!;
+    expect(extras).toHaveLength(3);
+    expect(extras.filter((e) => e.chapterId === '01').map((e) => e.pos)).toEqual(['C1', 'C2']);
+    expect(extras.find((e) => e.chapterId === '02')!.pos).toBe('C1'); // pos por capítulo
+  });
+
+  it('editContradictorio edita campos y clampa cantidad/precio a ≥ 0', () => {
+    state().setCurCert(0);
+    state().addContradictorio('01');
+    const id = state().certs[0]!.extras![0]!.id;
+    state().editContradictorio(id, 'title', 'Refuerzo de zapata');
+    state().editContradictorio(id, 'cantidad', 4);
+    state().editContradictorio(id, 'precio', -5); // negativo → 0
+    const e = state().certs[0]!.extras![0]!;
+    expect(e.title).toBe('Refuerzo de zapata');
+    expect(e.cantidad).toBe(4);
+    expect(e.precio).toBe(0);
+  });
+
+  it('deleteContradictorio elimina la línea y limpia extras si queda vacío', () => {
+    state().setCurCert(0);
+    state().addContradictorio('01');
+    const id = state().certs[0]!.extras![0]!.id;
+    state().deleteContradictorio(id);
+    expect(state().certs[0]!.extras).toBeUndefined();
+  });
+
+  it('addCert hereda los contradictorios a-origen como clon independiente', () => {
+    // addCert hereda de la ÚLTIMA cronológica → operamos sobre la última.
+    state().setCurCert(state().certs.length - 1);
+    const prevIdx = state().certs.length - 1;
+    state().addContradictorio('01');
+    const id = state().certs[prevIdx]!.extras![0]!.id;
+    state().editContradictorio(id, 'cantidad', 4);
+    state().addCert();
+    const nueva = state().certs.at(-1)!;
+    expect(nueva.extras).toHaveLength(1);
+    expect(nueva.extras![0]!.id).toBe(id); // mismo id → "anterior" cuadra
+    expect(nueva.extras![0]!.cantidad).toBe(4);
+    // editar la nueva (en curso) no toca la cert previa (clon independiente)
+    state().editContradictorio(id, 'cantidad', 9);
+    expect(state().certs[prevIdx]!.extras![0]!.cantidad).toBe(4);
+  });
 });
 
 describe('reset', () => {

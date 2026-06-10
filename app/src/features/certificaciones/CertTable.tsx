@@ -1,10 +1,17 @@
 import { Fragment, useState, type MouseEvent } from 'react';
-import { Badge, EditableNum, Icon } from '../../components';
-import { cantidadToPct, certCalc, estaCertDisplay, pctToCantidad } from '../../core/certificacion';
+import { Badge, EditableNum, EditableText, Icon } from '../../components';
+import {
+  cantidadToPct,
+  certCalc,
+  estaCertDisplay,
+  extraCalc,
+  extrasCantidad,
+  pctToCantidad,
+} from '../../core/certificacion';
 import { groupBySub } from '../../core/grouping';
 import { lineParcial } from '../../core/medicion';
 import { fmtNum, round2, sumCents, toEur, type Cents } from '../../core/money';
-import type { MedLine, Partida, Chapter } from '../../core/types';
+import type { CertExtra, MedLine, Partida, Chapter } from '../../core/types';
 import { useObraStore, type CertMode } from '../../store';
 import { PctBar } from './PctBar';
 import styles from './Certificaciones.module.css';
@@ -179,7 +186,94 @@ function CertRow({
   );
 }
 
-/** Tabla (cuerpo) de un capítulo: grupos por subcapítulo + subtotales por modo. */
+/** Fila de un precio contradictorio (F4.4): campos editables, vive en la cert. */
+function CertExtraRow({
+  e,
+  prevCantidad,
+  mode,
+}: {
+  e: CertExtra;
+  prevCantidad: number;
+  mode: CertMode;
+}) {
+  const editContradictorio = useObraStore((s) => s.editContradictorio);
+  const deleteContradictorio = useObraStore((s) => s.deleteContradictorio);
+  const k = extraCalc(e, prevCantidad);
+  const abono = mode === 'origen' ? k.aOrigen : k.estaCert;
+  return (
+    <tr className={`tcol ${styles.row} ${styles.extraRow}`}>
+      <td className={`${styles.cell} ${styles.cNum}`}>
+        <div className={styles.numFlex}>
+          <div>
+            <div className={`mono ${styles.pos}`}>{e.pos}</div>
+            <div className={`mono ${styles.code}`}>P.C.</div>
+          </div>
+        </div>
+      </td>
+      <td className={`${styles.cell} ${styles.cDesc}`}>
+        <div className={styles.descInner}>
+          <span className={styles.pcBadge}>
+            <span className="dot" style={{ background: 'var(--state-warn)' }} />
+            P.C.
+          </span>
+          <EditableText
+            value={e.title}
+            ariaLabel="Título del contradictorio"
+            placeholder="Descripción del precio contradictorio…"
+            style={{ fontSize: 13 }}
+            onCommit={(v) => editContradictorio(e.id, 'title', v)}
+          />
+        </div>
+      </td>
+      <td className={`mono ${styles.cell} ${styles.cUd}`} onClick={stop}>
+        <EditableText
+          value={e.ud}
+          ariaLabel="Unidad"
+          placeholder="ud"
+          style={{ fontSize: 12.5, textAlign: 'center' }}
+          onCommit={(v) => editContradictorio(e.id, 'ud', v)}
+        />
+      </td>
+      <td className={`mono ${styles.cell} ${styles.cNum2}`}>—</td>
+      <td className={`${styles.cell} ${styles.cExec}`} onClick={stop}>
+        <EditableNum
+          value={e.cantidad}
+          dec={2}
+          accent
+          ariaLabel="Cantidad ejecutada"
+          onCommit={(v) => editContradictorio(e.id, 'cantidad', v)}
+        />
+      </td>
+      <td className={`${styles.cell} ${styles.cPct}`}>
+        <span className={styles.pctDash}>—</span>
+      </td>
+      <td className={`${styles.cell} ${styles.cPrice}`} onClick={stop}>
+        <EditableNum
+          value={e.precio}
+          dec={2}
+          ariaLabel="Precio"
+          onCommit={(v) => editContradictorio(e.id, 'precio', v)}
+        />
+      </td>
+      <td className={`mono ${styles.cell} ${styles.cAbono}`}>
+        <span className={styles.extraAbono}>
+          {fmtNum(toEur(abono))}
+          <button
+            type="button"
+            className={styles.extraDel}
+            aria-label="Eliminar contradictorio"
+            onClick={() => deleteContradictorio(e.id)}
+          >
+            <Icon name="trash" size={13} />
+          </button>
+        </span>
+      </td>
+    </tr>
+  );
+}
+
+/** Tabla (cuerpo) de un capítulo: grupos por subcapítulo + subtotales por modo,
+ *  seguidos de los precios contradictorios (F4.4) y el botón de alta. */
 export function CertChapterTable({
   chapter,
   partidas,
@@ -187,6 +281,8 @@ export function CertChapterTable({
   prevData,
   mode,
   coefK,
+  extras,
+  prevExtras,
 }: {
   chapter: Chapter;
   partidas: Partida[];
@@ -194,8 +290,13 @@ export function CertChapterTable({
   prevData: Data;
   mode: CertMode;
   coefK: number;
+  extras: CertExtra[];
+  prevExtras: CertExtra[];
 }) {
+  const addContradictorio = useObraStore((s) => s.addContradictorio);
   const groups = groupBySub(chapter, partidas).filter((g) => g.items.length > 0);
+  const chapExtras = extras.filter((e) => e.chapterId === chapter.id);
+  const prevCant = extrasCantidad(prevExtras);
   const subTotal = (items: Partida[]): Cents =>
     sumCents(
       items.map((p) => {
@@ -232,6 +333,20 @@ export function CertChapterTable({
             ))}
           </Fragment>
         ))}
+        {chapExtras.map((e) => (
+          <CertExtraRow key={e.id} e={e} prevCantidad={prevCant[e.id] ?? 0} mode={mode} />
+        ))}
+        <tr className={styles.addRow}>
+          <td colSpan={8}>
+            <button
+              type="button"
+              className={`tcol ${styles.addBtn}`}
+              onClick={() => addContradictorio(chapter.id)}
+            >
+              <Icon name="plus" size={13} /> Añadir precio contradictorio
+            </button>
+          </td>
+        </tr>
       </tbody>
     </table>
   );

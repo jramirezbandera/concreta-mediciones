@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { EditableText, Icon } from '../../components';
-import { certCalc } from '../../core/certificacion';
+import { certCalc, extraCalc, extrasCantidad } from '../../core/certificacion';
 import { fmtCents, fmtNum, sumCents, toEur, type Cents } from '../../core/money';
 import {
   selectCertChapterRows,
@@ -22,8 +22,9 @@ const MODES: [CertMode, string][] = [
  * Vista de Certificaciones (F4.1): selector de cert + periodo/retención editables,
  * "líquido a abonar" grande, toggle A origen / Esta certificación, tabla por
  * capítulo con la cantidad ejecutada editable, y resúmenes (económico + por
- * capítulos). El cálculo es el motor de F1; el % editable + desplegable (F4.2) y
- * marcar líneas (F4.3) ya están; los contradictorios y el móvil llegan en F4.4-F4.5.
+ * capítulos). El cálculo es el motor de F1; el % editable + desplegable (F4.2),
+ * marcar líneas (F4.3) y los precios contradictorios cert-local (F4.4) ya están;
+ * el móvil llega en F4.5.
  */
 export function CertificacionesView() {
   const [mode, setMode] = useState<CertMode>('origen');
@@ -40,6 +41,9 @@ export function CertificacionesView() {
   if (!cur) return <div className={styles.view} />;
   const curData = cur.data;
   const prevData = curCert > 0 ? (certs[curCert - 1]?.data ?? {}) : {};
+  const extras = cur.extras ?? [];
+  const prevExtras = curCert > 0 ? (certs[curCert - 1]?.extras ?? []) : [];
+  const prevExtraCant = extrasCantidad(prevExtras);
 
   return (
     <div className={styles.view}>
@@ -87,12 +91,17 @@ export function CertificacionesView() {
       {chapters.map((ch) => {
         const ps = partidas[ch.id] ?? [];
         if (!ps.length) return null;
-        const totalByMode: Cents = sumCents(
-          ps.map((p) => {
+        const chExtras = extras.filter((e) => e.chapterId === ch.id);
+        const totalByMode: Cents = sumCents([
+          ...ps.map((p) => {
             const k = certCalc(p, curData, prevData, coefK);
             return mode === 'origen' ? k.aOrigen : k.estaCert;
           }),
-        );
+          ...chExtras.map((e) => {
+            const k = extraCalc(e, prevExtraCant[e.id] ?? 0);
+            return mode === 'origen' ? k.aOrigen : k.estaCert;
+          }),
+        ]);
         const pct = chapterRows.find((r) => r.id === ch.id)?.pct ?? 0;
         const full = pct >= 99.5;
         return (
@@ -115,6 +124,8 @@ export function CertificacionesView() {
                 prevData={prevData}
                 mode={mode}
                 coefK={coefK}
+                extras={extras}
+                prevExtras={prevExtras}
               />
             </div>
           </section>

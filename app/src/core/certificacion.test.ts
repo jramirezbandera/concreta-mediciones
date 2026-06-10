@@ -6,12 +6,24 @@ import {
   certTotals,
   estaCertDisplay,
   estaCertToOrigen,
+  extraCalc,
   prevDataOf,
   pctToCantidad,
   sumLineQty,
 } from './certificacion';
 import { toCents, toEur } from './money';
-import type { Cert, Chapter, Partida, PartidasMap, Rates } from './types';
+import type { Cert, CertExtra, Chapter, Partida, PartidasMap, Rates } from './types';
+
+const extra = (over: Partial<CertExtra>): CertExtra => ({
+  id: 'x1',
+  chapterId: '01',
+  pos: 'C1',
+  title: '',
+  ud: 'ud',
+  cantidad: 0,
+  precio: 0,
+  ...over,
+});
 
 const partida = (over: Partial<Partida>): Partida => ({
   id: 'p',
@@ -79,6 +91,38 @@ describe('certTotals (cadena GG+BI → retención → IVA → líquido)', () => 
     expect(toEur(t.base)).toBe(339.15); // 357 − 17,85
     expect(toEur(t.iva)).toBe(33.92); // round2(339,15 × 10%) = 33,92
     expect(toEur(t.liquido)).toBe(373.07); // 339,15 + 33,92
+  });
+});
+
+describe('extraCalc (precios contradictorios, F4.4)', () => {
+  const e = extra({ id: 'x1', cantidad: 4, precio: 25 });
+  it('importe a-origen = cantidad · precio, SIN coeficiente K', () => {
+    const k = extraCalc(e, 0);
+    expect(toEur(k.aOrigen)).toBe(100); // 4 × 25
+    expect(toEur(k.anterior)).toBe(0);
+    expect(toEur(k.estaCert)).toBe(100);
+  });
+  it('esta cert = aOrigen − anterior (cantidad de la cert previa)', () => {
+    const k = extraCalc(e, 1); // 1 ud certificada antes
+    expect(toEur(k.anterior)).toBe(25); // 1 × 25
+    expect(toEur(k.estaCert)).toBe(75); // 100 − 25
+  });
+});
+
+describe('certTotals con contradictorios (F4.4)', () => {
+  const partidas = [partida({ id: 'p1', cantidad: 100, precio: 10 })];
+  const extras = [extra({ id: 'x1', cantidad: 4, precio: 25 })]; // 100 € a-origen
+  const t = certTotals(partidas, { p1: 50 }, { p1: 20 }, rates, 0, 1, extras, []);
+
+  it('suman a certificado/anterior pero NO al PEM de presupuesto', () => {
+    expect(toEur(t.budgetPEM)).toBe(1000); // sólo la partida
+    expect(toEur(t.certPEM)).toBe(600); // 500 + 100 del contradictorio
+    expect(toEur(t.prevPEM)).toBe(200); // el contradictorio es nuevo → anterior 0
+  });
+  it('el "anterior" del contradictorio sale de prevExtras (mismo id)', () => {
+    const prev = [extra({ id: 'x1', cantidad: 1, precio: 25 })];
+    const t2 = certTotals(partidas, { p1: 50 }, { p1: 20 }, rates, 0, 1, extras, prev);
+    expect(toEur(t2.prevPEM)).toBe(225); // 200 + 25 (1 × 25)
   });
 });
 

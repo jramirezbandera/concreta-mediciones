@@ -318,7 +318,7 @@ Cada fase es incremental y deja algo ejecutable. Marca `[ ]` al completar.
 - [ ] Selector de certificación (histórico con % y líquido + "Nueva certificación").
 - [ ] Periodo editable; "Líquido a abonar" grande; toggle **A origen / Esta certificación**; % ejecución global.
 - [ ] Tabla por partida con `PctBar`, ejecutada editable (semántica según modo), importe a abonar.
-- [ ] Precios contradictorios: botón por capítulo → partida con badge ámbar P.C., código "P.C."/pos "C…", campos editables (título/ud/cantidad/precio) en la propia cert.
+- [x] Precios contradictorios (F4.4, commit pendiente): botón "Añadir precio contradictorio" por capítulo → línea con badge ámbar P.C., código "P.C."/pos "C…", campos editables (título/ud/cantidad/precio) DENTRO de la cert (`Cert.extras: CertExtra[]`, no toca `partidas` ni el PEM base). El `precio` es efectivo (NO se escala por K). Suma a certPEM/prevPEM (no a budgetPEM → % global puede pasar de 100). `addCert` hereda los extras a-origen (mismo id → "anterior" cuadra). Acciones `addContradictorio`/`editContradictorio`/`deleteContradictorio`; core `extraCalc`/`extrasCantidad`.
 - [ ] `CertSummary` (retención % editable, base, IVA, líquido) + `CertChapterSummary` (barras de avance).
 
 **Requisitos del dogfood (2026-06-09) — validados en obra real, son lo que falta para que sea útil:**

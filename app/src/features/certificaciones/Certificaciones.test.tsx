@@ -64,4 +64,13 @@ describe('CertificacionesView (F4.1)', () => {
     const s = useObraStore.getState();
     expect(s.certs[s.curCert]!.data.p111).toBe(124.65); // 100% de la ofertada
   });
+
+  it('añadir un precio contradictorio crea una línea P.C. editable (F4.4)', () => {
+    render(<CertificacionesView />);
+    useObraStore.getState().setCurCert(0);
+    fireEvent.click(screen.getAllByText('Añadir precio contradictorio')[0]!);
+    expect(useObraStore.getState().certs[0]!.extras).toHaveLength(1);
+    expect(screen.getByLabelText('Título del contradictorio')).toBeInTheDocument();
+    expect(screen.getAllByText('P.C.').length).toBeGreaterThan(0);
+  });
 });

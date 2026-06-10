@@ -60,6 +60,13 @@ function nextMedLineId(): string {
   return `m·${medLineSeq}`;
 }
 
+/** Secuencia para ids de contradictorio (F4.4). `x·N`, único por sesión. */
+let extraSeq = 0;
+function nextExtraId(): string {
+  extraSeq += 1;
+  return `x·${extraSeq}`;
+}
+
 /**
  * Renumera `pos` de una lista de partidas EN SITIO (Immer-friendly), reusando la
  * regla pura de `core/numbering`. Sólo escribe `pos` sobre los drafts; descarta
@@ -130,6 +137,20 @@ export interface ObraState extends ObraData {
   addCert: () => void;
   /** Edita el periodo (texto) o la retención (0..1, se clampa) de la cert en curso. */
   setCertField: (field: 'period' | 'retencion', value: string | number) => void;
+  /**
+   * Añade un precio contradictorio (F4.4) al capítulo dado, DENTRO de la cert en
+   * curso (no toca `partidas` ni el PEM base). `pos` = "C{n}" según los que ya
+   * cuelgan del capítulo; campos a 0/'' para editar in-situ.
+   */
+  addContradictorio: (chapterId: string) => void;
+  /** Edita un campo de un contradictorio de la cert en curso (cantidad/precio ≥ 0). */
+  editContradictorio: (
+    extraId: string,
+    field: 'title' | 'ud' | 'cantidad' | 'precio',
+    value: string | number,
+  ) => void;
+  /** Elimina un contradictorio de la cert en curso. */
+  deleteContradictorio: (extraId: string) => void;
 
   /* ---- acciones F2 (edición in-situ de partidas) ---- */
   /** Edita un campo de texto de la partida (title/ud/code/desc) y quita el chip BASE. */
@@ -360,6 +381,8 @@ export const useObraStore = create<ObraState>()(
             lineQty = {};
             for (const pid in last.lineQty) lineQty[pid] = { ...last.lineQty[pid] };
           }
+          // Los contradictorios se heredan a-origen (mismo id → "anterior" cuadra).
+          const extras = last?.extras?.map((e) => ({ ...e }));
           s.certs.push({
             id: `c${num}`,
             num,
@@ -367,6 +390,7 @@ export const useObraStore = create<ObraState>()(
             retencion: last?.retencion ?? 0,
             data,
             lineQty,
+            extras,
           });
           s.curCert = s.certs.length - 1;
         }),
@@ -380,6 +404,44 @@ export const useObraStore = create<ObraState>()(
           } else if (typeof value === 'number' && Number.isFinite(value)) {
             cert.retencion = Math.min(1, Math.max(0, value)); // retención ∈ [0,1]
           }
+        }),
+
+      addContradictorio: (chapterId) =>
+        set((s) => {
+          const cert = s.certs[s.curCert];
+          if (!cert) return;
+          const extras = (cert.extras ??= []);
+          const n = extras.filter((e) => e.chapterId === chapterId).length + 1;
+          extras.push({
+            id: nextExtraId(),
+            chapterId,
+            pos: `C${n}`,
+            title: '',
+            ud: '',
+            cantidad: 0,
+            precio: 0,
+          });
+        }),
+
+      editContradictorio: (extraId, field, value) =>
+        set((s) => {
+          const e = s.certs[s.curCert]?.extras?.find((x) => x.id === extraId);
+          if (!e) return;
+          if (field === 'title' || field === 'ud') {
+            if (typeof value === 'string') e[field] = value;
+          } else if (typeof value === 'number' && Number.isFinite(value)) {
+            // cantidad/precio no pueden ser negativos; cantidad a 2 dec, precio
+            // (dinero) a 2 dec también (coherente con el banco de precios).
+            e[field] = round2(Math.max(0, value));
+          }
+        }),
+
+      deleteContradictorio: (extraId) =>
+        set((s) => {
+          const cert = s.certs[s.curCert];
+          if (!cert?.extras) return;
+          cert.extras = cert.extras.filter((e) => e.id !== extraId);
+          if (cert.extras.length === 0) cert.extras = undefined;
         }),
 
       editPartidaField: (chapterId, partidaId, field, value) =>

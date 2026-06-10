@@ -84,6 +84,23 @@ export interface Chapter {
   children?: SubChapter[];
 }
 
+/**
+ * Línea de precio contradictorio (F4.4): trabajo extra acordado en obra que NO
+ * está en el presupuesto. Vive DENTRO de la certificación (no toca `partidas`
+ * ni el PEM base — eng-review F4 §4). `precio` es el precio EFECTIVO acordado:
+ * NO se escala por el coeficiente K (a diferencia de las partidas, el K es la
+ * baja de adjudicación y el contradictorio ya se pacta a precio final).
+ */
+export interface CertExtra {
+  id: string;
+  chapterId: string; // capítulo al que cuelga (agrupación y subtotales)
+  pos: string; // "C1", "C2"… posición dentro del capítulo
+  title: string;
+  ud: string;
+  cantidad: number; // ejecutada A ORIGEN (como `Cert.data`)
+  precio: number; // euros, precio efectivo (sin K)
+}
+
 /** Certificación: `data[partidaId]` = cantidad ejecutada A ORIGEN. */
 export interface Cert {
   id: string;
@@ -100,6 +117,8 @@ export interface Cert {
    * frente a editar la medición después (la cert no cambia sola).
    */
   lineQty?: Record<string, Record<string, number>>;
+  /** Precios contradictorios de ESTA cert (F4.4). Ver `CertExtra`. */
+  extras?: CertExtra[];
 }
 
 /** Tasas económicas. Estado del store, NUNCA globals mutados (§8 riesgos). */

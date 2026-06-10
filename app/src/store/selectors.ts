@@ -17,7 +17,7 @@ import {
   type CertTotals,
 } from '../core/certificacion';
 import type { Cents } from '../core/money';
-import type { Chapter, PartidasMap, Rates } from '../core/types';
+import type { CertExtra, Chapter, PartidasMap, Rates } from '../core/types';
 import { chapterTotals as chapterTotalsCore, pec as pecCore, pem as pemCore, totalConIva as totalConIvaCore } from '../core/totales';
 import type { ObraState } from './obraStore';
 
@@ -86,6 +86,7 @@ export const selectRecursoUsage = (s: ObraState): Record<string, number> => _usa
 
 /** Referencia estable para "sin datos previos" (no romper la memoización). */
 const EMPTY_DATA: Record<string, number> = {};
+const EMPTY_EXTRAS: CertExtra[] = [];
 
 const _certTotals = memo1(
   (
@@ -94,8 +95,19 @@ const _certTotals = memo1(
     prevData: Record<string, number>,
     rates: Rates,
     retencion: number,
+    extras: CertExtra[],
+    prevExtras: CertExtra[],
   ): CertTotals =>
-    certTotalsCore(Object.values(partidas).flat(), curData, prevData, rates, retencion, rates.coefK),
+    certTotalsCore(
+      Object.values(partidas).flat(),
+      curData,
+      prevData,
+      rates,
+      retencion,
+      rates.coefK,
+      extras,
+      prevExtras,
+    ),
 );
 const _certChapterRows = memo1(
   (
@@ -104,17 +116,29 @@ const _certChapterRows = memo1(
     curData: Record<string, number>,
     prevData: Record<string, number>,
     coefK: number,
-  ): CertChapterRow[] => certChapterRowsCore(chapters, partidas, curData, prevData, coefK),
+    extras: CertExtra[],
+  ): CertChapterRow[] => certChapterRowsCore(chapters, partidas, curData, prevData, coefK, extras),
 );
 
 const curCertData = (s: ObraState): Record<string, number> => s.certs[s.curCert]?.data ?? EMPTY_DATA;
 const prevCertData = (s: ObraState): Record<string, number> =>
   s.curCert > 0 ? (s.certs[s.curCert - 1]?.data ?? EMPTY_DATA) : EMPTY_DATA;
+const curCertExtras = (s: ObraState): CertExtra[] => s.certs[s.curCert]?.extras ?? EMPTY_EXTRAS;
+const prevCertExtras = (s: ObraState): CertExtra[] =>
+  s.curCert > 0 ? (s.certs[s.curCert - 1]?.extras ?? EMPTY_EXTRAS) : EMPTY_EXTRAS;
 
 /** Totales económicos de la certificación en curso (céntimos). */
 export const selectCertTotals = (s: ObraState): CertTotals =>
-  _certTotals(s.partidas, curCertData(s), prevCertData(s), s.rates, s.certs[s.curCert]?.retencion ?? 0);
+  _certTotals(
+    s.partidas,
+    curCertData(s),
+    prevCertData(s),
+    s.rates,
+    s.certs[s.curCert]?.retencion ?? 0,
+    curCertExtras(s),
+    prevCertExtras(s),
+  );
 
 /** Avance certificado por capítulo de la cert en curso. */
 export const selectCertChapterRows = (s: ObraState): CertChapterRow[] =>
-  _certChapterRows(s.chapters, s.partidas, curCertData(s), prevCertData(s), s.rates.coefK);
+  _certChapterRows(s.chapters, s.partidas, curCertData(s), prevCertData(s), s.rates.coefK, curCertExtras(s));
