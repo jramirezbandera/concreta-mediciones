@@ -4,6 +4,7 @@ export { Bar } from './Bar';
 export { EditableNum } from './EditableNum';
 export { EditableText } from './EditableText';
 export { InlineCreate } from './InlineCreate';
+export { Modal, type ModalProps } from './Modal';
 export { IvaSelect } from './IvaSelect';
 export { ContraChip } from './ContraChip';
 export { GhostBtn } from './GhostBtn';

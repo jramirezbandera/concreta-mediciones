@@ -150,6 +150,31 @@ describe('acciones de UI', () => {
   });
 });
 
+describe('setObraPath (datos de obra, F6.2)', () => {
+  it('edita un campo plano (lo lee el breadcrumb)', () => {
+    state().setObraPath('denominacion', 'Casa de campo');
+    expect(state().obra.denominacion).toBe('Casa de campo');
+  });
+
+  it('crea los objetos intermedios de una ruta anidada', () => {
+    state().setObraPath('promotor.nif', 'B12345678');
+    expect((state().obra.promotor as { nif: string }).nif).toBe('B12345678');
+  });
+
+  it('escribe varios campos del mismo objeto anidado sin pisarse', () => {
+    state().setObraPath('constructor.nombre', 'Obras SL');
+    state().setObraPath('constructor.cif', 'A1');
+    // `constructor` colisiona con Object.prototype.constructor en el tipo → cast doble.
+    const c = state().obra.constructor as unknown as { nombre: string; cif: string };
+    expect(c).toEqual({ nombre: 'Obras SL', cif: 'A1' });
+  });
+
+  it('ignora valores que no son string', () => {
+    state().setObraPath('localidad', 42 as unknown as string);
+    expect(state().obra.localidad).toBe('Madrid');
+  });
+});
+
 describe('setRates (tasas como estado, no globals)', () => {
   it('coefK escala el PEM hacia arriba', () => {
     const base = selectPem(state());

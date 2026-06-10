@@ -264,6 +264,15 @@ export interface ObraState extends ObraData {
   /** Mueve una partida a otro capítulo/subcapítulo y renumera origen y destino. */
   movePartida: (fromChapterId: string, partidaId: string, toChapterId: string, toSubId: string | null) => void;
 
+  /* ---- acciones F6.2 (datos de obra) ---- */
+  /**
+   * Edita un campo de los datos de obra por RUTA anidada (`'promotor.nif'`,
+   * `'denominacion'`). Crea los objetos intermedios que falten (la obra semilla
+   * solo trae los campos planos; promotor/constructor/redactor nacen al editarse).
+   * Solo escribe strings (los campos del modal son inputs de texto).
+   */
+  setObraPath: (path: string, value: string) => void;
+
   /** Restaura el estado sembrado (datos + UI). Útil en tests y para "nueva obra". */
   reset: () => void;
 }
@@ -784,6 +793,19 @@ export const useObraStore = create<ObraState>()(
             toList,
           );
           s.expanded[toChapterId] = true;
+        }),
+
+      setObraPath: (path, value) =>
+        set((s) => {
+          if (typeof value !== 'string') return;
+          const keys = path.split('.');
+          let obj = s.obra as Record<string, unknown>;
+          for (let i = 0; i < keys.length - 1; i++) {
+            const k = keys[i]!;
+            if (typeof obj[k] !== 'object' || obj[k] === null) obj[k] = {};
+            obj = obj[k] as Record<string, unknown>;
+          }
+          obj[keys[keys.length - 1]!] = value;
         }),
 
       reset: () =>

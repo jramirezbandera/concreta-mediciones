@@ -1,0 +1,68 @@
+.section {
+  margin-bottom: 20px;
+}
+.section:last-child {
+  margin-bottom: 4px;
+}
+
+.secHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 11px;
+  color: var(--accent);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 11px;
+}
+.one {
+  grid-template-columns: 1fr;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.full {
+  grid-column: 1 / -1;
+}
+.fLabel {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-disabled);
+}
+
+.input {
+  height: 34px;
+  border-radius: 7px;
+  padding: 0 10px;
+  outline: none;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-main);
+  width: 100%;
+  box-sizing: border-box;
+}
+.input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.done {
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 7px;
+  border: 0;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--on-accent);
+  background: var(--accent);
+  font-family: inherit;
+}

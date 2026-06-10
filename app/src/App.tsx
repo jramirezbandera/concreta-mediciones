@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Icon } from './components/Icon';
 import { CertificacionesView } from './features/certificaciones';
 import { ImportarView } from './features/importar';
+import { ObraModal } from './features/obra';
 import { PresupuestoView } from './features/presupuesto';
 import { PlaceholderView } from './features/PlaceholderView';
 import { ReferenciaPanel, refStyles } from './features/referencia';
@@ -60,6 +61,7 @@ export default function App() {
   const overlayOpen = refOpen && bp.w < SPLIT_WIDTH;
 
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [obraOpen, setObraOpen] = useState(false);
   const [sandbox, setSandbox] = useState(isSandboxHash);
   const [flash, setFlash] = useState<string | null>(null);
 
@@ -132,7 +134,7 @@ export default function App() {
         refOpen={refOpen}
         onToggleRef={() => setRefOpen()}
         onExport={() => placeholder('La exportación de listados')}
-        onObra={() => placeholder('Los datos de la obra')}
+        onObra={() => setObraOpen(true)}
       />
 
       <div className={styles.body}>
@@ -210,6 +212,8 @@ export default function App() {
           {flash}
         </div>
       )}
+
+      <ObraModal open={obraOpen} onClose={() => setObraOpen(false)} compact={bp.isMobile} />
 
       <PersistUI />
     </div>
