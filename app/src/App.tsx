@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { CertificacionesView } from './features/certificaciones';
-import { ExportModal, exportXlsx } from './features/exportar';
+import { ExportModal, exportDocx, exportXlsx } from './features/exportar';
 import { ImportarView } from './features/importar';
 import { ObraModal } from './features/obra';
 import { PresupuestoView } from './features/presupuesto';
@@ -103,9 +103,12 @@ export default function App() {
   // El doc de impresión se desmonta al terminar (afterprint / fallback).
   const closePrint = useCallback(() => setPrintTarget(null), []);
   const exportPdf = useCallback((target: PrintTarget) => setPrintTarget(target), []);
-  // XLSX (F7.2): genera y descarga; la librería se carga por import dinámico.
+  // XLSX/DOCX (F7.2/F7.3): generan y descargan; las librerías van por import dinámico.
   const exportExcel = useCallback((target: PrintTarget) => {
     exportXlsx(target).catch((err: unknown) => console.error('Export XLSX falló:', err));
+  }, []);
+  const exportWord = useCallback((target: PrintTarget) => {
+    exportDocx(target).catch((err: unknown) => console.error('Export DOCX falló:', err));
   }, []);
 
   const changeView = useCallback(
@@ -211,6 +214,7 @@ export default function App() {
         compact={bp.isMobile}
         onExportPdf={exportPdf}
         onExportXlsx={exportExcel}
+        onExportDocx={exportWord}
       />
       {printTarget && <PrintDoc target={printTarget} onDone={closePrint} />}
 

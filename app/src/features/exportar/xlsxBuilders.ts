@@ -18,6 +18,7 @@ import type {
 } from '../../core/listado';
 import type { MedLineListado } from '../../core/listado';
 import { toEur, type Cents } from '../../core/money';
+import { docFileName } from './fileName';
 
 /** Formato Excel de dinero/cantidades: 2 dec + miles (es-ES: 1.234,56). */
 export const FMT_NUM = '#,##0.00';
@@ -55,15 +56,9 @@ function bold(cell: CellObject): CellObject {
   return { ...cell, fontWeight: 'bold' };
 }
 
-/** Ficheros Windows/macOS: sin `\/:*?"<>|`, espacios colapsados. */
+/** Nombre de archivo .xlsx (sanitizado en `fileName.ts`, compartido con DOCX). */
 export function xlsxFileName(titulo: string, denominacion: string): string {
-  const safe = (s: string) =>
-    s
-      .replace(/[\\/:*?"<>|]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-  const den = safe(denominacion);
-  return `${safe(titulo)}${den ? ` - ${den}` : ''}.xlsx`;
+  return docFileName(titulo, denominacion, 'xlsx');
 }
 
 /** ISO → dd/mm/aaaa ('' si falta/inválida). */
