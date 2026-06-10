@@ -153,6 +153,17 @@ export function cantidadToPct(ofertada: number, cantidad: number): number {
   return ofertada > 0 ? round2((cantidad / ofertada) * 100) : 0;
 }
 
+/* ---- Certificación por líneas (dogfood #3) --------------------------------
+   `lineQty[partidaId]` = cantidad ejecutada A ORIGEN por línea (snapshot). La
+   cantidad ejecutada de la partida certificada por líneas = Σ de esas cantidades
+   (redondeo a precisión de CANTIDAD, no céntimos). */
+
+/** Σ a-origen de las líneas marcadas de una partida ({}/undefined → 0). */
+export function sumLineQty(lines: Record<string, number> | undefined): number {
+  if (!lines) return 0;
+  return round2(Object.values(lines).reduce((a, b) => a + b, 0));
+}
+
 /* ---- Edición en modo "esta certificación" --------------------------------
    El input muestra la cantidad de ESTA cert (ejecutada − anterior); al
    confirmar `v`, se guarda como cantidad A ORIGEN = max(0, prev + v). */

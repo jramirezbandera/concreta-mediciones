@@ -484,6 +484,33 @@
 .detailMedRow:first-child {
   border-top: 0;
 }
+.detailMedRow.lineOn {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.lineCheck {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1.5px solid var(--border-strong, var(--border-main));
+  border-radius: 5px;
+  background: var(--bg-surface);
+  color: #fff;
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease;
+}
+.lineCheck:hover {
+  border-color: var(--accent);
+}
+.lineCheck.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
 .detailMedComment {
   flex: 1;
   min-width: 0;

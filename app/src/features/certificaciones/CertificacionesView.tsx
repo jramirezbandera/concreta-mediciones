@@ -22,8 +22,8 @@ const MODES: [CertMode, string][] = [
  * Vista de Certificaciones (F4.1): selector de cert + periodo/retención editables,
  * "líquido a abonar" grande, toggle A origen / Esta certificación, tabla por
  * capítulo con la cantidad ejecutada editable, y resúmenes (económico + por
- * capítulos). El cálculo es el motor de F1; el % editable, el desplegable de
- * medición, marcar líneas, los contradictorios y el móvil llegan en F4.2-F4.5.
+ * capítulos). El cálculo es el motor de F1; el % editable + desplegable (F4.2) y
+ * marcar líneas (F4.3) ya están; los contradictorios y el móvil llegan en F4.4-F4.5.
  */
 export function CertificacionesView() {
   const [mode, setMode] = useState<CertMode>('origen');

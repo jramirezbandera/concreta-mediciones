@@ -22,25 +22,42 @@ function dimsOf(l: MedLine): string {
     .join(' × ');
 }
 
-/** Desplegable por partida (F4.2, lectura): descripción + líneas de medición. */
+/** Desplegable por partida (F4.2 lectura + F4.3 marcar líneas): descripción +
+ *  líneas de medición, cada una con casilla para certificarla "por trozos". */
 function CertDetail({ p }: { p: Partida }) {
   const med = p.med ?? [];
+  const lineQty = useObraStore((s) => s.certs[s.curCert]?.lineQty?.[p.id]);
+  const setCertLine = useObraStore((s) => s.setCertLine);
   return (
     <div className={styles.detail}>
       <div className={styles.detailLabel}>Descripción</div>
       <p className={styles.detailDesc}>{p.desc || '—'}</p>
-      <div className={styles.detailLabel}>Mediciones</div>
+      <div className={styles.detailLabel}>Mediciones · marca las líneas ejecutadas</div>
       {med.length > 0 ? (
         <div className={styles.detailMed}>
-          {med.map((l) => (
-            <div key={l.id} className={styles.detailMedRow}>
-              <span className={`${styles.detailMedComment} ${l.comment ? '' : styles.empty}`}>
-                {l.comment || 'Sin comentario'}
-              </span>
-              <span className={`mono ${styles.detailMedDims}`}>{dimsOf(l) || '—'}</span>
-              <span className={`mono ${styles.detailMedParcial}`}>{fmtNum(lineParcial(l))}</span>
-            </div>
-          ))}
+          {med.map((l) => {
+            const parcial = lineParcial(l);
+            const marked = (lineQty?.[l.id] ?? 0) > 0;
+            return (
+              <div key={l.id} className={`${styles.detailMedRow} ${marked ? styles.lineOn : ''}`}>
+                <button
+                  type="button"
+                  role="checkbox"
+                  aria-checked={marked}
+                  aria-label={`Marcar línea ejecutada: ${l.comment || 'sin comentario'}`}
+                  className={`${styles.lineCheck} ${marked ? styles.on : ''}`}
+                  onClick={() => setCertLine(p.id, l.id, marked ? null : parcial)}
+                >
+                  {marked && <Icon name="check" size={12} />}
+                </button>
+                <span className={`${styles.detailMedComment} ${l.comment ? '' : styles.empty}`}>
+                  {l.comment || 'Sin comentario'}
+                </span>
+                <span className={`mono ${styles.detailMedDims}`}>{dimsOf(l) || '—'}</span>
+                <span className={`mono ${styles.detailMedParcial}`}>{fmtNum(parcial)}</span>
+              </div>
+            );
+          })}
         </div>
       ) : (
         <p className={styles.detailEmpty}>Sin líneas de medición.</p>

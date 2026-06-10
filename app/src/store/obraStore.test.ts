@@ -467,6 +467,39 @@ describe('acciones F4 (certificaciones)', () => {
     expect(state().certs[prevIdx]!.data.p111).toBe(antes); // la previa intacta
   });
 
+  it('setCertLine marca líneas: data = Σ lineQty a-origen (dogfood #3)', () => {
+    state().setCurCert(0);
+    state().setCertLine('p111', 'p111-m1', 61.2); // 1×85×0,6×1,2
+    expect(state().certs[0]!.lineQty!.p111!['p111-m1']).toBe(61.2);
+    expect(state().certs[0]!.data.p111).toBe(61.2);
+    state().setCertLine('p111', 'p111-m2', 63.45); // 1×70,5×0,5×1,8
+    expect(state().certs[0]!.data.p111).toBe(124.65); // Σ de las dos
+  });
+
+  it('setCertLine: desmarcar la última línea limpia lineQty y data de la partida', () => {
+    state().setCurCert(0);
+    state().setCertLine('p111', 'p111-m1', 61.2);
+    state().setCertLine('p111', 'p111-m1', null);
+    expect(state().certs[0]!.lineQty?.p111).toBeUndefined();
+    expect(state().certs[0]!.data.p111).toBeUndefined();
+  });
+
+  it('onCertEdit (teclear cantidad) hace override y borra lineQty de la partida (§8a)', () => {
+    state().setCurCert(0);
+    state().setCertLine('p111', 'p111-m1', 61.2);
+    expect(state().certs[0]!.lineQty?.p111).toBeDefined();
+    state().onCertEdit('p111', 30, 'origen');
+    expect(state().certs[0]!.data.p111).toBe(30);
+    expect(state().certs[0]!.lineQty?.p111).toBeUndefined();
+  });
+
+  it('setCertLine sólo muta la cert en curso (aislamiento)', () => {
+    state().setCurCert(0);
+    state().setCertLine('p111', 'p111-m1', 61.2);
+    expect(state().certs[1]!.lineQty?.p111).toBeUndefined();
+    expect(state().certs[2]!.lineQty?.p111).toBeUndefined();
+  });
+
   it('setCertField edita periodo y clampa la retención a [0,1]', () => {
     state().setCertField('period', 'Julio 2026');
     expect(state().certs[state().curCert]!.period).toBe('Julio 2026');

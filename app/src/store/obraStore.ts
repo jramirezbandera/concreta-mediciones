@@ -16,7 +16,7 @@ import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import type { Banco, Cert, Chapter, MedLine, Obra, Partida, PartidasMap, Rates } from '../core/types';
 import { buildRecursos, precioCuadraDescompuesto, precioSegunModo } from '../core/banco';
-import { estaCertToOrigen, prevDataOf } from '../core/certificacion';
+import { estaCertToOrigen, prevDataOf, sumLineQty } from '../core/certificacion';
 import { round2 } from '../core/money';
 import { renumberChapter } from '../core/numbering';
 import { CHAPTERS, DEFAULT_OBRA, DEFAULT_RATES, PARTIDAS, makeCertsInit } from '../core/seed';
@@ -113,6 +113,14 @@ export interface ObraState extends ObraData {
    * `core/certificacion.estaCertToOrigen` = round2(max(0, anterior + v)).
    */
   onCertEdit: (partidaId: string, value: number, mode: CertMode) => void;
+  /**
+   * Marca/desmarca una línea de medición como ejecutada en la cert en curso
+   * (dogfood #3). `qty` = cantidad A ORIGEN de la línea (su parcial si entera;
+   * menos si se certifica una parte); `null`/≤0 la desmarca. Resincroniza
+   * `data[partidaId] = Σ lineQty[partidaId]` (a-origen, regla §1). La marca es
+   * SIEMPRE a-origen, independiente del modo A origen/Esta cert (regla §2).
+   */
+  setCertLine: (partidaId: string, lineId: string, qty: number | null) => void;
   /**
    * Crea una certificación nueva al final y la deja en curso. Hereda de la
    * ÚLTIMA cronológica (no de la actual): `data` y `lineQty` a-origen (la
@@ -308,6 +316,34 @@ export const useObraStore = create<ObraState>()(
             // consistente con `estaCertToOrigen` y con el seed (`makeCertsInit`),
             // que también redondean la cantidad a origen.
             cert.data[partidaId] = round2(Math.max(0, value));
+          }
+          // Teclear una cantidad/% es un override del total: deja de certificarse
+          // por líneas (regresión §8a). Si no quedan líneas marcadas en la cert,
+          // limpia el contenedor para no dejar `{}` huérfanos.
+          if (cert.lineQty?.[partidaId]) {
+            delete cert.lineQty[partidaId];
+            if (Object.keys(cert.lineQty).length === 0) cert.lineQty = undefined;
+          }
+        }),
+
+      setCertLine: (partidaId, lineId, qty) =>
+        set((s) => {
+          const cert = s.certs[s.curCert];
+          if (!cert) return;
+          const lineQty = (cert.lineQty ??= {});
+          const lines = (lineQty[partidaId] ??= {});
+          if (qty == null || qty <= 0) {
+            delete lines[lineId];
+          } else {
+            lines[lineId] = round2(qty);
+          }
+          if (Object.keys(lines).length === 0) {
+            // Sin líneas marcadas: la partida deja de certificarse por líneas.
+            delete lineQty[partidaId];
+            delete cert.data[partidaId];
+            if (Object.keys(lineQty).length === 0) cert.lineQty = undefined;
+          } else {
+            cert.data[partidaId] = sumLineQty(lines);
           }
         }),
 

@@ -37,8 +37,21 @@ describe('CertificacionesView (F4.1)', () => {
     render(<CertificacionesView />);
     expect(screen.queryByText('Zanjas de saneamiento')).toBeNull();
     fireEvent.click(screen.getByText('E02EM030')); // celda Nº de p111 → despliega
-    expect(screen.getByText('Mediciones')).toBeInTheDocument();
+    expect(screen.getByText(/Mediciones/)).toBeInTheDocument();
     expect(screen.getByText('Zanjas de saneamiento')).toBeInTheDocument(); // línea de p111
+  });
+
+  it('marcar una línea suma su parcial a la cantidad ejecutada (F4.3 #3)', () => {
+    render(<CertificacionesView />);
+    useObraStore.getState().setCurCert(0);
+    fireEvent.click(screen.getByText('E02EM030')); // despliega p111
+    const check = screen.getByLabelText(/Marcar línea ejecutada: Zanjas de saneamiento/);
+    fireEvent.click(check);
+    const s = useObraStore.getState();
+    expect(s.certs[0]!.lineQty!.p111!['p111-m1']).toBe(61.2); // 1×85×0,6×1,2
+    expect(s.certs[0]!.data.p111).toBe(61.2);
+    fireEvent.click(check); // desmarca
+    expect(useObraStore.getState().certs[0]!.lineQty?.p111).toBeUndefined();
   });
 
   it('teclear un % rellena la cantidad ejecutada a origen (F4.2 #1)', () => {

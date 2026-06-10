@@ -8,6 +8,7 @@ import {
   estaCertToOrigen,
   prevDataOf,
   pctToCantidad,
+  sumLineQty,
 } from './certificacion';
 import { toCents, toEur } from './money';
 import type { Cert, Chapter, Partida, PartidasMap, Rates } from './types';
@@ -126,5 +127,16 @@ describe('% editable (F4, dogfood #1) — cantidad, no dinero', () => {
     expect(pctToCantidad(124.65, 50)).toBe(62.33); // round2(62.325)
     expect(cantidadToPct(100, 50)).toBe(50);
     expect(cantidadToPct(0, 5)).toBe(0); // sin ofertada → 0, no NaN
+  });
+});
+
+describe('sumLineQty (certificar marcando líneas, F4.3)', () => {
+  it('suma las cantidades por línea a-origen, redondeo a 2 dec', () => {
+    expect(sumLineQty({ a: 61.2, b: 63.45 })).toBe(124.65);
+    expect(sumLineQty({ a: 0.1, b: 0.2 })).toBe(0.3); // round2 corrige el float
+  });
+  it('vacío/undefined → 0', () => {
+    expect(sumLineQty({})).toBe(0);
+    expect(sumLineQty(undefined)).toBe(0);
   });
 });
