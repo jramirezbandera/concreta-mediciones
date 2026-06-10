@@ -129,6 +129,13 @@
 .chap.on {
   background: var(--accent-soft);
 }
+/* destino de drop de una partida de Referencia (F5.2) */
+.chap.dropOver,
+.subRow.dropOver {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
 .chap.on::before {
   content: '';
   position: absolute;

@@ -115,12 +115,14 @@ function RefPartidaRow({
   onToggleSel,
   onCopyOne,
   onDragStart,
+  onDragEnd,
 }: {
   p: RefPartida;
   selected: boolean;
   onToggleSel: (p: RefPartida) => void;
   onCopyOne: (p: RefPartida) => void;
   onDragStart: (e: React.DragEvent, p: RefPartida) => void;
+  onDragEnd: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const desc = REF_DESC[p.code] ?? '';
@@ -129,6 +131,7 @@ function RefPartidaRow({
       <div
         draggable
         onDragStart={(e) => onDragStart(e, p)}
+        onDragEnd={onDragEnd}
         className={`${styles.partRow} ${selected ? styles.selected : ''}`}
       >
         <button
@@ -199,12 +202,13 @@ function RefPartidaRow({
    partidas/capítulos al presupuesto propio (botón o selección múltiple).
    El arrastre (F5.2) se conectará sobre `onDragStart`.
    =========================================================================== */
-export function ReferenciaPanel({ onDragStart }: { onDragStart?: (items: RefCopyItem[]) => void }) {
+export function ReferenciaPanel() {
   const refSourceId = useObraStore((s) => s.refSourceId);
   const setRefSource = useObraStore((s) => s.setRefSource);
   const setRefOpen = useObraStore((s) => s.setRefOpen);
   const setView = useObraStore((s) => s.setView);
   const copyRefPartidas = useObraStore((s) => s.copyRefPartidas);
+  const setRefDrag = useObraStore((s) => s.setRefDrag);
   const target = useObraStore(selectCopyTarget);
 
   const source = REF_SOURCES.find((s) => s.id === refSourceId) ?? REF_SOURCES[0]!;
@@ -248,26 +252,27 @@ export function ReferenciaPanel({ onDragStart }: { onDragStart?: (items: RefCopy
   }
   const selCount = Object.keys(sel).length;
 
+  function beginDrag(e: React.DragEvent, items: RefCopyItem[]) {
+    const dt = e.dataTransfer;
+    if (dt) {
+      dt.effectAllowed = 'copy';
+      try {
+        dt.setData('text/plain', 'concreta-ref');
+      } catch {
+        /* algunos entornos (jsdom) no soportan setData */
+      }
+    }
+    setRefDrag({ items, contra });
+  }
   function dragStart(e: React.DragEvent, p: RefPartida) {
     const k = refKey(p);
-    const items = sel[k] ? Object.values(sel) : [copyItem(source, p)];
-    e.dataTransfer.effectAllowed = 'copy';
-    try {
-      e.dataTransfer.setData('text/plain', 'concreta-ref');
-    } catch {
-      /* algunos navegadores en test no soportan setData */
-    }
-    onDragStart?.(items);
+    // Si la partida arrastrada está en la selección, arrastra TODA la selección.
+    beginDrag(e, sel[k] ? Object.values(sel) : [copyItem(source, p)]);
   }
   function dragStartChapter(e: React.DragEvent, ps: RefPartida[]) {
-    e.dataTransfer.effectAllowed = 'copy';
-    try {
-      e.dataTransfer.setData('text/plain', 'concreta-ref');
-    } catch {
-      /* idem */
-    }
-    onDragStart?.(ps.map((p) => copyItem(source, p)));
+    beginDrag(e, ps.map((p) => copyItem(source, p)));
   }
+  const endDrag = () => setRefDrag(null);
 
   function openImport() {
     setView('import' as View);
@@ -328,6 +333,7 @@ export function ReferenciaPanel({ onDragStart }: { onDragStart?: (items: RefCopy
               <div
                 draggable
                 onDragStart={(e) => dragStartChapter(e, ps)}
+                onDragEnd={endDrag}
                 className={styles.chapRow}
               >
                 <button
@@ -361,6 +367,7 @@ export function ReferenciaPanel({ onDragStart }: { onDragStart?: (items: RefCopy
                       onToggleSel={toggleSel}
                       onCopyOne={(pp) => copyRefPartidas([copyItem(source, pp)], null, contra)}
                       onDragStart={dragStart}
+                      onDragEnd={endDrag}
                     />
                   ))}
                 </div>

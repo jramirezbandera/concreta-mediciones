@@ -92,6 +92,19 @@ function ResumenCard() {
   );
 }
 
+/* ---------- Drop de partidas de Referencia (F5.2) ------------------------- */
+/** Genera los props de drop para una fila destino; `undefined` si no se arrastra. */
+interface DropHandlers {
+  bind: (id: string, chId: string, subId: string | null) => {
+    isOver: boolean;
+    events: {
+      onDragOver: (e: React.DragEvent) => void;
+      onDragLeave: () => void;
+      onDrop: (e: React.DragEvent) => void;
+    };
+  };
+}
+
 /* ---------- Fila de subcapítulo ------------------------------------------- */
 function SubRow({
   sub,
@@ -99,16 +112,24 @@ function SubRow({
   active,
   onSelect,
   onDelete,
+  drop,
 }: {
   sub: SubChapter;
   chId: string;
   active: string;
   onSelect: (id: string) => void;
   onDelete: (chId: string, subId: string) => void;
+  drop?: DropHandlers;
 }) {
   const on = active === sub.id;
+  const dropProps = drop?.bind(sub.id, chId, sub.id);
   return (
-    <button type="button" className={`tcol ${styles.subRow} ${on ? styles.on : ''}`} onClick={() => onSelect(sub.id)}>
+    <button
+      type="button"
+      className={`tcol ${styles.subRow} ${on ? styles.on : ''} ${dropProps?.isOver ? styles.dropOver : ''}`}
+      onClick={() => onSelect(sub.id)}
+      {...dropProps?.events}
+    >
       <span className={`mono ${styles.subCode}`}>{sub.code}</span>
       <span className={styles.subTitle}>{sub.title}</span>
       <span
@@ -138,6 +159,7 @@ function ChapterCard({
   onToggle,
   onAddSub,
   onDelete,
+  drop,
 }: {
   ch: Chapter;
   active: string;
@@ -148,14 +170,17 @@ function ChapterCard({
   onToggle: (id: string) => void;
   onAddSub: (id: string) => void;
   onDelete: (id: string) => void;
+  drop?: DropHandlers;
 }) {
   const isActive = active === ch.id || !!ch.children?.some((c) => c.id === active);
   const hasChildren = !!ch.children?.length;
+  const dropProps = drop?.bind(ch.id, ch.id, null);
   return (
     <button
       type="button"
-      className={`tcol ${styles.chap} ${isActive ? styles.on : ''}`}
+      className={`tcol ${styles.chap} ${isActive ? styles.on : ''} ${dropProps?.isOver ? styles.dropOver : ''}`}
       onClick={() => onSelect(ch.id)}
+      {...dropProps?.events}
     >
       <div className={styles.chapTop}>
         {hasChildren ? (
@@ -235,9 +260,36 @@ export function Sidebar({ drawer = false, onAfterSelect }: SidebarProps) {
   const addSubchapter = useObraStore((s) => s.addSubchapter);
   const deleteChapter = useObraStore((s) => s.deleteChapter);
   const deleteSubchapter = useObraStore((s) => s.deleteSubchapter);
+  const refDrag = useObraStore((s) => s.refDrag);
+  const setRefDrag = useObraStore((s) => s.setRefDrag);
+  const copyRefPartidas = useObraStore((s) => s.copyRefPartidas);
 
   const [creatingChapter, setCreatingChapter] = useState(false);
   const [creatingSubFor, setCreatingSubFor] = useState<string | null>(null);
+  const [dropId, setDropId] = useState<string | null>(null);
+
+  // Drop de partidas de Referencia (F5.2): sólo activo mientras se arrastra.
+  const drop: DropHandlers | undefined = refDrag
+    ? {
+        bind: (id, chId, subId) => ({
+          isOver: dropId === id,
+          events: {
+            onDragOver: (e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'copy';
+              if (dropId !== id) setDropId(id);
+            },
+            onDragLeave: () => setDropId((d) => (d === id ? null : d)),
+            onDrop: (e) => {
+              e.preventDefault();
+              if (refDrag) copyRefPartidas(refDrag.items, { chId, subId }, refDrag.contra);
+              setRefDrag(null);
+              setDropId(null);
+            },
+          },
+        }),
+      }
+    : undefined;
 
   const select = (id: string) => {
     setActive(id);
@@ -304,6 +356,7 @@ export function Sidebar({ drawer = false, onAfterSelect }: SidebarProps) {
               onToggle={toggleExpanded}
               onAddSub={onAddSub}
               onDelete={onDeleteChapter}
+              drop={drop}
             />
             {ch.children && expanded[ch.id] && (
               <div className={styles.subList}>
@@ -315,6 +368,7 @@ export function Sidebar({ drawer = false, onAfterSelect }: SidebarProps) {
                     active={active}
                     onSelect={select}
                     onDelete={onDeleteSub}
+                    drop={drop}
                   />
                 ))}
               </div>

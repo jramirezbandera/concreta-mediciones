@@ -39,6 +39,13 @@ export interface RefCopyItem {
   partida: RefPartida;
 }
 
+/** Payload de arrastre del panel Referencia (F5.2): los items a soltar y si van
+ *  como contradictorio (se congela el toggle al empezar a arrastrar). */
+export interface RefDrag {
+  items: RefCopyItem[];
+  contra: boolean;
+}
+
 const CI = (cantidad: number): Item => ({ code: '%CI', type: '%CI', desc: 'Costes indirectos 3%', ud: '%', cantidad, precio: 0 });
 
 export const REF_SOURCES: RefSource[] = [

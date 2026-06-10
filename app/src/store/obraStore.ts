@@ -19,7 +19,7 @@ import { buildRecursos, precioCuadraDescompuesto, precioSegunModo } from '../cor
 import { estaCertToOrigen, prevDataOf, sumLineQty } from '../core/certificacion';
 import { round2 } from '../core/money';
 import { renumberChapter } from '../core/numbering';
-import { REF_DESC, REF_SOURCES, type RefCopyItem } from '../core/refdata';
+import { REF_DESC, REF_SOURCES, type RefCopyItem, type RefDrag } from '../core/refdata';
 import { CHAPTERS, DEFAULT_OBRA, DEFAULT_RATES, PARTIDAS, makeCertsInit } from '../core/seed';
 import type { View } from '../layout/types';
 
@@ -125,6 +125,8 @@ export interface ObraState extends ObraData {
   refSourceId: string;
   /** Ancho del panel en modo split (px, clamp 320–640). */
   refWidth: number;
+  /** Arrastre en curso desde el panel Referencia (F5.2); null = nada arrastrándose. */
+  refDrag: RefDrag | null;
 
   /* ---- acciones (F1) ---- */
   setView: (v: View) => void;
@@ -185,6 +187,8 @@ export interface ObraState extends ObraData {
   setRefSource: (id: string) => void;
   /** Fija el ancho del panel en split (se clampa a 320–640). */
   setRefWidth: (w: number) => void;
+  /** Fija/limpia el payload de arrastre (drag&drop, F5.2). */
+  setRefDrag: (drag: RefDrag | null) => void;
   /**
    * Copia partidas de una fuente de referencia al presupuesto (F5). Integra los
    * recursos de su descomposición en el banco SIN pisar los homónimos (coherencia);
@@ -329,6 +333,7 @@ function seedUi(certs: Cert[]) {
     refOpen: false,
     refSourceId: REF_SOURCES[0]?.id ?? '',
     refWidth: 400,
+    refDrag: null as RefDrag | null,
   };
 }
 
@@ -506,6 +511,11 @@ export const useObraStore = create<ObraState>()(
       setRefWidth: (w) =>
         set((s) => {
           s.refWidth = Math.max(320, Math.min(640, Math.round(w)));
+        }),
+
+      setRefDrag: (drag) =>
+        set((s) => {
+          s.refDrag = drag;
         }),
 
       copyRefPartidas: (items, target, contra) =>

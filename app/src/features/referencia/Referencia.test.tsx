@@ -68,4 +68,23 @@ describe('ReferenciaPanel (F5.1)', () => {
     // capítulo A de la base BDT = 3 partidas (ADE010, ADR010, ASA010)
     expect(useObraStore.getState().partidas['01']!).toHaveLength(n0 + 3);
   });
+
+  it('arrastrar una partida publica el payload y soltar lo limpia (F5.2)', () => {
+    render(<ReferenciaPanel />);
+    const dt = { effectAllowed: '', setData: () => {} };
+    fireEvent.dragStart(screen.getByText('ADE010'), { dataTransfer: dt });
+    const drag = useObraStore.getState().refDrag;
+    expect(drag).not.toBeNull();
+    expect(drag!.items[0]!.partida.code).toBe('ADE010');
+    expect(drag!.contra).toBe(false);
+    fireEvent.dragEnd(screen.getByText('ADE010'));
+    expect(useObraStore.getState().refDrag).toBeNull();
+  });
+
+  it('el toggle contradictorio se congela en el payload de arrastre (F5.2)', () => {
+    render(<ReferenciaPanel />);
+    fireEvent.click(screen.getByText('Copiar como precio contradictorio'));
+    fireEvent.dragStart(screen.getByText('ADE010'), { dataTransfer: { effectAllowed: '', setData: () => {} } });
+    expect(useObraStore.getState().refDrag!.contra).toBe(true);
+  });
 });

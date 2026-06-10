@@ -33,8 +33,11 @@ export default function App() {
 
   const refOpen = useObraStore((s) => s.refOpen);
   const refWidth = useObraStore((s) => s.refWidth);
+  const refDrag = useObraStore((s) => s.refDrag);
   const setRefOpen = useObraStore((s) => s.setRefOpen);
   const setRefWidth = useObraStore((s) => s.setRefWidth);
+  const setRefDrag = useObraStore((s) => s.setRefDrag);
+  const copyRefPartidas = useObraStore((s) => s.copyRefPartidas);
 
   // Redimensionar el panel en split: se arrastra el tirador (320–640 lo clampa el store).
   const startRefResize = useCallback(
@@ -128,7 +131,27 @@ export default function App() {
           </Drawer>
         )}
 
-        <main className={styles.main}>
+        <main
+          className={`${styles.main}${refDrag ? ` ${styles.dropZone}` : ''}`}
+          onDragOver={
+            refDrag
+              ? (e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'copy';
+                }
+              : undefined
+          }
+          onDrop={
+            refDrag
+              ? (e) => {
+                  e.preventDefault();
+                  // Soltar en el área de presupuesto = capítulo/sub activo.
+                  copyRefPartidas(refDrag.items, null, refDrag.contra);
+                  setRefDrag(null);
+                }
+              : undefined
+          }
+        >
           {view === 'presupuesto' ? (
             <PresupuestoView compact={bp.isMobile} />
           ) : view === 'certificaciones' ? (

@@ -22,6 +22,16 @@
   background: var(--bg-primary);
   position: relative; /* contexto para el overlay del panel Referencia (<1100) */
 }
+/* área de presupuesto como destino de drop de Referencia (F5.2) */
+.main.dropZone::after {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  z-index: 5;
+  pointer-events: none;
+  border: 2px dashed color-mix(in srgb, var(--accent) 55%, transparent);
+  border-radius: 12px;
+}
 
 .toast {
   position: fixed;
