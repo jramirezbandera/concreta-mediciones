@@ -1,0 +1,66 @@
+.chip {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  box-shadow: var(--shadow-float);
+  border: 1px solid var(--border-main);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+}
+.chip.saved {
+  color: var(--state-ok, #30a46c);
+}
+.chip.error {
+  color: var(--state-danger, #e5484d);
+  border-color: color-mix(in srgb, var(--state-danger, #e5484d) 40%, var(--border-main));
+}
+.spin {
+  animation: persistspin 0.9s linear infinite;
+}
+@keyframes persistspin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  background: color-mix(in srgb, var(--state-warn) 14%, var(--bg-elevated));
+  border-bottom: 1px solid color-mix(in srgb, var(--state-warn) 45%, var(--border-main));
+  color: var(--text-primary);
+  font-size: 13px;
+}
+.bannerText {
+  flex: 1;
+  min-width: 0;
+}
+.bannerBtn {
+  flex-shrink: 0;
+  padding: 6px 11px;
+  border-radius: 7px;
+  border: 1px solid var(--border-main);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+.bannerBtn:hover {
+  background: var(--bg-primary);
+}
+.bannerBtn.danger {
+  color: var(--state-danger, #e5484d);
+  border-color: color-mix(in srgb, var(--state-danger, #e5484d) 40%, var(--border-main));
+}

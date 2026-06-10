@@ -90,3 +90,23 @@ Origen: revisión de ingeniería (`/plan-eng-review`) + voz externa Codex, 2026-
 - **Cons:** requiere la acción de edición de recursos de F2 (no existe aún).
 - **Contexto / dónde empezar:** `core/banco` ya tiene `precioSegunModo`/`precioCuadraDescompuesto` (este último ya compara en céntimos tras la eng-review). El seed marca `precioManual` donde el precio es autoridad (no se colapsa). Falta: acción `editRecurso` en `store/obraStore` + test en `store/`. 
 - **Depende de / bloqueado por:** F2 (vista Presupuesto). Relacionado con T-8 (K) y la decisión §0.6 (override).
+
+---
+
+> Añadidos en `/plan-eng-review` de F6 (eng run 5, 2026-06-10). Aplazados por decisión del fundador (D2-A / Issue 4-A).
+
+## T-10 · Gestión multi-proyecto (lista de obras)
+- **Qué:** poder tener VARIAS obras: lista/selector de proyectos, crear/duplicar/borrar, "obra activa", cambiar entre ellas.
+- **Por qué:** hoy el dogfood es una obra y F6 persiste UN proyecto. Cuando el fundador maneje varias obras a la vez (lo normal en un estudio), hará falta. El plan ya lo marcaba "(opcional)"; se aplazó en F6 (D2-A) para no gastar UI/estado en valor aún no necesitado.
+- **Pros:** soporta el flujo real de un estudio con varias obras; aprovecha de pleno una BD local.
+- **Cons:** más UI y estado (selector, CRUD de proyectos); puede justificar migrar de `idb-keyval` a Dexie.
+- **Contexto / dónde empezar:** F6.1 persiste con `idb-keyval` un blob `ObraData` bajo UNA clave, con envelope `{schemaVersion, savedAt, appVersion, data}`. Para multi-proyecto: clave por `projectId` (en vez de clave única) + un índice de proyectos; si crece en consultas, evaluar **Dexie** (tabla de obras). El envelope y la capa `persist` aislada ya dejan sitio sin migración traumática.
+- **Depende de / bloqueado por:** F6 base (persistencia de una obra). No bloquea el dogfood.
+
+## T-11 · Recordar dónde estaba al recargar (estado de UI)
+- **Qué:** persistir y restaurar la vista activa + capítulo/sub seleccionado + certificación en curso al recargar, no solo el dominio.
+- **Por qué:** comodidad — volver exactamente donde estabas. F6 (Issue 4-A) persiste DOMINIO-SOLO; al recargar se conserva todo el trabajo pero aterrizas en Presupuesto / primer capítulo. Si estabas certificando la cert nº2, vuelves a Presupuesto (fricción menor, cero pérdida de datos).
+- **Pros:** UX más pulida ("sigo donde lo dejé"); barato con CC.
+- **Cons:** añade una 2ª clave de persistencia y acopla UI a la hidratación, ensuciando la separación dominio/UI limpia que F6 mantiene a propósito (`toSerializable` excluye UI).
+- **Contexto / dónde empezar:** una clave aparte (no el blob de dominio) con `{view, active, curCert}`, rehidratada en `useHydrate` tras cargar el dominio. Reusar el gate de hidratación de F6.1. Mantener separada del envelope de dominio.
+- **Depende de / bloqueado por:** F6 base. Encaja en **F8 (pulido)**.

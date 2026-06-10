@@ -13,6 +13,7 @@
    preparado pero esas acciones no se implementan aquí.
    =========================================================================== */
 import { create } from 'zustand';
+import { subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import type { Banco, Cert, Chapter, MedLine, Obra, Partida, PartidasMap, Rates } from '../core/types';
 import { buildRecursos, precioCuadraDescompuesto, precioSegunModo } from '../core/banco';
@@ -38,36 +39,27 @@ export const SCHEMA_VERSION = 1;
 export type CertMode = 'origen' | 'esta';
 
 /**
- * Secuencia para códigos de recurso nuevos (F2.3, "añadir concepto"). Monótona
- * por sesión; el prefijo `r·` no colisiona con los códigos de banco del seed
- * (mo001/mq…/E…). La generación robusta de ids es competencia de F6 (persistencia).
+ * Ids ÚNICOS por construcción (F6, eng-review run 5 / Tensión 1-B). Antes eran
+ * contadores de sesión (`p·N`…) que arrancaban en 0 cada carga → al recargar una
+ * obra persistida colisionaban. Peor: el id de línea `m·N` vive CONGELADO en los
+ * snapshots de certificación (`Cert.lineQty`), así que rehidratar contadores
+ * podía reusar un id que una cert vieja aún referencia (corrupción del cobro).
+ * `crypto.randomUUID` elimina la clase entera: sin contadores, sin rehidratación,
+ * sin escaneo que olvidar. El prefijo (`p-`/`r-`/`m-`/`x-`) sólo da legibilidad;
+ * la unicidad la garantiza el uuid. Seed (`p111`) y bc3 (`b3-*`) ids son literales
+ * (no salen de aquí) y no cambian.
  */
-let recursoSeq = 0;
-function nextRecursoCode(): string {
-  recursoSeq += 1;
-  return `r·${recursoSeq}`;
+function uid(prefix: string): string {
+  const c = globalThis.crypto;
+  const raw = c?.randomUUID
+    ? c.randomUUID()
+    : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+  return `${prefix}-${raw}`;
 }
-
-/** Secuencia para ids de partida nuevas (F2.4). `p·N` no colisiona con el seed (p111…). */
-let partidaSeq = 0;
-function nextPartidaId(): string {
-  partidaSeq += 1;
-  return `p·${partidaSeq}`;
-}
-
-/** Secuencia para ids de línea de medición (F4). `m·N` no colisiona con el seed (`<pid>-m<n>`). */
-let medLineSeq = 0;
-function nextMedLineId(): string {
-  medLineSeq += 1;
-  return `m·${medLineSeq}`;
-}
-
-/** Secuencia para ids de contradictorio (F4.4). `x·N`, único por sesión. */
-let extraSeq = 0;
-function nextExtraId(): string {
-  extraSeq += 1;
-  return `x·${extraSeq}`;
-}
+const nextRecursoCode = (): string => uid('r');
+const nextPartidaId = (): string => uid('p');
+const nextMedLineId = (): string => uid('m');
+const nextExtraId = (): string => uid('x');
 
 /**
  * Renumera `pos` de una lista de partidas EN SITIO (Immer-friendly), reusando la
@@ -345,6 +337,7 @@ function seedUi(certs: Cert[]) {
 }
 
 export const useObraStore = create<ObraState>()(
+  subscribeWithSelector(
   immer((set) => {
     const data = seedObraData();
     return {
@@ -803,4 +796,5 @@ export const useObraStore = create<ObraState>()(
         }),
     };
   }),
+  ),
 );

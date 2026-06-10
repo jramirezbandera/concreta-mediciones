@@ -6,6 +6,7 @@ import { PresupuestoView } from './features/presupuesto';
 import { PlaceholderView } from './features/PlaceholderView';
 import { ReferenciaPanel, refStyles } from './features/referencia';
 import { Sandbox } from './features/sandbox/Sandbox';
+import { PersistUI, flushPending } from './persist';
 import { useBreakpoint } from './hooks/useBreakpoint';
 import { useTheme } from './hooks/useTheme';
 import { BottomTabBar, Drawer, Sidebar, StatusBar, TopBar, type View } from './layout';
@@ -80,6 +81,17 @@ export default function App() {
     const id = window.setTimeout(() => setFlash(null), 2600);
     return () => window.clearTimeout(id);
   }, [flash]);
+
+  // F6.1: al ocultar la pestaña, fuerza el guardado pendiente (no perder la última
+  // edición por el debounce). `pagehide` es el evento más fiable para esto.
+  useEffect(() => {
+    const onHide = () => void flushPending();
+    window.addEventListener('pagehide', onHide);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') onHide();
+    });
+    return () => window.removeEventListener('pagehide', onHide);
+  }, []);
 
   const goSandbox = useCallback(() => {
     window.location.hash = 'sandbox';
@@ -198,6 +210,8 @@ export default function App() {
           {flash}
         </div>
       )}
+
+      <PersistUI />
     </div>
   );
 }

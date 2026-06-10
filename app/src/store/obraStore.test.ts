@@ -629,6 +629,38 @@ describe('acciones F5 (panel Referencia · copiar)', () => {
   });
 });
 
+describe('ids únicos tras recargar (regresión F6.1 — el landmine de los contadores)', () => {
+  it('crear partidas → "recargar" (loadObra) → crear más NO colisiona ids', () => {
+    // Sesión 1: crea partidas; recoge sus ids.
+    state().addPartida('01', null);
+    state().addPartida('01', null);
+    const session1 = new Set(allPartidas().map((p) => p.id));
+    expect(session1.size).toBeGreaterThan(0);
+    // "Recarga": carga la obra serializada (lo que hace la hidratación de F6).
+    const serialized = toSerializable(state());
+    state().loadObra(serialized);
+    // Sesión 2: crea más. Con ids únicos (UUID) el nuevo id NO está entre los previos.
+    state().addPartida('01', null);
+    const nuevo = state().partidas['01']!.at(-1)!.id;
+    expect(session1.has(nuevo)).toBe(false);
+    // Invariante global: todos los ids de partida siguen siendo únicos.
+    const todos = allPartidas().map((p) => p.id);
+    expect(new Set(todos).size).toBe(todos.length);
+  });
+
+  it('los generadores devuelven ids únicos por construcción (sin contadores de sesión)', () => {
+    const ids = new Set<string>();
+    for (let i = 0; i < 50; i++) {
+      state().addPartida('02', null);
+      state().addContradictorio('02');
+    }
+    for (const p of state().partidas['02'] ?? []) ids.add(p.id);
+    for (const e of state().certs[state().curCert]?.extras ?? []) ids.add(e.id);
+    // 50 partidas + 50 contradictorios, todos distintos.
+    expect(ids.size).toBeGreaterThanOrEqual(100);
+  });
+});
+
 describe('loadObra (importar .bc3, F5.3)', () => {
   it('reemplaza la obra, estampa esquema y deja la vista en presupuesto', () => {
     state().loadObra({
