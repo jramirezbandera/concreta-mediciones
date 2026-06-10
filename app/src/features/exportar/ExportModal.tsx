@@ -4,10 +4,38 @@ import { useObraStore } from '../../store';
 import type { PrintTarget } from '../print';
 import styles from './Exportar.module.css';
 
-/** Colores de chip por formato (DESIGN.md). Los formatos llegan por slice:
- *  en F7.1 solo PDF está construido y solo PDF se muestra (design review D2,
- *  "mostrar solo lo que funciona"); DOCX/XLSX/BC3 aparecerán al shipear F7.2+. */
+/** Colores de chip por formato (DESIGN.md: PDF=warn, XLSX=ok, DOCX=accent,
+ *  BC3=mq). Los formatos llegan por slice ("mostrar solo lo que funciona",
+ *  design review D2): PDF (F7.1) y Excel (F7.2); DOCX/BC3 al shipear F7.3+. */
 const CHIP_PDF: CSSProperties = { ['--chip' as string]: 'var(--state-warn)' };
+const CHIP_XLSX: CSSProperties = { ['--chip' as string]: 'var(--state-ok)' };
+
+function Chip({
+  label,
+  fmt,
+  doc,
+  style,
+  onClick,
+}: {
+  label: string;
+  fmt: string;
+  doc: string;
+  style: CSSProperties;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={styles.chip}
+      style={style}
+      title={`Exportar «${doc}» a ${fmt}`}
+      aria-label={`Exportar «${doc}» a ${fmt}`}
+      onClick={onClick}
+    >
+      {label}
+    </button>
+  );
+}
 
 function Row({
   icon,
@@ -15,12 +43,14 @@ function Row({
   title,
   sub,
   onPdf,
+  onXlsx,
 }: {
   icon: IconName;
   accent?: boolean;
   title: string;
   sub: string;
   onPdf: () => void;
+  onXlsx: () => void;
 }) {
   return (
     <div className={styles.row}>
@@ -32,41 +62,40 @@ function Row({
         <div className={styles.rowSub}>{sub}</div>
       </div>
       <div className={styles.chips}>
-        <button
-          type="button"
-          className={styles.chip}
-          style={CHIP_PDF}
-          title={`Exportar «${title}» a PDF`}
-          aria-label={`Exportar «${title}» a PDF`}
-          onClick={onPdf}
-        >
-          PDF
-        </button>
+        <Chip label="PDF" fmt="PDF" doc={title} style={CHIP_PDF} onClick={onPdf} />
+        <Chip label="Excel" fmt="Excel" doc={title} style={CHIP_XLSX} onClick={onXlsx} />
       </div>
     </div>
   );
 }
 
 /**
- * Modal Exportar (F7.1): elige listado y formato sobre la primitiva `Modal`
- * (focus-trap de F6.2). `onExportPdf` monta el doc de impresión bajo demanda
- * (→ `window.print()` → "Guardar como PDF" del navegador).
+ * Modal Exportar (F7.1/F7.2): elige listado y formato sobre la primitiva
+ * `Modal` (focus-trap de F6.2). `onExportPdf` monta el doc de impresión bajo
+ * demanda (→ `window.print()` → "Guardar como PDF" del navegador);
+ * `onExportXlsx` genera y descarga el .xlsx (celdas numéricas, F7.2).
  */
 export function ExportModal({
   open,
   onClose,
   compact,
   onExportPdf,
+  onExportXlsx,
 }: {
   open: boolean;
   onClose: () => void;
   compact?: boolean;
   onExportPdf: (target: PrintTarget) => void;
+  onExportXlsx: (target: PrintTarget) => void;
 }): ReactNode {
   const certs = useObraStore((s) => s.certs);
   const doPdf = (target: PrintTarget) => {
     onClose();
     onExportPdf(target);
+  };
+  const doXlsx = (target: PrintTarget) => {
+    onClose();
+    onExportXlsx(target);
   };
   return (
     <Modal
@@ -78,8 +107,8 @@ export function ExportModal({
       subtitle="Elige el listado y el formato"
       footer={
         <span className={styles.foot}>
-          PDF imprimible al instante (Guardar como PDF del navegador) · Word, Excel y BC3 llegarán
-          en próximas fases.
+          PDF imprimible al instante (Guardar como PDF del navegador) · Excel con celdas numéricas
+          reales · Word y BC3 llegarán en próximas fases.
         </span>
       }
     >
@@ -88,12 +117,14 @@ export function ExportModal({
         title="Presupuesto y mediciones"
         sub="Partidas con precio, descripción y líneas de medición"
         onPdf={() => doPdf({ kind: 'presupuesto' })}
+        onXlsx={() => doXlsx({ kind: 'presupuesto' })}
       />
       <Row
         icon="list"
         title="Resumen de presupuesto"
         sub="Importes y porcentajes por capítulo"
         onPdf={() => doPdf({ kind: 'resumen' })}
+        onXlsx={() => doXlsx({ kind: 'resumen' })}
       />
       {certs.length > 0 && (
         <>
@@ -110,6 +141,7 @@ export function ExportModal({
                 title={`Certificación nº ${c.num}`}
                 sub={`${c.period || 'sin periodo'} · a origen${congelados}`}
                 onPdf={() => doPdf({ kind: 'cert', index: i })}
+                onXlsx={() => doXlsx({ kind: 'cert', index: i })}
               />
             );
           })}
