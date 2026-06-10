@@ -5,10 +5,10 @@ import { bc3ToObra, Bc3ImportError } from './bc3import';
 import { toEur } from './money';
 import { pem as pemOf } from './totales';
 
-/** Lee un .bc3 de muestra del spike como bytes (ruta absoluta → fs de Node, no
- *  pasa por la resolución de assets de Vite). vitest corre desde `app/`. */
+/** Lee un .bc3 de muestra del spike como bytes (ruta absoluta -> fs de Node, no
+ *  pasa por la resolución de assets de Vite). Vitest corre desde la raíz. */
 function sample(name: string): Uint8Array {
-  return new Uint8Array(readFileSync(resolve(process.cwd(), '..', 'spike', 'samples', name)));
+  return new Uint8Array(readFileSync(resolve(process.cwd(), 'docs', 'spike', 'samples', name)));
 }
 
 describe('bc3ToObra — import de obra real (Presto)', () => {

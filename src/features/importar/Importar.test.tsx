@@ -15,7 +15,7 @@ afterEach(() => {
 function sampleFile(name: string): File {
   // Copia a un Uint8Array fresco: el Buffer de readFileSync puede ser una vista
   // sobre un pool compartido y jsdom leería bytes de más al construir el File.
-  const bytes = new Uint8Array(readFileSync(resolve(process.cwd(), '..', 'spike', 'samples', name)));
+  const bytes = new Uint8Array(readFileSync(resolve(process.cwd(), 'docs', 'spike', 'samples', name)));
   return new File([bytes], name, { type: 'application/octet-stream' });
 }
 
