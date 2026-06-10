@@ -629,6 +629,30 @@ describe('acciones F5 (panel Referencia · copiar)', () => {
   });
 });
 
+describe('loadObra (importar .bc3, F5.3)', () => {
+  it('reemplaza la obra, estampa esquema y deja la vista en presupuesto', () => {
+    state().loadObra({
+      chapters: [{ id: '01', code: '1', title: 'Cap importado' }],
+      partidas: { '01': [] },
+      recursos: { r1: { type: 'MAT', desc: 'X', ud: 'm', precio: 5 } },
+      certs: [{ id: 'c1', num: 1, period: 'Certificación nº 1', retencion: 0.05, data: {} }],
+      rates: { ...DEFAULT_RATES, coefK: 1.13 },
+      obra: { denominacion: 'Obra X', direccion: '', localidad: '' },
+    });
+    const s = state();
+    expect(s.schemaVersion).toBe(SCHEMA_VERSION);
+    expect(s.chapters).toHaveLength(1);
+    expect(s.partidas['01']).toEqual([]);
+    expect(s.rates.coefK).toBe(1.13);
+    expect(s.obra.denominacion).toBe('Obra X');
+    expect(s.view).toBe('presupuesto');
+    expect(s.active).toBe('01');
+    expect(s.expanded).toEqual({ '01': true });
+    expect(s.curCert).toBe(0);
+    expect(s.refOpen).toBe(false);
+  });
+});
+
 describe('reset', () => {
   it('restaura datos y UI tras editar', () => {
     const s = state();

@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   ArrowLeft,
   Building2,
   Check,
@@ -17,6 +18,7 @@ import {
   Layers,
   LayoutGrid,
   List,
+  Loader2,
   Menu,
   MoreVertical,
   Pencil,
@@ -66,6 +68,8 @@ export const ICONS = {
   x: X,
   sun: Sun,
   moon: Moon,
+  loader: Loader2,
+  alert: AlertTriangle,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICONS;

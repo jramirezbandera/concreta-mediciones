@@ -19,6 +19,7 @@ import { buildRecursos, precioCuadraDescompuesto, precioSegunModo } from '../cor
 import { estaCertToOrigen, prevDataOf, sumLineQty } from '../core/certificacion';
 import { round2 } from '../core/money';
 import { renumberChapter } from '../core/numbering';
+import type { ImportedObra } from '../core/bc3import';
 import { REF_DESC, REF_SOURCES, type RefCopyItem, type RefDrag } from '../core/refdata';
 import { CHAPTERS, DEFAULT_OBRA, DEFAULT_RATES, PARTIDAS, makeCertsInit } from '../core/seed';
 import type { View } from '../layout/types';
@@ -189,6 +190,12 @@ export interface ObraState extends ObraData {
   setRefWidth: (w: number) => void;
   /** Fija/limpia el payload de arrastre (drag&drop, F5.2). */
   setRefDrag: (drag: RefDrag | null) => void;
+  /**
+   * Reemplaza TODA la obra por una importada (F5.3, .bc3). Estampa la versión de
+   * esquema, resetea la UI y deja la vista en el presupuesto, con el primer
+   * capítulo activo. Igual que `reset` pero con datos importados en vez de seed.
+   */
+  loadObra: (data: ImportedObra) => void;
   /**
    * Copia partidas de una fuente de referencia al presupuesto (F5). Integra los
    * recursos de su descomposición en el banco SIN pisar los homónimos (coherencia);
@@ -516,6 +523,17 @@ export const useObraStore = create<ObraState>()(
       setRefDrag: (drag) =>
         set((s) => {
           s.refDrag = drag;
+        }),
+
+      loadObra: (data) =>
+        set((s) => {
+          Object.assign(s, { schemaVersion: SCHEMA_VERSION, ...data });
+          Object.assign(s, seedUi(data.certs));
+          const first = data.chapters[0]?.id;
+          s.view = 'presupuesto';
+          s.active = first ?? ALL;
+          s.expanded = first ? { [first]: true } : {};
+          s.refOpen = false;
         }),
 
       copyRefPartidas: (items, target, contra) =>

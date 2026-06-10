@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Icon } from './components/Icon';
 import { CertificacionesView } from './features/certificaciones';
+import { ImportarView } from './features/importar';
 import { PresupuestoView } from './features/presupuesto';
 import { PlaceholderView } from './features/PlaceholderView';
 import { ReferenciaPanel, refStyles } from './features/referencia';
@@ -156,6 +157,8 @@ export default function App() {
             <PresupuestoView compact={bp.isMobile} />
           ) : view === 'certificaciones' ? (
             <CertificacionesView compact={bp.isMobile} />
+          ) : view === 'import' ? (
+            <ImportarView compact={bp.isMobile} />
           ) : (
             <PlaceholderView view={view} compact={bp.isMobile} />
           )}
