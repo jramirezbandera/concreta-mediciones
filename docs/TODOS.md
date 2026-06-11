@@ -142,3 +142,15 @@ Origen: revisión de ingeniería (`/plan-eng-review`) + voz externa Codex, 2026-
 - **Contexto / dónde empezar:** la checklist ya existe (gate manual de Presto, §F7.4 D5 capa 5); el colega del dogfood podría ejecutarla.
 - **Depende de / bloqueado por:** F7.4 shipeada; acceso a CYPE.
 - **AVANCE (2026-06-11):** la TRAZADORA (no una obra real) ya se abrió en **Arquímedes 2022** con resultado idéntico a Presto (raíz 4.074,19, descomposición y precio cerrado respetados, acentos/€/— OK). Queda la checklist con una obra completa real cuando F7.4 ruede en el dogfood.
+
+## T-15 · Tokenizar la escala tipográfica (design-review 2026-06-11)
+- **Qué:** colapsar las ~23 medidas de `font-size` distintas (con saltos de 0,5px: 11/11,5/12/12,5/13/13,5…) a una escala de ~7 tokens (`--fs-hero/h1/body/table/label/badge/micro`) y cuadrar las medidas sueltas. DESIGN.md describe la escala como rangos ("cuerpo 12,5–13 · tabla 12–13 · badges 9,5–11"), no como tokens, así que el CSS trata el tamaño como variable continua.
+- **Por qué:** la diferencia entre 12px/12,5px/13px no es un paso de jerarquía perceptible, es deriva. Una escala tokenizada evita que cada módulo invente su propio tamaño.
+- **Cons / por qué NO en el design-review:** toca ~24 ficheros CSS Module a la vez; riesgo de regresión visual alto. Es trabajo de refactor de sistema, no de fix atómico CSS. Cazado por Codex Y subagente (cross-model), severidad MEDIA.
+- **Contexto:** los números grande análogos divergen (importe de capítulo 25px vs líquido cert 24px vs su líquido final 22px; H1 23px vs Resumen 25px). Empezar por definir los tokens en `tokens.css` y migrar fichero a fichero con QA visual por vista.
+
+## T-16 · Tokenizar la escala de espaciado (design-review 2026-06-11)
+- **Qué:** el padding/gap cae sobre una escala reconocible (4/6/8/12/16/24) pero mezclada con valores fuera de grid (7/9/11/13/14/18/22) que se repiten por copia-pega entre módulos (p.ej. `padding: 9px 14px` en sub-labels idéntico en Presupuesto y Certificaciones). No hay tokens de espaciado: la consistencia se mantiene a mano. Introducir `--space-*` y/o variables de ancho de columna de tabla (`width:116px`/`124px` duplicados).
+- **Por qué:** sin tokens, la coherencia depende de no equivocarse al copiar; un token previene la deriva.
+- **Cons:** sistematización de bajo riesgo pero amplia (muchos ficheros). POLISH, no bloquea nada. Cazado por Codex + subagente.
+- **Depende de:** idealmente junto con T-15 (misma pasada de tokenización).
