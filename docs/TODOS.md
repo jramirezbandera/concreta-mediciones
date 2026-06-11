@@ -113,3 +113,31 @@ Origen: revisión de ingeniería (`/plan-eng-review`) + voz externa Codex, 2026-
 - **Cons:** añade una 2ª clave de persistencia y acopla UI a la hidratación, ensuciando la separación dominio/UI limpia que F6 mantiene a propósito (`toSerializable` excluye UI).
 - **Contexto / dónde empezar:** una clave aparte (no el blob de dominio) con `{view, active, curCert}`, rehidratada en `useHydrate` tras cargar el dominio. Reusar el gate de hidratación de F6.1. Mantener separada del envelope de dominio.
 - **Depende de / bloqueado por:** F6 base. Encaja en **F8 (pulido)**.
+
+---
+
+> Añadidos en `/plan-eng-review` de F7.4 (eng run 7, 2026-06-11). Aplazados por decisión del fundador.
+
+## T-12 · Export de CERTIFICACIONES a BC3 (fases de medición FIEBDC)
+- **Qué:** exportar una certificación como .bc3 con mediciones por fases (el mecanismo FIEBDC para certs), no solo el presupuesto.
+- **Por qué:** cierra el ciclo del puente arquitecto↔constructora: la cert también viaja en .bc3, no solo en PDF/Word/Excel.
+- **Pros:** completa la visión "owning the handoff"; FIEBDC lo soporta de serie.
+- **Cons:** la semántica de fases es de lo menos uniforme entre programas; el mapeo `Cert.data`/`lineQty`→fases no es 1:1; necesita un .bc3 de cert real de referencia. Trabajo: human ~2d / CC ~1-2h.
+- **Contexto / dónde empezar:** `core/bc3export` (añadir fases a `~M`) + mapeo cert→fase N. Conseguir primero un .bc3 de certificación real (Presto) como ground truth, igual que se hizo con el de presupuesto.
+- **Depende de / bloqueado por:** F7.4 (writer base) + fixture real de cert.
+
+## T-13 · Contribuir el writer BC3 upstream a la librería `bc3` (ogorhc, MIT)
+- **Qué:** cuando el serializador esté estable y validado en Presto, PR upstream añadiendo `BC3.serialize()` a la librería que ya usamos para parsear.
+- **Por qué:** el plan original lo apuntaba ("opción elegante"); mitiga el bus-factor del autor único y blinda el round-trip con los fixtures del ecosistema.
+- **Pros:** visibilidad en el nicho FIEBDC; tests de terceros gratis; karma open-source.
+- **Cons:** adaptar nuestro writer (serializa NUESTRO modelo) a `BC3Document`; la review del maintainer no está en nuestra mano. Trabajo: human ~1-2d / CC ~1h + ida y vuelta del PR.
+- **Contexto / dónde empezar:** tras F7.4b estable; escribir un adapter `ObraData→BC3Document` o emitir desde `BC3Document`.
+- **Depende de / bloqueado por:** F7.4 estable y validado en Presto.
+
+## T-14 · Validación del export BC3 en Arquímedes/CYPE (y TCQ) cuando haya acceso
+- **Qué:** abrir el .bc3 exportado en Arquímedes (CYPE) — y si surge, TCQ — con la misma checklist del gate manual de Presto (estructura, acentos, PEM al céntimo).
+- **Por qué:** la aceptación de F7.4 nombra "Presto/CYPE" pero solo hay Presto a mano; los dialectos FIEBDC difieren justo en los baches (multilínea, charset, %). Sin esto, la mitad CYPE de la aceptación queda sin rastro.
+- **Pros:** cubre al segundo lector más común; caza dialectismos antes de que un usuario externo los sufra.
+- **Cons:** requiere acceso a Arquímedes (licencia/colega); no automatizable. Trabajo: human ~1h con el programa delante / CC 0.
+- **Contexto / dónde empezar:** la checklist ya existe (gate manual de Presto, §F7.4 D5 capa 5); el colega del dogfood podría ejecutarla.
+- **Depende de / bloqueado por:** F7.4 shipeada; acceso a CYPE.
