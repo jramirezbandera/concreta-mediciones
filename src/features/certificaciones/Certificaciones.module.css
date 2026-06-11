@@ -359,7 +359,7 @@
   padding: 1px 6px 1px 5px;
   border-radius: 5px;
   font-size: 9.5px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.03em;
   background: color-mix(in srgb, var(--state-warn) 13%, transparent);
   color: var(--state-warn);
@@ -563,10 +563,10 @@
   width: 18px;
   height: 18px;
   padding: 0;
-  border: 1.5px solid var(--border-strong, var(--border-main));
+  border: 1.5px solid var(--border-main);
   border-radius: 5px;
   background: var(--bg-surface);
-  color: #fff;
+  color: var(--on-accent);
   cursor: pointer;
   transition:
     background 0.12s ease,
