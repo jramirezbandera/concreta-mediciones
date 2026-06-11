@@ -68,6 +68,7 @@ export function EditableNum({
       type="button"
       onClick={start}
       aria-label={ariaLabel}
+      data-editcell=""
       className={`mono tcol ${styles.display}`}
       style={{
         fontWeight: bold ? 600 : 400,

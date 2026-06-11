@@ -68,6 +68,7 @@ export function MedNum({
     <button
       type="button"
       aria-label={ariaLabel}
+      data-editcell=""
       className={`mono tcol ${styles.medCellBtn} ${isBlank ? styles.blank : ''}`}
       style={{ textAlign: align }}
       onClick={start}
@@ -125,6 +126,7 @@ export function MedComment({
       role="textbox"
       tabIndex={0}
       aria-label={ariaLabel}
+      data-editcell=""
       className={`tcol ${styles.medComment} ${value ? '' : styles.empty}`}
       onClick={start}
       onKeyDown={(e) => {

@@ -2,6 +2,7 @@ import { Badge, EditableNum, EditableText, Icon } from '../../components';
 import { descompUnit, itemImporteRec, precioCuadraDescompuesto, recursoBase } from '../../core/banco';
 import { fmtNum } from '../../core/money';
 import type { Partida } from '../../core/types';
+import { useGridNav } from '../../hooks/useGridNav';
 import { selectRecursoUsage, useObraStore } from '../../store';
 import styles from './Presupuesto.module.css';
 
@@ -31,13 +32,14 @@ export function PriceJustif({ p, chapterId }: { p: Partida; chapterId: string })
   const addItem = useObraStore((s) => s.addItem);
   const deleteItem = useObraStore((s) => s.deleteItem);
 
+  const gridNav = useGridNav();
   const items = p.items ?? [];
   const base = recursoBase(items, recursos);
   const descomp = descompUnit(items, recursos);
   const isOverride = !precioCuadraDescompuesto(p, recursos);
 
   return (
-    <div className={styles.medWrap}>
+    <div className={styles.medWrap} onKeyDown={gridNav}>
       <table className={styles.jTable}>
         <thead>
           <tr>

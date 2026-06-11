@@ -3,6 +3,7 @@ import { EditableText, Icon } from '../../components';
 import { lineParcial, medTotal } from '../../core/medicion';
 import { fmtNum } from '../../core/money';
 import type { Partida } from '../../core/types';
+import { useGridNav } from '../../hooks/useGridNav';
 import { useObraStore } from '../../store';
 import { decOf } from './format';
 import { MedCards } from './MedCards';
@@ -29,6 +30,7 @@ export function DetailPanel({
   compact?: boolean;
 }) {
   const [tab, setTab] = useState<Tab>('medicion');
+  const gridNav = useGridNav();
   const editPartidaField = useObraStore((s) => s.editPartidaField);
   const addMedLine = useObraStore((s) => s.addMedLine);
   const editMedLine = useObraStore((s) => s.editMedLine);
@@ -82,7 +84,7 @@ export function DetailPanel({
           {compact ? (
             <MedCards p={p} chapterId={chapterId} />
           ) : (
-            <div className={styles.medWrap}>
+            <div className={styles.medWrap} onKeyDown={gridNav}>
             <table className={styles.medTable}>
               <thead>
                 <tr>

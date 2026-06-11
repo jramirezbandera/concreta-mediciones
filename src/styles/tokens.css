@@ -145,6 +145,12 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
   border-radius:6px; border:0; background:none; cursor:pointer; color:var(--text-secondary); }
 .icon-btn:hover { color:var(--text-primary); background:var(--bg-elevated); }
 
+/* a11y §6: en punteros táctiles los botones-icono crecen a ≥44px de área táctil */
+@media (pointer: coarse) {
+  .icon-btn { width:44px; height:44px; }
+  .med-del { min-width:44px; min-height:44px; }
+}
+
 /* thin scrollbar nav */
 .scroll-thin { scrollbar-width:thin; scrollbar-color:var(--border-main) transparent; }
 

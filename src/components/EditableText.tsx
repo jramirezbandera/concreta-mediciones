@@ -78,6 +78,7 @@ export function EditableText({
       role="textbox"
       tabIndex={0}
       aria-label={ariaLabel}
+      data-editcell=""
       className={`tcol ${styles.display} ${className}`}
       style={style}
       onClick={() => {

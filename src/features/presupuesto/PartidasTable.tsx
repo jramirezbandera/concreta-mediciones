@@ -4,6 +4,7 @@ import { partidaImporte } from '../../core/medicion';
 import { fmtNum, sumCents, toEur, type Cents } from '../../core/money';
 import type { Chapter, Partida, SubChapter } from '../../core/types';
 import { groupBySub } from '../../core/grouping';
+import { useGridNav } from '../../hooks/useGridNav';
 import { useObraStore } from '../../store';
 import { PartidaRow } from './PartidaRow';
 import styles from './Presupuesto.module.css';
@@ -41,11 +42,12 @@ export function PartidasTable({
 }) {
   const coefK = useObraStore((s) => s.rates.coefK);
   const addPartida = useObraStore((s) => s.addPartida);
+  const gridNav = useGridNav();
   const groups = useMemo(() => groupBySub(chapter, partidas), [chapter, partidas]);
   const subTotal = (items: Partida[]): Cents => sumCents(items.map((p) => partidaImporte(p, coefK)));
 
   return (
-    <div className={styles.tableWrap}>
+    <div className={styles.tableWrap} onKeyDown={gridNav}>
       <table className={`ctable ${styles.table}`}>
         <thead className={sticky ? styles.sticky : undefined}>
           <tr>

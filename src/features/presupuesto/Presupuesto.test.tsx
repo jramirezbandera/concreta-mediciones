@@ -92,6 +92,31 @@ describe('PresupuestoView (F2.1 lectura + F2.2 detalle)', () => {
     expect(useObraStore.getState().recursos['mo001']!.ud).toBe('jornada'); // afecta a TODAS las partidas que lo usan
   });
 
+  it('las flechas mueven el foco entre celdas editables de la medición (F8.2 a11y)', () => {
+    render(<PresupuestoView compact={false} />);
+    fireEvent.click(screen.getByText('E02EM030')); // despliega p111 → tab Medición
+    const uds = screen.getAllByRole('button', { name: 'Unidades' })[0]!;
+    uds.focus();
+    // → Longitud (misma fila), ↓ Longitud de la 2ª línea, ← Uds de esa línea
+    fireEvent.keyDown(uds, { key: 'ArrowRight' });
+    expect(document.activeElement).toBe(screen.getAllByRole('button', { name: 'Longitud' })[0]);
+    fireEvent.keyDown(document.activeElement!, { key: 'ArrowDown' });
+    expect(document.activeElement).toBe(screen.getAllByRole('button', { name: 'Longitud' })[1]);
+    fireEvent.keyDown(document.activeElement!, { key: 'ArrowLeft' });
+    expect(document.activeElement).toBe(screen.getAllByRole('button', { name: 'Unidades' })[1]);
+  });
+
+  it('las flechas no interfieren mientras se EDITA (el caret manda)', () => {
+    render(<PresupuestoView compact={false} />);
+    fireEvent.click(screen.getByText('E02EM030'));
+    const uds = screen.getAllByRole('button', { name: 'Unidades' })[0]!;
+    fireEvent.click(uds); // entra en edición → input
+    const input = document.querySelector('input')!;
+    input.focus();
+    fireEvent.keyDown(input, { key: 'ArrowRight' });
+    expect(document.activeElement).toBe(input); // el foco no se mueve de celda
+  });
+
   it('en compacto (<780) la tabla conmuta a tarjetas (F2.5)', () => {
     render(<PresupuestoView compact={true} />);
     expect(screen.queryByText('Nº · Código')).toBeNull(); // sin cabecera de tabla
