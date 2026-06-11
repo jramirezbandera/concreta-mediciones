@@ -626,7 +626,7 @@
   color: var(--text-primary);
   background: var(--bg-surface);
   border: 1px solid var(--accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 28%, transparent);
+  box-shadow: var(--ring-accent);
   font-family: inherit;
 }
 .medComment {
@@ -655,7 +655,7 @@
   color: var(--text-primary);
   background: var(--bg-surface);
   border: 1px solid var(--accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 28%, transparent);
+  box-shadow: var(--ring-accent);
   font-family: inherit;
 }
 
