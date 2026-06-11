@@ -55,7 +55,7 @@ export function CertDetail({ p }: { p: Partida }) {
                   role="checkbox"
                   aria-checked={marked}
                   aria-label={`Marcar línea ejecutada: ${l.comment || 'sin comentario'}`}
-                  className={`${styles.lineCheck} ${marked ? styles.on : ''}`}
+                  className={`tap-target ${styles.lineCheck} ${marked ? styles.on : ''}`}
                   onClick={() => setCertLine(p.id, l.id, marked ? null : parcial)}
                 >
                   {marked && <Icon name="check" size={12} />}

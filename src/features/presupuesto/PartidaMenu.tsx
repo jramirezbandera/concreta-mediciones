@@ -51,7 +51,7 @@ export function PartidaMenu({ p, chapterId }: { p: Partida; chapterId: string })
       <button
         type="button"
         title="Más acciones"
-        className={`tcol ${styles.menuBtn} ${open ? styles.open : ''}`}
+        className={`tcol tap-target ${styles.menuBtn} ${open ? styles.open : ''}`}
         onClick={(e) => {
           e.stopPropagation();
           setOpen((o) => !o);

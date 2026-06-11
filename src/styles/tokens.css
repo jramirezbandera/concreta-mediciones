@@ -153,6 +153,19 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 @media (pointer: coarse) {
   .icon-btn { width:44px; height:44px; }
   .med-del { min-width:44px; min-height:44px; }
+  /* Expande el área TÁCTIL a 44px sin agrandar el control en sí (p.ej. el
+     checkbox de certificar de 18px o el kebab ⋮): hit-area invisible centrada.
+     Para controles cuyo tamaño visual no debe crecer. */
+  .tap-target { position: relative; }
+  .tap-target::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%);
+  }
 }
 
 /* thin scrollbar nav */
