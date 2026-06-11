@@ -59,6 +59,39 @@ describe('PresupuestoView (F2.1 lectura + F2.2 detalle)', () => {
     expect(s.partidas['02']!.some((p) => p.id === 'p111')).toBe(true);
   });
 
+  it('la unidad de medida de la partida es editable en la fila (F8.0)', () => {
+    render(<PresupuestoView compact={false} />);
+    // p111 (E02EM030) mide en m³; cámbiala a m². Al editar, el span pasa a
+    // textarea (único en el DOM: el resto de filas siguen siendo spans).
+    fireEvent.click(screen.getAllByRole('textbox', { name: 'Unidad de medida de la partida' })[0]!);
+    const input = document.querySelector('textarea')!;
+    fireEvent.change(input, { target: { value: 'm²' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    const p111 = useObraStore.getState().partidas['01']!.find((p) => p.id === 'p111')!;
+    expect(p111.ud).toBe('m²');
+    expect(p111.fromBase).toBe(false); // editar confirma la partida
+  });
+
+  it('la unidad de medida también se edita en la tarjeta compacta (F8.0)', () => {
+    render(<PresupuestoView compact={true} />);
+    fireEvent.click(screen.getAllByRole('textbox', { name: 'Unidad de medida de la partida' })[0]!);
+    const input = document.querySelector('textarea')!;
+    fireEvent.change(input, { target: { value: 'ud' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(useObraStore.getState().partidas['01']![0]!.ud).toBe('ud');
+  });
+
+  it('la unidad del RECURSO se edita en las tarjetas de justificación (banco compartido, F8.0)', () => {
+    render(<PresupuestoView compact={true} />);
+    fireEvent.click(screen.getByText('E02EM030')); // despliega p111 (tarjeta)
+    fireEvent.click(screen.getByText('Justificación del precio'));
+    fireEvent.click(screen.getAllByRole('textbox', { name: 'Unidad del recurso' })[0]!); // mo001
+    const input = document.querySelector('textarea')!;
+    fireEvent.change(input, { target: { value: 'jornada' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(useObraStore.getState().recursos['mo001']!.ud).toBe('jornada'); // afecta a TODAS las partidas que lo usan
+  });
+
   it('en compacto (<780) la tabla conmuta a tarjetas (F2.5)', () => {
     render(<PresupuestoView compact={true} />);
     expect(screen.queryByText('Nº · Código')).toBeNull(); // sin cabecera de tabla

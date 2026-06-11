@@ -37,6 +37,7 @@ export function PriceJustifCards({ p, chapterId }: { p: Partida; chapterId: stri
         const rec = recursos[it.code];
         const precio = isCI ? base : (rec?.precio ?? it.precio ?? 0);
         const desc = isCI ? it.desc || 'Costes indirectos' : (rec?.desc ?? it.desc ?? '');
+        const ud = isCI ? '%' : (rec?.ud ?? it.ud ?? '');
         const importe = itemImporteRec(it, recursos, base);
         return (
           <div key={i} className={styles.jCard}>
@@ -68,6 +69,19 @@ export function PriceJustifCards({ p, chapterId }: { p: Partida; chapterId: stri
               </div>
             )}
             <div className={styles.jCardGrid}>
+              <Field label="Ud">
+                {isCI ? (
+                  <span className={`mono ${styles.jCIRead}`} style={{ textAlign: 'center' }}>%</span>
+                ) : (
+                  <EditableText
+                    value={ud}
+                    ariaLabel="Unidad del recurso"
+                    placeholder="ud"
+                    style={{ textAlign: 'center' }}
+                    onCommit={(v) => editRecurso(it.code, 'ud', v)}
+                  />
+                )}
+              </Field>
               <Field label={isCI ? 'Porcentaje' : 'Rendimiento'}>
                 <EditableNum
                   value={it.cantidad}

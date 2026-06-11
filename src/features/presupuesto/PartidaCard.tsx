@@ -65,9 +65,16 @@ export function PartidaCard({
         </div>
 
         <div className={styles.pCardStats}>
-          <div className={styles.pStat}>
+          <div className={styles.pStat} onClick={stop}>
             <div className={`caps ${styles.pStatLabel}`}>Ud.</div>
-            <div className={`mono ${styles.pStatVal}`}>{p.ud}</div>
+            <div className={`mono ${styles.pStatVal}`}>
+              <EditableText
+                value={p.ud}
+                ariaLabel="Unidad de medida de la partida"
+                placeholder="ud"
+                onCommit={(v) => editPartidaField(chapterId, p.id, 'ud', v)}
+              />
+            </div>
           </div>
           <div className={styles.pStat}>
             <div className={`caps ${styles.pStatLabel}`}>Cantidad</div>

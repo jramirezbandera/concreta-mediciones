@@ -75,7 +75,14 @@ export function PartidaRow({
             {p.contradictorio && <ContraChip />}
           </div>
         </td>
-        <td className={`mono ${styles.cUd}`}>{p.ud}</td>
+        <td className={`mono ${styles.cUd}`} onClick={stop}>
+          <EditableText
+            value={p.ud}
+            ariaLabel="Unidad de medida de la partida"
+            placeholder="ud"
+            onCommit={(v) => editPartidaField(chapterId, p.id, 'ud', v)}
+          />
+        </td>
         <td className={`mono ${styles.cQty}`}>
           <span className={styles.qtyNum}>{fmtNum(cantidad)}</span>
         </td>
