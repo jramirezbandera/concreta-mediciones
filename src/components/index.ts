@@ -9,3 +9,4 @@ export { IvaSelect } from './IvaSelect';
 export { ContraChip } from './ContraChip';
 export { GhostBtn } from './GhostBtn';
 export { EmptyState, EmptyAction } from './EmptyState';
+export { UdSelect } from './UdSelect';

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Badge, EditableNum, EditableText, Icon } from '../../components';
+import { Badge, EditableNum, EditableText, Icon, UdSelect } from '../../components';
 import { descompUnit, itemImporteRec, precioCuadraDescompuesto, recursoBase } from '../../core/banco';
 import { fmtNum } from '../../core/money';
 import type { Partida } from '../../core/types';
@@ -73,11 +73,9 @@ export function PriceJustifCards({ p, chapterId }: { p: Partida; chapterId: stri
                 {isCI ? (
                   <span className={`mono ${styles.jCIRead}`} style={{ textAlign: 'center' }}>%</span>
                 ) : (
-                  <EditableText
+                  <UdSelect
                     value={ud}
                     ariaLabel="Unidad del recurso"
-                    placeholder="ud"
-                    style={{ textAlign: 'center' }}
                     onCommit={(v) => editRecurso(it.code, 'ud', v)}
                   />
                 )}

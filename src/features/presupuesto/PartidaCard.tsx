@@ -1,5 +1,5 @@
 import { useState, type MouseEvent } from 'react';
-import { Badge, ContraChip, EditableNum, EditableText, Icon } from '../../components';
+import { Badge, ContraChip, EditableNum, EditableText, Icon, UdSelect } from '../../components';
 import { fmtNum, toEur, type Cents } from '../../core/money';
 import type { Partida } from '../../core/types';
 import { usePartidaRow } from '../../hooks/usePartidaRow';
@@ -68,10 +68,9 @@ export function PartidaCard({
           <div className={styles.pStat} onClick={stop}>
             <div className={`caps ${styles.pStatLabel}`}>Ud.</div>
             <div className={`mono ${styles.pStatVal}`}>
-              <EditableText
+              <UdSelect
                 value={p.ud}
                 ariaLabel="Unidad de medida de la partida"
-                placeholder="ud"
                 onCommit={(v) => editPartidaField(chapterId, p.id, 'ud', v)}
               />
             </div>

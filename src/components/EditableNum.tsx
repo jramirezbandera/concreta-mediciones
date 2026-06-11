@@ -52,6 +52,7 @@ export function EditableNum({
         value={draft}
         inputMode="decimal"
         aria-label={ariaLabel}
+        size={1} // sin esto el ancho intrínseco (~20ch) deforma la columna al editar
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commit}
         onKeyDown={(e) => {

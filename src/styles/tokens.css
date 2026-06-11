@@ -120,9 +120,11 @@ button, input, select, textarea { font-family:inherit; }
 /* hide native number spinners */
 input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
 
-/* entrance */
+/* entrance — SIN fill-mode: con `both` el transform residual (matriz identidad,
+   no `none`) convierte la vista en containing block y rompe los popovers
+   position:fixed de dentro (UdSelect). Al terminar, el estilo vuelve solo. */
 @keyframes fadeUp { from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
-.fadeUp { animation:fadeUp .3s cubic-bezier(.22,1,.36,1) both; }
+.fadeUp { animation:fadeUp .3s cubic-bezier(.22,1,.36,1); }
 
 /* drawer (móvil / tablet) — estado base visible; animación sólo como mejora */
 .drawer-overlay { background:rgba(3,8,20,.5); }

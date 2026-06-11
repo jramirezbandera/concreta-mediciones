@@ -1,4 +1,4 @@
-import { Badge, EditableNum, EditableText, Icon } from '../../components';
+import { Badge, EditableNum, EditableText, Icon, UdSelect } from '../../components';
 import { descompUnit, itemImporteRec, precioCuadraDescompuesto, recursoBase } from '../../core/banco';
 import { fmtNum } from '../../core/money';
 import type { Partida } from '../../core/types';
@@ -89,11 +89,9 @@ export function PriceJustif({ p, chapterId }: { p: Partida; chapterId: string })
                   {isCI ? (
                     <span className={`mono ${styles.jCode}`}>%</span>
                   ) : (
-                    <EditableText
+                    <UdSelect
                       value={ud}
                       ariaLabel="Unidad del recurso"
-                      placeholder="ud"
-                      style={{ fontSize: 11.5, color: 'var(--text-disabled)' }}
                       onCommit={(v) => editRecurso(it.code, 'ud', v)}
                     />
                   )}

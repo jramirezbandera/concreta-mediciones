@@ -53,6 +53,7 @@ export function MedNum({
         value={draft}
         inputMode="decimal"
         aria-label={ariaLabel}
+        size={1} // sin esto el ancho intrínseco (~20ch) revienta la columna al editar
         className={`mono ${styles.medCellInput}`}
         style={{ textAlign: align }}
         onChange={(e) => setDraft(e.target.value)}
@@ -111,6 +112,7 @@ export function MedComment({
         value={draft}
         placeholder="Comentario…"
         aria-label={ariaLabel}
+        size={1} // ancho gobernado por la columna, no por el intrínseco del input
         className={styles.medCommentInput}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commit}

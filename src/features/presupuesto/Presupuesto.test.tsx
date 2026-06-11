@@ -59,36 +59,31 @@ describe('PresupuestoView (F2.1 lectura + F2.2 detalle)', () => {
     expect(s.partidas['02']!.some((p) => p.id === 'p111')).toBe(true);
   });
 
-  it('la unidad de medida de la partida es editable en la fila (F8.0)', () => {
+  it('la unidad de la partida se elige de un desplegable en la fila (F8.0 + UdSelect)', () => {
     render(<PresupuestoView compact={false} />);
-    // p111 (E02EM030) mide en m³; cámbiala a m². Al editar, el span pasa a
-    // textarea (único en el DOM: el resto de filas siguen siendo spans).
-    fireEvent.click(screen.getAllByRole('textbox', { name: 'Unidad de medida de la partida' })[0]!);
-    const input = document.querySelector('textarea')!;
-    fireEvent.change(input, { target: { value: 'm²' } });
-    fireEvent.keyDown(input, { key: 'Enter' });
+    // p111 (E02EM030) mide en m³; cámbiala a m² desde el desplegable.
+    fireEvent.click(screen.getAllByRole('button', { name: 'Unidad de medida de la partida' })[0]!);
+    fireEvent.click(screen.getByRole('option', { name: /m² superficie/ }));
     const p111 = useObraStore.getState().partidas['01']!.find((p) => p.id === 'p111')!;
     expect(p111.ud).toBe('m²');
     expect(p111.fromBase).toBe(false); // editar confirma la partida
   });
 
-  it('la unidad de medida también se edita en la tarjeta compacta (F8.0)', () => {
+  it('la unidad también se elige en la tarjeta compacta (F8.0 + UdSelect)', () => {
     render(<PresupuestoView compact={true} />);
-    fireEvent.click(screen.getAllByRole('textbox', { name: 'Unidad de medida de la partida' })[0]!);
-    const input = document.querySelector('textarea')!;
-    fireEvent.change(input, { target: { value: 'ud' } });
-    fireEvent.keyDown(input, { key: 'Enter' });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Unidad de medida de la partida' })[0]!);
+    fireEvent.click(screen.getByRole('option', { name: /ud unidad/ }));
     expect(useObraStore.getState().partidas['01']![0]!.ud).toBe('ud');
   });
 
-  it('la unidad del RECURSO se edita en las tarjetas de justificación (banco compartido, F8.0)', () => {
+  it('la unidad del RECURSO admite una unidad libre («Otra…», banco compartido)', () => {
     render(<PresupuestoView compact={true} />);
     fireEvent.click(screen.getByText('E02EM030')); // despliega p111 (tarjeta)
     fireEvent.click(screen.getByText('Justificación del precio'));
-    fireEvent.click(screen.getAllByRole('textbox', { name: 'Unidad del recurso' })[0]!); // mo001
-    const input = document.querySelector('textarea')!;
-    fireEvent.change(input, { target: { value: 'jornada' } });
-    fireEvent.keyDown(input, { key: 'Enter' });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Unidad del recurso' })[0]!); // mo001
+    const otra = screen.getByRole('textbox', { name: 'Otra unidad' });
+    fireEvent.change(otra, { target: { value: 'jornada' } });
+    fireEvent.keyDown(otra, { key: 'Enter' });
     expect(useObraStore.getState().recursos['mo001']!.ud).toBe('jornada'); // afecta a TODAS las partidas que lo usan
   });
 
