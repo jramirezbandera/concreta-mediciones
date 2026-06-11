@@ -1,0 +1,4 @@
+# FIEBDC-3: bytes windows-1252 con CRLF obligatorio (spec F7.4 D1).
+# Sin -text, autocrlf normaliza a LF en el blob y el artefacto trazadora
+# dejaría de cuadrar byte a byte con el writer en checkouts no-Windows.
+*.bc3 -text
