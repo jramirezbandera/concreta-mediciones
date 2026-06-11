@@ -32,7 +32,7 @@ export function TopBar({
   onExport,
   onObra,
 }: TopBarProps) {
-  const { isMobile, isCompact } = bp;
+  const { isMobile, isTablet, isCompact } = bp;
 
   return (
     <header className={styles.bar} style={{ padding: isMobile ? '0 10px' : '0 14px' }}>
@@ -51,8 +51,10 @@ export function TopBar({
           </button>
         )}
         <img src="/favicon.svg" width={21} height={21} className={styles.logo} alt="" />
-        <span className={styles.name}>Concreta</span>
-        {!isMobile && <span className={styles.sep} />}
+        {/* En tablet las pestañas viven en el TopBar y no cabe el wordmark:
+            solo logo (en móvil las pestañas van abajo y el nombre sí cabe). */}
+        {!isTablet && <span className={styles.name}>Concreta</span>}
+        <span className={`hide-sm ${styles.sep}`} />
         <span className={`mono caps hide-md ${styles.kicker}`}>Mediciones</span>
         <span className={`hide-sm ${styles.slash}`}>/</span>
         <span className={`hide-sm ${styles.crumb}`}>{VIEW_LABEL[view]}</span>
