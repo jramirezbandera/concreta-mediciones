@@ -72,7 +72,7 @@ export function PresupuestoView({
   // no una vista en blanco.
   if (chapters.length === 0) {
     return (
-      <div ref={viewRef} className={cls}>
+      <div ref={viewRef} className={`${cls} ${styles.viewFill}`}>
         <EmptyState
           icon="building"
           title="Empieza tu primera obra"
@@ -90,11 +90,13 @@ export function PresupuestoView({
   }
 
   let content = null;
+  let fill = false; // el estado vacío necesita la raíz en columna flex (viewFill)
   if (active === ALL) {
     content = <AllChapters compact={compact} />;
   } else if (activeChapter) {
     const ps = partidas[activeChapter.id] ?? [];
     const importe = chapterTotals[activeChapter.id] ?? 0;
+    fill = ps.length === 0;
     content = (
       <>
         <ChapterHeader chapter={activeChapter} importe={importe} count={ps.length} pem={pem} />
@@ -108,7 +110,7 @@ export function PresupuestoView({
   }
 
   return (
-    <div ref={viewRef} className={cls}>
+    <div ref={viewRef} className={`${cls}${fill ? ` ${styles.viewFill}` : ''}`}>
       {content}
     </div>
   );

@@ -9,6 +9,13 @@
   overflow: auto;
   min-height: 0;
 }
+/* Cuando la vista acaba en un estado vacío, la raíz pasa a columna flex para
+   que el vacío (.empty / EmptyState, flex:1) llene la altura restante — sin
+   esto el dot-grid mide solo su contenido y la pantalla parece recortada. */
+.viewFill {
+  display: flex;
+  flex-direction: column;
+}
 
 /* ---------- Cabecera de capítulo ----------------------------------------- */
 .chHeader {

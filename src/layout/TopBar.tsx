@@ -50,7 +50,15 @@ export function TopBar({
             <Icon name="menu" size={18} />
           </button>
         )}
-        <img src="/favicon.svg" width={21} height={21} className={styles.logo} alt="" />
+        {/* BASE_URL: en GitHub Pages la app vive bajo /concreta-mediciones/ y la
+            ruta absoluta /favicon.svg daba 404 (logo roto en producción). */}
+        <img
+          src={`${import.meta.env.BASE_URL}favicon.svg`}
+          width={21}
+          height={21}
+          className={styles.logo}
+          alt=""
+        />
         {/* En tablet las pestañas viven en el TopBar y no cabe el wordmark:
             solo logo (en móvil las pestañas van abajo y el nombre sí cabe). */}
         {!isTablet && <span className={styles.name}>Concreta</span>}

@@ -59,7 +59,7 @@ export function CertificacionesView({
   // sutil, sin wizard). El estado vacío manda al presupuesto.
   if (Object.values(partidas).every((ps) => ps.length === 0)) {
     return (
-      <div ref={viewRef} className={styles.view}>
+      <div ref={viewRef} className={`${styles.view} ${styles.viewFill}`}>
         <EmptyState
           icon="clipboardCheck"
           title="Nada que certificar todavía"

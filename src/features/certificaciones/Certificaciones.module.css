@@ -8,6 +8,12 @@
   overflow: auto;
   min-height: 0;
 }
+/* Estado vacío: la raíz en columna flex para que el EmptyState (flex:1) llene
+   la altura (si no, el dot-grid mide su contenido y parece recortado). */
+.viewFill {
+  display: flex;
+  flex-direction: column;
+}
 
 /* ---------- cabecera (selector + periodo + líquido + toggle) -------------- */
 .header {
