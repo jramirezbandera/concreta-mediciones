@@ -19,8 +19,8 @@
   color: var(--state-ok, #30a46c);
 }
 .chip.error {
-  color: var(--state-danger, #e5484d);
-  border-color: color-mix(in srgb, var(--state-danger, #e5484d) 40%, var(--border-main));
+  color: var(--state-danger);
+  border-color: color-mix(in srgb, var(--state-danger) 40%, var(--border-main));
 }
 .spin {
   animation: persistspin 0.9s linear infinite;
@@ -61,6 +61,6 @@
   background: var(--bg-primary);
 }
 .bannerBtn.danger {
-  color: var(--state-danger, #e5484d);
-  border-color: color-mix(in srgb, var(--state-danger, #e5484d) 40%, var(--border-main));
+  color: var(--state-danger);
+  border-color: color-mix(in srgb, var(--state-danger) 40%, var(--border-main));
 }

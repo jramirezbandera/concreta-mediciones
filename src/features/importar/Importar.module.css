@@ -101,8 +101,8 @@
   padding: 16px;
 }
 .errorCard {
-  border-color: color-mix(in srgb, var(--state-danger, #e5484d) 45%, var(--border-main));
-  background: color-mix(in srgb, var(--state-danger, #e5484d) 6%, var(--bg-surface));
+  border-color: color-mix(in srgb, var(--state-danger) 45%, var(--border-main));
+  background: color-mix(in srgb, var(--state-danger) 6%, var(--bg-surface));
 }
 .errorHead {
   display: flex;
@@ -110,7 +110,7 @@
   gap: 7px;
   font-size: 13.5px;
   font-weight: 600;
-  color: var(--state-danger, #e5484d);
+  color: var(--state-danger);
 }
 .errorMsg {
   margin: 8px 0 0;

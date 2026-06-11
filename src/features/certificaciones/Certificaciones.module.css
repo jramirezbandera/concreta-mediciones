@@ -383,7 +383,7 @@
   transition: color 0.12s ease;
 }
 .extraDel:hover {
-  color: var(--state-danger, #e5484d);
+  color: var(--state-danger);
 }
 .addRow > td {
   padding: 0;

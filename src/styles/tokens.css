@@ -26,6 +26,7 @@
   --on-accent:    #04121f;
   --state-ok:     #22c55e;
   --state-warn:   #f59e0b;
+  --state-danger: #ef4444;
   --state-mat:    #2dd4bf;
   --state-mq:     #a78bfa;
   --state-neutral:#64748b;
@@ -51,6 +52,7 @@
   --on-accent:    #ffffff;
   --state-ok:     #16a34a;
   --state-warn:   #d97706;
+  --state-danger: #dc2626;
   --state-mat:    #0d9488;
   --state-mq:     #7c3aed;
   --state-neutral:#64748b;

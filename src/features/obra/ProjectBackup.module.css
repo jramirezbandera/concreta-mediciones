@@ -60,5 +60,5 @@
   gap: 6px;
   font-size: 11.5px;
   line-height: 1.4;
-  color: var(--state-danger, #e5484d);
+  color: var(--state-danger);
 }
