@@ -8,3 +8,4 @@ export { Modal, type ModalProps } from './Modal';
 export { IvaSelect } from './IvaSelect';
 export { ContraChip } from './ContraChip';
 export { GhostBtn } from './GhostBtn';
+export { EmptyState, EmptyAction } from './EmptyState';

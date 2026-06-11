@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useObraStore } from '../../store';
 import { CertificacionesView } from './CertificacionesView';
 
@@ -23,6 +23,15 @@ describe('CertificacionesView (F4.1)', () => {
     expect(screen.getByText('Ejec. a origen')).toBeInTheDocument();
     fireEvent.click(screen.getByText('Esta certificación'));
     expect(screen.getByText('Ejec. esta cert.')).toBeInTheDocument();
+  });
+
+  it('obra SIN partidas → "Nada que certificar todavía" + CTA al presupuesto (F8.3)', () => {
+    useObraStore.setState({ partidas: {} });
+    const onGoPresupuesto = vi.fn();
+    render(<CertificacionesView compact={false} onGoPresupuesto={onGoPresupuesto} />);
+    expect(screen.getByText('Nada que certificar todavía')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Ir al presupuesto'));
+    expect(onGoPresupuesto).toHaveBeenCalledTimes(1);
   });
 
   it('"Nueva certificación" añade una cert al histórico', () => {

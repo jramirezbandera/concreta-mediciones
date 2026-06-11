@@ -1,0 +1,71 @@
+.wrap {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+}
+.card {
+  text-align: center;
+  max-width: 340px;
+  padding: 24px;
+}
+.icon {
+  margin: 0 auto 12px;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-main);
+  display: grid;
+  place-items: center;
+  color: var(--text-disabled);
+}
+.title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.text {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  margin-top: 5px;
+  line-height: 1.55;
+}
+.actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.primary {
+  composes: btn;
+  border: 0;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.primary:hover {
+  background: var(--accent-hover);
+}
+.ghost {
+  composes: btn;
+  background: transparent;
+  border: 1px solid var(--border-main);
+  color: var(--text-secondary);
+}
+.ghost:hover {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+}

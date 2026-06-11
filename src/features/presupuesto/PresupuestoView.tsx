@@ -1,5 +1,5 @@
 import { useMemo, useRef } from 'react';
-import { Icon } from '../../components';
+import { EmptyAction, EmptyState, Icon } from '../../components';
 import type { Chapter } from '../../core/types';
 import { useElementWidth } from '../../hooks/useElementWidth';
 import { ALL, selectChapterTotals, selectPem, useObraStore } from '../../store';
@@ -39,7 +39,14 @@ function EmptyChapter({ chapter }: { chapter: Chapter }) {
  * compacto se decide por el ANCHO ÚTIL real del área (no el viewport): con la
  * sidebar fija el contenido puede ser estrecho aunque la ventana sea ancha.
  */
-export function PresupuestoView({ compact: mobile }: { compact: boolean }) {
+export function PresupuestoView({
+  compact: mobile,
+  onImport,
+}: {
+  compact: boolean;
+  /** Lleva a la vista Importar (CTA del estado vacío de obra, F8.3). */
+  onImport?: () => void;
+}) {
   const viewRef = useRef<HTMLDivElement>(null);
   const width = useElementWidth(viewRef);
   const compact = mobile || (width > 0 && width < COMPACT_WIDTH);
@@ -49,6 +56,7 @@ export function PresupuestoView({ compact: mobile }: { compact: boolean }) {
   const partidas = useObraStore((s) => s.partidas);
   const chapterTotals = useObraStore(selectChapterTotals);
   const pem = useObraStore(selectPem);
+  const addChapter = useObraStore((s) => s.addChapter);
 
   const activeChapter = useMemo(
     () =>
@@ -57,7 +65,29 @@ export function PresupuestoView({ compact: mobile }: { compact: boolean }) {
     [active, chapters],
   );
 
-  const cls = `${styles.view}${compact ? ` ${styles.compact}` : ''}`;
+  // fadeUp: entrada sutil al cambiar de vista (gated en reduced-motion global).
+  const cls = `fadeUp ${styles.view}${compact ? ` ${styles.compact}` : ''}`;
+
+  // Obra sin capítulos ("Estados de UI de M1" §1): wedge de entrada con CTAs,
+  // no una vista en blanco.
+  if (chapters.length === 0) {
+    return (
+      <div ref={viewRef} className={cls}>
+        <EmptyState
+          icon="building"
+          title="Empieza tu primera obra"
+          text="Importa un presupuesto .bc3 de Presto, Arquímedes o CYPE, o crea la estructura de capítulos en blanco."
+        >
+          {onImport && (
+            <EmptyAction primary onClick={onImport}>
+              Importar .bc3
+            </EmptyAction>
+          )}
+          <EmptyAction onClick={() => addChapter('Capítulo 1')}>Añadir capítulo</EmptyAction>
+        </EmptyState>
+      </div>
+    );
+  }
 
   let content = null;
   if (active === ALL) {

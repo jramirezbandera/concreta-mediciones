@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useObraStore } from '../../store';
 import { PresupuestoView } from './PresupuestoView';
 
@@ -127,5 +127,16 @@ describe('PresupuestoView (F2.1 lectura + F2.2 detalle)', () => {
   it('escritorio mantiene la tabla (cabecera de columnas presente)', () => {
     render(<PresupuestoView compact={false} />);
     expect(screen.getByText('Nº · Código')).toBeInTheDocument();
+  });
+
+  it('obra SIN capítulos → estado vacío "Empieza tu primera obra" con CTAs (F8.3)', () => {
+    useObraStore.setState({ chapters: [], partidas: {} });
+    const onImport = vi.fn();
+    render(<PresupuestoView compact={false} onImport={onImport} />);
+    expect(screen.getByText('Empieza tu primera obra')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Importar .bc3'));
+    expect(onImport).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByText('Añadir capítulo'));
+    expect(useObraStore.getState().chapters).toHaveLength(1); // obra en blanco arranca
   });
 });

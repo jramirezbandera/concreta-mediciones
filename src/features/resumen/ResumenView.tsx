@@ -20,7 +20,7 @@ export function ResumenView({ compact }: { compact: boolean }) {
   // Estado vacío (obra sin capítulos): no una hoja a 0,00 (design review F7.1).
   if (data.rows.length === 0) {
     return (
-      <div className={`dot-grid ${styles.view} ${styles.emptyWrap}`}>
+      <div className={`fadeUp dot-grid ${styles.view} ${styles.emptyWrap}`}>
         <div className={styles.emptyCard}>
           <div className={styles.emptyIcon}>
             <Icon name="grid" size={24} />
@@ -38,7 +38,7 @@ export function ResumenView({ compact }: { compact: boolean }) {
   }
 
   return (
-    <div className={`dot-grid ${styles.view} ${compact ? styles.compact : ''}`}>
+    <div className={`fadeUp dot-grid ${styles.view} ${compact ? styles.compact : ''}`}>
       <div className={styles.page}>
         <div>
           <div className={`caps ${styles.kicker}`}>Resumen de presupuesto</div>

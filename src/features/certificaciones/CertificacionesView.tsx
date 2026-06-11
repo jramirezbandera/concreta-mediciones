@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { EditableText, Icon } from '../../components';
+import { EditableText, EmptyAction, EmptyState, Icon } from '../../components';
 import { certCalc, certSnapshotOf, extraCalc, extrasCantidad } from '../../core/certificacion';
 import { fmtCents, fmtNum, sumCents, toEur, type Cents } from '../../core/money';
 import { useElementWidth } from '../../hooks/useElementWidth';
@@ -31,7 +31,14 @@ const MODES: [CertMode, string][] = [
  * marcar líneas (F4.3), contradictorios cert-local (F4.4) y tarjetas móvil (F4.5,
  * conmuta por ancho útil <780, igual que F2.5). F4 completa.
  */
-export function CertificacionesView({ compact: mobile }: { compact: boolean }) {
+export function CertificacionesView({
+  compact: mobile,
+  onGoPresupuesto,
+}: {
+  compact: boolean;
+  /** Lleva a la vista Presupuesto (CTA del estado vacío de obra, F8.3). */
+  onGoPresupuesto?: () => void;
+}) {
   const viewRef = useRef<HTMLDivElement>(null);
   const width = useElementWidth(viewRef);
   const compact = mobile || (width > 0 && width < COMPACT_WIDTH);
@@ -47,6 +54,26 @@ export function CertificacionesView({ compact: mobile }: { compact: boolean }) {
 
   const cur = certs[curCert];
   if (!cur) return <div className={styles.view} />;
+
+  // Obra sin partidas: no hay nada que certificar (journey §4 — siguiente paso
+  // sutil, sin wizard). El estado vacío manda al presupuesto.
+  if (Object.values(partidas).every((ps) => ps.length === 0)) {
+    return (
+      <div ref={viewRef} className={styles.view}>
+        <EmptyState
+          icon="clipboardCheck"
+          title="Nada que certificar todavía"
+          text="Cuando el presupuesto tenga partidas medidas, aquí certificarás la obra ejecutada mes a mes y sacarás la relación valorada."
+        >
+          {onGoPresupuesto && (
+            <EmptyAction primary onClick={onGoPresupuesto}>
+              Ir al presupuesto
+            </EmptyAction>
+          )}
+        </EmptyState>
+      </div>
+    );
+  }
   const curData = cur.data;
   const prevData = curCert > 0 ? (certs[curCert - 1]?.data ?? {}) : {};
   const extras = cur.extras ?? [];
@@ -56,7 +83,7 @@ export function CertificacionesView({ compact: mobile }: { compact: boolean }) {
   const snap = certSnapshotOf(cur, coefK);
 
   return (
-    <div ref={viewRef} className={`${styles.view}${compact ? ` ${styles.compact}` : ''}`}>
+    <div ref={viewRef} className={`fadeUp ${styles.view}${compact ? ` ${styles.compact}` : ''}`}>
       <div className={styles.header}>
         <div className={styles.headerTop}>
           <div className={styles.headerLeft}>

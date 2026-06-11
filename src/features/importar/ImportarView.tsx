@@ -81,7 +81,7 @@ export function ImportarView({ compact }: { compact: boolean }) {
   const deltaEur = r?.deltaCents != null ? toEur(r.deltaCents) : null;
 
   return (
-    <div className={`${styles.view} ${compact ? styles.compact : ''}`}>
+    <div className={`fadeUp ${styles.view} ${compact ? styles.compact : ''}`}>
       <div className={styles.inner}>
         <header className={styles.header}>
           <div className={styles.headIcon}>

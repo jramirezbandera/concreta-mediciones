@@ -178,9 +178,12 @@ export default function App() {
           }
         >
           {view === 'presupuesto' ? (
-            <PresupuestoView compact={bp.isMobile} />
+            <PresupuestoView compact={bp.isMobile} onImport={() => changeView('import')} />
           ) : view === 'certificaciones' ? (
-            <CertificacionesView compact={bp.isMobile} />
+            <CertificacionesView
+              compact={bp.isMobile}
+              onGoPresupuesto={() => changeView('presupuesto')}
+            />
           ) : view === 'import' ? (
             <ImportarView compact={bp.isMobile} />
           ) : (
