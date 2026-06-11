@@ -217,7 +217,13 @@ export function bc3ToObra(bytes: Uint8Array): Bc3ImportResult {
         const rc = doc.getConcept(dc.childCode);
         const type = badgeOf(dc.childCode, rc?.concept.type ?? undefined);
         registerRecurso(dc.childCode, type, rc);
-        return { code: dc.childCode, type, cantidad: dc.performance ?? dc.factor ?? 0 };
+        const raw = dc.performance ?? dc.factor ?? 0;
+        // Convención FIEBDC/Presto de los conceptos %: el rendimiento viaja
+        // como FRACCIÓN (0.02 = 2 %); nuestro modelo guarda el PORCENTAJE (2).
+        // Verificado con la trazadora F7.4a en Presto real (importe = base ×
+        // rendimiento) y con el fixture (%PM0200: precio 2, rendimiento 0.02).
+        const cantidad = type === '%CI' ? Math.round(raw * 100 * 1e4) / 1e4 : raw;
+        return { code: dc.childCode, type, cantidad };
       });
 
       list.push({

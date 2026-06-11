@@ -24,9 +24,16 @@
        `collectPartidas`): se emite UN ~M por partida, en orden, con 0 líneas
        si no hay medición — si faltara alguno, el reimport desalinearía las
        líneas de medición del resto.
-     · `%CI` = concepto `%` con cantidad = porcentaje en la `~D` (no es un
-       recurso con precio; el precio del `~C` de la partida es la autoridad,
-       la descomposición es informativa — mismo contrato que el import).
+     · `%CI` = concepto `%` con rendimiento = PORCENTAJE/100 en la `~D` y el
+       porcentaje en el campo precio del `~C` (convención de Presto, verificada
+       con la trazadora: Presto calcula importe = base × rendimiento, así que
+       escribir el porcentaje entero multiplicaba el CI ×100).
+     · La descomposición SOLO viaja si el precio cuadra con ella
+       (`precioCuadraDescompuesto`): Presto recalcula el precio del padre desde
+       los hijos e ignora el del `~C` (verificado con la trazadora). Un precio
+       manual/override se exporta como precio CERRADO sin `~D` — partida
+       alzada, que Presto sí respeta. El PEM es lo sagrado; la justificación
+       inconsistente es irrepresentable en FIEBDC.
      · Solo se exporta el ÁRBOL de la obra: los recursos huérfanos del banco
        (sin partida que los use) NO viajan.
 
@@ -35,6 +42,7 @@
    F7.4b). Certificaciones a BC3: aplazado (TODOS.md T-12).
    =========================================================================== */
 import type { Banco, Chapter, Item, MedLine, Obra, PartidasMap, Rates, ResourceType } from './types';
+import { precioCuadraDescompuesto } from './banco';
 import { toEur } from './money';
 import { partidaCantidad } from './medicion';
 import { chapterTotal, pem } from './totales';
@@ -135,8 +143,9 @@ export function obraToBc3(input: Bc3ExportObra): Uint8Array {
   recs.push(`~C|${ROOT_CODE}##||${field(obra.denominacion)}|${num(toEur(pem(partidas, k)), 2)}||0|`);
   recs.push(`~D|${ROOT_CODE}##|${chapters.map((c) => `${field(c.code)}\\1\\1\\`).join('')}|`);
 
-  // Recursos usados por el árbol, en orden de primera aparición (huérfanos fuera).
-  const used = new Map<string, ResourceType>();
+  // Recursos usados por el árbol, en orden de primera aparición (huérfanos
+  // fuera). Para los % se guarda el porcentaje del primer uso (precio del ~C).
+  const used = new Map<string, { type: ResourceType; pct?: number }>();
 
   chapters.forEach((ch, ci) => {
     const ps = partidas[ch.id] ?? [];
@@ -153,19 +162,26 @@ export function obraToBc3(input: Bc3ExportObra): Uint8Array {
     for (const p of ps) {
       recs.push(`~C|${field(p.code)}|${field(p.ud)}|${field(p.title)}|${num(p.precio, 2)}||0|`);
       if (p.desc) recs.push(`~T|${field(p.code)}|${ttext(p.desc)}|`);
-      if (p.items.length) {
+      // La ~D solo si el precio ES su descompuesto: Presto recalcula el padre
+      // desde los hijos, así que una justificación que no cuadra movería el PEM.
+      if (p.items.length && precioCuadraDescompuesto(p, recursos)) {
         recs.push(`~D|${field(p.code)}|${p.items.map((it) => itemLine(it)).join('')}|`);
-        for (const it of p.items) if (!used.has(it.code)) used.set(it.code, recursos[it.code]?.type ?? it.type);
+        for (const it of p.items)
+          if (!used.has(it.code))
+            used.set(it.code, {
+              type: recursos[it.code]?.type ?? it.type,
+              pct: it.type === '%CI' ? it.cantidad : undefined,
+            });
       }
     }
   });
 
-  for (const [code, type] of used) {
-    if (type === '%CI') {
-      recs.push(`~C|${field(code)}|%|Costes indirectos|0||0|`);
+  for (const [code, u] of used) {
+    if (u.type === '%CI') {
+      recs.push(`~C|${field(code)}|%|Costes indirectos|${num(u.pct ?? 0, 4)}||0|`);
     } else {
       const r = recursos[code];
-      recs.push(`~C|${field(code)}|${field(r?.ud ?? '')}|${field(r?.desc ?? '')}|${num(r?.precio ?? 0, 2)}||${TYPE_NUM[type]}|`);
+      recs.push(`~C|${field(code)}|${field(r?.ud ?? '')}|${field(r?.desc ?? '')}|${num(r?.precio ?? 0, 2)}||${TYPE_NUM[u.type]}|`);
     }
   }
 
@@ -173,7 +189,9 @@ export function obraToBc3(input: Bc3ExportObra): Uint8Array {
 }
 
 /** Línea de descomposición `código\factor\rendimiento\` (rendimiento 3 dec).
- *  Para `%CI` el rendimiento ES el porcentaje (3 → 3 %), espejo del import. */
+ *  Para `%CI` el rendimiento viaja como FRACCIÓN (3 % → 0.03): Presto calcula
+ *  importe = base × rendimiento (verificado con la trazadora). */
 function itemLine(it: Item): string {
+  if (it.type === '%CI') return `${field(it.code)}\\1\\${num(it.cantidad / 100, 6)}\\`;
   return `${field(it.code)}\\1\\${num(it.cantidad, 3)}\\`;
 }

@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { coefKPct, encodeCp1252, obraToBc3, type Bc3ExportObra } from './bc3export';
 import { bc3ToObra } from './bc3import';
-import { buildRecursos } from './banco';
+import { buildRecursos, precioCuadraDescompuesto } from './banco';
 import { partidaCantidad } from './medicion';
 import { toCents } from './money';
 import { CHAPTERS, DEFAULT_OBRA, DEFAULT_RATES, PARTIDAS } from './seed';
@@ -17,7 +17,9 @@ const decode = (b: Uint8Array) => new TextDecoder('windows-1252').decode(b);
 const records = (o: Bc3ExportObra) => decode(obraToBc3(o)).split('\r\n').filter(Boolean);
 const rec = (o: Bc3ExportObra, prefix: string) => records(o).find((r) => r.startsWith(prefix));
 
-/** Obra mínima configurable: 1 capítulo, partidas a medida. */
+/** Obra mínima configurable: 1 capítulo, partidas a medida. El precio por
+ *  defecto CUADRA con el descompuesto (7,88 + 103,32 + 3 % = 114,54) para que
+ *  la ~D viaje; los tests de override lo cambian a un precio manual. */
 function mini(partida: Partial<Partida> = {}, over: Partial<Bc3ExportObra> = {}): Bc3ExportObra {
   const p: Partida = {
     id: 'p1',
@@ -25,7 +27,7 @@ function mini(partida: Partial<Partida> = {}, over: Partial<Bc3ExportObra> = {})
     code: 'D01',
     title: 'Demolición de tabique',
     ud: 'm²',
-    precio: 12.34,
+    precio: 114.54,
     desc: 'Demolición de tabiquería.',
     med: [{ id: 'p1-m1', comment: 'Planta baja', uds: 2, largo: 4.5, ancho: '', alto: 2.6 }],
     items: [
@@ -122,17 +124,28 @@ describe('obraToBc3 — conceptos y precios', () => {
 
   it('partida: precio en BASE (sin K) y cantidad 2 dec en la ~D del capítulo', () => {
     const o = mini({}, { rates: { ...DEFAULT_RATES, coefK: 1.13 } });
-    expect(rec(o, '~C|D01|')).toBe('~C|D01|m²|Demolición de tabique|12.34||0|');
+    expect(rec(o, '~C|D01|')).toBe('~C|D01|m²|Demolición de tabique|114.54||0|');
     // cantidad = 2·4,5·2,6 = 23,4 (ancho vacío = factor 1)
     expect(rec(o, '~D|1#')).toBe('~D|1#|D01\\1\\23.4\\|');
   });
 
-  it('~D de partida: rendimientos 3 dec y %CI con cantidad = porcentaje', () => {
-    expect(rec(mini(), '~D|D01')).toBe('~D|D01|mo001\\1\\0.45\\mt001\\1\\1.05\\%CI\\1\\3\\|');
+  it('~D de partida: rendimientos 3 dec y %CI como FRACCIÓN (3 % → 0.03, convención Presto)', () => {
+    expect(rec(mini(), '~D|D01')).toBe(String.raw`~D|D01|mo001\1\0.45\mt001\1\1.05\%CI\1\0.03\|`);
   });
 
-  it('recursos con tipo numérico (MO 1 · MQ 2 · MAT 3) y %CI como concepto %', () => {
+  it('precio manual (no cuadra con el descompuesto) → SIN ~D: Presto respeta el precio cerrado', () => {
+    // Verificado con la trazadora en Presto real: con ~D, Presto recalcula el
+    // precio del padre desde los hijos e ignora el del ~C → el PEM divergiría.
+    const o = mini({ precio: 12.34, precioManual: true });
+    expect(rec(o, '~C|D01|')).toBe('~C|D01|m²|Demolición de tabique|12.34||0|');
+    expect(rec(o, '~D|D01')).toBeUndefined();
+    expect(rec(o, '~C|mo001')).toBeUndefined(); // sus recursos tampoco viajan
+  });
+
+  it('recursos con tipo numérico (MO 1 · MQ 2 · MAT 3) y %CI como concepto % con el pct de precio', () => {
+    // descompuesto: 8,76 + 4,62 + 98,4 = 111,78 + 3 % (3,35) = 115,13
     const o = mini({
+      precio: 115.13,
       items: [
         { code: 'mo001', type: 'MO', cantidad: 0.5 },
         { code: 'mq001', type: 'MQ', cantidad: 0.12 },
@@ -144,7 +157,7 @@ describe('obraToBc3 — conceptos y precios', () => {
     expect(rec(o, '~C|mo001')).toBe('~C|mo001|h|Peón ordinario|17.52||1|');
     expect(rec(o, '~C|mq001')).toBe('~C|mq001|h|Retro|38.5||2|');
     expect(rec(o, '~C|mt001')).toBe('~C|mt001|mu|Ladrillo hueco|98.4||3|');
-    expect(rec(o, '~C|%CI')).toBe('~C|%CI|%|Costes indirectos|0||0|');
+    expect(rec(o, '~C|%CI')).toBe('~C|%CI|%|Costes indirectos|3||0|');
   });
 
   it('los recursos huérfanos del banco NO se exportan (solo el árbol de la obra)', () => {
@@ -199,7 +212,7 @@ describe('obraToBc3 — sanitización (BC3 no tiene escape)', () => {
   it('`|`→`¦` y `\\`→`/` en campos; saltos de línea de campos → espacio', () => {
     const o = mini({ title: 'Tabique|especial C\\D', ud: 'm²' });
     o.obra.denominacion = 'Obra\ncon salto';
-    expect(rec(o, '~C|D01|')).toBe('~C|D01|m²|Tabique¦especial C/D|12.34||0|');
+    expect(rec(o, '~C|D01|')).toBe('~C|D01|m²|Tabique¦especial C/D|114.54||0|');
     expect(rec(o, '~C|OBRA##')).toContain('|Obra con salto|');
   });
 
@@ -222,11 +235,23 @@ describe('round-trip del seed: obraToBc3 → bc3ToObra EXACTO', () => {
     obra: { ...DEFAULT_OBRA },
   });
 
-  it('estructura: mismos capítulos, partidas y recursos', () => {
+  /** ¿La justificación de esta partida viaja en el .bc3? (precio = descompuesto) */
+  const banco = buildRecursos(PARTIDAS);
+  const conDescomp = (p: Partida) => p.items.length > 0 && precioCuadraDescompuesto(p, banco);
+
+  it('estructura: mismos capítulos, partidas y los recursos de las ~D que viajan', () => {
     const { data, report } = bc3ToObra(obraToBc3(seedObra()));
     expect(data.chapters).toHaveLength(CHAPTERS.length);
     expect(report.partidas).toBe(Object.values(PARTIDAS).flat().length);
-    expect(Object.keys(data.recursos).sort()).toEqual(Object.keys(buildRecursos(PARTIDAS)).sort());
+    const expected = [
+      ...new Set(
+        Object.values(PARTIDAS)
+          .flat()
+          .filter(conDescomp)
+          .flatMap((p) => p.items.filter((it) => it.type !== '%CI').map((it) => it.code)),
+      ),
+    ].sort();
+    expect(Object.keys(data.recursos).sort()).toEqual(expected);
     expect(data.obra.denominacion).toBe(DEFAULT_OBRA.denominacion);
   });
 
@@ -247,7 +272,10 @@ describe('round-trip del seed: obraToBc3 → bc3ToObra EXACTO', () => {
       expect(gp.code).toBe(sp.code);
       expect(gp.precio).toBe(sp.precio);
       expect(partidaCantidad(gp)).toBe(partidaCantidad(sp));
-      expect(gp.items.map((it) => [it.code, it.cantidad])).toEqual(sp.items.map((it) => [it.code, it.cantidad]));
+      // la justificación solo viaja si cuadra con el precio (precio manual →
+      // partida alzada sin ~D, o Presto recalcularía el padre y movería el PEM)
+      const wantItems = conDescomp(sp) ? sp.items.map((it) => [it.code, it.cantidad]) : [];
+      expect(gp.items.map((it) => [it.code, it.cantidad])).toEqual(wantItems);
       expect(gp.med).toHaveLength(sp.med.length);
       expect(gp.med.map((l) => l.comment)).toEqual(sp.med.map((l) => l.comment));
     });

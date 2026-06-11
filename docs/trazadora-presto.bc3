@@ -1,17 +1,17 @@
 ~V|Concreta|FIEBDC-3/2016|Concreta Mediciones||ANSI|
 ~K|\2\2\3\2\2\2\2\EUR\|13|
-~C|OBRA##||Obra trazadora Concreta — Demolición y transporte|604.93||0|
+~C|OBRA##||Obra trazadora Concreta — Demolición y transporte|4074.13||0|
 ~D|OBRA##|C1\1\1\|
-~C|C1#||DEMOLICIONES Y GESTIÓN DE RESIDUOS|604.93||0|
+~C|C1#||DEMOLICIONES Y GESTIÓN DE RESIDUOS|4074.13||0|
 ~D|C1#|DEM010\1\30.04\TRA020\1\18.5\|
 ~M|C1#\DEM010|1\1\|30.04|\Salón y cocina\2\4.5\\2.6\\A deducir hueco de puerta\-1\0.8\\2.1\\Pasillo\1\3.2\\2.6\|
 ~M|C1#\TRA020|1\2\|18.5||
-~C|DEM010|m²|Demolición de tabique de ladrillo hueco sencillo|12.34||0|
+~C|DEM010|m²|Demolición de tabique de ladrillo hueco sencillo|114.54||0|
 ~T|DEM010|Demolición de tabique de ladrillo hueco sencillo, con medios manuales, sin afectar a la estabilidad de los elementos contiguos.
 Medido a cinta corrida — incluye retirada de escombros (coste medio 1 €/m²).|
-~D|DEM010|mo001\1\0.45\mt001\1\1.05\%CI\1\3\|
+~D|DEM010|mo001\1\0.45\mt001\1\1.05\%CI\1\0.03\|
 ~C|TRA020|m³|Carga y transporte de escombros ¦ contenedor / gestor autorizado|8.9||0|
 ~T|TRA020|Carga manual y transporte de escombros a vertedero autorizado con contenedor de 5 m³.|
 ~C|mo001|h|Peón ordinario construcción|17.52||1|
 ~C|mt001|mu|Ladrillo cerámico hueco sencillo 24x11,5x4|98.4||3|
-~C|%CI|%|Costes indirectos|0||0|
+~C|%CI|%|Costes indirectos|3||0|

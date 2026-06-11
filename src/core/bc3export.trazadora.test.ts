@@ -3,7 +3,17 @@
    el .bc3 mínimo de la spec (raíz + 1 capítulo + 2 partidas con ~D/~M/~T,
    ~K = 13 %, acentos, €, sanitización) que hay que abrir en PRESTO REAL antes
    de construir F7.4b — gate manual D5 capa 5: estructura, acentos y
-   PEM = 604,93 €.
+   PEM = 4.074,13 €.
+
+   ITERACIÓN 2 (tras el 1er pase por Presto 8.7, 2026-06-11): la 1ª trazadora
+   cazó dos errores de spec, corregidos aquí: (1) los conceptos % llevan el
+   rendimiento como FRACCIÓN (3 % → 0.03) — escribir 3 multiplicaba el CI
+   ×100 —; (2) Presto recalcula el precio del padre desde la ~D e ignora el
+   del ~C → DEM010 ahora cuadra con su descompuesto (114,54) y TRA020 (precio
+   manual) viaja como precio cerrado SIN ~D, que Presto ya demostró respetar
+   (8,90 → 186,11 con su K). Presto mostrará raíz ≈ 4.074,19 €: redondea
+   precio×K por partida (T-8); la diferencia con nuestro 4.074,13 entra en la
+   tolerancia <1 € del criterio dual D8.
 
    El test REGENERA el artefacto cuando el writer cambia y falla solo si no
    puede dejarlo sincronizado: el .bc3 queda COMMITEADO (datos sintéticos, sin
@@ -31,7 +41,8 @@ const TRAZADORA: Bc3ExportObra = {
         code: 'DEM010',
         title: 'Demolición de tabique de ladrillo hueco sencillo',
         ud: 'm²',
-        precio: 12.34,
+        // = su descompuesto (7,88 + 103,32 + 3 % = 114,54) → la ~D viaja
+        precio: 114.54,
         desc:
           'Demolición de tabique de ladrillo hueco sencillo, con medios manuales, sin afectar a la estabilidad de los elementos contiguos.\n' +
           'Medido a cinta corrida — incluye retirada de escombros (coste medio 1 €/m²).',
@@ -80,20 +91,27 @@ const bytes = obraToBc3(TRAZADORA);
 const text = new TextDecoder('windows-1252').decode(bytes);
 
 describe('trazadora — el archivo mínimo para el gate manual en Presto', () => {
-  it('PEM con K = 604,93 € (30,04·12,34·1,13 + 18,5·8,9·1,13, redondeo por partida)', () => {
-    expect(pem(TRAZADORA.partidas, 1.13)).toBe(60493);
+  it('PEM con K = 4.074,13 € (30,04·114,54·1,13 + 18,5·8,9·1,13, redondeo por partida)', () => {
+    expect(pem(TRAZADORA.partidas, 1.13)).toBe(407413);
   });
 
   it('ejercita ~V/~K/~C/~D/~M/~T con ANSI, K=13 % y la raíz al PEM', () => {
     expect(text.startsWith('~V|Concreta|FIEBDC-3/2016|Concreta Mediciones||ANSI|\r\n')).toBe(true);
     expect(text).toContain(String.raw`~K|\2\2\3\2\2\2\2\EUR\|13|`);
-    expect(text).toContain('|604.93||0|'); // raíz Y capítulo único: PEM con K
+    expect(text).toContain('|4074.13||0|'); // raíz Y capítulo único: PEM con K
     expect(text).toContain(String.raw`~D|OBRA##|C1\1\1\|`);
     expect(text).toContain(String.raw`~D|C1#|DEM010\1\30.04\TRA020\1\18.5\|`);
     expect(text).toContain(String.raw`~M|C1#\DEM010|1\1\|30.04|`);
     expect(text).toContain(String.raw`~M|C1#\TRA020|1\2\|18.5||`); // sin med: 0 líneas, ancla el índice
     expect(text).toContain('~T|DEM010|');
-    expect(text).toContain(String.raw`~D|DEM010|mo001\1\0.45\mt001\1\1.05\%CI\1\3\|`);
+    // %CI como fracción (3 % → 0.03) y el porcentaje en el precio del concepto %
+    expect(text).toContain(String.raw`~D|DEM010|mo001\1\0.45\mt001\1\1.05\%CI\1\0.03\|`);
+    expect(text).toContain('~C|%CI|%|Costes indirectos|3||0|');
+  });
+
+  it('precio manual (TRA020) → precio cerrado SIN ~D, que Presto respeta', () => {
+    expect(text).toContain('~C|TRA020|m³|');
+    expect(text).not.toContain('~D|TRA020');
   });
 
   it('sanitiza `|`→`¦` y `\\`→`/`; el huérfano del banco no viaja', () => {
@@ -114,11 +132,11 @@ describe('trazadora — el archivo mínimo para el gate manual en Presto', () =>
     expect(report.partidas).toBe(2);
     expect(Object.keys(data.recursos).sort()).toEqual(['mo001', 'mt001']);
     expect(data.rates.coefK).toBe(1.13);
-    expect(pem(data.partidas, 1.13)).toBe(60493);
+    expect(pem(data.partidas, 1.13)).toBe(407413);
     expect(report.deltaCents).toBe(0);
     const [p1, p2] = Object.values(data.partidas).flat();
     if (!p1 || !p2) throw new Error('faltan partidas en el reimport');
-    expect(p1.precio).toBe(12.34);
+    expect(p1.precio).toBe(114.54);
     expect(partidaCantidad(p1)).toBe(30.04);
     expect(p1.med.map((l) => l.comment)).toEqual(['Salón y cocina', 'A deducir hueco de puerta', 'Pasillo']);
     expect(p1.items.map((it) => [it.code, it.cantidad])).toEqual([
