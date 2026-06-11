@@ -1,5 +1,5 @@
 /** Nombre de archivo seguro Windows/macOS: sin `\/:*?"<>|`, espacios colapsados. */
-export function docFileName(titulo: string, denominacion: string, ext: 'xlsx' | 'docx'): string {
+export function docFileName(titulo: string, denominacion: string, ext: 'xlsx' | 'docx' | 'bc3'): string {
   const safe = (s: string) =>
     s
       .replace(/[\\/:*?"<>|]/g, ' ')

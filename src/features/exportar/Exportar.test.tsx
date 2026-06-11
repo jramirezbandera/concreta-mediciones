@@ -7,7 +7,7 @@ beforeEach(() => {
   useObraStore.getState().reset();
 });
 
-describe('ExportModal (F7.1–F7.3) — "mostrar solo lo que funciona"', () => {
+describe('ExportModal (F7.1–F7.4) — "mostrar solo lo que funciona"', () => {
   const noop = () => {};
   const abierto = (over: Partial<Parameters<typeof ExportModal>[0]> = {}) => (
     <ExportModal
@@ -16,12 +16,14 @@ describe('ExportModal (F7.1–F7.3) — "mostrar solo lo que funciona"', () => {
       onExportPdf={noop}
       onExportXlsx={noop}
       onExportDocx={noop}
+      onExportBc3={noop}
       {...over}
     />
   );
 
-  it('lista los docs construidos + una fila por certificación', () => {
+  it('lista la obra completa (BC3) + los docs construidos + una fila por certificación', () => {
     render(abierto());
+    expect(screen.getByText('Obra completa')).toBeInTheDocument();
     expect(screen.getByText('Presupuesto y mediciones')).toBeInTheDocument();
     expect(screen.getByText('Resumen de presupuesto')).toBeInTheDocument();
     expect(screen.getByText('Certificaciones de obra')).toBeInTheDocument();
@@ -29,13 +31,22 @@ describe('ExportModal (F7.1–F7.3) — "mostrar solo lo que funciona"', () => {
     expect(screen.getByText('Certificación nº 3')).toBeInTheDocument();
   });
 
-  it('chips PDF + Word + Excel por fila; BC3 aún no (llega al shipear F7.4)', () => {
+  it('chips PDF + Word + Excel por fila y UN chip BC3 de cabecera (F7.4)', () => {
     render(abierto());
-    // 2 docs + 3 certs del seed = 5 chips de cada formato construido.
+    // 2 docs + 3 certs del seed = 5 chips de cada formato por-listado.
     expect(screen.getAllByRole('button', { name: /a PDF$/ })).toHaveLength(5);
     expect(screen.getAllByRole('button', { name: /a Word$/ })).toHaveLength(5);
     expect(screen.getAllByRole('button', { name: /a Excel$/ })).toHaveLength(5);
-    expect(screen.queryByRole('button', { name: /BC3/ })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /BC3/ })).toHaveLength(1);
+  });
+
+  it('el chip BC3 dispara onExportBc3 y cierra el modal (F7.4)', () => {
+    const onClose = vi.fn();
+    const onExportBc3 = vi.fn();
+    render(abierto({ onClose, onExportBc3 }));
+    fireEvent.click(screen.getByRole('button', { name: 'Exportar «Obra completa» a BC3 (FIEBDC-3)' }));
+    expect(onExportBc3).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalled();
   });
 
   it('el chip PDF dispara onExportPdf con su target y cierra el modal', () => {

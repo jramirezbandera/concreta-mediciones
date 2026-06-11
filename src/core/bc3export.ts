@@ -37,12 +37,24 @@
      · Solo se exporta el ÁRBOL de la obra: los recursos huérfanos del banco
        (sin partida que los use) NO viajan.
 
-   F7.4a (bala trazadora): subcapítulos APLANADOS en su capítulo y códigos tal
-   cual (el anidado real D3 y el renombrado determinista de homónimos D2 son
-   F7.4b). Certificaciones a BC3: aplazado (TODOS.md T-12).
+   F7.4b añade sobre la trazadora (validada en Presto 8.7 y Arquímedes 2022):
+     · Códigos DETERMINISTAS (D2): la identidad BC3 es el código → homónimos
+       divergentes se renombran `.2`/`.3`…; los idénticos comparten un solo
+       concepto (correcto en BC3: cantidad en la ~D del padre, medición en su
+       ~M); vacíos/'——' → generados (P001…). La asignación corre TRAS
+       sanitizar y canonicalizar a cp1252 (sanitizar puede crear colisiones
+       nuevas). Sin esto, Presto fusiona homónimos EN SILENCIO.
+     · Subcapítulos ANIDADOS reales (D3): el consumidor es Presto. Las
+       directas van ANTES que los subs en la ~D del capítulo (el anclaje por
+       índice de los ~M exige que las partidas ocupen los primeros índices).
+       Asimetría documentada: nuestro import los aplana (PEM invariante). Los
+       subs VACÍOS no viajan (sin ~M propio, el reimport los confundiría con
+       una partida fantasma a 0).
+   Certificaciones a BC3: aplazado (TODOS.md T-12).
    =========================================================================== */
-import type { Banco, Chapter, Item, MedLine, Obra, PartidasMap, Rates, ResourceType } from './types';
+import type { Banco, Chapter, Item, MedLine, Obra, Partida, PartidasMap, Rates, ResourceType } from './types';
 import { precioCuadraDescompuesto } from './banco';
+import { groupBySub } from './grouping';
 import { toEur } from './money';
 import { partidaCantidad } from './medicion';
 import { chapterTotal, pem } from './totales';
@@ -80,6 +92,18 @@ export function encodeCp1252(text: string): Uint8Array {
     else out.push(0x3f); // '?'
   }
   return Uint8Array.from(out);
+}
+
+/** Forma canónica cp1252 de un texto: lo no mapeable → '?'. La dedupe de
+ *  códigos (D2) corre sobre esta forma — dos códigos distintos en Unicode que
+ *  acaban en los mismos BYTES son una colisión real en el archivo. */
+function cp1252Canonical(s: string): string {
+  let out = '';
+  for (const ch of s) {
+    const cp = ch.codePointAt(0)!;
+    out += cp <= 0x9f || (cp >= 0xa0 && cp <= 0xff) || CP1252_EXTRA[cp] != null ? ch : '?';
+  }
+  return out;
 }
 
 /* ---- números: punto decimal, sin miles, ceros finales fuera (como Presto) -- */
@@ -125,6 +149,21 @@ function medLine(l: MedLine): string {
   return `\\${field(l.comment)}\\${uds}\\${d(l.largo)}\\${d(l.ancho)}\\${d(l.alto)}\\`;
 }
 
+/* ---- códigos de concepto (D2) ----------------------------------------------
+   Sanitizado + canónico cp1252 (la colisión se decide sobre los BYTES que
+   viajan), sin `#` (marcador de capítulo/raíz) y sin `%` inicial (reservado a
+   los conceptos porcentaje). Vacío ⇒ el llamante genera uno. */
+function sanCode(s: string): string {
+  return cp1252Canonical(field(s)).replace(/#/g, '-').replace(/^%+/, '').trim();
+}
+
+/** Identidad de una partida como CONCEPTO BC3: lo que define al ~C/~T/~D.
+ *  La cantidad y la medición quedan fuera (viven en la ~D/~M del contenedor),
+ *  así dos homónimos idénticos con distinta medición comparten concepto. */
+function partidaSig(p: Partida): string {
+  return `P|${JSON.stringify([p.title, p.ud, p.precio, p.desc, p.items.map((it) => [it.code, it.type, it.cantidad])])}`;
+}
+
 /* ===========================================================================
    Serialización principal
    =========================================================================== */
@@ -133,55 +172,139 @@ const ROOT_CODE = 'OBRA';
 export function obraToBc3(input: Bc3ExportObra): Uint8Array {
   const { chapters, partidas, recursos, rates, obra } = input;
   const k = rates.coefK || 1;
-  const recs: string[] = [];
 
+  /* ---- asignación determinista de códigos (D2) ----
+     Homónimos divergentes → sufijo `.2`/`.3`…; idénticos (misma identidad) →
+     concepto compartido; nada se pierde nunca (sin esto Presto fusiona
+     homónimos en silencio). Precedencia: raíz → capítulos → subs/partidas en
+     orden del árbol → recursos en orden de primer uso. */
+  const taken = new Map<string, string>(); // código final → identidad
+  function assign(desired: string, sig: string): string {
+    let code = desired;
+    for (let n = 2; ; n += 1) {
+      const cur = taken.get(code);
+      if (cur === undefined) {
+        taken.set(code, sig);
+        return code;
+      }
+      if (cur === sig) return code; // concepto idéntico → compartido
+      code = `${desired}.${n}`;
+    }
+  }
+  let genP = 0;
+  const genned = new Map<string, string>(); // identidad → código generado ('——'/vacíos)
+  function conceptCode(raw: string, sig: string): string {
+    const san = sanCode(raw);
+    if (san && san !== '——') return assign(san, sig);
+    const hit = genned.get(sig);
+    if (hit != null) return hit;
+    const fin = assign(`P${String((genP += 1)).padStart(3, '0')}`, sig);
+    genned.set(sig, fin);
+    return fin;
+  }
+
+  // Recursos usados por el árbol, código del banco → código final (huérfanos
+  // fuera). Para los % se guarda el porcentaje del primer uso (precio del ~C).
+  const recFinal = new Map<string, string>();
+  const used = new Map<string, { orig: string; type: ResourceType; pct?: number }>();
+  let genR = 0;
+  function recursoCode(it: Item): string {
+    const hit = recFinal.get(it.code);
+    if (hit != null) return hit;
+    const fin =
+      it.type === '%CI'
+        ? assign(`%${sanCode(it.code) || 'CI'}`, `%|${it.code}`)
+        : assign(sanCode(it.code) || `R${String((genR += 1)).padStart(3, '0')}`, `R|${it.code}`);
+    recFinal.set(it.code, fin);
+    used.set(fin, {
+      orig: it.code,
+      type: recursos[it.code]?.type ?? it.type,
+      pct: it.type === '%CI' ? it.cantidad : undefined,
+    });
+    return fin;
+  }
+
+  const recs: string[] = [];
   recs.push('~V|Concreta|FIEBDC-3/2016|Concreta Mediciones||ANSI|');
   const pct = coefKPct(k);
   if (pct !== 0) recs.push(`~K|\\2\\2\\3\\2\\2\\2\\2\\EUR\\|${num(pct, 4)}|`);
 
   // Raíz: precio = PEM CON K (como Presto). Sus hijos en la ~D van sin `#`.
-  recs.push(`~C|${ROOT_CODE}##||${field(obra.denominacion)}|${num(toEur(pem(partidas, k)), 2)}||0|`);
-  recs.push(`~D|${ROOT_CODE}##|${chapters.map((c) => `${field(c.code)}\\1\\1\\`).join('')}|`);
+  const rootCode = assign(sanCode(ROOT_CODE), 'ROOT');
+  const chCodes = chapters.map((ch, ci) =>
+    assign(sanCode(ch.code) || `C${String(ci + 1).padStart(2, '0')}`, `CH|${ch.id}`),
+  );
+  recs.push(`~C|${rootCode}##||${field(obra.denominacion)}|${num(toEur(pem(partidas, k)), 2)}||0|`);
+  recs.push(`~D|${rootCode}##|${chCodes.map((c) => `${c}\\1\\1\\`).join('')}|`);
 
-  // Recursos usados por el árbol, en orden de primera aparición (huérfanos
-  // fuera). Para los % se guarda el porcentaje del primer uso (precio del ~C).
-  const used = new Map<string, { type: ResourceType; pct?: number }>();
+  /** ~C/~T/~D de un concepto de partida, una sola vez por código final. */
+  const emitted = new Set<string>();
+  function partidaBlock(p: Partida, code: string): void {
+    if (emitted.has(code)) return;
+    emitted.add(code);
+    recs.push(`~C|${code}|${field(p.ud)}|${field(p.title)}|${num(p.precio, 2)}||0|`);
+    if (p.desc) recs.push(`~T|${code}|${ttext(p.desc)}|`);
+    // La ~D solo si el precio ES su descompuesto: Presto recalcula el padre
+    // desde los hijos, así que una justificación que no cuadra movería el PEM.
+    if (p.items.length && precioCuadraDescompuesto(p, recursos)) {
+      recs.push(`~D|${code}|${p.items.map((it) => itemLine(it, recursoCode(it))).join('')}|`);
+    }
+  }
 
+  const mRec = (parent: string, child: string, pos: string, p: Partida): string =>
+    `~M|${parent}#\\${child}|${pos}|${num(partidaCantidad(p), 2)}|${p.med.map(medLine).join('')}|`;
+
+  let genS = 0;
   chapters.forEach((ch, ci) => {
     const ps = partidas[ch.id] ?? [];
-    const chCode = `${field(ch.code)}#`;
-    recs.push(`~C|${chCode}||${field(ch.title)}|${num(toEur(chapterTotal(ps, k)), 2)}||0|`);
-    if (ps.length) {
-      recs.push(`~D|${chCode}|${ps.map((p) => `${field(p.code)}\\1\\${num(partidaCantidad(p), 2)}\\`).join('')}|`);
-      // Un ~M por partida, alineado por índice con la ~D del capítulo.
-      ps.forEach((p, pi) => {
-        const lines = p.med.map(medLine).join('');
-        recs.push(`~M|${chCode}\\${field(p.code)}|${ci + 1}\\${pi + 1}\\|${num(partidaCantidad(p), 2)}|${lines}|`);
-      });
+    const chCode = chCodes[ci]!;
+    // Grupos en el orden de la vista (directas primero, luego subs); los subs
+    // vacíos no viajan. Las directas DEBEN ir antes: el ~M se ancla por índice
+    // a la ~D del contenedor y los subs no llevan ~M anclado al capítulo.
+    const groups = groupBySub(ch, ps).filter((g) => g.items.length > 0);
+    const subCode = new Map<string, string>(); // sub.id → código final
+    const pCode = new Map<Partida, string>();
+    for (const g of groups) {
+      if (g.sub) subCode.set(g.sub.id, assign(sanCode(g.sub.code) || `S${String((genS += 1)).padStart(2, '0')}`, `SUB|${ch.id}|${g.sub.id}`));
+      for (const p of g.items) pCode.set(p, conceptCode(p.code, partidaSig(p)));
     }
-    for (const p of ps) {
-      recs.push(`~C|${field(p.code)}|${field(p.ud)}|${field(p.title)}|${num(p.precio, 2)}||0|`);
-      if (p.desc) recs.push(`~T|${field(p.code)}|${ttext(p.desc)}|`);
-      // La ~D solo si el precio ES su descompuesto: Presto recalcula el padre
-      // desde los hijos, así que una justificación que no cuadra movería el PEM.
-      if (p.items.length && precioCuadraDescompuesto(p, recursos)) {
-        recs.push(`~D|${field(p.code)}|${p.items.map((it) => itemLine(it)).join('')}|`);
-        for (const it of p.items)
-          if (!used.has(it.code))
-            used.set(it.code, {
-              type: recursos[it.code]?.type ?? it.type,
-              pct: it.type === '%CI' ? it.cantidad : undefined,
-            });
+
+    recs.push(`~C|${chCode}#||${field(ch.title)}|${num(toEur(chapterTotal(ps, k)), 2)}||0|`);
+    const children = groups.flatMap((g) =>
+      g.sub
+        ? [`${subCode.get(g.sub.id)}\\1\\1\\`]
+        : g.items.map((p) => `${pCode.get(p)}\\1\\${num(partidaCantidad(p), 2)}\\`),
+    );
+    if (children.length) recs.push(`~D|${chCode}#|${children.join('')}|`);
+
+    // ~M de las directas (anclados al capítulo) y bloques de subcapítulos.
+    const subBlocks: string[] = [];
+    let entry = 0;
+    for (const g of groups) {
+      if (!g.sub) {
+        for (const p of g.items) {
+          entry += 1;
+          recs.push(mRec(chCode, pCode.get(p)!, `${ci + 1}\\${entry}\\`, p));
+        }
+        continue;
       }
+      entry += 1;
+      const sc = subCode.get(g.sub.id)!;
+      subBlocks.push(`~C|${sc}#||${field(g.sub.title)}|${num(toEur(chapterTotal(g.items, k)), 2)}||0|`);
+      subBlocks.push(`~D|${sc}#|${g.items.map((p) => `${pCode.get(p)}\\1\\${num(partidaCantidad(p), 2)}\\`).join('')}|`);
+      g.items.forEach((p, pi) => subBlocks.push(mRec(sc, pCode.get(p)!, `${ci + 1}\\${entry}\\${pi + 1}\\`, p)));
     }
+    recs.push(...subBlocks);
+
+    for (const g of groups) for (const p of g.items) partidaBlock(p, pCode.get(p)!);
   });
 
   for (const [code, u] of used) {
     if (u.type === '%CI') {
-      recs.push(`~C|${field(code)}|%|Costes indirectos|${num(u.pct ?? 0, 4)}||0|`);
+      recs.push(`~C|${code}|%|Costes indirectos|${num(u.pct ?? 0, 4)}||0|`);
     } else {
-      const r = recursos[code];
-      recs.push(`~C|${field(code)}|${field(r?.ud ?? '')}|${field(r?.desc ?? '')}|${num(r?.precio ?? 0, 2)}||${TYPE_NUM[u.type]}|`);
+      const r = recursos[u.orig];
+      recs.push(`~C|${code}|${field(r?.ud ?? '')}|${field(r?.desc ?? '')}|${num(r?.precio ?? 0, 2)}||${TYPE_NUM[u.type]}|`);
     }
   }
 
@@ -191,7 +314,7 @@ export function obraToBc3(input: Bc3ExportObra): Uint8Array {
 /** Línea de descomposición `código\factor\rendimiento\` (rendimiento 3 dec).
  *  Para `%CI` el rendimiento viaja como FRACCIÓN (3 % → 0.03): Presto calcula
  *  importe = base × rendimiento (verificado con la trazadora). */
-function itemLine(it: Item): string {
-  if (it.type === '%CI') return `${field(it.code)}\\1\\${num(it.cantidad / 100, 6)}\\`;
-  return `${field(it.code)}\\1\\${num(it.cantidad, 3)}\\`;
+function itemLine(it: Item, code: string): string {
+  if (it.type === '%CI') return `${code}\\1\\${num(it.cantidad / 100, 6)}\\`;
+  return `${code}\\1\\${num(it.cantidad, 3)}\\`;
 }

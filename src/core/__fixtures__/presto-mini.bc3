@@ -1,0 +1,19 @@
+~V|ACME S.A.|FIEBDC-3/2002|Presto 8.7||ANSI|
+~K|\2\2\3\2\2\2\2\EUR\|10|
+~C|%AUX|%|Medios auxiliares|2|060522|0|
+~C|OBRA01##||OBRA MINI ANÓNIMA|723.00|050802|0|
+~D|OBRA01##|C01\1\1\C02\1\1\|
+~T|OBRA01##||
+~C|C01#||DEMOLICIONES|657.00|020116|0|
+~D|C01#|E01\1\100\E02\1\10\|
+~M|C01#\E01|1\1\|100|\CABECERA\\\\\\ZONA A\1\50\\\\ZONA B\1\50\\\|
+~M|C01#\E02|1\2\|10|\\10\\\\|
+~C|E01|m2|DEMOLICIÓN TABIQUE CON MEDIOS MANUALES|3.47|050802|0|
+~D|E01|MO01\1\0.2\%AUX\1\0.02\|
+~T|E01|Demolición de tabique con medios manuales, según CTE. Medida la superficie ejecutada.|
+~C|E02|u|AYUDAS DE ALBAÑILERÍA|25|050802|0|
+~C|C02#||GESTIÓN DE RESIDUOS|66.00|010110|0|
+~D|C02#|E03\1\5\|
+~C|E03|m³|CANON DE VERTIDO|12|290725|0|
+~T|E03|Canon de vertido de residuos a gestor autorizado.|
+~C|MO01|h|PEÓN ORDINARIO|17|010110|1|

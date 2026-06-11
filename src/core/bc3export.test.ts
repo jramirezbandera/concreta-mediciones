@@ -3,6 +3,8 @@
    fidelidad capa 2 (D5): round-trip del seed export→`bc3ToObra` EXACTO al
    céntimo (los round-trips PROPIOS no tienen tolerancia — D8).
    =========================================================================== */
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { coefKPct, encodeCp1252, obraToBc3, type Bc3ExportObra } from './bc3export';
 import { bc3ToObra } from './bc3import';
@@ -223,6 +225,128 @@ describe('obraToBc3 — sanitización (BC3 no tiene escape)', () => {
   });
 });
 
+/* ---- D2: códigos deterministas ------------------------------------------------ */
+describe('obraToBc3 — códigos deterministas (D2)', () => {
+  const otra = (over: Partial<Partida>): Partida => ({
+    id: 'p2',
+    pos: '1.2',
+    code: 'D01',
+    title: 'Demolición de tabique',
+    ud: 'm²',
+    precio: 114.54,
+    desc: 'Demolición de tabiquería.',
+    med: [],
+    cantidad: 5,
+    items: [
+      { code: 'mo001', type: 'MO', cantidad: 0.45 },
+      { code: 'mt001', type: 'MAT', cantidad: 1.05 },
+      { code: '%CI', type: '%CI', cantidad: 3 },
+    ],
+    ...over,
+  });
+
+  it('homónimos DIVERGENTES → sufijo .2 (nada se fusiona en silencio)', () => {
+    const o = mini();
+    o.partidas['01']!.push(otra({ precio: 99, precioManual: true, title: 'Otra cosa' }));
+    expect(rec(o, '~C|D01|')).toContain('|114.54||0|');
+    expect(rec(o, '~C|D01.2|')).toBe('~C|D01.2|m²|Otra cosa|99||0|');
+    expect(rec(o, '~D|1#')).toBe(String.raw`~D|1#|D01\1\23.4\D01.2\1\5\|`);
+    const { data } = bc3ToObra(obraToBc3(o));
+    expect(Object.values(data.partidas).flat().map((p) => p.precio)).toEqual([114.54, 99]);
+  });
+
+  it('homónimos IDÉNTICOS comparten concepto (la cantidad/medición viven en el padre)', () => {
+    const o = mini();
+    o.partidas['01']!.push(otra({}));
+    const text = decode(obraToBc3(o));
+    expect(text.match(/~C\|D01\|/g)).toHaveLength(1); // un solo ~C
+    expect(rec(o, '~D|1#')).toBe(String.raw`~D|1#|D01\1\23.4\D01\1\5\|`);
+    const ms = records(o).filter((r) => r.startsWith('~M|'));
+    expect(ms).toHaveLength(2); // cada referencia conserva SU medición/cantidad
+    const { data } = bc3ToObra(obraToBc3(o));
+    const got = Object.values(data.partidas).flat();
+    expect(got.map((p) => partidaCantidad(p))).toEqual([23.4, 5]);
+  });
+
+  it("códigos vacíos o '——' → generados (P001…); idénticos comparten el generado", () => {
+    const o = mini({ code: '——' });
+    o.partidas['01']!.push(otra({ code: '', precio: 99, precioManual: true }));
+    o.partidas['01']!.push(otra({ id: 'p3', code: '', precio: 99, precioManual: true }));
+    expect(rec(o, '~D|1#')).toBe(String.raw`~D|1#|P001\1\23.4\P002\1\5\P002\1\5\|`);
+    expect(rec(o, '~C|P002|')).toBeDefined();
+  });
+
+  it('la dedupe corre TRAS sanitizar (sanitizar puede crear la colisión)', () => {
+    const o = mini({ code: 'A|B' });
+    o.partidas['01']!.push(otra({ code: 'A¦B', precio: 99, precioManual: true }));
+    expect(rec(o, '~D|1#')).toBe(String.raw`~D|1#|A¦B\1\23.4\A¦B.2\1\5\|`);
+  });
+
+  it('una partida no puede pisar el código de un capítulo (ni de la raíz)', () => {
+    const o = mini({ code: '1' }); // colisiona con el capítulo '1'
+    expect(rec(o, '~D|1#')).toBe(String.raw`~D|1#|1.2\1\23.4\|`);
+    expect(rec(o, '~C|1.2|')).toContain('Demolición de tabique');
+  });
+
+  it("un código de partida no puede empezar por '%' (lo reservan los conceptos porcentaje)", () => {
+    const o = mini({ code: '%X' });
+    expect(rec(o, '~D|1#')).toBe(String.raw`~D|1#|X\1\23.4\|`);
+  });
+});
+
+/* ---- D3: subcapítulos anidados ------------------------------------------------ */
+describe('obraToBc3 — subcapítulos anidados (D3)', () => {
+  /** Cap 1 con una directa + sub 1.1 (dos partidas); sub 1.2 vacío. */
+  function conSubs(): Bc3ExportObra {
+    const o = mini();
+    o.chapters = [
+      {
+        id: '01',
+        code: '1',
+        title: 'Demoliciones',
+        children: [
+          { id: '01.01', code: '1.1', title: 'Tabiquería' },
+          { id: '01.02', code: '1.2', title: 'Sub vacío' },
+        ],
+      },
+    ];
+    const base = o.partidas['01']![0]!;
+    o.partidas['01'] = [
+      { ...base, id: 'd1', code: 'DIR01', sub: undefined },
+      { ...base, id: 's1', code: 'SUB01', sub: '01.01' },
+      { ...base, id: 's2', code: 'SUB02', sub: '01.01', precio: 99, precioManual: true, med: [], cantidad: 5 },
+    ];
+    return o;
+  }
+
+  it('el sub viaja como contenedor real; las directas van ANTES en la ~D del capítulo', () => {
+    const o = conSubs();
+    expect(rec(o, '~D|1#')).toBe(String.raw`~D|1#|DIR01\1\23.4\1.1\1\1\|`);
+    // Σ sub = 23,4·114,54 + 5·99 = 2.680,24 + 495 = 3.175,24
+    expect(rec(o, '~C|1.1#')).toBe('~C|1.1#||Tabiquería|3175.24||0|');
+    expect(rec(o, '~D|1.1#')).toBe(String.raw`~D|1.1#|SUB01\1\23.4\SUB02\1\5\|`);
+    // ~M: la directa anclada al capítulo (1\1\), las del sub al sub (1\2\n\)
+    const ms = records(o).filter((r) => r.startsWith('~M|'));
+    expect(ms[0]).toContain(String.raw`~M|1#\DIR01|1\1\|`);
+    expect(ms[1]).toContain(String.raw`~M|1.1#\SUB01|1\2\1\|`);
+    expect(ms[2]).toContain(String.raw`~M|1.1#\SUB02|1\2\2\|`);
+  });
+
+  it('el sub VACÍO no viaja (el reimport lo confundiría con una partida a 0)', () => {
+    expect(rec(conSubs(), '~C|1.2#')).toBeUndefined();
+  });
+
+  it('round-trip: el import APLANA (asimetría documentada) con PEM exacto y mismo orden', () => {
+    const o = conSubs();
+    const { data, report } = bc3ToObra(obraToBc3(o));
+    expect(report.chapters).toBe(1);
+    expect(report.partidas).toBe(3);
+    expect(Object.values(data.partidas).flat().map((p) => p.code)).toEqual(['DIR01', 'SUB01', 'SUB02']);
+    expect(pem(data.partidas, 1)).toBe(pem(o.partidas, 1));
+    expect(report.deltaCents).toBe(0);
+  });
+});
+
 /* ===========================================================================
    Gate de fidelidad capa 2 (D5+D8): round-trip PROPIO exacto al céntimo.
    =========================================================================== */
@@ -307,5 +431,73 @@ describe('round-trip del seed: obraToBc3 → bc3ToObra EXACTO', () => {
     expect(gp.med).toHaveLength(0);
     expect(partidaCantidad(gp)).toBe(qty);
     expect(pem(data.partidas, 1)).toBe(pem(o.partidas, 1));
+  });
+});
+
+/* ===========================================================================
+   Gate capa 3 (D5): fixture Presto ANONIMIZADO commiteado — ejercita los
+   quirks del dialecto que el writer no produce (fechas, ~T de raíz vacío,
+   línea de sección en ~M, % con precio=pct y rendimiento=fracción, capítulo
+   sin ~M, precios de capítulo/raíz con el redondeo de K POR PRECIO de Presto).
+   =========================================================================== */
+describe('gate capa 3: fixture Presto anonimizado', () => {
+  const FIXTURE = resolve(process.cwd(), 'src', 'core', '__fixtures__', 'presto-mini.bc3');
+  const bytes = new Uint8Array(readFileSync(FIXTURE));
+
+  it('importa el dialecto: estructura, K, % como fracción→porcentaje y línea de sección filtrada', () => {
+    const { data, report } = bc3ToObra(bytes);
+    expect(report.chapters).toBe(2);
+    expect(report.partidas).toBe(3);
+    expect(report.coefK).toBe(1.1);
+    expect(report.medVisible).toBe(2); // E01 (sección filtrada sin romper la suma) y E02; E03 sin ~M
+    // la raíz de Presto redondea precio×K por partida → tolerancia <1 € (D8)
+    expect(Math.abs(report.deltaCents!)).toBeLessThan(100);
+    expect(report.deltaCents).not.toBe(0); // el fixture reproduce esa divergencia a propósito (−0,30 €)
+    const e01 = Object.values(data.partidas).flat().find((p) => p.code === 'E01')!;
+    expect(e01.items.map((it) => [it.code, it.cantidad])).toEqual([
+      ['MO01', 0.2],
+      ['%AUX', 2], // 0.02 del archivo → 2 % en el modelo (drive-by del import)
+    ]);
+    expect(data.recursos['MO01']).toMatchObject({ type: 'MO', precio: 17 });
+  });
+
+  it('re-export → re-import: PEM, estructura y mediciones ESTABLES (idempotencia, sin tolerancia)', () => {
+    const a = bc3ToObra(bytes);
+    const b = bc3ToObra(obraToBc3(a.data));
+    expect(pem(b.data.partidas, b.data.rates.coefK)).toBe(pem(a.data.partidas, a.data.rates.coefK));
+    expect(b.report.chapters).toBe(a.report.chapters);
+    expect(b.report.partidas).toBe(a.report.partidas);
+    expect(b.report.medVisible).toBe(a.report.medVisible);
+    expect(b.report.deltaCents).toBe(0); // nuestra raíz = nuestro PEM exacto
+    const e01 = Object.values(b.data.partidas).flat().find((p) => p.code === 'E01')!;
+    expect(e01.items.map((it) => [it.code, it.cantidad])).toEqual([
+      ['MO01', 0.2],
+      ['%AUX', 2], // el % sobrevive el viaje completo (E01 cuadra con su descompuesto)
+    ]);
+  });
+});
+
+/* ===========================================================================
+   Gate capa 4 (D5): round-trip del .bc3 REAL — LOCAL-ONLY skip-if-missing
+   (docs/spike/samples/ no está en git: datos de cliente).
+   =========================================================================== */
+const REAL = resolve(process.cwd(), 'docs', 'spike', 'samples', 'obra ejemplo.bc3');
+describe.skipIf(!existsSync(REAL))('gate capa 4: round-trip del .bc3 real (local-only)', () => {
+  it('import → export → import: PEM exacto, estructura y mediciones estables', () => {
+    const a = bc3ToObra(new Uint8Array(readFileSync(REAL)));
+    const b = bc3ToObra(obraToBc3(a.data));
+    expect(pem(b.data.partidas, b.data.rates.coefK)).toBe(pem(a.data.partidas, a.data.rates.coefK));
+    expect(b.report.chapters).toBe(a.report.chapters); // 19
+    expect(b.report.partidas).toBe(a.report.partidas); // 167
+    expect(b.report.medVisible).toBe(a.report.medVisible);
+    expect(b.report.coefK).toBe(a.report.coefK);
+    expect(b.report.deltaCents).toBe(0);
+    // precio y cantidad partida a partida (los códigos pueden ganar sufijo .2 por dedupe)
+    const pa = Object.values(a.data.partidas).flat();
+    const pb = Object.values(b.data.partidas).flat();
+    pa.forEach((p, i) => {
+      expect(pb[i]!.precio).toBe(p.precio);
+      expect(partidaCantidad(pb[i]!)).toBe(partidaCantidad(p));
+    });
   });
 });

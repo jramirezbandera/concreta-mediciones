@@ -141,3 +141,4 @@ Origen: revisión de ingeniería (`/plan-eng-review`) + voz externa Codex, 2026-
 - **Cons:** requiere acceso a Arquímedes (licencia/colega); no automatizable. Trabajo: human ~1h con el programa delante / CC 0.
 - **Contexto / dónde empezar:** la checklist ya existe (gate manual de Presto, §F7.4 D5 capa 5); el colega del dogfood podría ejecutarla.
 - **Depende de / bloqueado por:** F7.4 shipeada; acceso a CYPE.
+- **AVANCE (2026-06-11):** la TRAZADORA (no una obra real) ya se abrió en **Arquímedes 2022** con resultado idéntico a Presto (raíz 4.074,19, descomposición y precio cerrado respetados, acentos/€/— OK). Queda la checklist con una obra completa real cuando F7.4 ruede en el dogfood.

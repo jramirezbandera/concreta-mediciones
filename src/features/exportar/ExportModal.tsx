@@ -5,11 +5,12 @@ import type { PrintTarget } from '../print';
 import styles from './Exportar.module.css';
 
 /** Colores de chip por formato (DESIGN.md: PDF=warn, XLSX=ok, DOCX=accent,
- *  BC3=mq). Los formatos llegan por slice ("mostrar solo lo que funciona",
- *  design review D2): PDF (F7.1), Excel (F7.2) y Word (F7.3); BC3 en F7.4. */
+ *  BC3=mq). Los formatos llegaron por slice ("mostrar solo lo que funciona",
+ *  design review D2): PDF (F7.1), Excel (F7.2), Word (F7.3) y BC3 (F7.4). */
 const CHIP_PDF: CSSProperties = { ['--chip' as string]: 'var(--state-warn)' };
 const CHIP_XLSX: CSSProperties = { ['--chip' as string]: 'var(--state-ok)' };
 const CHIP_DOCX: CSSProperties = { ['--chip' as string]: 'var(--accent)' };
+const CHIP_BC3: CSSProperties = { ['--chip' as string]: 'var(--state-mq)' };
 
 function Chip({
   label,
@@ -86,6 +87,7 @@ export function ExportModal({
   onExportPdf,
   onExportXlsx,
   onExportDocx,
+  onExportBc3,
 }: {
   open: boolean;
   onClose: () => void;
@@ -93,6 +95,7 @@ export function ExportModal({
   onExportPdf: (target: PrintTarget) => void;
   onExportXlsx: (target: PrintTarget) => void;
   onExportDocx: (target: PrintTarget) => void;
+  onExportBc3: () => void;
 }): ReactNode {
   const certs = useObraStore((s) => s.certs);
   const doPdf = (target: PrintTarget) => {
@@ -107,6 +110,10 @@ export function ExportModal({
     onClose();
     onExportDocx(target);
   };
+  const doBc3 = () => {
+    onClose();
+    onExportBc3();
+  };
   return (
     <Modal
       open={open}
@@ -118,10 +125,23 @@ export function ExportModal({
       footer={
         <span className={styles.foot}>
           PDF imprimible al instante (Guardar como PDF del navegador) · Word y Excel descargan el
-          archivo · BC3 (FIEBDC-3) llegará en una fase posterior.
+          archivo · BC3 (FIEBDC-3) abre en Presto, Arquímedes y otros.
         </span>
       }
     >
+      {/* Cabecera: la obra completa en el formato de intercambio del sector. */}
+      <div className={styles.row}>
+        <span className={styles.rowIcon}>
+          <Icon name="download" size={17} />
+        </span>
+        <div className={styles.rowBody}>
+          <div className={styles.rowTitle}>Obra completa</div>
+          <div className={styles.rowSub}>Presupuesto y mediciones en FIEBDC-3 (.bc3)</div>
+        </div>
+        <div className={styles.chips}>
+          <Chip label="BC3" fmt="BC3 (FIEBDC-3)" doc="Obra completa" style={CHIP_BC3} onClick={doBc3} />
+        </div>
+      </div>
       <Row
         icon="doc"
         title="Presupuesto y mediciones"

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { CertificacionesView } from './features/certificaciones';
-import { ExportModal, exportDocx, exportXlsx } from './features/exportar';
+import { ExportModal, exportBc3, exportDocx, exportXlsx } from './features/exportar';
 import { ImportarView } from './features/importar';
 import { ObraModal } from './features/obra';
 import { PresupuestoView } from './features/presupuesto';
@@ -110,6 +110,14 @@ export default function App() {
   const exportWord = useCallback((target: PrintTarget) => {
     exportDocx(target).catch((err: unknown) => console.error('Export DOCX falló:', err));
   }, []);
+  // BC3 (F7.4): writer propio síncrono, sin librería (FIEBDC-3 para Presto y cía).
+  const exportObraBc3 = useCallback(() => {
+    try {
+      exportBc3();
+    } catch (err: unknown) {
+      console.error('Export BC3 falló:', err);
+    }
+  }, []);
 
   const changeView = useCallback(
     (v: View) => {
@@ -215,6 +223,7 @@ export default function App() {
         onExportPdf={exportPdf}
         onExportXlsx={exportExcel}
         onExportDocx={exportWord}
+        onExportBc3={exportObraBc3}
       />
       {printTarget && <PrintDoc target={printTarget} onDone={closePrint} />}
 
