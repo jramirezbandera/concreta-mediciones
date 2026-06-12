@@ -45,16 +45,13 @@ export function PartidasCards({
           {g.items.map((p) => (
             <PartidaCard key={p.id} p={p} chapterId={chapter.id} chapterTotal={chapterTotal} />
           ))}
-          {/* Alta solo hasta el nivel 2 en Fase 1 (edición profunda = T-17). */}
-          {g.depth <= 1 && (
-            <button
-              type="button"
-              className={`tcol ${styles.cardsAdd}`}
-              onClick={() => addPartida(chapter.id, g.sub?.id ?? null)}
-            >
-              <Icon name="plus" size={15} /> Añadir partida{g.sub ? ` a ${g.sub.code}` : ''}
-            </button>
-          )}
+          <button
+            type="button"
+            className={`tcol ${styles.cardsAdd}`}
+            onClick={() => addPartida(chapter.id, g.sub?.id ?? null)}
+          >
+            <Icon name="plus" size={15} /> Añadir partida{g.sub ? ` a ${g.sub.code}` : ''}
+          </button>
         </Fragment>
       ))}
     </div>

@@ -1,5 +1,13 @@
 # Plan — Jerarquía de N niveles (Fase 1: camino de lectura)
 
+> **Fase 2 (edición a profundidad, T-17) también IMPLEMENTADA** (2026-06-12,
+> misma rama): `addSubchapter` bajo cualquier contenedor, `deleteSubchapter`
+> a cualquier profundidad con política de PROMOVER (ramas al final de los
+> hermanos con códigos libres, partidas al padre; nunca cascada destructiva),
+> y `moveSubtree` (rama + partidas entre buckets, recodificada bajo el nuevo
+> padre, ids estables). UI: menú ⋮ en el árbol del sidebar, alta de partida a
+> cualquier nivel y destinos profundos en "Mover a". Detalle en TODOS.md T-17.
+
 Estado: **IMPLEMENTADA** (2026-06-12, rama `feat/jerarquia-n-niveles`). T1-T10
 completas; 422 tests en verde (+23 nuevos: árbol, round-trips N-nivel sintético
 y BCCA real, migración v1→v2 por hydrate e import .json, endurecimiento del

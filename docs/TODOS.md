@@ -155,7 +155,11 @@ Origen: revisión de ingeniería (`/plan-eng-review`) + voz externa Codex, 2026-
 - **Cons:** sistematización de bajo riesgo pero amplia (muchos ficheros). POLISH, no bloquea nada. Cazado por Codex + subagente.
 - **Depende de:** idealmente junto con T-15 (misma pasada de tokenización).
 
-## T-17 · Jerarquía de N niveles — Fase 2: edición a profundidad (eng-review 2026-06-12)
+## ~~T-17 · Jerarquía de N niveles — Fase 2: edición a profundidad (eng-review 2026-06-12)~~ HECHA (2026-06-12)
+- **IMPLEMENTADA** en `feat/jerarquia-n-niveles`: `addSubchapter(parentId)` acepta cualquier contenedor; `deleteSubchapter` borra a cualquier profundidad **PROMOVIENDO** (los sub-contenedores pasan al final de los hermanos recodificados con índices libres, las partidas directas suben al padre — se decidió promover, no cascada: borrar nunca destruye ramas ni partidas); nueva `moveSubtree(nodeId, toParentId)` mueve la rama con sus partidas entre buckets de `PartidasMap` recodificándola bajo el nuevo padre (ids estables → las certs no se enteran; rechaza capítulos, destinos fantasma y destinos dentro del propio subárbol). UI: menú ⋮ por fila del sidebar (añadir subcapítulo / mover a / eliminar), alta de partida a cualquier profundidad (fuera el gate `depth<=1`) y "Mover a" de partidas con destinos a cualquier nivel. 8 tests nuevos (429 en verde).
+- Pendiente menor: reordenar contenedores por drag&drop (el menú "Mover a" cuelga al FINAL del destino; no hay orden fino entre hermanos).
+
+### (histórico T-17)
 - **Qué:** las acciones de ESCRITURA estructural a cualquier profundidad: crear sub-subcapítulo bajo cualquier contenedor, mover un subárbol (contenedor + sus partidas + sub-contenedores) entre capítulos, y borrar un contenedor promoviendo o eliminando sus hijos en cascada. Más las afordances de UI para hacerlo en el árbol del sidebar.
 - **Por qué:** la Fase 1 (camino de lectura) deja la jerarquía N-nivel importable, navegable y exportable, pero NO editable bajo el nivel 2 (en Fase 1 esas afordances se DESACTIVAN para no corromper `Partida.sub`). Sin Fase 2, una obra con jerarquía profunda se ve pero no se reestructura a mano.
 - **Pros:** edición completa de la jerarquía; cierra el ciclo (importar profundo → reorganizar → exportar).

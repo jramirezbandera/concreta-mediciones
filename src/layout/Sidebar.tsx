@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { Bar, Icon, InlineCreate, IvaSelect } from '../components';
 import { fmtCents, fmtNum, toEur, type Cents } from '../core/money';
-import { flattenContainers } from '../core/tree';
+import { findNode, flattenContainers, subtreeIds } from '../core/tree';
 import type { Chapter, SubChapter } from '../core/types';
 import {
   ALL,
@@ -106,55 +106,174 @@ interface DropHandlers {
   };
 }
 
+/* ---------- Menú ⋮ de un contenedor del árbol (T-17: edición profunda) ----- */
+function SubMenu({
+  sub,
+  chId,
+  parentId,
+  chapters,
+  onAddChild,
+  onDelete,
+  onClose,
+}: {
+  sub: SubChapter;
+  chId: string;
+  /** Contenedor del que cuelga (el capítulo para depth 1): destino "actual". */
+  parentId: string;
+  chapters: Chapter[];
+  onAddChild: (chId: string, parentId: string) => void;
+  onDelete: (chId: string, subId: string) => void;
+  onClose: () => void;
+}) {
+  const moveSubtree = useObraStore((s) => s.moveSubtree);
+  const [moving, setMoving] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onDoc(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    }
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [onClose]);
+
+  // Destinos de "Mover a": cualquier contenedor FUERA del propio subárbol
+  // (un nodo no puede colgar de sí mismo); el padre actual sale deshabilitado.
+  const branch = subtreeIds(sub);
+  const target = (id: string, code: string, title: string, depth: number) => {
+    const cur = id === parentId;
+    return (
+      <button
+        key={id}
+        type="button"
+        disabled={cur}
+        className={`tcol ${styles.menuTarget}`}
+        style={depth > 0 ? { paddingLeft: 8 + depth * 14 } : undefined}
+        onClick={() => {
+          moveSubtree(sub.id, id);
+          onClose();
+        }}
+      >
+        <span className={`mono ${styles.menuCode}`}>{code}</span>
+        <span className={styles.menuLabel}>{title}</span>
+        {cur && <span className={styles.menuActual}>actual</span>}
+      </button>
+    );
+  };
+
+  return (
+    <div ref={ref} className={styles.subMenuPop} onClick={(e) => e.stopPropagation()}>
+      {moving ? (
+        <>
+          <div className={`sec-head ${styles.menuHead}`}>Mover a</div>
+          <div className={`scroll-thin ${styles.menuList}`}>
+            {chapters.map((ch) => (
+              <div key={ch.id}>
+                {target(ch.id, ch.code, ch.title, 0)}
+                {flattenContainers(ch)
+                  .filter((f) => !branch.has(f.sub.id))
+                  .map((f) => target(f.sub.id, f.sub.code, f.sub.title, f.depth))}
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <>
+          <button
+            type="button"
+            className={`tcol ${styles.menuItem}`}
+            onClick={() => {
+              onAddChild(chId, sub.id);
+              onClose();
+            }}
+          >
+            <Icon name="plus" size={13} /> Añadir subcapítulo
+          </button>
+          <button type="button" className={`tcol ${styles.menuItem}`} onClick={() => setMoving(true)}>
+            <Icon name="move" size={13} /> Mover a…
+          </button>
+          <div className={styles.menuDivider} />
+          <button
+            type="button"
+            className={`tcol ${styles.menuItem} ${styles.menuDanger}`}
+            onClick={() => {
+              onDelete(chId, sub.id);
+              onClose();
+            }}
+          >
+            <Icon name="trash" size={13} /> Eliminar
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
 /* ---------- Fila de subcapítulo (a cualquier profundidad) ------------------ */
 function SubRow({
   sub,
   depth,
   chId,
+  parentId,
+  chapters,
   active,
   onSelect,
   onDelete,
+  onAddChild,
   drop,
 }: {
   sub: SubChapter;
   /** 1 = sub de primer nivel; 2+ = anidado (sangría). */
   depth: number;
   chId: string;
+  /** Contenedor del que cuelga (el capítulo para depth 1). */
+  parentId: string;
+  chapters: Chapter[];
   active: string;
   onSelect: (id: string) => void;
   onDelete: (chId: string, subId: string) => void;
+  onAddChild: (chId: string, parentId: string) => void;
   drop?: DropHandlers;
 }) {
   const on = active === sub.id;
+  const [menuOpen, setMenuOpen] = useState(false);
   const dropProps = drop?.bind(sub.id, chId, sub.id);
-  // Fase 1: solo se borran subs de primer nivel SIN hijos (borrar un contenedor
-  // con sub-contenedores es edición profunda → T-17; el store también lo bloquea).
-  const deletable = depth === 1 && !sub.children?.length;
   return (
-    <button
-      type="button"
-      className={`tcol ${styles.subRow} ${on ? styles.on : ''} ${dropProps?.isOver ? styles.dropOver : ''}`}
-      style={{ paddingLeft: (depth - 1) * 14 }}
-      onClick={() => onSelect(sub.id)}
-      {...dropProps?.events}
-    >
-      <span className={`mono ${styles.subCode}`}>{sub.code}</span>
-      <span className={styles.subTitle}>{sub.title}</span>
-      {deletable && (
+    <div className={styles.subRowWrap}>
+      <button
+        type="button"
+        className={`tcol ${styles.subRow} ${on ? styles.on : ''} ${dropProps?.isOver ? styles.dropOver : ''}`}
+        style={{ paddingLeft: (depth - 1) * 14 }}
+        onClick={() => onSelect(sub.id)}
+        {...dropProps?.events}
+      >
+        <span className={`mono ${styles.subCode}`}>{sub.code}</span>
+        <span className={styles.subTitle}>{sub.title}</span>
         <span
           role="button"
           tabIndex={-1}
-          aria-label="Eliminar subcapítulo"
-          className={`tcol ${styles.subDel}`}
+          aria-label="Acciones del subcapítulo"
+          className={`tcol ${styles.subAct} ${menuOpen ? styles.open : ''}`}
           onClick={(e) => {
             e.stopPropagation();
-            onDelete(chId, sub.id);
+            setMenuOpen((o) => !o);
           }}
         >
-          <Icon name="trash" size={12} />
+          <Icon name="dots" size={13} />
         </span>
+      </button>
+      {menuOpen && (
+        <SubMenu
+          sub={sub}
+          chId={chId}
+          parentId={parentId}
+          chapters={chapters}
+          onAddChild={onAddChild}
+          onDelete={onDelete}
+          onClose={() => setMenuOpen(false)}
+        />
       )}
-    </button>
+    </div>
   );
 }
 
@@ -307,9 +426,11 @@ export function Sidebar({ drawer = false, onAfterSelect }: SidebarProps) {
     setView('presupuesto');
     onAfterSelect?.();
   };
-  const onAddSub = (id: string) => {
-    toggleExpanded(id, true);
-    setCreatingSubFor(id);
+  // `parentId` puede ser el capítulo o un sub a cualquier profundidad (T-17);
+  // el despliegue del sidebar va por capítulo, así que se abre el dueño.
+  const onAddSub = (chId: string, parentId: string = chId) => {
+    toggleExpanded(chId, true);
+    setCreatingSubFor(parentId);
   };
   const onDeleteChapter = (id: string) => {
     const ch = chapters.find((c) => c.id === id);
@@ -317,9 +438,13 @@ export function Sidebar({ drawer = false, onAfterSelect }: SidebarProps) {
       deleteChapter(id);
   };
   const onDeleteSub = (chId: string, subId: string) => {
-    const sub = chapters.find((c) => c.id === chId)?.children?.find((s) => s.id === subId);
-    if (window.confirm(`¿Eliminar el subcapítulo «${sub?.title}»? Sus partidas pasan al capítulo.`))
-      deleteSubchapter(chId, subId);
+    // Borrar PROMUEVE (T-17): las partidas y los sub-contenedores del borrado
+    // suben al nivel superior; el mensaje lo dice según lo que tenga.
+    const node = findNode(chapters, subId)?.node;
+    const msg = node?.children?.length
+      ? `¿Eliminar el subcapítulo «${node?.title}»? Sus subcapítulos y partidas suben al nivel superior.`
+      : `¿Eliminar el subcapítulo «${node?.title}»? Sus partidas suben al nivel superior.`;
+    if (window.confirm(msg)) deleteSubchapter(chId, subId);
   };
 
   return (
@@ -365,23 +490,40 @@ export function Sidebar({ drawer = false, onAfterSelect }: SidebarProps) {
               pct={pem ? ((chapterTotals[ch.id] ?? 0) / pem) * 100 : 0}
               onSelect={select}
               onToggle={toggleExpanded}
-              onAddSub={onAddSub}
+              onAddSub={(id) => onAddSub(id)}
               onDelete={onDeleteChapter}
               drop={drop}
             />
             {ch.children && expanded[ch.id] && (
               <div className={styles.subList}>
                 {flattenContainers(ch).map((f) => (
-                  <SubRow
-                    key={f.sub.id}
-                    sub={f.sub}
-                    depth={f.depth}
-                    chId={ch.id}
-                    active={active}
-                    onSelect={select}
-                    onDelete={onDeleteSub}
-                    drop={drop}
-                  />
+                  <Fragment key={f.sub.id}>
+                    <SubRow
+                      sub={f.sub}
+                      depth={f.depth}
+                      chId={ch.id}
+                      parentId={f.parentId}
+                      chapters={chapters}
+                      active={active}
+                      onSelect={select}
+                      onDelete={onDeleteSub}
+                      onAddChild={onAddSub}
+                      drop={drop}
+                    />
+                    {/* Alta de un HIJO de este sub (T-17), sangrada a su nivel. */}
+                    {creatingSubFor === f.sub.id && (
+                      <div style={{ marginLeft: f.depth * 14 }}>
+                        <InlineCreate
+                          placeholder="Nombre del subcapítulo…"
+                          onCommit={(t) => {
+                            addSubchapter(f.sub.id, t);
+                            setCreatingSubFor(null);
+                          }}
+                          onCancel={() => setCreatingSubFor(null)}
+                        />
+                      </div>
+                    )}
+                  </Fragment>
                 ))}
               </div>
             )}

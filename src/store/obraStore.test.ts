@@ -482,8 +482,8 @@ describe('jerarquía N niveles — endurecimiento Fase 1 (eng-review 2026-06-12)
       .flat()
       .find((p) => p.id === id);
 
-  /** Anida un sub-sub bajo 01.01 directamente en el modelo (la UI de creación
-   *  profunda es Fase 2/T-17; el dato puede venir de un .bc3 importado). */
+  /** Anida un sub-sub bajo 01.01 directamente en el modelo (sin pasar por las
+   *  acciones: este bloque prueba el ENDURECIMIENTO, no la edición de T-17). */
   function nestSubSub(): void {
     useObraStore.setState((s) => {
       const c1 = s.chapters.find((c) => c.id === '01')!;
@@ -511,19 +511,115 @@ describe('jerarquía N niveles — endurecimiento Fase 1 (eng-review 2026-06-12)
     expect(state().partidas['02']!.some((p) => p.id === 'p111')).toBe(false);
   });
 
-  it('deleteSubchapter de un sub CON hijos → bloqueado (edición profunda = Fase 2)', () => {
-    nestSubSub();
-    state().deleteSubchapter('01', '01.01');
-    const c1 = state().chapters.find((c) => c.id === '01')!;
-    expect(c1.children!.some((sc) => sc.id === '01.01')).toBe(true); // sigue
-    expect(findP('p111')!.sub).toBe('01.01'); // sus partidas intactas
-  });
-
   it('copyTargetOf resuelve un sub profundo activo a su capítulo y subId', () => {
     nestSubSub();
     const t = copyTargetOf(state().chapters, '01.01.01');
     expect(t).toMatchObject({ chId: '01', subId: '01.01.01' });
     expect(t.label).toContain('1.1.1');
+  });
+});
+
+describe('jerarquía N niveles — Fase 2: edición a profundidad (T-17)', () => {
+  const ch01 = () => state().partidas['01']!;
+  const c = (id: string) => state().chapters.find((x) => x.id === id)!;
+  const findP = (id: string) => allPartidas().find((p) => p.id === id);
+
+  /** Anida un sub-sub bajo 01.01 directamente en el modelo (como un .bc3). */
+  function nestSubSub(): void {
+    useObraStore.setState((s) => {
+      const c1 = s.chapters.find((x) => x.id === '01')!;
+      c1.children![0]!.children = [{ id: '01.01.01', code: '1.1.1', title: 'Profundo' }];
+    });
+  }
+
+  it('addSubchapter bajo un sub: código <padre>.<n>, recursivo, y despliega el capítulo dueño', () => {
+    state().addSubchapter('01.01', 'Nivel 3');
+    const s11 = c('01').children![0]!;
+    expect(s11.children).toHaveLength(1);
+    expect(s11.children![0]).toMatchObject({ id: '01.01.01', code: '1.1.1', title: 'Nivel 3' });
+    expect(state().expanded['01']).toBe(true);
+    // …y bajo el nuevo nivel, otro más (recursivo de verdad).
+    state().addSubchapter('01.01.01', 'Nivel 4');
+    expect(c('01').children![0]!.children![0]!.children![0]).toMatchObject({
+      id: '01.01.01.01',
+      code: '1.1.1.1',
+    });
+  });
+
+  it('addSubchapter con padre inexistente → no-op', () => {
+    const antes = JSON.stringify(state().chapters);
+    state().addSubchapter('no-existe', 'Huérfano');
+    expect(JSON.stringify(state().chapters)).toBe(antes);
+  });
+
+  it('deleteSubchapter CON hijos → PROMUEVE: ramas al final con código libre, partidas al padre', () => {
+    nestSubSub();
+    state().setActive('01.01');
+    state().deleteSubchapter('01', '01.01');
+    const c1 = c('01');
+    expect(c1.children!.some((sc) => sc.id === '01.01')).toBe(false);
+    // El nieto sube al final de los hermanos con el siguiente código libre
+    // (1.2/1.3 siguen; política de huecos: el 1.1 no se rellena).
+    const promoted = c1.children!.at(-1)!;
+    expect(promoted).toMatchObject({ id: '01.01.01', code: '1.4' });
+    // Las partidas directas del borrado suben al capítulo, renumeradas.
+    expect(findP('p111')!.sub).toBeUndefined();
+    expect(findP('p111')!.pos).toBe('1.1');
+    expect(state().active).toBe('01'); // el activo salta al padre
+  });
+
+  it('deleteSubchapter de un sub PROFUNDO: sus partidas suben a su PADRE, no al capítulo', () => {
+    nestSubSub();
+    state().addPartida('01', '01.01.01');
+    state().setActive('01.01.01');
+    state().deleteSubchapter('01', '01.01.01');
+    const nueva = ch01().find((p) => p.code === '——')!;
+    expect(nueva.sub).toBe('01.01'); // al padre 01.01, no a undefined
+    expect(nueva.pos).toBe('1.1.4'); // detrás de p111-p113
+    expect(state().active).toBe('01.01');
+  });
+
+  it('moveSubtree entre capítulos: rama recodificada, partidas de bucket y PEM conservado', () => {
+    nestSubSub();
+    const pem0 = toEur(selectPem(state()));
+    state().moveSubtree('01.01', '02'); // cap 02 no tiene subcapítulos
+    const s = state();
+    expect(c('01').children!.some((sc) => sc.id === '01.01')).toBe(false);
+    const moved = c('02').children!.find((sc) => sc.id === '01.01')!;
+    expect(moved.code).toBe('2.1'); // recodificado bajo el nuevo padre…
+    expect(moved.children![0]).toMatchObject({ id: '01.01.01', code: '2.1.1' }); // …con su rama
+    // Las partidas del subárbol cambian de bucket SIN cambiar id ni sub.
+    expect(s.partidas['01']!.some((p) => p.id === 'p111')).toBe(false);
+    const p111 = s.partidas['02']!.find((p) => p.id === 'p111')!;
+    expect(p111.sub).toBe('01.01');
+    expect(p111.pos).toBe('2.1.1'); // renumerada bajo la ruta nueva
+    expect(toEur(selectPem(s))).toBe(pem0); // mover no crea ni destruye importe
+    expect(s.expanded['02']).toBe(true);
+  });
+
+  it('moveSubtree DENTRO del mismo capítulo (reparent): recodifica sin tocar el bucket', () => {
+    nestSubSub();
+    const n0 = ch01().length;
+    state().moveSubtree('01.01.01', '01.02');
+    const s102 = c('01').children!.find((sc) => sc.id === '01.02')!;
+    expect(s102.children![0]).toMatchObject({ id: '01.01.01', code: '1.2.1' });
+    expect(ch01()).toHaveLength(n0); // mismas partidas en el mismo bucket
+  });
+
+  it('moveSubtree rechaza: destino en el propio subárbol, inexistente, capítulos y el padre actual', () => {
+    nestSubSub();
+    const antes = JSON.stringify(state().chapters);
+    state().moveSubtree('01.01', '01.01.01'); // dentro de su propio subárbol (ciclo)
+    state().moveSubtree('01.01', 'no-existe'); // destino fantasma
+    state().moveSubtree('01', '02'); // los capítulos no se mueven
+    state().moveSubtree('01.01', '01'); // ya cuelga de ahí ("actual")
+    expect(JSON.stringify(state().chapters)).toBe(antes);
+  });
+
+  it('moveSubtree conserva el dato de certificación (indexado por id de partida)', () => {
+    const certData0 = JSON.stringify(state().certs.map((x) => x.data));
+    state().moveSubtree('01.01', '02');
+    expect(JSON.stringify(state().certs.map((x) => x.data))).toBe(certData0);
   });
 });
 

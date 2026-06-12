@@ -47,6 +47,23 @@ export function flattenContainers(chapter: Chapter): FlatContainer[] {
   return out;
 }
 
+/**
+ * Ids del subárbol de un contenedor (él mismo + TODOS sus descendientes).
+ * Lo usan la edición a profundidad (T-17): `moveSubtree` mueve las partidas
+ * cuyo `sub` cae dentro del conjunto, y el menú "Mover a" excluye el propio
+ * subárbol como destino (un nodo no puede colgar de sí mismo).
+ */
+export function subtreeIds(node: SubChapter): Set<string> {
+  const ids = new Set<string>();
+  const walk = (n: SubChapter): void => {
+    if (ids.has(n.id)) return; // ciclo (dato corrupto): corta la repetición
+    ids.add(n.id);
+    for (const c of n.children ?? []) walk(c);
+  };
+  walk(node);
+  return ids;
+}
+
 /** Resultado de buscar un contenedor (capítulo o sub a cualquier nivel). */
 export interface FoundNode {
   chapter: Chapter;

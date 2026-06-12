@@ -293,7 +293,10 @@
   white-space: nowrap;
   font-size: 12.5px;
 }
-.subDel {
+.subRowWrap {
+  position: relative;
+}
+.subAct {
   display: grid;
   place-items: center;
   width: 18px;
@@ -306,14 +309,106 @@
   flex-shrink: 0;
   opacity: 0;
 }
-.subRow:hover .subDel,
-.subRow.on .subDel {
+.subRow:hover .subAct,
+.subRow.on .subAct,
+.subAct.open {
   opacity: 1;
 }
-.subDel:hover {
-  background: color-mix(in srgb, var(--state-warn) 16%, transparent);
+.subAct:hover,
+.subAct.open {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+/* ---------- menú ⋮ de subcapítulo (T-17: edición a profundidad) ----------- */
+.subMenuPop {
+  position: absolute;
+  top: 28px;
+  right: 0;
+  width: 226px;
+  z-index: 300;
+  padding: 5px;
+  border-radius: 10px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-main);
+  box-shadow: var(--shadow-float);
+}
+.menuItem {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--text-primary);
+}
+.menuItem:hover {
+  background: var(--bg-elevated);
+}
+.menuDanger {
   color: var(--state-warn);
 }
+.menuDanger:hover {
+  background: color-mix(in srgb, var(--state-warn) 16%, transparent);
+}
+.menuDivider {
+  height: 1px;
+  background: var(--border-sub);
+  margin: 4px 6px;
+}
+.menuHead {
+  padding: 4px 8px 6px;
+}
+.menuList {
+  max-height: 240px;
+  overflow-y: auto;
+}
+.menuTarget {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+.menuTarget:hover:not(:disabled) {
+  background: var(--bg-elevated);
+}
+.menuTarget:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.menuCode {
+  font-size: 10.5px;
+  color: var(--text-disabled);
+  flex-shrink: 0;
+}
+.menuLabel {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.menuActual {
+  font-size: 10px;
+  color: var(--text-disabled);
+  flex-shrink: 0;
+}
+
 .createSub {
   margin-left: 26px;
   margin-top: 2px;

@@ -20,7 +20,7 @@ import { buildRecursos, precioCuadraDescompuesto, precioSegunModo } from '../cor
 import { estaCertToOrigen, prevDataOf, sumLineQty } from '../core/certificacion';
 import { round2 } from '../core/money';
 import { renumberChapter } from '../core/numbering';
-import { findNode, flattenContainers } from '../core/tree';
+import { findNode, flattenContainers, subtreeIds } from '../core/tree';
 import type { ImportedObra } from '../core/bc3import';
 import { REF_DESC, REF_SOURCES, type RefCopyItem, type RefDrag } from '../core/refdata';
 import { CHAPTERS, DEFAULT_OBRA, DEFAULT_RATES, PARTIDAS, makeCertsInit } from '../core/seed';
@@ -32,6 +32,48 @@ export const ALL = '__ALL__';
 /** Sub del capítulo por id, a CUALQUIER profundidad (jerarquía N niveles). */
 function subIn(ch: Chapter, subId: string): SubChapter | undefined {
   return flattenContainers(ch).find((f) => f.sub.id === subId)?.sub;
+}
+
+/**
+ * Siguiente índice libre entre los hijos de un contenedor: max(último segmento
+ * numérico de los códigos) + 1. Política de huecos (igual que `addChapter`):
+ * borrar no recodifica a los hermanos, así que el hueco no se rellena.
+ */
+function nextChildNum(parent: Chapter | SubChapter): number {
+  return (
+    (parent.children ?? []).reduce(
+      (m, sub) => Math.max(m, parseInt(String(sub.code).split('.').at(-1) ?? '', 10) || 0),
+      0,
+    ) + 1
+  );
+}
+
+/**
+ * Recodifica un subárbol bajo un código nuevo: el nodo toma `code` y sus
+ * descendientes pasan a índices secuenciales (`code.1`, `code.2`…). Lo usan
+ * promover (deleteSubchapter) y mover (moveSubtree): el código de un contenedor
+ * es su RUTA, así que cambiar de padre obliga a reescribir toda la rama. Los
+ * ids NO cambian (son los que referencian `Partida.sub` y `active`).
+ */
+function recodeSubtree(node: SubChapter, code: string): void {
+  const seen = new Set<SubChapter>();
+  const walk = (n: SubChapter, c: string): void => {
+    if (seen.has(n)) return; // ciclo (dato corrupto)
+    seen.add(n);
+    n.code = c;
+    (n.children ?? []).forEach((child, i) => walk(child, `${c}.${i + 1}`));
+  };
+  walk(node, code);
+}
+
+/**
+ * Contenedor PADRE de un sub dentro de su capítulo (el propio capítulo para
+ * los de primer nivel), o `null` si el sub no existe en él.
+ */
+function parentOf(ch: Chapter, subId: string): Chapter | SubChapter | null {
+  const f = flattenContainers(ch).find((x) => x.sub.id === subId);
+  if (!f) return null;
+  return f.parentId === ch.id ? ch : (subIn(ch, f.parentId) ?? null);
 }
 
 /**
@@ -291,12 +333,30 @@ export interface ObraState extends ObraData {
   /* ---- acciones F2.4 (CRUD estructural + renumeración) ---- */
   /** Añade un capítulo (código = max+1) y lo deja activo en la vista Presupuesto. */
   addChapter: (title: string) => void;
-  /** Añade un subcapítulo al capítulo (código `<cap>.<n>`) y despliega el padre. */
-  addSubchapter: (chapterId: string, title: string) => void;
+  /**
+   * Añade un subcapítulo bajo CUALQUIER contenedor (capítulo o sub a cualquier
+   * profundidad, T-17): código `<padre>.<n>` (siguiente índice libre) y
+   * despliega el capítulo dueño. Un `parentId` inexistente es no-op.
+   */
+  addSubchapter: (parentId: string, title: string) => void;
   /** Elimina un capítulo y sus partidas; si estaba activo, salta a "Toda la obra". */
   deleteChapter: (chapterId: string) => void;
-  /** Elimina un subcapítulo; sus partidas suben al capítulo (renumeradas). */
+  /**
+   * Elimina un contenedor a CUALQUIER profundidad (T-17). Sus hijos se
+   * PROMUEVEN al final de los hermanos (recodificados con índices libres) y
+   * sus partidas directas suben al contenedor padre — borrar nunca destruye
+   * ramas ni partidas. Si estaba activo, el activo salta al padre.
+   */
   deleteSubchapter: (chapterId: string, subId: string) => void;
+  /**
+   * Mueve un SUBÁRBOL (contenedor + sub-contenedores + sus partidas) bajo otro
+   * contenedor, incluso de otro capítulo (T-17): las partidas del subárbol
+   * cambian de bucket en `PartidasMap` (la clave sigue siendo el capítulo) y la
+   * rama se recodifica bajo el código del nuevo padre. Los ids no cambian (las
+   * certs, indexadas por id de partida, no se enteran). Rechaza (no-op) mover
+   * un capítulo, un destino inexistente o un destino DENTRO del propio subárbol.
+   */
+  moveSubtree: (nodeId: string, toParentId: string) => void;
   /** Añade una partida vacía al capítulo/subcapítulo, con su `pos` correlativa. */
   addPartida: (chapterId: string, subId: string | null) => void;
   /** Elimina una partida y renumera su capítulo. */
@@ -769,22 +829,19 @@ export const useObraStore = create<ObraState>()(
           s.active = id;
         }),
 
-      addSubchapter: (chapterId, title) =>
+      addSubchapter: (parentId, title) =>
         set((s) => {
-          const c = s.chapters.find((ch) => ch.id === chapterId);
-          if (!c) return;
-          if (!c.children) c.children = [];
-          const n =
-            c.children.reduce(
-              (m, sub) => Math.max(m, parseInt(String(sub.code).split('.')[1] ?? '', 10) || 0),
-              0,
-            ) + 1;
-          c.children.push({
-            id: `${c.id}.${String(n).padStart(2, '0')}`,
-            code: `${c.code}.${n}`,
+          // El padre puede ser un capítulo o un sub a cualquier profundidad.
+          const hit = findNode(s.chapters, parentId);
+          if (!hit) return;
+          const parent = hit.node;
+          const n = nextChildNum(parent);
+          (parent.children ??= []).push({
+            id: `${parent.id}.${String(n).padStart(2, '0')}`,
+            code: `${parent.code}.${n}`,
             title,
           });
-          s.expanded[chapterId] = true;
+          s.expanded[hit.chapter.id] = true;
         }),
 
       deleteChapter: (chapterId) =>
@@ -801,18 +858,65 @@ export const useObraStore = create<ObraState>()(
       deleteSubchapter: (chapterId, subId) =>
         set((s) => {
           const ch = s.chapters.find((c) => c.id === chapterId);
-          const si = ch?.children?.findIndex((sc) => sc.id === subId) ?? -1;
-          if (!ch?.children || si < 0) return;
-          // Fase 1: borrar un contenedor CON sub-contenedores es edición
-          // profunda (qué pasa con los nietos: ¿promover? ¿cascada?) → T-17.
-          // Se bloquea aquí (la UI oculta la papelera en esos subs).
-          if (ch.children[si]!.children?.length) return;
-          ch.children.splice(si, 1);
-          // Las partidas del sub borrado suben al capítulo (sub = undefined).
+          if (!ch) return;
+          const parent = parentOf(ch, subId);
+          const siblings = parent?.children;
+          const si = siblings?.findIndex((sc) => sc.id === subId) ?? -1;
+          if (!parent || !siblings || si < 0) return;
+          const node = siblings.splice(si, 1)[0]!;
+          // PROMOVER, no cascada (T-17): los hijos del borrado pasan al final
+          // de los hermanos, recodificados con los índices libres siguientes
+          // (política de huecos: los hermanos no se recodifican). Borrar un
+          // contenedor nunca destruye sus ramas ni sus partidas.
+          for (const child of node.children ?? []) {
+            recodeSubtree(child, `${parent.code}.${nextChildNum(parent)}`);
+            siblings.push(child);
+          }
+          // Las partidas directas del borrado suben al contenedor padre
+          // (`sub = undefined` si el padre es el capítulo).
+          const parentSubId = parent === ch ? undefined : parent.id;
           const list = s.partidas[chapterId] ?? [];
-          for (const p of list) if (p.sub === subId) p.sub = undefined;
+          for (const p of list) if (p.sub === subId) p.sub = parentSubId;
           renumberInPlace(ch, list);
-          if (s.active === subId) s.active = chapterId;
+          if (s.active === subId) s.active = parentSubId ?? chapterId;
+        }),
+
+      moveSubtree: (nodeId, toParentId) =>
+        set((s) => {
+          if (nodeId === toParentId) return;
+          const src = findNode(s.chapters, nodeId);
+          const dst = findNode(s.chapters, toParentId);
+          // Los capítulos no se mueven (depth 0); destino inexistente = no-op.
+          if (!src || !dst || src.depth === 0) return;
+          const node = src.node as SubChapter;
+          // El destino no puede caer DENTRO del subárbol movido (sería un ciclo
+          // estructural: un contenedor colgando de su propio descendiente).
+          const branch = subtreeIds(node);
+          if (branch.has(toParentId)) return;
+          const fromCh = src.chapter;
+          const fromParent = parentOf(fromCh, nodeId);
+          const fi = fromParent?.children?.findIndex((sc) => sc.id === nodeId) ?? -1;
+          if (!fromParent || fi < 0) return;
+          if (fromParent === dst.node) return; // ya cuelga de ahí
+          fromParent.children!.splice(fi, 1);
+          // Engancha al final del destino y recodifica la rama bajo su código.
+          const toParent = dst.node;
+          recodeSubtree(node, `${toParent.code}.${nextChildNum(toParent)}`);
+          (toParent.children ??= []).push(node);
+          // Las partidas del subárbol cambian de bucket si cambia el capítulo
+          // (los ids no cambian: el dato de cert, por id de partida, no se toca).
+          const toChId = dst.chapter.id;
+          if (toChId !== fromCh.id) {
+            const fromList = s.partidas[fromCh.id] ?? [];
+            const moving = fromList.filter((p) => p.sub != null && branch.has(p.sub));
+            if (moving.length) {
+              s.partidas[fromCh.id] = fromList.filter((p) => !(p.sub != null && branch.has(p.sub)));
+              (s.partidas[toChId] ??= []).push(...moving);
+            }
+            renumberInPlace(fromCh, s.partidas[fromCh.id] ?? []);
+          }
+          renumberInPlace(dst.chapter, s.partidas[toChId] ?? []);
+          s.expanded[toChId] = true;
         }),
 
       addPartida: (chapterId, subId) =>
