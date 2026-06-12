@@ -1,6 +1,7 @@
 import { useMemo, useRef } from 'react';
 import { EmptyAction, EmptyState, Icon } from '../../components';
 import type { Chapter } from '../../core/types';
+import { findNode } from '../../core/tree';
 import { useElementWidth } from '../../hooks/useElementWidth';
 import { ALL, selectChapterTotals, selectPem, useObraStore } from '../../store';
 import { AllChapters } from './AllChapters';
@@ -58,10 +59,9 @@ export function PresupuestoView({
   const pem = useObraStore(selectPem);
   const addChapter = useObraStore((s) => s.addChapter);
 
+  // Resuelve el id activo (capítulo o sub a CUALQUIER profundidad) a su capítulo.
   const activeChapter = useMemo(
-    () =>
-      chapters.find((ch) => ch.id === active || ch.children?.some((c) => c.id === active)) ??
-      chapters[0],
+    () => findNode(chapters, active)?.chapter ?? chapters[0],
     [active, chapters],
   );
 

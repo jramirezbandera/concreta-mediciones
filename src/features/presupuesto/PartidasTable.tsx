@@ -4,17 +4,19 @@ import { partidaImporte } from '../../core/medicion';
 import { fmtNum, sumCents, toEur, type Cents } from '../../core/money';
 import type { Chapter, Partida, SubChapter } from '../../core/types';
 import { groupBySub } from '../../core/grouping';
+import { rollupByDepth } from '../../core/tree';
 import { useGridNav } from '../../hooks/useGridNav';
 import { useObraStore } from '../../store';
 import { PartidaRow } from './PartidaRow';
 import styles from './Presupuesto.module.css';
 
-/** Fila separadora de subcapítulo con su subtotal. */
-function SubHeaderRow({ sub, importe }: { sub: SubChapter; importe: Cents }) {
+/** Fila separadora de subcapítulo: sangrada por profundidad, con el subtotal
+ *  ACUMULADO de su subárbol (directas + descendientes). */
+function SubHeaderRow({ sub, depth, importe }: { sub: SubChapter; depth: number; importe: Cents }) {
   return (
     <tr className={styles.subRow}>
       <td colSpan={5}>
-        <div className={styles.subLabel}>
+        <div className={styles.subLabel} style={{ paddingLeft: (depth - 1) * 16 }}>
           <span className={`mono ${styles.subCode}`}>{sub.code}</span>
           <span className={`caps ${styles.subTitle}`}>{sub.title}</span>
         </div>
@@ -27,7 +29,8 @@ function SubHeaderRow({ sub, importe }: { sub: SubChapter; importe: Cents }) {
 
 /**
  * Tabla de partidas de un capítulo (F2.1, lectura): cabecera + grupos por
- * subcapítulo. La cantidad/importe de cada fila los calcula `usePartidaRow`.
+ * contenedor en PRE-ORDEN del árbol (N niveles, sangrados por profundidad).
+ * La cantidad/importe de cada fila los calcula `usePartidaRow`.
  */
 export function PartidasTable({
   chapter,
@@ -44,7 +47,14 @@ export function PartidasTable({
   const addPartida = useObraStore((s) => s.addPartida);
   const gridNav = useGridNav();
   const groups = useMemo(() => groupBySub(chapter, partidas), [chapter, partidas]);
-  const subTotal = (items: Partida[]): Cents => sumCents(items.map((p) => partidaImporte(p, coefK)));
+  const rollups = useMemo(
+    () =>
+      rollupByDepth(
+        groups,
+        groups.map((g) => sumCents(g.items.map((p) => partidaImporte(p, coefK)))),
+      ),
+    [groups, coefK],
+  );
 
   return (
     <div className={styles.tableWrap} onKeyDown={gridNav}>
@@ -63,21 +73,25 @@ export function PartidasTable({
         <tbody>
           {groups.map((g, gi) => (
             <Fragment key={g.sub?.id ?? `orphan-${gi}`}>
-              {g.sub && <SubHeaderRow sub={g.sub} importe={subTotal(g.items)} />}
+              {g.sub && <SubHeaderRow sub={g.sub} depth={g.depth} importe={rollups[gi] ?? 0} />}
               {g.items.map((p) => (
                 <PartidaRow key={p.id} p={p} chapterId={chapter.id} chapterTotal={chapterTotal} />
               ))}
-              <tr className={styles.addRow}>
-                <td colSpan={7}>
-                  <button
-                    type="button"
-                    className={`tcol add-partida ${styles.addBtn}`}
-                    onClick={() => addPartida(chapter.id, g.sub?.id ?? null)}
-                  >
-                    <Icon name="plus" size={13} /> Añadir partida{g.sub ? ` a ${g.sub.code}` : ''}
-                  </button>
-                </td>
-              </tr>
+              {/* Alta solo hasta el nivel 2 en Fase 1: crear/editar contenedores
+                  más profundos es edición estructural (T-17). */}
+              {g.depth <= 1 && (
+                <tr className={styles.addRow}>
+                  <td colSpan={7}>
+                    <button
+                      type="button"
+                      className={`tcol add-partida ${styles.addBtn}`}
+                      onClick={() => addPartida(chapter.id, g.sub?.id ?? null)}
+                    >
+                      <Icon name="plus" size={13} /> Añadir partida{g.sub ? ` a ${g.sub.code}` : ''}
+                    </button>
+                  </td>
+                </tr>
+              )}
             </Fragment>
           ))}
         </tbody>

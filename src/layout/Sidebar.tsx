@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Bar, Icon, InlineCreate, IvaSelect } from '../components';
 import { fmtCents, fmtNum, toEur, type Cents } from '../core/money';
+import { flattenContainers } from '../core/tree';
 import type { Chapter, SubChapter } from '../core/types';
 import {
   ALL,
@@ -105,9 +106,10 @@ interface DropHandlers {
   };
 }
 
-/* ---------- Fila de subcapítulo ------------------------------------------- */
+/* ---------- Fila de subcapítulo (a cualquier profundidad) ------------------ */
 function SubRow({
   sub,
+  depth,
   chId,
   active,
   onSelect,
@@ -115,6 +117,8 @@ function SubRow({
   drop,
 }: {
   sub: SubChapter;
+  /** 1 = sub de primer nivel; 2+ = anidado (sangría). */
+  depth: number;
   chId: string;
   active: string;
   onSelect: (id: string) => void;
@@ -123,27 +127,33 @@ function SubRow({
 }) {
   const on = active === sub.id;
   const dropProps = drop?.bind(sub.id, chId, sub.id);
+  // Fase 1: solo se borran subs de primer nivel SIN hijos (borrar un contenedor
+  // con sub-contenedores es edición profunda → T-17; el store también lo bloquea).
+  const deletable = depth === 1 && !sub.children?.length;
   return (
     <button
       type="button"
       className={`tcol ${styles.subRow} ${on ? styles.on : ''} ${dropProps?.isOver ? styles.dropOver : ''}`}
+      style={{ paddingLeft: (depth - 1) * 14 }}
       onClick={() => onSelect(sub.id)}
       {...dropProps?.events}
     >
       <span className={`mono ${styles.subCode}`}>{sub.code}</span>
       <span className={styles.subTitle}>{sub.title}</span>
-      <span
-        role="button"
-        tabIndex={-1}
-        aria-label="Eliminar subcapítulo"
-        className={`tcol ${styles.subDel}`}
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete(chId, sub.id);
-        }}
-      >
-        <Icon name="trash" size={12} />
-      </span>
+      {deletable && (
+        <span
+          role="button"
+          tabIndex={-1}
+          aria-label="Eliminar subcapítulo"
+          className={`tcol ${styles.subDel}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(chId, sub.id);
+          }}
+        >
+          <Icon name="trash" size={12} />
+        </span>
+      )}
     </button>
   );
 }
@@ -172,7 +182,8 @@ function ChapterCard({
   onDelete: (id: string) => void;
   drop?: DropHandlers;
 }) {
-  const isActive = active === ch.id || !!ch.children?.some((c) => c.id === active);
+  // Activo si es el propio capítulo o CUALQUIER descendiente (N niveles).
+  const isActive = active === ch.id || flattenContainers(ch).some((f) => f.sub.id === active);
   const hasChildren = !!ch.children?.length;
   const dropProps = drop?.bind(ch.id, ch.id, null);
   return (
@@ -360,10 +371,11 @@ export function Sidebar({ drawer = false, onAfterSelect }: SidebarProps) {
             />
             {ch.children && expanded[ch.id] && (
               <div className={styles.subList}>
-                {ch.children.map((sub) => (
+                {flattenContainers(ch).map((f) => (
                   <SubRow
-                    key={sub.id}
-                    sub={sub}
+                    key={f.sub.id}
+                    sub={f.sub}
+                    depth={f.depth}
                     chId={ch.id}
                     active={active}
                     onSelect={select}

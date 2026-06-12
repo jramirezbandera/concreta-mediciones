@@ -154,3 +154,11 @@ Origen: revisión de ingeniería (`/plan-eng-review`) + voz externa Codex, 2026-
 - **Por qué:** sin tokens, la coherencia depende de no equivocarse al copiar; un token previene la deriva.
 - **Cons:** sistematización de bajo riesgo pero amplia (muchos ficheros). POLISH, no bloquea nada. Cazado por Codex + subagente.
 - **Depende de:** idealmente junto con T-15 (misma pasada de tokenización).
+
+## T-17 · Jerarquía de N niveles — Fase 2: edición a profundidad (eng-review 2026-06-12)
+- **Qué:** las acciones de ESCRITURA estructural a cualquier profundidad: crear sub-subcapítulo bajo cualquier contenedor, mover un subárbol (contenedor + sus partidas + sub-contenedores) entre capítulos, y borrar un contenedor promoviendo o eliminando sus hijos en cascada. Más las afordances de UI para hacerlo en el árbol del sidebar.
+- **Por qué:** la Fase 1 (camino de lectura) deja la jerarquía N-nivel importable, navegable y exportable, pero NO editable bajo el nivel 2 (en Fase 1 esas afordances se DESACTIVAN para no corromper `Partida.sub`). Sin Fase 2, una obra con jerarquía profunda se ve pero no se reestructura a mano.
+- **Pros:** edición completa de la jerarquía; cierra el ciclo (importar profundo → reorganizar → exportar).
+- **Cons:** es el camino de escritura, el más espinoso. `movePartida`/`moveSubtree` entre capítulos arrastra partidas entre buckets de `PartidasMap` (la clave sigue siendo el capítulo); `deleteSubchapter` recursivo debe decidir promover vs borrar en cascada. Diff grande, riesgo de dejar `sub` huérfanos.
+- **Contexto / dónde empezar:** la Fase 1 ya deja `core/tree.ts` (helper de estructura acotado a view-model), `findNode`/`findChapterIdForContainer`, el tipo recursivo y `addPartida`/`movePartida` endurecidos para RECHAZAR subId inexistente. Fase 2 = generalizar esas acciones del store a profundidad + UI. Empezar por `addSubchapter(parentId)` a cualquier nivel y `moveSubtree(fromChId, nodeId, toChId, toParentId)`.
+- **Depende de / bloqueado por:** Fase 1 mergeada (plan en `docs/plan-jerarquia-n-niveles.md`).
