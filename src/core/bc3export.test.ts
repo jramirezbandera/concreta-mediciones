@@ -158,6 +158,29 @@ describe('round-trip N niveles: exportar → reimportar conserva el árbol', () 
     expect(shape(re.data.chapters)).toEqual(shape(first.data.chapters));
     expect(re.report.partidas).toBe(first.report.partidas);
     expect(re.report.pemCents).toBe(first.report.pemCents);
+    // Los 2 conceptos de código con byte no ASCII inicial que el parser (fork)
+    // recupera del BCCA sobreviven al ciclo: el encoder cp1252 es round-trip
+    // estable en 0x80–0x9F y sanCode no toca la identidad del código. Siguen
+    // en el banco y en la justificación de su partida, en el mismo orden.
+    const traps = (b: Record<string, unknown>): string[] =>
+      Object.keys(b)
+        .filter((c) => c.endsWith('KLLKJKJ') || c.endsWith('LKKJJHDD'))
+        .sort();
+    expect(traps(first.data.recursos)).toHaveLength(2);
+    expect(traps(re.data.recursos)).toEqual(traps(first.data.recursos));
+    const itemsOf = (d: typeof first.data, pcode: string): string[] =>
+      Object.values(d.partidas)
+        .flat()
+        .find((p) => p.code === pcode)!
+        .items.map((i) => i.code);
+    expect(itemsOf(first.data, '06DPC80521').some((c) => c.endsWith('KLLKJKJ'))).toBe(true);
+    // Módulo el sufijo de dedupe D2: en un BANCO un precio básico (TO00900) es
+    // a la vez partida hoja («Precios Básicos») y recurso de justificaciones;
+    // el export les da identidades separadas (TO00900 / TO00900.2) en vez de
+    // fusionarlas en silencio como haría Presto. El código BASE se conserva.
+    const base = (c: string): string => c.replace(/\.\d+$/, '');
+    expect(itemsOf(re.data, '06DPC80521').map(base)).toEqual(itemsOf(first.data, '06DPC80521'));
+    expect(itemsOf(re.data, '10LWW90040').map(base)).toEqual(itemsOf(first.data, '10LWW90040'));
   }, 60000);
 });
 
