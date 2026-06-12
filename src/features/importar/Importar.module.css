@@ -243,3 +243,50 @@
 .confirm:hover {
   filter: brightness(1.05);
 }
+.confirm:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* ---- modal de confirmación de reemplazo ---- */
+.confirmBody {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--text-secondary);
+}
+.confirmBody strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.cancel {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 9px;
+  border: 1px solid var(--border-main);
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--text-secondary);
+}
+.cancel:hover {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+.danger {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 9px;
+  border: 0;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--on-accent);
+  background: var(--state-danger);
+}
+.danger:hover {
+  filter: brightness(1.05);
+}

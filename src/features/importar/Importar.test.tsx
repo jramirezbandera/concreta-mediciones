@@ -20,7 +20,7 @@ function sampleFile(name: string): File {
 }
 
 describe('ImportarView (F5.3)', () => {
-  it('parsea un .bc3 real, muestra el resumen y al confirmar reemplaza la obra', async () => {
+  it('parsea un .bc3 real, pide confirmación y al confirmar reemplaza la obra', async () => {
     const { container } = render(<ImportarView compact={false} />);
     const input = container.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(input, { target: { files: [sampleFile('obra ejemplo.bc3')] } });
@@ -30,12 +30,31 @@ describe('ImportarView (F5.3)', () => {
     expect(screen.getByText('obra ejemplo.bc3')).toBeInTheDocument();
     expect(screen.getByText('×1,1300')).toBeInTheDocument(); // coef K
 
+    // El botón NO reemplaza directamente: abre el modal de confirmación, que
+    // enseña qué se pierde (obra actual) y qué entra (la del .bc3).
     fireEvent.click(screen.getByText('Cargar al presupuesto'));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('Reemplazar la obra actual');
+    expect(dialog).toHaveTextContent('VIVIENDA UNIFAMILIAR ESPIGA');
+
+    fireEvent.click(screen.getByText('Reemplazar y cargar'));
     const s = useObraStore.getState();
     expect(s.chapters).toHaveLength(19);
     expect(Object.values(s.partidas).reduce((a, ps) => a + ps.length, 0)).toBe(167);
     expect(s.view).toBe('presupuesto');
     expect(s.rates.coefK).toBe(1.13);
+  });
+
+  it('cancelar el modal no toca la obra actual', async () => {
+    const { container } = render(<ImportarView compact={false} />);
+    const seedChapters = useObraStore.getState().chapters.length;
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [sampleFile('obra ejemplo.bc3')] } });
+
+    fireEvent.click(await screen.findByText('Cargar al presupuesto'));
+    fireEvent.click(await screen.findByText('Cancelar'));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(useObraStore.getState().chapters).toHaveLength(seedChapters); // intacta
   });
 
   it('muestra un error legible ante un archivo que no es .bc3', async () => {

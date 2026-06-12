@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react';
-import { Icon } from '../../components';
-import { bc3ToObra, Bc3ImportError, type Bc3ImportResult } from '../../core/bc3import';
+import { Icon, Modal } from '../../components';
+import { Bc3ImportError, type Bc3ImportResult } from '../../core/bc3import';
 import { fmtCents, fmtNum, toEur } from '../../core/money';
-import { useObraStore } from '../../store';
+import { selectPem, useObraStore } from '../../store';
+import { parseBc3 } from './parseBc3';
 import styles from './Importar.module.css';
 
 /** Lee un File como bytes. Usa `arrayBuffer()` si existe; si no, `FileReader`
@@ -36,6 +37,15 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
  */
 export function ImportarView({ compact }: { compact: boolean }) {
   const loadObra = useObraStore((s) => s.loadObra);
+  // Lo que se perdería al reemplazar: se enseña en el modal de confirmación.
+  const obraActual = useObraStore((s) => s.obra.denominacion);
+  const pemActual = useObraStore(selectPem);
+  const partidasActuales = useObraStore((s) =>
+    Object.values(s.partidas).reduce((a, ps) => a + ps.length, 0),
+  );
+  const certsConDatos = useObraStore(
+    (s) => s.certs.filter((c) => Object.keys(c.data).length > 0).length,
+  );
   const inputRef = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -43,16 +53,17 @@ export function ImportarView({ compact }: { compact: boolean }) {
   const [diag, setDiag] = useState<string[]>([]);
   const [result, setResult] = useState<Bc3ImportResult | null>(null);
   const [fileName, setFileName] = useState('');
+  const [confirming, setConfirming] = useState(false);
 
   async function handleFile(file: File | undefined) {
-    if (!file) return;
+    if (!file || busy) return;
     setBusy(true);
     setError(null);
     setDiag([]);
     setResult(null);
     try {
       const bytes = await readBytes(file);
-      const res = bc3ToObra(bytes);
+      const res = await parseBc3(bytes); // Web Worker: la UI no se congela
       setResult(res);
       setFileName(file.name);
     } catch (e) {
@@ -74,7 +85,9 @@ export function ImportarView({ compact }: { compact: boolean }) {
   }
 
   function confirm() {
-    if (result) loadObra(result.data); // el store salta a Presupuesto
+    if (!result) return;
+    setConfirming(false);
+    loadObra(result.data); // el store salta a Presupuesto
   }
 
   const r = result?.report;
@@ -182,7 +195,12 @@ export function ImportarView({ compact }: { compact: boolean }) {
 
             <div className={styles.actions}>
               <span className={styles.replaceHint}>Reemplazará la obra actual.</span>
-              <button type="button" className={styles.confirm} onClick={confirm}>
+              <button
+                type="button"
+                className={styles.confirm}
+                onClick={() => setConfirming(true)}
+                disabled={busy}
+              >
                 <Icon name="arrowLeft" size={15} style={{ transform: 'rotate(90deg)' }} />
                 Cargar al presupuesto
               </button>
@@ -190,6 +208,37 @@ export function ImportarView({ compact }: { compact: boolean }) {
           </div>
         )}
       </div>
+
+      <Modal
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        title="Reemplazar la obra actual"
+        subtitle="Esta acción no se puede deshacer"
+        icon="alert"
+        compact={compact}
+        footer={
+          <>
+            <button type="button" className={styles.cancel} onClick={() => setConfirming(false)}>
+              Cancelar
+            </button>
+            <button type="button" className={styles.danger} onClick={confirm}>
+              Reemplazar y cargar
+            </button>
+          </>
+        }
+      >
+        <p className={styles.confirmBody}>
+          Se reemplazará <strong>{obraActual || 'la obra actual'}</strong> — {fmtNum(partidasActuales, 0)}{' '}
+          partidas · PEM {fmtCents(pemActual)}
+          {certsConDatos > 0 && (
+            <>
+              {' '}
+              · <strong>{certsConDatos} {certsConDatos > 1 ? 'certificaciones' : 'certificación'} con datos</strong>
+            </>
+          )}{' '}
+          — por <strong>{result?.data.obra.denominacion || fileName}</strong> ({fileName}).
+        </p>
+      </Modal>
     </div>
   );
 }
