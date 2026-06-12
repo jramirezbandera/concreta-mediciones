@@ -14,6 +14,7 @@ import { DEFAULT_RATES, PARTIDAS } from '../core/seed';
 import {
   ALL,
   SCHEMA_VERSION,
+  copyTargetOf,
   fromSerializable,
   seedObraData,
   selectCertTotals,
@@ -471,6 +472,58 @@ describe('acciones F2.4 (CRUD estructural + renumeración)', () => {
     expect(findP('p111')!.sub).toBeUndefined();
     expect(findP('p111')!.pos).toBe('1.1');
     expect(state().active).toBe('01'); // el sub activo salta a su capítulo
+  });
+});
+
+describe('jerarquía N niveles — endurecimiento Fase 1 (eng-review 2026-06-12)', () => {
+  const ch01 = () => state().partidas['01']!;
+  const findP = (id: string) =>
+    Object.values(state().partidas)
+      .flat()
+      .find((p) => p.id === id);
+
+  /** Anida un sub-sub bajo 01.01 directamente en el modelo (la UI de creación
+   *  profunda es Fase 2/T-17; el dato puede venir de un .bc3 importado). */
+  function nestSubSub(): void {
+    useObraStore.setState((s) => {
+      const c1 = s.chapters.find((c) => c.id === '01')!;
+      c1.children![0]!.children = [{ id: '01.01.01', code: '1.1.1', title: 'Profundo' }];
+    });
+  }
+
+  it('addPartida con subId INEXISTENTE en el capítulo → no-op (sin huérfanas)', () => {
+    const before = ch01().length;
+    state().addPartida('01', 'no-existe');
+    expect(ch01()).toHaveLength(before);
+  });
+
+  it('addPartida a un sub PROFUNDO existente funciona (pos con ruta completa)', () => {
+    nestSubSub();
+    state().addPartida('01', '01.01.01');
+    const nueva = ch01().find((p) => p.sub === '01.01.01');
+    expect(nueva).toBeDefined();
+    expect(nueva!.pos).toBe('1.1.1.1');
+  });
+
+  it('movePartida con destino inexistente → RECHAZADA (la partida no se mueve)', () => {
+    state().movePartida('01', 'p111', '02', 'sub-fantasma');
+    expect(findP('p111')!.sub).toBe('01.01'); // sigue donde estaba
+    expect(state().partidas['02']!.some((p) => p.id === 'p111')).toBe(false);
+  });
+
+  it('deleteSubchapter de un sub CON hijos → bloqueado (edición profunda = Fase 2)', () => {
+    nestSubSub();
+    state().deleteSubchapter('01', '01.01');
+    const c1 = state().chapters.find((c) => c.id === '01')!;
+    expect(c1.children!.some((sc) => sc.id === '01.01')).toBe(true); // sigue
+    expect(findP('p111')!.sub).toBe('01.01'); // sus partidas intactas
+  });
+
+  it('copyTargetOf resuelve un sub profundo activo a su capítulo y subId', () => {
+    nestSubSub();
+    const t = copyTargetOf(state().chapters, '01.01.01');
+    expect(t).toMatchObject({ chId: '01', subId: '01.01.01' });
+    expect(t.label).toContain('1.1.1');
   });
 });
 

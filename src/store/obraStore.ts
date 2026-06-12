@@ -15,11 +15,12 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import type { Banco, Cert, Chapter, MedLine, Obra, Partida, PartidasMap, Rates } from '../core/types';
+import type { Banco, Cert, Chapter, MedLine, Obra, Partida, PartidasMap, Rates, SubChapter } from '../core/types';
 import { buildRecursos, precioCuadraDescompuesto, precioSegunModo } from '../core/banco';
 import { estaCertToOrigen, prevDataOf, sumLineQty } from '../core/certificacion';
 import { round2 } from '../core/money';
 import { renumberChapter } from '../core/numbering';
+import { findNode, flattenContainers } from '../core/tree';
 import type { ImportedObra } from '../core/bc3import';
 import { REF_DESC, REF_SOURCES, type RefCopyItem, type RefDrag } from '../core/refdata';
 import { CHAPTERS, DEFAULT_OBRA, DEFAULT_RATES, PARTIDAS, makeCertsInit } from '../core/seed';
@@ -28,12 +29,22 @@ import type { View } from '../layout/types';
 /** Selección especial del sidebar: "Toda la obra". */
 export const ALL = '__ALL__';
 
+/** Sub del capítulo por id, a CUALQUIER profundidad (jerarquía N niveles). */
+function subIn(ch: Chapter, subId: string): SubChapter | undefined {
+  return flattenContainers(ch).find((f) => f.sub.id === subId)?.sub;
+}
+
 /**
  * Versión del shape serializable de la obra (§0 decisión 4: schemaVersion +
- * ruta de migración desde el día uno). F6 (Dexie) persiste `ObraData` y migra
- * versiones < SCHEMA_VERSION en `fromSerializable`; aquí sólo nace versionado.
+ * ruta de migración desde el día uno). `fromSerializable` migra en CADENA las
+ * versiones < SCHEMA_VERSION (hydrate de IndexedDB e import .json pasan ambos
+ * por ahí); las > SCHEMA_VERSION se rechazan (archivo de una app más nueva).
+ *
+ *   v1 → v2 (2026-06-12, jerarquía N niveles): `SubChapter` pasa a ser
+ *   recursivo (`children?`). Migración IDENTIDAD: un árbol de 2 niveles ya es
+ *   un caso degenerado válido del recursivo; solo se sella la versión.
  */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 /** Modo de edición de una certificación: importe a origen vs. de esta cert. */
 export type CertMode = 'origen' | 'esta';
@@ -105,10 +116,14 @@ export interface CopyTarget {
 }
 export function copyTargetOf(chapters: Chapter[], active: string): CopyTarget {
   if (active !== ALL) {
-    for (const ch of chapters) {
-      if (ch.id === active) return { chId: ch.id, subId: null, label: `${ch.code} · ${ch.title}` };
-      for (const sub of ch.children ?? [])
-        if (sub.id === active) return { chId: ch.id, subId: sub.id, label: `${sub.code} · ${sub.title}` };
+    // Resolución a CUALQUIER profundidad (jerarquía N niveles): un sub-sub
+    // activo también es un destino válido de copia.
+    const hit = findNode(chapters, active);
+    if (hit) {
+      const { chapter, node } = hit;
+      return node === chapter
+        ? { chId: chapter.id, subId: null, label: `${chapter.code} · ${chapter.title}` }
+        : { chId: chapter.id, subId: node.id, label: `${node.code} · ${node.title}` };
     }
   }
   const c = chapters[0];
@@ -344,16 +359,33 @@ export function toSerializable(s: ObraData): ObraData {
 }
 
 /**
- * Valida/migra un `ObraData` cargado. Punto único donde F6 (Dexie) enchufará la
- * ruta de migración de versiones antiguas; hoy sólo acepta la versión vigente.
+ * Migraciones de esquema: `MIGRATIONS[v]` transforma un `ObraData` de la
+ * versión `v` a la `v+1`. Se aplican en cadena hasta `SCHEMA_VERSION`.
+ */
+const MIGRATIONS: Record<number, (d: ObraData) => ObraData> = {
+  // v1 → v2 (jerarquía N niveles): identidad estructural — el shape de 2
+  // niveles ya es un árbol recursivo degenerado; solo sube la versión.
+  1: (d) => ({ ...d, schemaVersion: 2 }),
+};
+
+/**
+ * Valida/migra un `ObraData` cargado (hydrate de IndexedDB e import .json).
+ * Migra en cadena las versiones antiguas; rechaza las desconocidas (más nuevas
+ * que la app, o tan viejas que no hay ruta).
  */
 export function fromSerializable(data: ObraData): ObraData {
-  if (data.schemaVersion !== SCHEMA_VERSION) {
+  let d = data;
+  while (d.schemaVersion < SCHEMA_VERSION) {
+    const mig = MIGRATIONS[d.schemaVersion];
+    if (!mig) break; // sin ruta → cae al rechazo de abajo
+    d = mig(d);
+  }
+  if (d.schemaVersion !== SCHEMA_VERSION) {
     throw new Error(
-      `schemaVersion ${data.schemaVersion} no soportada (esperada ${SCHEMA_VERSION}); falta migración (F6).`,
+      `schemaVersion ${data.schemaVersion} no soportada (esperada ≤ ${SCHEMA_VERSION}); sin ruta de migración.`,
     );
   }
-  return data;
+  return d;
 }
 
 /** Estado de UI inicial (sincronizado con el nº de certs sembradas). */
@@ -583,7 +615,10 @@ export const useObraStore = create<ObraState>()(
           const ch = s.chapters.find((c) => c.id === t.chId);
           if (!ch) return;
           const subId = t.subId;
-          const sub = subId && ch.children ? ch.children.find((x) => x.id === subId) : undefined;
+          // Destino a cualquier profundidad; un subId inexistente se RECHAZA
+          // (no-op): nunca crear partidas con `sub` huérfano.
+          const sub = subId ? subIn(ch, subId) : undefined;
+          if (subId && !sub) return;
           const base = sub ? sub.code : ch.code;
           const list = (s.partidas[t.chId] ??= []);
           // 1) recursos al banco SIN pisar los homónimos (coherencia, §0).
@@ -757,8 +792,7 @@ export const useObraStore = create<ObraState>()(
           const i = s.chapters.findIndex((c) => c.id === chapterId);
           if (i < 0) return;
           const ch = s.chapters[i]!;
-          const affectsActive =
-            s.active === chapterId || !!ch.children?.some((sc) => sc.id === s.active);
+          const affectsActive = s.active === chapterId || !!subIn(ch, s.active);
           s.chapters.splice(i, 1);
           delete s.partidas[chapterId];
           if (affectsActive) s.active = ALL;
@@ -769,6 +803,10 @@ export const useObraStore = create<ObraState>()(
           const ch = s.chapters.find((c) => c.id === chapterId);
           const si = ch?.children?.findIndex((sc) => sc.id === subId) ?? -1;
           if (!ch?.children || si < 0) return;
+          // Fase 1: borrar un contenedor CON sub-contenedores es edición
+          // profunda (qué pasa con los nietos: ¿promover? ¿cascada?) → T-17.
+          // Se bloquea aquí (la UI oculta la papelera en esos subs).
+          if (ch.children[si]!.children?.length) return;
           ch.children.splice(si, 1);
           // Las partidas del sub borrado suben al capítulo (sub = undefined).
           const list = s.partidas[chapterId] ?? [];
@@ -781,8 +819,12 @@ export const useObraStore = create<ObraState>()(
         set((s) => {
           const ch = s.chapters.find((c) => c.id === chapterId);
           if (!ch) return;
+          // El sub destino se resuelve a CUALQUIER profundidad; un subId que no
+          // exista en el capítulo se RECHAZA (crearía una partida huérfana cuyo
+          // grupo ninguna vista pinta — eng-review 2026-06-12, Tensión 2).
+          const sub = subId ? subIn(ch, subId) : undefined;
+          if (subId && !sub) return;
           const list = (s.partidas[chapterId] ??= []);
-          const sub = subId && ch.children ? ch.children.find((x) => x.id === subId) : undefined;
           const base = sub ? sub.code : ch.code;
           const sameSub = list.filter((p) => (subId ? p.sub === subId : !p.sub)).length;
           list.push({
@@ -816,6 +858,11 @@ export const useObraStore = create<ObraState>()(
           const fromList = s.partidas[fromChapterId];
           const idx = fromList?.findIndex((p) => p.id === partidaId) ?? -1;
           if (!fromList || idx < 0) return;
+          // Destino validado ANTES de mover: un toSubId inexistente en el
+          // capítulo destino se RECHAZA (no-op), nunca deja `sub` huérfano.
+          const toCh = s.chapters.find((c) => c.id === toChapterId);
+          if (!toCh) return;
+          if (toSubId && !subIn(toCh, toSubId)) return;
           const [moving] = fromList.splice(idx, 1);
           if (!moving) return;
           moving.sub = toSubId || undefined;
