@@ -3,7 +3,7 @@ import { Icon } from '../../components';
 import { partidaImporte } from '../../core/medicion';
 import { fmtNum, sumCents, toEur, type Cents } from '../../core/money';
 import type { Chapter, Partida, SubChapter } from '../../core/types';
-import { groupBySub } from '../../core/grouping';
+import { groupsForFocus } from '../../core/grouping';
 import { rollupByDepth } from '../../core/tree';
 import { useGridNav } from '../../hooks/useGridNav';
 import { useObraStore } from '../../store';
@@ -36,17 +36,23 @@ export function PartidasTable({
   chapter,
   partidas,
   chapterTotal,
+  focus,
   sticky = true,
 }: {
   chapter: Chapter;
   partidas: Partida[];
   chapterTotal: Cents;
+  /** Id de sub activo: aísla su subárbol (navegación de obras grandes). */
+  focus?: string | null;
   sticky?: boolean;
 }) {
   const coefK = useObraStore((s) => s.rates.coefK);
   const addPartida = useObraStore((s) => s.addPartida);
   const gridNav = useGridNav();
-  const groups = useMemo(() => groupBySub(chapter, partidas), [chapter, partidas]);
+  const groups = useMemo(
+    () => groupsForFocus(chapter, partidas, focus),
+    [chapter, partidas, focus],
+  );
   const rollups = useMemo(
     () =>
       rollupByDepth(

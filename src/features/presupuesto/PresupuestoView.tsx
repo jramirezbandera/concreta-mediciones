@@ -1,7 +1,9 @@
 import { useMemo, useRef } from 'react';
 import { EmptyAction, EmptyState, Icon } from '../../components';
-import type { Chapter } from '../../core/types';
-import { findNode } from '../../core/tree';
+import type { Chapter, SubChapter } from '../../core/types';
+import { partidaImporte } from '../../core/medicion';
+import { sumCents } from '../../core/money';
+import { findNode, subtreeIds } from '../../core/tree';
 import { useElementWidth } from '../../hooks/useElementWidth';
 import { ALL, selectChapterTotals, selectPem, useObraStore } from '../../store';
 import { AllChapters } from './AllChapters';
@@ -12,21 +14,27 @@ import styles from './Presupuesto.module.css';
 /** Por debajo de este ancho ÚTIL la tabla conmuta a tarjetas (prototipo: 780). */
 const COMPACT_WIDTH = 780;
 
-/** Estado vacío de un capítulo sin partidas, con alta directa de la primera. */
-function EmptyChapter({ chapter }: { chapter: Chapter }) {
+/** Estado vacío del contenedor activo sin partidas (capítulo o sub aislado),
+ *  con alta directa de la primera EN ese contenedor. */
+function EmptyChapter({ chapter, sub }: { chapter: Chapter; sub?: SubChapter | null }) {
   const addPartida = useObraStore((s) => s.addPartida);
+  const node = sub ?? chapter;
   return (
     <div className={`dot-grid ${styles.empty}`}>
       <div className={styles.emptyCard}>
         <div className={styles.emptyIcon}>
           <Icon name="folder" size={24} />
         </div>
-        <div className={styles.emptyTitle}>Capítulo sin partidas</div>
+        <div className={styles.emptyTitle}>{sub ? 'Subcapítulo' : 'Capítulo'} sin partidas</div>
         <p className={styles.emptyText}>
-          «{chapter.title}» aún no tiene partidas medidas. Añade la primera o crea un subcapítulo
+          «{node.title}» aún no tiene partidas medidas. Añade la primera o crea un subcapítulo
           desde el árbol.
         </p>
-        <button type="button" className={styles.emptyAdd} onClick={() => addPartida(chapter.id, null)}>
+        <button
+          type="button"
+          className={styles.emptyAdd}
+          onClick={() => addPartida(chapter.id, sub?.id ?? null)}
+        >
           <Icon name="plus" size={15} /> Añadir partida
         </button>
       </div>
@@ -59,11 +67,25 @@ export function PresupuestoView({
   const pem = useObraStore(selectPem);
   const addChapter = useObraStore((s) => s.addChapter);
 
+  const coefK = useObraStore((s) => s.rates.coefK);
+
   // Resuelve el id activo (capítulo o sub a CUALQUIER profundidad) a su capítulo.
   const activeChapter = useMemo(
     () => findNode(chapters, active)?.chapter ?? chapters[0],
     [active, chapters],
   );
+
+  // Sub AISLADO: si el activo es un sub (no el capítulo), la vista muestra
+  // SOLO su subárbol — navegación de obras grandes (un banco tipo BCCA mete
+  // miles de partidas por capítulo; seleccionar «Arenas» debe enseñar Arenas).
+  const focused = useMemo(() => {
+    const hit = findNode(chapters, active);
+    if (!hit || hit.depth === 0) return null; // capítulo, ALL o id desconocido
+    const sub = hit.node as SubChapter;
+    const ids = subtreeIds(sub);
+    const ps = (partidas[hit.chapter.id] ?? []).filter((p) => p.sub != null && ids.has(p.sub));
+    return { sub, ps };
+  }, [active, chapters, partidas]);
 
   // fadeUp: entrada sutil al cambiar de vista (gated en reduced-motion global).
   const cls = `fadeUp ${styles.view}${compact ? ` ${styles.compact}` : ''}`;
@@ -95,15 +117,30 @@ export function PresupuestoView({
     content = <AllChapters compact={compact} />;
   } else if (activeChapter) {
     const ps = partidas[activeChapter.id] ?? [];
-    const importe = chapterTotals[activeChapter.id] ?? 0;
-    fill = ps.length === 0;
+    // Aislado: cabecera, total, conteo y vacío hablan del SUB, no del capítulo.
+    const shown = focused ? focused.ps : ps;
+    const importe = focused
+      ? sumCents(focused.ps.map((p) => partidaImporte(p, coefK)))
+      : (chapterTotals[activeChapter.id] ?? 0);
+    fill = shown.length === 0;
     content = (
       <>
-        <ChapterHeader chapter={activeChapter} importe={importe} count={ps.length} pem={pem} />
-        {ps.length > 0 ? (
-          <Partidas compact={compact} chapter={activeChapter} partidas={ps} chapterTotal={importe} />
+        <ChapterHeader
+          chapter={focused ? focused.sub : activeChapter}
+          importe={importe}
+          count={shown.length}
+          pem={pem}
+        />
+        {shown.length > 0 ? (
+          <Partidas
+            compact={compact}
+            chapter={activeChapter}
+            partidas={ps}
+            chapterTotal={importe}
+            focus={focused?.sub.id ?? null}
+          />
         ) : (
-          <EmptyChapter chapter={activeChapter} />
+          <EmptyChapter chapter={activeChapter} sub={focused?.sub} />
         )}
       </>
     );

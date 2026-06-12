@@ -1,15 +1,15 @@
 import { fmtCents, fmtNum, type Cents } from '../../core/money';
-import type { Chapter } from '../../core/types';
 import styles from './Presupuesto.module.css';
 
-/** Cabecera del capítulo activo: código, nº de partidas, % del PEM e importe. */
+/** Cabecera del contenedor activo (capítulo o sub AISLADO, jerarquía N
+ *  niveles): código, nº de partidas, % del PEM e importe acumulado. */
 export function ChapterHeader({
   chapter,
   importe,
   count,
   pem,
 }: {
-  chapter: Chapter;
+  chapter: { code: string; title: string };
   importe: Cents;
   count: number;
   pem: Cents;

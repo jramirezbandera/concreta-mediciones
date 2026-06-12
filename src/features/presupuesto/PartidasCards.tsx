@@ -3,7 +3,7 @@ import { Icon } from '../../components';
 import { partidaImporte } from '../../core/medicion';
 import { fmtNum, sumCents, toEur, type Cents } from '../../core/money';
 import type { Chapter, Partida } from '../../core/types';
-import { groupBySub } from '../../core/grouping';
+import { groupsForFocus } from '../../core/grouping';
 import { rollupByDepth } from '../../core/tree';
 import { useObraStore } from '../../store';
 import { PartidaCard } from './PartidaCard';
@@ -14,14 +14,20 @@ export function PartidasCards({
   chapter,
   partidas,
   chapterTotal,
+  focus,
 }: {
   chapter: Chapter;
   partidas: Partida[];
   chapterTotal: Cents;
+  /** Id de sub activo: aísla su subárbol (navegación de obras grandes). */
+  focus?: string | null;
 }) {
   const coefK = useObraStore((s) => s.rates.coefK);
   const addPartida = useObraStore((s) => s.addPartida);
-  const groups = useMemo(() => groupBySub(chapter, partidas), [chapter, partidas]);
+  const groups = useMemo(
+    () => groupsForFocus(chapter, partidas, focus),
+    [chapter, partidas, focus],
+  );
   // Subtotal ACUMULADO por cabecera (directas + descendientes), como la tabla.
   const rollups = rollupByDepth(
     groups,

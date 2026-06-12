@@ -8,7 +8,7 @@ import {
   partidasByContainer,
   rollupByDepth,
 } from './tree';
-import { groupBySub } from './grouping';
+import { groupBySub, groupsForFocus } from './grouping';
 
 /** Partida mínima: solo lo que usa el árbol (sub/cantidad/precio). */
 const P = (id: string, sub: string | undefined, cantidad = 1, precio = 10): Partida => ({
@@ -141,6 +141,27 @@ describe('groupBySub (pre-orden + depth) y rollupByDepth', () => {
     const gs = groupBySub(ch, [P('a', undefined)]);
     expect(gs).toHaveLength(1);
     expect(gs[0]!.sub).toBeNull();
+  });
+
+  it('groupsForFocus aísla el subárbol del sub activo, re-basado a nivel 1', () => {
+    const ch = deepChapter();
+    const ps = [P('d', undefined), P('s11', '01.01'), P('a', '01.01.01'), P('c', '01.02')];
+    // Foco en 1.1: él y sus descendientes; fuera las directas del capítulo y 1.2.
+    const focused = groupsForFocus(ch, ps, '01.01');
+    expect(focused.map((g) => [g.sub?.code ?? null, g.depth, g.items.length])).toEqual([
+      ['1.1', 1, 1],
+      ['1.1.1', 2, 1],
+      ['1.1.2', 2, 0],
+    ]);
+    // Foco en un sub PROFUNDO (1.1.1, depth 2): re-basado a nivel 1.
+    const deep = groupsForFocus(ch, ps, '01.01.01');
+    expect(deep.map((g) => [g.sub?.code ?? null, g.depth, g.items.length])).toEqual([
+      ['1.1.1', 1, 1],
+    ]);
+    // Sin foco, foco = capítulo o foco inexistente ⇒ capítulo completo.
+    expect(groupsForFocus(ch, ps, null)).toEqual(groupBySub(ch, ps));
+    expect(groupsForFocus(ch, ps, '01')).toEqual(groupBySub(ch, ps));
+    expect(groupsForFocus(ch, ps, 'no-existe')).toEqual(groupBySub(ch, ps));
   });
 
   it('rollupByDepth acumula descendientes y trata el grupo sin sub como hoja', () => {

@@ -9,17 +9,26 @@ export function Partidas({
   chapter,
   partidas,
   chapterTotal,
+  focus,
   sticky,
 }: {
   compact: boolean;
   chapter: Chapter;
   partidas: Partida[];
   chapterTotal: Cents;
+  /** Id de sub activo: aísla su subárbol (navegación de obras grandes). */
+  focus?: string | null;
   sticky?: boolean;
 }) {
   return compact ? (
-    <PartidasCards chapter={chapter} partidas={partidas} chapterTotal={chapterTotal} />
+    <PartidasCards chapter={chapter} partidas={partidas} chapterTotal={chapterTotal} focus={focus} />
   ) : (
-    <PartidasTable chapter={chapter} partidas={partidas} chapterTotal={chapterTotal} sticky={sticky} />
+    <PartidasTable
+      chapter={chapter}
+      partidas={partidas}
+      chapterTotal={chapterTotal}
+      focus={focus}
+      sticky={sticky}
+    />
   );
 }
