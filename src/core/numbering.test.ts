@@ -55,4 +55,26 @@ describe('renumberChapter', () => {
     const out = renumberChapter(flat, [partida('a', 'x'), partida('b', 'x')]);
     expect(out.map((p) => p.pos)).toEqual(['2.1', '2.2']);
   });
+
+  it('sub anidado (N niveles): base = código del contenedor inmediato', () => {
+    const deep: Chapter = {
+      id: '03',
+      code: '3',
+      title: 'Estructura',
+      children: [
+        {
+          id: '03.01',
+          code: '3.1',
+          title: 'Hormigón',
+          children: [{ id: '03.01.02', code: '3.1.2', title: 'Pilares' }],
+        },
+      ],
+    };
+    const out = renumberChapter(deep, [
+      partida('a', '03.01.02'),
+      partida('b', '03.01'),
+      partida('c', '03.01.02'),
+    ]);
+    expect(out.map((p) => p.pos)).toEqual(['3.1.2.1', '3.1.1', '3.1.2.2']);
+  });
 });

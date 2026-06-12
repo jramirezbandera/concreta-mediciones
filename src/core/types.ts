@@ -47,6 +47,8 @@ export interface Recurso {
 
 export interface Partida {
   id: string;
+  /** Id del contenedor INMEDIATO (sub a cualquier profundidad del capítulo);
+   *  `undefined` = partida directa del capítulo. */
   sub?: string;
   pos: string;
   code: string;
@@ -71,10 +73,21 @@ export interface Partida {
   baseSource?: string;
 }
 
+/**
+ * Subcapítulo, RECURSIVO (N niveles): un sub puede contener subs. La estructura
+ * (árbol de contenedores) vive aquí; el contenido (partidas) sigue PLANO por
+ * capítulo en `PartidasMap`, etiquetado por su contenedor INMEDIATO vía
+ * `Partida.sub` (id de un contenedor a CUALQUIER profundidad del capítulo).
+ *
+ *   Chapter ─ children ─► SubChapter ─ children ─► SubChapter … (árbol)
+ *   partidas[ch.id] = Partida[]   con  p.sub = id del contenedor inmediato
+ *                                      (undefined = directa del capítulo)
+ */
 export interface SubChapter {
   id: string;
   code: string;
   title: string;
+  children?: SubChapter[];
 }
 
 export interface Chapter {
