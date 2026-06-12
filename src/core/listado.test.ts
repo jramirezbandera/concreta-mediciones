@@ -93,6 +93,42 @@ describe('buildPresupuestoListado (doc combinado, F7.1)', () => {
     const seed = buildPresupuestoListado(CHAPTERS, PARTIDAS, DEFAULT_RATES.coefK);
     expect(seed.pem).toBe(pem(PARTIDAS, DEFAULT_RATES.coefK));
   });
+
+  it('jerarquía de N niveles: pre-orden, depth, rollup en cabecera y total sin doble cuenta', () => {
+    const deep: Chapter[] = [
+      {
+        id: '01',
+        code: '1',
+        title: 'Cap',
+        children: [
+          {
+            id: '01.01',
+            code: '1.1',
+            title: 'Padre sin filas directas',
+            children: [{ id: '01.01.01', code: '1.1.1', title: 'Nieto' }],
+          },
+        ],
+      },
+    ];
+    const ps: PartidasMap = {
+      '01': [
+        partida({ id: 'd', precio: 100, cantidad: 1 }),
+        partida({ id: 'n', sub: '01.01.01', precio: 10, cantidad: 2 }),
+      ],
+    };
+    const l = buildPresupuestoListado(deep, ps);
+    const g = l.capitulos[0]!.grupos;
+    // El padre intermedio SIN filas directas se conserva (contexto del nieto).
+    expect(g.map((x) => [x.sub?.code ?? null, x.depth, x.rows.length])).toEqual([
+      [null, 0, 1],
+      ['1.1', 1, 0],
+      ['1.1.1', 2, 1],
+    ]);
+    expect(g[1]!.total).toBe(toCents(20)); // rollup del padre = el nieto
+    expect(g[2]!.total).toBe(toCents(20));
+    expect(l.capitulos[0]!.total).toBe(toCents(120)); // 100 + 20, sin doble cuenta
+    expect(l.pem).toBe(toCents(120));
+  });
 });
 
 describe('buildResumen (hoja resumen, F7.1)', () => {

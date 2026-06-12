@@ -1,4 +1,4 @@
-/* ===========================================================================
+﻿/* ===========================================================================
    features/exportar/xlsxBuilders — filas XLSX desde `core/listado` (F7.2).
    ---------------------------------------------------------------------------
    PURO (sin la librería en runtime: solo type-imports → no entra al bundle).
@@ -100,6 +100,11 @@ function medLabel(l: MedLineListado): string {
   return dims ? `${comment} — ${dims}` : comment;
 }
 
+/** Sangría de cabecera de grupo por profundidad (NBSP: Excel no la recorta). */
+function sangria(depth: number): string {
+  return '   '.repeat(Math.max(0, depth - 1));
+}
+
 export function buildPresupuestoXlsx(data: PresupuestoListado, meta: ObraMeta): XlsxDoc {
   const rows: Row[] = metaRows('Presupuesto y mediciones', meta);
   const header: Row = [
@@ -125,7 +130,7 @@ export function buildPresupuestoXlsx(data: PresupuestoListado, meta: ObraMeta): 
     for (const g of c.grupos) {
       if (g.sub) {
         rows.push([
-          txt(g.sub.code, { textColor: GRIS, fontWeight: 'bold' }),
+          txt(sangria(g.depth) + g.sub.code, { textColor: GRIS, fontWeight: 'bold' }),
           txt(g.sub.title.toUpperCase(), { textColor: GRIS, fontWeight: 'bold', columnSpan: 5 }),
           null,
           null,
@@ -275,7 +280,7 @@ export function buildCertXlsx(data: CertListado, meta: ObraMeta): XlsxDoc {
     for (const g of c.grupos) {
       if (g.sub) {
         rows.push([
-          txt(g.sub.code, { textColor: GRIS, fontWeight: 'bold' }),
+          txt(sangria(g.depth) + g.sub.code, { textColor: GRIS, fontWeight: 'bold' }),
           txt(g.sub.title.toUpperCase(), { textColor: GRIS, fontWeight: 'bold', columnSpan: 10 }),
           ...Array<null>(9).fill(null),
         ]);

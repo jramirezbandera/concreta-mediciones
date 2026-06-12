@@ -20,10 +20,10 @@
      · Precios de partida/recurso en BASE (sin K); capítulo = Σ hijos CON K y
        raíz = PEM CON K. Verificado en el fixture de Presto: Σ capítulos =
        precio raíz al céntimo, con los precios de partida en base.
-     · `~M` anclado por ÍNDICE a la `~D` del contenedor (espejo de
-       `collectPartidas`): se emite UN ~M por partida, en orden, con 0 líneas
-       si no hay medición — si faltara alguno, el reimport desalinearía las
-       líneas de medición del resto.
+     · `~M` anclado por RUTA DE POSICIONES (campo POSICIÓN: entradas 1-based
+       de cada `~D` desde la raíz, p.ej. `2\3\1\`), espejo del import (que
+       alinea cada ~M con su partida por ese campo). Se emite UN ~M por
+       partida directa, en orden, con 0 líneas si no hay medición.
      · `%CI` = concepto `%` con rendimiento = PORCENTAJE/100 en la `~D` y el
        porcentaje en el campo precio del `~C` (convención de Presto, verificada
        con la trazadora: Presto calcula importe = base × rendimiento, así que
@@ -44,20 +44,25 @@
        ~M); vacíos/'——' → generados (P001…). La asignación corre TRAS
        sanitizar y canonicalizar a cp1252 (sanitizar puede crear colisiones
        nuevas). Sin esto, Presto fusiona homónimos EN SILENCIO.
-     · Subcapítulos ANIDADOS reales (D3): el consumidor es Presto. Las
-       directas van ANTES que los subs en la ~D del capítulo (el anclaje por
-       índice de los ~M exige que las partidas ocupen los primeros índices).
-       Asimetría documentada: nuestro import los aplana (PEM invariante). Los
-       subs VACÍOS no viajan (sin ~M propio, el reimport los confundiría con
-       una partida fantasma a 0).
+     · Subcapítulos ANIDADOS reales a N NIVELES (D3 + jerarquía 2026-06-12):
+       emisión RECURSIVA del árbol de contenedores (core/tree da estructura,
+       orden y totales acumulados; la lógica FIEBDC — dedupe de códigos, ~D,
+       anclas ~M, orden de recursos — vive aquí). Las directas van ANTES que
+       los contenedores hijos en cada ~D (las posiciones de los ~M ocupan los
+       primeros índices). El import conserva los mismos niveles (round-trip
+       fiel). Los contenedores VACÍOS también viajan: la regla antigua de
+       descartarlos protegía al import por-mediciones (un sub sin ~M reimportaba
+       como partida fantasma a 0), pero desde que el import detecta contenedores
+       por el marcador «#» esa confusión es imposible, y descartarlos re-perdía
+       en silencio la taxonomía de los bancos (BCCA: 1.177 de 2.900 grupos).
    Certificaciones a BC3: aplazado (TODOS.md T-12).
    =========================================================================== */
 import type { Banco, Chapter, Item, MedLine, Obra, Partida, PartidasMap, Rates, ResourceType } from './types';
 import { precioCuadraDescompuesto } from './banco';
-import { groupBySub } from './grouping';
+import { buildChapterTree, type TreeNode } from './tree';
 import { toEur } from './money';
 import { partidaCantidad } from './medicion';
-import { chapterTotal, pem } from './totales';
+import { pem } from './totales';
 
 /** Payload de dominio a exportar (espeja `ImportedObra` sin certs — T-12). */
 export interface Bc3ExportObra {
@@ -256,47 +261,60 @@ export function obraToBc3(input: Bc3ExportObra): Uint8Array {
 
   let genS = 0;
   chapters.forEach((ch, ci) => {
-    const ps = partidas[ch.id] ?? [];
     const chCode = chCodes[ci]!;
-    // Grupos en el orden de la vista (directas primero, luego subs); los subs
-    // vacíos no viajan. Las directas DEBEN ir antes: el ~M se ancla por índice
-    // a la ~D del contenedor y los subs no llevan ~M anclado al capítulo.
-    const groups = groupBySub(ch, ps).filter((g) => g.items.length > 0);
-    const subCode = new Map<string, string>(); // sub.id → código final
+    // Árbol del capítulo (core/tree): estructura + orden + totales acumulados
+    // CON K. Las directas (y huérfanas) cuelgan de la raíz. Los contenedores
+    // vacíos también viajan (ver cabecera: la taxonomía es estructura).
+    const tree = buildChapterTree(ch, partidas[ch.id] ?? [], k);
+    const kidsOf = (n: TreeNode): TreeNode[] => n.children;
+
+    // Fase 1 — asignación de códigos en el ORDEN del recorrido (directas del
+    // contenedor, luego cada hijo con su subárbol): la precedencia decide los
+    // sufijos `.2` de homónimos, igual que la versión de 2 niveles.
+    const contCode = new Map<TreeNode, string>();
     const pCode = new Map<Partida, string>();
-    for (const g of groups) {
-      if (g.sub) subCode.set(g.sub.id, assign(sanCode(g.sub.code) || `S${String((genS += 1)).padStart(2, '0')}`, `SUB|${ch.id}|${g.sub.id}`));
-      for (const p of g.items) pCode.set(p, conceptCode(p.code, partidaSig(p)));
-    }
-
-    recs.push(`~C|${chCode}#||${field(ch.title)}|${num(toEur(chapterTotal(ps, k)), 2)}||0|`);
-    const children = groups.flatMap((g) =>
-      g.sub
-        ? [`${subCode.get(g.sub.id)}\\1\\1\\`]
-        : g.items.map((p) => `${pCode.get(p)}\\1\\${num(partidaCantidad(p), 2)}\\`),
-    );
-    if (children.length) recs.push(`~D|${chCode}#|${children.join('')}|`);
-
-    // ~M de las directas (anclados al capítulo) y bloques de subcapítulos.
-    const subBlocks: string[] = [];
-    let entry = 0;
-    for (const g of groups) {
-      if (!g.sub) {
-        for (const p of g.items) {
-          entry += 1;
-          recs.push(mRec(chCode, pCode.get(p)!, `${ci + 1}\\${entry}\\`, p));
-        }
-        continue;
+    const ordered: Partida[] = []; // orden de recorrido, para los bloques ~C/~T/~D
+    (function assignTree(node: TreeNode): void {
+      for (const p of node.partidas) {
+        pCode.set(p, conceptCode(p.code, partidaSig(p)));
+        ordered.push(p);
       }
-      entry += 1;
-      const sc = subCode.get(g.sub.id)!;
-      subBlocks.push(`~C|${sc}#||${field(g.sub.title)}|${num(toEur(chapterTotal(g.items, k)), 2)}||0|`);
-      subBlocks.push(`~D|${sc}#|${g.items.map((p) => `${pCode.get(p)}\\1\\${num(partidaCantidad(p), 2)}\\`).join('')}|`);
-      g.items.forEach((p, pi) => subBlocks.push(mRec(sc, pCode.get(p)!, `${ci + 1}\\${entry}\\${pi + 1}\\`, p)));
-    }
-    recs.push(...subBlocks);
+      for (const c of kidsOf(node)) {
+        contCode.set(
+          c,
+          assign(
+            sanCode(c.sub!.code) || `S${String((genS += 1)).padStart(2, '0')}`,
+            `SUB|${ch.id}|${c.sub!.id}`,
+          ),
+        );
+        assignTree(c);
+      }
+    })(tree);
 
-    for (const g of groups) for (const p of g.items) partidaBlock(p, pCode.get(p)!);
+    // Fase 2 — emisión RECURSIVA en pre-orden. En cada ~D las directas van
+    // ANTES que los contenedores hijos (ocupan las primeras posiciones, que
+    // anclan sus ~M); el ~M de cada partida lleva la RUTA de posiciones desde
+    // la raíz (`posPath` + su entrada 1-based en la ~D del contenedor).
+    (function emitContainer(node: TreeNode, code: string, title: string, posPath: string): void {
+      const kids = kidsOf(node);
+      recs.push(`~C|${code}#||${field(title)}|${num(toEur(node.total), 2)}||0|`);
+      const entries = [
+        ...node.partidas.map((p) => `${pCode.get(p)}\\1\\${num(partidaCantidad(p), 2)}\\`),
+        ...kids.map((c) => `${contCode.get(c)}\\1\\1\\`),
+      ];
+      if (entries.length) recs.push(`~D|${code}#|${entries.join('')}|`);
+      node.partidas.forEach((p, i) => recs.push(mRec(code, pCode.get(p)!, `${posPath}${i + 1}\\`, p)));
+      kids.forEach((c, j) =>
+        emitContainer(
+          c,
+          contCode.get(c)!,
+          c.sub!.title,
+          `${posPath}${node.partidas.length + j + 1}\\`,
+        ),
+      );
+    })(tree, chCode, ch.title, `${ci + 1}\\`);
+
+    for (const p of ordered) partidaBlock(p, pCode.get(p)!);
   });
 
   for (const [code, u] of used) {

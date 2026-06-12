@@ -53,6 +53,114 @@ function mini(partida: Partial<Partida> = {}, over: Partial<Bc3ExportObra> = {})
   };
 }
 
+/* ---- round-trip de jerarquía N niveles (Fase 1, 2026-06-12) ---------------- */
+describe('round-trip N niveles: exportar → reimportar conserva el árbol', () => {
+  it('obra sintética de 4 niveles: estructura, pos, mediciones y PEM exactos', () => {
+    const p = (id: string, sub: string | undefined, pos: string, precio: number): Partida => ({
+      id,
+      sub,
+      pos,
+      code: id.toUpperCase(),
+      title: `Partida ${id}`,
+      ud: 'm2',
+      precio,
+      cantidad: 2,
+      desc: '',
+      med: [],
+      items: [],
+    });
+    const obra: Bc3ExportObra = {
+      chapters: [
+        {
+          id: '01',
+          code: '1',
+          title: 'Capítulo uno',
+          children: [
+            {
+              id: '01.01',
+              code: '1.1',
+              title: 'Sub uno',
+              children: [
+                { id: '01.01.01', code: '1.1.1', title: 'Sub-sub A' },
+                { id: '01.01.02', code: '1.1.2', title: 'Sub-sub B' },
+              ],
+            },
+            { id: '01.02', code: '1.2', title: 'Sub dos' },
+            { id: '01.03', code: '1.3', title: 'Sub vacío (también viaja)' },
+          ],
+        },
+      ],
+      partidas: {
+        '01': [
+          p('d1', undefined, '1.1', 10),
+          p('a1', '01.01.01', '1.1.1.1', 20),
+          p('a2', '01.01.01', '1.1.1.2', 30),
+          p('b1', '01.01.02', '1.1.2.1', 40),
+          // medición en una partida profunda: el ~M viaja anclado por la ruta
+          {
+            ...p('c1', '01.02', '1.2.1', 50),
+            cantidad: undefined,
+            med: [{ id: 'c1-m1', comment: 'Zona', uds: 2, largo: 3, ancho: '', alto: '' }],
+          },
+        ],
+      },
+      recursos: {},
+      rates: { ...DEFAULT_RATES, coefK: 1 },
+      obra: { ...DEFAULT_OBRA, denominacion: 'Obra profunda' },
+    };
+
+    const re = bc3ToObra(obraToBc3(obra));
+    const ch = re.data.chapters[0]!;
+    expect(ch.title).toBe('Capítulo uno');
+    // El árbol vuelve con los mismos niveles, incluido el sub vacío.
+    expect(ch.children!.map((s) => s.title)).toEqual([
+      'Sub uno',
+      'Sub dos',
+      'Sub vacío (también viaja)',
+    ]);
+    expect(ch.children![0]!.children!.map((s) => s.title)).toEqual(['Sub-sub A', 'Sub-sub B']);
+    // Partidas en su contenedor, con pos de ruta y cantidades intactas.
+    const ps = re.data.partidas[ch.id]!;
+    expect(ps.map((x) => [x.code, x.pos])).toEqual([
+      ['D1', '1.1'],
+      ['A1', '1.1.1.1'],
+      ['A2', '1.1.1.2'],
+      ['B1', '1.1.2.1'],
+      ['C1', '1.2.1'],
+    ]);
+    // La medición profunda sobrevive (anclaje por ruta de posiciones).
+    const c1 = ps.find((x) => x.code === 'C1')!;
+    expect(c1.med.map((m) => [m.comment, m.uds, m.largo])).toEqual([['Zona', 2, 3]]);
+    // PEM exacto (round-trip propio sin tolerancia, D8).
+    expect(re.report.pemCents).toBe(pem(obra.partidas, 1));
+    expect(re.report.deltaCents).toBe(0);
+  });
+
+  it('BCCA (banco real, 4 niveles): exportar → reimportar conserva jerarquía y conteos', () => {
+    const file = resolve(process.cwd(), 'docs', 'spike', 'samples', 'BCCA2023_V02.bc3');
+    if (!existsSync(file)) return; // muestra local, no viaja en CI
+    const first = bc3ToObra(new Uint8Array(readFileSync(file)));
+    const re = bc3ToObra(
+      obraToBc3({
+        chapters: first.data.chapters,
+        partidas: first.data.partidas,
+        recursos: first.data.recursos,
+        rates: first.data.rates,
+        obra: first.data.obra,
+      }),
+    );
+    expect(re.data.chapters.map((c) => c.title)).toEqual(first.data.chapters.map((c) => c.title));
+    // Mismos contenedores nivel a nivel (comparando títulos del árbol entero).
+    const shape = (chs: typeof first.data.chapters): unknown =>
+      chs.map((c) => ({ t: c.title, k: walk(c.children) }));
+    const walk = (subs?: { title: string; children?: unknown[] }[]): unknown =>
+      (subs ?? []).map((s) => ({ t: s.title, k: walk(s.children as never) }));
+    expect(shape(re.data.chapters)).toEqual(shape(first.data.chapters));
+    expect(re.report.partidas).toBe(first.report.partidas);
+    expect(re.report.pemCents).toBe(first.report.pemCents);
+  }, 60000);
+});
+
 /* ---- encoder cp1252 -------------------------------------------------------- */
 describe('encodeCp1252', () => {
   it('latin-1 directo y extras del rango 0x80–0x9F', () => {
@@ -321,7 +429,8 @@ describe('obraToBc3 — subcapítulos anidados (D3)', () => {
 
   it('el sub viaja como contenedor real; las directas van ANTES en la ~D del capítulo', () => {
     const o = conSubs();
-    expect(rec(o, '~D|1#')).toBe(String.raw`~D|1#|DIR01\1\23.4\1.1\1\1\|`);
+    // El sub vacío 1.2 también viaja como entrada del ~D (taxonomía).
+    expect(rec(o, '~D|1#')).toBe(String.raw`~D|1#|DIR01\1\23.4\1.1\1\1\1.2\1\1\|`);
     // Σ sub = 23,4·114,54 + 5·99 = 2.680,24 + 495 = 3.175,24
     expect(rec(o, '~C|1.1#')).toBe('~C|1.1#||Tabiquería|3175.24||0|');
     expect(rec(o, '~D|1.1#')).toBe(String.raw`~D|1.1#|SUB01\1\23.4\SUB02\1\5\|`);
@@ -332,16 +441,23 @@ describe('obraToBc3 — subcapítulos anidados (D3)', () => {
     expect(ms[2]).toContain(String.raw`~M|1.1#\SUB02|1\2\2\|`);
   });
 
-  it('el sub VACÍO no viaja (el reimport lo confundiría con una partida a 0)', () => {
-    expect(rec(conSubs(), '~C|1.2#')).toBeUndefined();
+  it('el sub VACÍO también viaja (la taxonomía es estructura; el «#» evita la partida fantasma)', () => {
+    // Regla antigua: no viajaba, porque el import por-mediciones lo confundía
+    // con una partida a 0. Con la detección por marcador «#» eso es imposible,
+    // y descartarlos re-perdía la taxonomía de los bancos (BCCA: 1.177 grupos).
+    expect(rec(conSubs(), '~C|1.2#')).toBe('~C|1.2#||Sub vacío|0||0|');
   });
 
-  it('round-trip: el import APLANA (asimetría documentada) con PEM exacto y mismo orden', () => {
+  it('round-trip: el import conserva los subcapítulos con PEM exacto y mismo orden', () => {
     const o = conSubs();
     const { data, report } = bc3ToObra(obraToBc3(o));
     expect(report.chapters).toBe(1);
     expect(report.partidas).toBe(3);
     expect(Object.values(data.partidas).flat().map((p) => p.code)).toEqual(['DIR01', 'SUB01', 'SUB02']);
+    const ch = data.chapters[0]!;
+    expect(ch.children!.map((s) => s.title)).toEqual(['Tabiquería', 'Sub vacío']);
+    const sub1 = ch.children![0]!;
+    expect(Object.values(data.partidas).flat().filter((p) => p.sub === sub1.id)).toHaveLength(2);
     expect(pem(data.partidas, 1)).toBe(pem(o.partidas, 1));
     expect(report.deltaCents).toBe(0);
   });

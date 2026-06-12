@@ -20,6 +20,7 @@ import {
 import { groupBySub } from './grouping';
 import { lineParcial, partidaCantidad, partidaImporte } from './medicion';
 import { chapterTotals } from './totales';
+import { rollupByDepth } from './tree';
 import { round2, scaleCents, sumCents, type Cents } from './money';
 
 /* ---- Metadatos de obra (contrato COMPARTIDO por PDF/XLSX/DOCX) ------------ */
@@ -92,7 +93,13 @@ export interface PartidaListadoRow {
 
 export interface GrupoListado {
   sub: SubChapter | null;
+  /** 0 = grupo sin sub (directas del capítulo); 1 = sub; 2 = sub-sub… */
+  depth: number;
+  /** Filas DIRECTAS del contenedor (las de los descendientes van en sus grupos). */
   rows: PartidaListadoRow[];
+  /** Importe ACUMULADO del subárbol (directas + descendientes): lo que pinta
+   *  la cabecera del grupo. El total del capítulo NO es Σ de estos (sería
+   *  doble cuenta): es la Σ de las filas directas de todos los grupos. */
   total: Cents;
 }
 
@@ -121,36 +128,46 @@ export function buildPresupuestoListado(
 ): PresupuestoListado {
   const capitulos = chapters
     .map((ch) => {
-      const grupos = groupBySub(ch, partidas[ch.id] ?? [])
-        .filter((g) => g.items.length > 0)
-        .map((g) => {
-          const rows = g.items.map(
-            (p): PartidaListadoRow => ({
-              id: p.id,
-              pos: p.pos,
-              code: p.code,
-              title: p.title,
-              desc: p.desc,
-              ud: p.ud,
-              cantidad: partidaCantidad(p),
-              precio: round2((p.precio ?? 0) * coefK),
-              importe: partidaImporte(p, coefK),
-              med: p.med.map((l) => ({
-                id: l.id,
-                comment: l.comment,
-                dims: [l.uds, l.largo, l.ancho, l.alto],
-                parcial: lineParcial(l),
-              })),
-            }),
-          );
-          return { sub: g.sub, rows, total: sumCents(rows.map((r) => r.importe)) };
-        });
+      const gs = groupBySub(ch, partidas[ch.id] ?? []);
+      const rowsPorGrupo = gs.map((g) =>
+        g.items.map(
+          (p): PartidaListadoRow => ({
+            id: p.id,
+            pos: p.pos,
+            code: p.code,
+            title: p.title,
+            desc: p.desc,
+            ud: p.ud,
+            cantidad: partidaCantidad(p),
+            precio: round2((p.precio ?? 0) * coefK),
+            importe: partidaImporte(p, coefK),
+            med: p.med.map((l) => ({
+              id: l.id,
+              comment: l.comment,
+              dims: [l.uds, l.largo, l.ancho, l.alto],
+              parcial: lineParcial(l),
+            })),
+          }),
+        ),
+      );
+      const directos = rowsPorGrupo.map((rows) => sumCents(rows.map((r) => r.importe)));
+      const acumulados = rollupByDepth(gs, directos);
+      const cuenta = rollupByDepth(
+        gs,
+        gs.map((g) => g.items.length),
+      );
+      // Un contenedor intermedio sin filas directas pero CON descendientes se
+      // conserva (su cabecera da contexto); solo caen los subárboles vacíos.
+      const grupos = gs
+        .map((g, i) => ({ sub: g.sub, depth: g.depth, rows: rowsPorGrupo[i]!, total: acumulados[i]! }))
+        .filter((_, i) => cuenta[i]! > 0);
       return {
         id: ch.id,
         code: ch.code,
         title: ch.title,
         grupos,
-        total: sumCents(grupos.map((g) => g.total)),
+        // Σ de filas DIRECTAS de todos los grupos: cada partida cuenta una vez.
+        total: sumCents(directos),
       };
     })
     .filter((c) => c.grupos.length > 0);
@@ -244,6 +261,8 @@ export interface CertExtraListadoRow {
 
 export interface CertGrupoListado {
   sub: SubChapter | null;
+  /** 0 = grupo sin sub; 1 = sub; 2 = sub-sub… (sangría en los documentos). */
+  depth: number;
   rows: CertListadoRow[];
 }
 
@@ -292,10 +311,16 @@ export function buildCertListado(
 
   const capitulos = chapters
     .map((ch) => {
-      const grupos = groupBySub(ch, partidas[ch.id] ?? [])
-        .filter((g) => g.items.length > 0)
+      const gs = groupBySub(ch, partidas[ch.id] ?? []);
+      const cuenta = rollupByDepth(
+        gs,
+        gs.map((g) => g.items.length),
+      );
+      const grupos = gs
+        .filter((_, i) => cuenta[i]! > 0) // conserva contenedores con descendientes
         .map((g) => ({
           sub: g.sub,
+          depth: g.depth,
           rows: g.items.map((p): CertListadoRow => {
             const k = certCalc(p, cert.data, prevData, rates.coefK, snap);
             return {

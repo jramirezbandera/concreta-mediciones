@@ -1,4 +1,4 @@
-/* ===========================================================================
+﻿/* ===========================================================================
    features/exportar/docxRender — documentos Word desde `core/listado` (F7.3).
    ---------------------------------------------------------------------------
    Importa `docx` ESTÁTICAMENTE, pero este módulo solo se alcanza por IMPORT
@@ -195,6 +195,11 @@ function firma(meta: ObraMeta): Paragraph[] {
 // Nº·Código · Descripción · Ud. · Cantidad · Precio · Importe = 10546 twips.
 const W_PRES = [1100, 5100, 480, 1100, 1100, 1666];
 
+/** Sangría de cabecera de grupo por profundidad (NBSP: Word no la recorta). */
+function sangria(depth: number): string {
+  return '   '.repeat(Math.max(0, depth - 1));
+}
+
 function medLinea(l: MedLineListado): Paragraph {
   const dims = l.dims
     .filter((v) => v !== '' && v != null)
@@ -240,7 +245,7 @@ function presupuestoBloques(data: PresupuestoListado): (Paragraph | Table)[] {
           new TableRow({
             cantSplit: true,
             children: [
-              cell(g.sub.code, { width: W_PRES[0]!, bold: true, color: GRIS, size: T_SMALL, fill: BANDA }),
+              cell(sangria(g.depth) + g.sub.code, { width: W_PRES[0]!, bold: true, color: GRIS, size: T_SMALL, fill: BANDA }),
               cell(g.sub.title.toUpperCase(), { width: 0, span: 4, bold: true, color: GRIS, size: T_SMALL, fill: BANDA }),
               cell(fmtNum(g.total / 100), { width: W_PRES[5]!, right: true, color: GRIS, size: T_SMALL, fill: BANDA }),
             ],
@@ -379,7 +384,7 @@ function certBloques(data: CertListado): (Paragraph | Table)[] {
           new TableRow({
             cantSplit: true,
             children: [
-              cell(g.sub.code, { width: W_CERT[0]!, bold: true, color: GRIS, size: T_TINY, fill: BANDA }),
+              cell(sangria(g.depth) + g.sub.code, { width: W_CERT[0]!, bold: true, color: GRIS, size: T_TINY, fill: BANDA }),
               cell(g.sub.title.toUpperCase(), { width: 0, span: 8, bold: true, color: GRIS, size: T_TINY, fill: BANDA }),
             ],
           }),
