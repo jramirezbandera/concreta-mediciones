@@ -2,6 +2,7 @@ import { Fragment, useMemo } from 'react';
 import { Icon } from '../../components';
 import { certCalc, extrasCantidad, type CertSnapshot } from '../../core/certificacion';
 import { groupBySub } from '../../core/grouping';
+import { rollupByDepth } from '../../core/tree';
 import { fmtNum, sumCents, toEur, type Cents } from '../../core/money';
 import type { CertExtra, Chapter, Partida } from '../../core/types';
 import { useObraStore, type CertMode } from '../../store';
@@ -34,29 +35,41 @@ export function CertChapterCards({
   prevExtras: CertExtra[];
 }) {
   const addContradictorio = useObraStore((s) => s.addContradictorio);
-  const groups = useMemo(
-    () => groupBySub(chapter, partidas).filter((g) => g.items.length > 0),
-    [chapter, partidas],
-  );
+  // Grupos en pre-orden (N niveles) con subtotal ACUMULADO por cabecera; los
+  // contenedores intermedios con descendientes certificables se conservan.
+  const groups = useMemo(() => {
+    const gs = groupBySub(chapter, partidas);
+    const certImporte = (p: Partida): Cents => {
+      const k = certCalc(p, curData, prevData, coefK, snap);
+      return mode === 'origen' ? k.aOrigen : k.estaCert;
+    };
+    const rollups = rollupByDepth(
+      gs,
+      gs.map((g) => sumCents(g.items.map(certImporte))),
+    );
+    const counts = rollupByDepth(
+      gs,
+      gs.map((g) => g.items.length),
+    );
+    return gs
+      .map((g, i) => ({ ...g, rollup: rollups[i] ?? 0, n: counts[i] ?? 0 }))
+      .filter((g) => g.n > 0);
+  }, [chapter, partidas, curData, prevData, coefK, snap, mode]);
   const chapExtras = extras.filter((e) => e.chapterId === chapter.id);
   const prevCant = extrasCantidad(prevExtras);
-  const subTotal = (items: Partida[]): Cents =>
-    sumCents(
-      items.map((p) => {
-        const k = certCalc(p, curData, prevData, coefK, snap);
-        return mode === 'origen' ? k.aOrigen : k.estaCert;
-      }),
-    );
 
   return (
     <div className={styles.cards}>
       {groups.map((g, gi) => (
         <Fragment key={g.sub?.id ?? `orphan-${gi}`}>
           {g.sub && (
-            <div className={`${styles.cardsSubHead} ${gi === 0 ? styles.first : ''}`}>
+            <div
+              className={`${styles.cardsSubHead} ${gi === 0 ? styles.first : ''}`}
+              style={{ paddingLeft: (g.depth - 1) * 14 }}
+            >
               <span className={`mono ${styles.cardsSubCode}`}>{g.sub.code}</span>
               <span className={`caps ${styles.cardsSubTitle}`}>{g.sub.title}</span>
-              <span className={`mono ${styles.cardsSubImporte}`}>{fmtNum(toEur(subTotal(g.items)))}</span>
+              <span className={`mono ${styles.cardsSubImporte}`}>{fmtNum(toEur(g.rollup))}</span>
             </div>
           )}
           {g.items.map((p) => (

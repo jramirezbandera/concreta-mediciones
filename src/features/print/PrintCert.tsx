@@ -50,7 +50,8 @@ export function PrintCert({ data }: { data: CertListado }) {
                 <Fragment key={g.sub?.id ?? `orphan-${gi}`}>
                   {g.sub && (
                     <tr className="pd-sub">
-                      <td colSpan={9}>
+                      {/* sangría por profundidad (N niveles) */}
+                      <td colSpan={9} style={{ paddingLeft: 6 + (g.depth - 1) * 14 }}>
                         {g.sub.code} · {g.sub.title}
                       </td>
                     </tr>

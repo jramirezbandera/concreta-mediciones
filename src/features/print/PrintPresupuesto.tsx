@@ -46,7 +46,8 @@ export function PrintPresupuesto({ data }: { data: PresupuestoListado }) {
                 <Fragment key={g.sub?.id ?? `orphan-${gi}`}>
                   {g.sub && (
                     <tr className="pd-sub">
-                      <td colSpan={5}>
+                      {/* sangría por profundidad (N niveles); total ACUMULADO */}
+                      <td colSpan={5} style={{ paddingLeft: 6 + (g.depth - 1) * 14 }}>
                         {g.sub.code} · {g.sub.title}
                       </td>
                       <td className="mono pd-num">{fmtNum(toEur(g.total))}</td>

@@ -59,6 +59,16 @@ describe('parseObraJson (F6.3)', () => {
       expect((e as ImportError).kind).toBe('version-desconocida');
     }
   });
+
+  it('una obra v1 (2 niveles) MIGRA a v2 en el import .json (cadena identidad)', () => {
+    // Backup real anterior a la jerarquía N niveles: schemaVersion 1, subs planos.
+    const v1 = { ...toSerializable(state()), schemaVersion: 1 };
+    const data = parseObraJson(JSON.stringify(v1));
+    expect(data.schemaVersion).toBe(2);
+    expect(data.chapters.length).toBeGreaterThan(0);
+    // El árbol degenerado (2 niveles) sobrevive intacto.
+    expect(data.chapters[0]!.children?.length).toBeGreaterThan(0);
+  });
 });
 
 describe('exportObraJson (descarga)', () => {

@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+﻿import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { bc3ToObra, Bc3ImportError } from './bc3import';
@@ -89,6 +89,21 @@ describe('bc3ToObra — banco de precios (BCCA 2023, sin mediciones ~M)', () => 
     expect(data.chapters.every((c) => c.children?.length === 20)).toBe(true);
     expect(report.partidas).toBe(11798);
     expect(report.recursos).toBeGreaterThan(4000);
+  });
+
+  it('conserva los niveles profundos del banco (ÁRIDOS Y PIEDRAS → Arenas → precios)', () => {
+    const basicos = data.chapters[0]!;
+    const aridos = basicos.children![0]!;
+    expect(aridos.title).toBe('ÁRIDOS Y PIEDRAS');
+    expect(aridos.children!.length).toBeGreaterThan(0); // Arenas, Gravas… ya no se aplanan
+    const arenas = aridos.children![0]!;
+    expect(arenas.code).toBe('1.1.1');
+    // Las partidas hoja cuelgan de su contenedor INMEDIATO, con pos de ruta.
+    const arena = Object.values(data.partidas)
+      .flat()
+      .find((p) => p.code === 'AA00100')!;
+    expect(arena.sub).toBe(arenas.id);
+    expect(arena.pos.startsWith('1.1.1.')).toBe(true);
   });
 
   it('las partidas hoja llegan con código, ud y precio del banco', () => {
@@ -188,6 +203,64 @@ describe('bc3ToObra — semántica FIEBDC (fixtures sintéticos)', () => {
     );
     const p = allPartidas(r)[0]!;
     expect(p.med.map((m) => m.comment)).toEqual(['linea']);
+  });
+
+  it('conserva la jerarquía de N niveles (sub-subcapítulos anidados, sin aplanar)', () => {
+    // CAP → SUB1 → {SSA, SSB} → partidas; CAP → SUB2 → partida
+    const r = bc3ToObra(
+      bc3(
+        ...OBRA_MIN,
+        '~C|SUB1#||Subcapitulo 1.1|0|010101|0|',
+        '~C|SSA#||Sub-sub A|0|010101|0|',
+        '~C|SSB#||Sub-sub B|0|010101|0|',
+        '~C|SUB2#||Subcapitulo 1.2|0|010101|0|',
+        '~C|P1|m2|Partida 1|10|010101|0|',
+        '~C|P2|m2|Partida 2|10|010101|0|',
+        '~C|P3|m2|Partida 3|10|010101|0|',
+        '~C|P4|m2|Partida 4|10|010101|0|',
+        '~D|C1#|SUB1\\1\\1\\SUB2\\1\\1|',
+        '~D|SUB1#|SSA\\1\\1\\SSB\\1\\1|',
+        '~D|SSA#|P1\\1\\1\\P2\\1\\1|',
+        '~D|SSB#|P3\\1\\1|',
+        '~D|SUB2#|P4\\1\\1|',
+      ),
+    );
+    const ch = r.data.chapters[0]!;
+    const sub1 = ch.children![0]!;
+    expect(sub1.title).toBe('Subcapitulo 1.1');
+    expect(sub1.children!.map((s) => [s.code, s.title])).toEqual([
+      ['1.1.1', 'Sub-sub A'],
+      ['1.1.2', 'Sub-sub B'],
+    ]);
+    const ps = r.data.partidas[ch.id]!;
+    expect(ps.map((p) => [p.code, p.pos, p.sub])).toEqual([
+      ['P1', '1.1.1.1', sub1.children![0]!.id],
+      ['P2', '1.1.1.2', sub1.children![0]!.id],
+      ['P3', '1.1.2.1', sub1.children![1]!.id],
+      ['P4', '1.2.1', ch.children![1]!.id],
+    ]);
+  });
+
+  it('un contenedor reutilizado en dos ramas se CLONA (con aviso), no se pierde', () => {
+    // COMUN# cuelga de C1 y de C2: el árbol exige una copia por rama.
+    const r = bc3ToObra(
+      bc3(
+        '~C|R##||Obra|100|010101|0|',
+        '~C|C1#||Cap uno|0|010101|0|',
+        '~C|C2#||Cap dos|0|010101|0|',
+        '~C|COMUN#||Grupo comun|0|010101|0|',
+        '~C|P1|m2|Part|5|010101|0|',
+        '~D|R##|C1\\1\\1\\C2\\1\\1|',
+        '~D|C1#|COMUN\\1\\1|',
+        '~D|C2#|COMUN\\1\\1|',
+        '~D|COMUN#|P1\\1\\2|',
+      ),
+    );
+    expect(r.data.chapters).toHaveLength(2);
+    expect(r.data.chapters[0]!.children![0]!.title).toBe('Grupo comun');
+    expect(r.data.chapters[1]!.children![0]!.title).toBe('Grupo comun');
+    expect(r.report.partidas).toBe(2); // P1 instanciada en ambas ramas
+    expect(r.report.warnings.some((w) => w.includes('reutilizan'))).toBe(true);
   });
 
   it('un ~D cíclico no revienta: se corta y se avisa', () => {

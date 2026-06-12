@@ -11,6 +11,7 @@ import {
   type CertSnapshot,
 } from '../../core/certificacion';
 import { groupBySub } from '../../core/grouping';
+import { rollupByDepth } from '../../core/tree';
 import { lineParcial } from '../../core/medicion';
 import { fmtNum, round2, sumCents, toEur, type Cents } from '../../core/money';
 import type { CertExtra, MedLine, Partida, Chapter } from '../../core/types';
@@ -302,16 +303,26 @@ export function CertChapterTable({
   prevExtras: CertExtra[];
 }) {
   const addContradictorio = useObraStore((s) => s.addContradictorio);
-  const groups = groupBySub(chapter, partidas).filter((g) => g.items.length > 0);
+  // Grupos en pre-orden (N niveles): se conservan los contenedores intermedios
+  // con descendientes certificables; el subtotal de cabecera es el ACUMULADO.
+  const allGroups = groupBySub(chapter, partidas);
+  const certImporte = (p: Partida): Cents => {
+    const k = certCalc(p, curData, prevData, coefK, snap);
+    return mode === 'origen' ? k.aOrigen : k.estaCert;
+  };
+  const rollups = rollupByDepth(
+    allGroups,
+    allGroups.map((g) => sumCents(g.items.map(certImporte))),
+  );
+  const counts = rollupByDepth(
+    allGroups,
+    allGroups.map((g) => g.items.length),
+  );
+  const groups = allGroups
+    .map((g, i) => ({ ...g, rollup: rollups[i] ?? 0, n: counts[i] ?? 0 }))
+    .filter((g) => g.n > 0);
   const chapExtras = extras.filter((e) => e.chapterId === chapter.id);
   const prevCant = extrasCantidad(prevExtras);
-  const subTotal = (items: Partida[]): Cents =>
-    sumCents(
-      items.map((p) => {
-        const k = certCalc(p, curData, prevData, coefK, snap);
-        return mode === 'origen' ? k.aOrigen : k.estaCert;
-      }),
-    );
 
   return (
     <table className={`ctable ${styles.table}`}>
@@ -321,12 +332,12 @@ export function CertChapterTable({
             {g.sub && (
               <tr className={styles.subRow}>
                 <td colSpan={7}>
-                  <div className={styles.subLabel}>
+                  <div className={styles.subLabel} style={{ paddingLeft: (g.depth - 1) * 16 }}>
                     <span className={`mono ${styles.subCode}`}>{g.sub.code}</span>
                     <span className={`caps ${styles.subTitle}`}>{g.sub.title}</span>
                   </div>
                 </td>
-                <td className={`mono ${styles.subImporte}`}>{fmtNum(toEur(subTotal(g.items)))}</td>
+                <td className={`mono ${styles.subImporte}`}>{fmtNum(toEur(g.rollup))}</td>
               </tr>
             )}
             {g.items.map((p) => (

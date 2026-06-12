@@ -31,6 +31,22 @@ describe('hydrate (F6.1)', () => {
     expect(state().obra.denominacion).toBe('Obra Guardada');
   });
 
+  it('una obra v1 guardada (pre-jerarquía N niveles) MIGRA y carga al hidratar', async () => {
+    const { set } = await import('idb-keyval');
+    const { OBRA_KEY } = await import('./persist');
+    // Sobre v1 real: lo que persistió la app antes del SCHEMA_VERSION 2.
+    const v1: ObraData = {
+      ...toSerializable(state()),
+      schemaVersion: 1,
+      obra: { denominacion: 'Obra v1 antigua', direccion: '', localidad: '' },
+    };
+    await set(OBRA_KEY, { schemaVersion: 1, savedAt: 'x', appVersion: '0.5', data: v1 });
+    await hydrate();
+    expect(state().obra.denominacion).toBe('Obra v1 antigua'); // cargó, no recuperación
+    expect(state().schemaVersion).toBe(2); // migrada en cadena
+    expect(usePersistStore.getState().recovery).toBeNull();
+  });
+
   it('datos corruptos → NO pisa, marca recuperación, no arma autosave', async () => {
     const { set } = await import('idb-keyval');
     const { OBRA_KEY } = await import('./persist');

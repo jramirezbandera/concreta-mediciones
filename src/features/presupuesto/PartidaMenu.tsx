@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '../../components';
+import { flattenContainers } from '../../core/tree';
 import type { Partida } from '../../core/types';
 import { useObraStore } from '../../store';
 import styles from './Presupuesto.module.css';
@@ -24,14 +25,15 @@ export function PartidaMenu({ p, chapterId }: { p: Partida; chapterId: string })
   const isCur = (chId: string, subId: string | null) =>
     chId === chapterId && (subId ?? null) === (p.sub ?? null);
 
-  const target = (chId: string, subId: string | null, code: string, label: string, sub: boolean) => {
+  const target = (chId: string, subId: string | null, code: string, label: string, depth: number) => {
     const cur = isCur(chId, subId);
     return (
       <button
         key={`${chId}/${subId ?? ''}`}
         type="button"
         disabled={cur}
-        className={`tcol ${styles.menuTarget} ${sub ? styles.menuSub : ''}`}
+        className={`tcol ${styles.menuTarget} ${depth >= 1 ? styles.menuSub : ''}`}
+        style={depth > 1 ? { paddingLeft: 24 + (depth - 1) * 14 } : undefined}
         onClick={() => {
           if (!cur) {
             movePartida(chapterId, p.id, chId, subId);
@@ -63,10 +65,13 @@ export function PartidaMenu({ p, chapterId }: { p: Partida; chapterId: string })
         <div className={styles.menuPop} onClick={(e) => e.stopPropagation()}>
           <div className={`sec-head ${styles.menuHead}`}>Mover a</div>
           <div className={`scroll-thin ${styles.menuList}`}>
+            {/* Destinos a CUALQUIER profundidad (T-17), sangrados por nivel. */}
             {chapters.map((ch) => (
               <div key={ch.id}>
-                {target(ch.id, null, ch.code, ch.title, false)}
-                {(ch.children ?? []).map((sc) => target(ch.id, sc.id, sc.code, sc.title, true))}
+                {target(ch.id, null, ch.code, ch.title, 0)}
+                {flattenContainers(ch).map((f) =>
+                  target(ch.id, f.sub.id, f.sub.code, f.sub.title, f.depth),
+                )}
               </div>
             ))}
           </div>

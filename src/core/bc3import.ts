@@ -12,11 +12,14 @@
      · Marca `precioManual` donde el precio del .bc3 ≠ descompuesto (autoridad de
        la fuente), igual que `seedObraData`.
    El mapeo de estructura usa la DESCOMPOSICIÓN como verdad: raíz → capítulos →
-   subcapítulos → partidas → recursos. Un nodo es contenedor (capítulo/sub) si
-   tiene mediciones de hijos (~M, obras) O si su código lleva el marcador «#»
-   de capítulo FIEBDC (bancos de precios, que no traen ~M). El primer nivel de
-   contenedores bajo un capítulo se conserva como subcapítulo; los más
-   profundos se APLANAN en su subcapítulo (el modelo tiene 2 niveles).
+   subcapítulos (N NIVELES) → partidas → recursos. Un nodo es contenedor
+   (capítulo/sub) si tiene mediciones de hijos (~M, obras) O si su código lleva
+   el marcador «#» de capítulo FIEBDC (bancos de precios, que no traen ~M).
+   Cada contenedor del .bc3 se conserva en su nivel (SubChapter recursivo).
+   BC3 es un GRAFO: un contenedor referenciado desde varios padres se CLONA en
+   cada rama (ids propios por ruta, recursos compartidos por código) — como lo
+   presenta Arquímedes; solo los ciclos reales (un ancestro de la propia rama)
+   se cortan, con aviso.
    =========================================================================== */
 import { BC3, type BC3Document, type ConceptNode } from 'bc3';
 import { descompUnit } from './banco';
@@ -214,6 +217,8 @@ export function bc3ToObra(bytes: Uint8Array): Bc3ImportResult {
   let medVisible = 0;
   let medSeq = 0;
   let cyclesSkipped = 0;
+  const containersSeen = new Set<string>(); // codeNorm de contenedores ya emitidos
+  const containersReused = new Set<string>(); // referenciados desde >1 rama (clonados)
 
   /** Registra un recurso en el banco sin pisar el primero visto (homónimos). */
   function registerRecurso(code: string, type: ResourceType, node: ConceptNode | undefined): void {
@@ -227,21 +232,25 @@ export function bc3ToObra(bytes: Uint8Array): Bc3ImportResult {
   }
 
   /**
-   * Recorre la descomposición de un contenedor y emite sus partidas. Un
-   * contenedor hijo directo del capítulo (`sub === null`) abre un subcapítulo;
-   * los contenedores más profundos se aplanan en el subcapítulo heredado.
-   * `counts` numera `pos` por grupo (subcapítulo o capítulo), como `renumberChapter`.
-   * `visited` (códigos de contenedor ya recorridos en el capítulo) corta los
-   * ~D cíclicos o duplicados, que de otro modo recursarían hasta reventar la
-   * pila (la librería no protege ciclos).
+   * Recorre la descomposición de un contenedor y emite sus partidas. Cada
+   * contenedor hijo crea un SubChapter EN SU NIVEL (recursivo, N niveles)
+   * colgado de `parent` (el capítulo o el sub actual); las partidas se
+   * etiquetan con su contenedor INMEDIATO (`sub`).
+   * `counts` numera `pos` por grupo (contenedor inmediato), como `renumberChapter`.
+   * `path` (codeNorms de los ANCESTROS de esta rama) corta SOLO los ciclos
+   * reales (A→B→A), que recursarían hasta reventar la pila (la librería no
+   * protege ciclos); un contenedor reutilizado desde OTRA rama no es un ciclo:
+   * se CLONA con ids propios (BC3 es un grafo; el árbol exige una copia por
+   * referencia, como lo muestra Arquímedes) y se anota para el aviso.
    */
   function collectPartidas(
     container: ConceptNode,
     ch: Chapter,
-    sub: SubChapter | null,
+    parent: Chapter | SubChapter,
     counts: Record<string, number>,
-    visited: Set<string>,
+    path: Set<string>,
   ): void {
+    const sub: SubChapter | null = parent === ch ? null : (parent as SubChapter);
     // Alineación ~M↔hijo por el campo POSICIÓN (1-based dentro de la descompo-
     // sición del padre): la librería pierde el código del hijo del ~M y las
     // cuelga del padre en orden de archivo, así que alinear por índice se
@@ -259,22 +268,23 @@ export function bc3ToObra(bytes: Uint8Array): Bc3ImportResult {
       const child = doc.getConcept(d.childCode);
       if (!child) return;
       if (isContainer(child)) {
-        if (visited.has(child.concept.codeNorm)) {
-          cyclesSkipped += 1;
+        const norm = child.concept.codeNorm;
+        if (path.has(norm)) {
+          cyclesSkipped += 1; // ciclo real: el concepto es ancestro de su propia rama
           return;
         }
-        visited.add(child.concept.codeNorm);
-        let next = sub;
-        if (!next) {
-          const k = (ch.children ??= []).length + 1;
-          next = {
-            id: `${ch.id}.${String(k).padStart(2, '0')}`,
-            code: `${ch.code}.${k}`,
-            title: (child.concept.summary || d.childCode).slice(0, 120),
-          };
-          ch.children.push(next);
-        }
-        collectPartidas(child, ch, next, counts, visited);
+        if (containersSeen.has(norm)) containersReused.add(norm);
+        else containersSeen.add(norm);
+        const k = (parent.children ??= []).length + 1;
+        const next: SubChapter = {
+          id: `${parent.id}.${String(k).padStart(2, '0')}`,
+          code: `${parent.code}.${k}`,
+          title: (child.concept.summary || d.childCode).slice(0, 120),
+        };
+        parent.children.push(next);
+        path.add(norm);
+        collectPartidas(child, ch, next, counts, path);
+        path.delete(norm);
         return;
       }
       const list = partidas[ch.id]!;
@@ -359,11 +369,18 @@ export function bc3ToObra(bytes: Uint8Array): Bc3ImportResult {
     const ch: Chapter = { id, code: String(ci), title: chNode.concept.summary || code };
     chapters.push(ch);
     partidas[id] = [];
-    collectPartidas(chNode, ch, null, {}, new Set([chNode.concept.codeNorm]));
+    containersSeen.add(chNode.concept.codeNorm);
+    collectPartidas(chNode, ch, ch, {}, new Set([chNode.concept.codeNorm]));
   }
   if (cyclesSkipped > 0)
     warnings.push(
-      `Se ignoraron ${cyclesSkipped} referencias circulares o duplicadas en la descomposición (archivo malformado).`,
+      `Se ignoraron ${cyclesSkipped} referencias circulares en la descomposición (archivo malformado).`,
+    );
+  if (containersReused.size > 0)
+    warnings.push(
+      `${containersReused.size} capítulo(s)/grupo(s) del .bc3 se reutilizan en varias ramas; ` +
+        `su contenido se duplicó en cada una (cantidades independientes): ` +
+        `${[...containersReused].slice(0, 5).join(', ')}${containersReused.size > 5 ? '…' : ''}.`,
     );
 
   if (chapters.length === 0) {

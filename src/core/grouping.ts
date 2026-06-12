@@ -1,28 +1,37 @@
 /* ===========================================================================
-   core/grouping — agrupación de partidas por subcapítulo (puro, sin React).
-   Compartido por la vista Presupuesto (F2) y Certificaciones (F4): misma
-   estructura de grupos en ambas. Movido aquí desde features/presupuesto en F4
-   para no acoplar las features entre sí (DRY, eng-review F4).
+   core/grouping — agrupación de partidas por contenedor (puro, sin React).
+   Compartido por la vista Presupuesto (F2), Certificaciones (F4) y los
+   exportadores (vía listado): misma estructura de grupos en todos.
+
+   Jerarquía de N niveles: los grupos salen APLANADOS en PRE-ORDEN del árbol
+   de contenedores, con `depth` (1 = sub de primer nivel). Las vistas pintan
+   la misma lista plana de siempre y sangran la cabecera por profundidad; el
+   subtotal acumulado de cada cabecera lo da `rollupByDepth` (core/tree).
    =========================================================================== */
 import type { Chapter, Partida, SubChapter } from './types';
+import { flattenContainers, partidasByContainer } from './tree';
 
 export interface Group {
+  /** `null` = directas (o huérfanas) del capítulo, sin subcabecera. */
   sub: SubChapter | null;
+  /** 0 para el grupo sin sub; 1 = sub de primer nivel; 2 = sub-sub… */
+  depth: number;
   items: Partida[];
 }
 
 /**
- * Agrupa las partidas de un capítulo por subcapítulo; las huérfanas (sin sub o
- * con un sub inexistente) van a un grupo inicial sin subcabecera.
+ * Agrupa las partidas de un capítulo por contenedor, en PRE-ORDEN del árbol;
+ * las huérfanas (sin sub o con un sub inexistente) van a un grupo inicial sin
+ * subcabecera. Los contenedores sin partidas directas también salen (igual que
+ * antes: una subcabecera vacía permite añadirle la primera partida).
  */
 export function groupBySub(chapter: Chapter, partidas: Partida[]): Group[] {
-  const children = chapter.children ?? [];
-  if (!children.length) return [{ sub: null, items: partidas }];
-  const used: Group[] = children.map((sub) => ({
-    sub,
-    items: partidas.filter((p) => p.sub === sub.id),
-  }));
-  const orphan = partidas.filter((p) => !p.sub || !children.some((s) => s.id === p.sub));
-  if (orphan.length) used.unshift({ sub: null, items: orphan });
-  return used.filter((g) => g.items.length > 0 || g.sub);
+  const flat = flattenContainers(chapter);
+  if (!flat.length) return [{ sub: null, depth: 0, items: partidas }];
+  const by = partidasByContainer(chapter, partidas);
+  const out: Group[] = [];
+  const orphan = by.get(null) ?? [];
+  if (orphan.length) out.push({ sub: null, depth: 0, items: orphan });
+  for (const f of flat) out.push({ sub: f.sub, depth: f.depth, items: by.get(f.sub.id) ?? [] });
+  return out;
 }

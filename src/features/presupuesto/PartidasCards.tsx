@@ -4,6 +4,7 @@ import { partidaImporte } from '../../core/medicion';
 import { fmtNum, sumCents, toEur, type Cents } from '../../core/money';
 import type { Chapter, Partida } from '../../core/types';
 import { groupBySub } from '../../core/grouping';
+import { rollupByDepth } from '../../core/tree';
 import { useObraStore } from '../../store';
 import { PartidaCard } from './PartidaCard';
 import styles from './Presupuesto.module.css';
@@ -21,17 +22,24 @@ export function PartidasCards({
   const coefK = useObraStore((s) => s.rates.coefK);
   const addPartida = useObraStore((s) => s.addPartida);
   const groups = useMemo(() => groupBySub(chapter, partidas), [chapter, partidas]);
-  const subTotal = (items: Partida[]): Cents => sumCents(items.map((p) => partidaImporte(p, coefK)));
+  // Subtotal ACUMULADO por cabecera (directas + descendientes), como la tabla.
+  const rollups = rollupByDepth(
+    groups,
+    groups.map((g) => sumCents(g.items.map((p) => partidaImporte(p, coefK)))),
+  );
 
   return (
     <div className={styles.cards}>
       {groups.map((g, gi) => (
         <Fragment key={g.sub?.id ?? `orphan-${gi}`}>
           {g.sub && (
-            <div className={`${styles.cardsSubHead} ${gi === 0 ? styles.first : ''}`}>
+            <div
+              className={`${styles.cardsSubHead} ${gi === 0 ? styles.first : ''}`}
+              style={{ paddingLeft: (g.depth - 1) * 14 }}
+            >
               <span className={`mono ${styles.cardsSubCode}`}>{g.sub.code}</span>
               <span className={`caps ${styles.cardsSubTitle}`}>{g.sub.title}</span>
-              <span className={`mono ${styles.cardsSubImporte}`}>{fmtNum(toEur(subTotal(g.items)))}</span>
+              <span className={`mono ${styles.cardsSubImporte}`}>{fmtNum(toEur(rollups[gi] ?? 0))}</span>
             </div>
           )}
           {g.items.map((p) => (
