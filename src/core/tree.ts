@@ -108,6 +108,28 @@ export function partidasByContainer(
   return by;
 }
 
+/**
+ * Ids de los contenedores cuyo SUBÁRBOL entero no tiene ninguna partida.
+ * En bancos tipo BCCA la taxonomía maestra se replica en las tres secciones
+ * y solo se rellenan las ramas pertinentes: cientos de contenedores son
+ * esqueleto de clasificación. El sidebar los atenúa para distinguir de un
+ * vistazo los nodos con contenido de los huecos de la taxonomía.
+ */
+export function emptyContainers(chapter: Chapter, partidas: Partida[]): Set<string> {
+  const flat = flattenContainers(chapter);
+  const out = new Set<string>();
+  if (!flat.length) return out;
+  const by = partidasByContainer(chapter, partidas);
+  const counts = rollupByDepth(
+    flat.map((f) => ({ sub: f.sub, depth: f.depth })),
+    flat.map((f) => by.get(f.sub.id)?.length ?? 0),
+  );
+  flat.forEach((f, i) => {
+    if (!counts[i]) out.add(f.sub.id);
+  });
+  return out;
+}
+
 /* ---- árbol con totales (view-model) ---------------------------------------- */
 
 export interface TreeNode {

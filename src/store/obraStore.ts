@@ -190,7 +190,7 @@ export interface ObraState extends ObraData {
   view: View;
   /** Capítulo/subcapítulo seleccionado, o `__ALL__` para toda la obra. */
   active: string;
-  /** Capítulos desplegados en el sidebar (id → abierto). */
+  /** Contenedores desplegados en el sidebar (id de capítulo O sub → abierto). */
   expanded: Record<string, boolean>;
   /** Índice de la certificación en curso dentro de `certs`. */
   curCert: number;
@@ -207,9 +207,9 @@ export interface ObraState extends ObraData {
   setView: (v: View) => void;
   setActive: (id: string) => void;
   /**
-   * Despliega/colapsa un capítulo en el árbol del sidebar (estado de UI).
-   * `force` fija el estado (true = desplegar) en vez de alternar; lo usa
-   * "añadir subcapítulo" para abrir el padre antes de crear (F2.4).
+   * Despliega/colapsa un contenedor (capítulo o sub) en el árbol del sidebar
+   * (estado de UI). `force` fija el estado (true = desplegar) en vez de
+   * alternar; lo usa "añadir subcapítulo" para abrir la cadena de ancestros.
    */
   toggleExpanded: (chId: string, force?: boolean) => void;
   /** Edita una o varias tasas (iva/gg/bi/coefK) sin tocar globals. */
@@ -453,7 +453,9 @@ function seedUi(certs: Cert[]) {
   return {
     view: 'presupuesto' as View,
     active: '01',
-    expanded: { '01': true } as Record<string, boolean>,
+    // Árbol COLAPSADO por defecto (capítulos y subs): en bancos/obras grandes
+    // el árbol desplegado es inmanejable; el usuario abre lo que necesita.
+    expanded: {} as Record<string, boolean>,
     curCert: Math.max(0, certs.length - 1), // la última cert queda en curso
     refOpen: false,
     refSourceId: REF_SOURCES[0]?.id ?? '',
@@ -664,7 +666,7 @@ export const useObraStore = create<ObraState>()(
           const first = data.chapters[0]?.id;
           s.view = 'presupuesto';
           s.active = first ?? ALL;
-          s.expanded = first ? { [first]: true } : {};
+          s.expanded = {}; // árbol colapsado: una obra recién importada se explora
           s.refOpen = false;
         }),
 

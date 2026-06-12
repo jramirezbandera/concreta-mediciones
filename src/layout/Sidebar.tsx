@@ -1,7 +1,13 @@
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { Bar, Icon, InlineCreate, IvaSelect } from '../components';
 import { fmtCents, fmtNum, toEur, type Cents } from '../core/money';
-import { findNode, flattenContainers, subtreeIds } from '../core/tree';
+import {
+  emptyContainers,
+  findNode,
+  flattenContainers,
+  subtreeIds,
+  type FlatContainer,
+} from '../core/tree';
 import type { Chapter, SubChapter } from '../core/types';
 import {
   ALL,
@@ -104,6 +110,24 @@ interface DropHandlers {
       onDrop: (e: React.DragEvent) => void;
     };
   };
+}
+
+/**
+ * Filas VISIBLES del árbol de un capítulo: un sub se ve solo si TODOS sus
+ * ancestros (subs) están desplegados — colapsar un nodo oculta su subárbol
+ * entero. Pre-orden, igual que `flattenContainers`.
+ */
+function visibleContainers(ch: Chapter, expanded: Record<string, boolean>): FlatContainer[] {
+  const out: FlatContainer[] = [];
+  const hidden = new Set<string>();
+  for (const f of flattenContainers(ch)) {
+    if (f.parentId !== ch.id && (hidden.has(f.parentId) || !expanded[f.parentId])) {
+      hidden.add(f.sub.id);
+      continue;
+    }
+    out.push(f);
+  }
+  return out;
 }
 
 /* ---------- Menú ⋮ de un contenedor del árbol (T-17: edición profunda) ----- */
@@ -217,9 +241,12 @@ function SubRow({
   parentId,
   chapters,
   active,
+  empty,
+  open,
   onSelect,
   onDelete,
   onAddChild,
+  onToggle,
   drop,
 }: {
   sub: SubChapter;
@@ -230,23 +257,47 @@ function SubRow({
   parentId: string;
   chapters: Chapter[];
   active: string;
+  /** Subárbol SIN partidas (esqueleto de taxonomía en bancos): se atenúa. */
+  empty?: boolean;
+  /** Desplegado (solo aplica si tiene hijos). */
+  open?: boolean;
   onSelect: (id: string) => void;
   onDelete: (chId: string, subId: string) => void;
   onAddChild: (chId: string, parentId: string) => void;
+  onToggle: (id: string) => void;
   drop?: DropHandlers;
 }) {
   const on = active === sub.id;
   const [menuOpen, setMenuOpen] = useState(false);
   const dropProps = drop?.bind(sub.id, chId, sub.id);
+  const hasChildren = !!sub.children?.length;
   return (
     <div className={styles.subRowWrap}>
       <button
         type="button"
-        className={`tcol ${styles.subRow} ${on ? styles.on : ''} ${dropProps?.isOver ? styles.dropOver : ''}`}
-        style={{ paddingLeft: (depth - 1) * 14 }}
+        className={`tcol ${styles.subRow} ${on ? styles.on : ''} ${empty && !on ? styles.dim : ''} ${dropProps?.isOver ? styles.dropOver : ''}`}
+        // 8px de respiro base (es el padding del row, que el inline pisa) +
+        // sangría por nivel.
+        style={{ paddingLeft: 8 + (depth - 1) * 14 }}
         onClick={() => onSelect(sub.id)}
         {...dropProps?.events}
       >
+        {hasChildren ? (
+          <span
+            role="button"
+            tabIndex={-1}
+            aria-label={open ? 'Colapsar' : 'Desplegar'}
+            className={`tcol ${styles.subChev}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggle(sub.id);
+            }}
+          >
+            <Icon name={open ? 'chevronDown' : 'chevron'} size={12} />
+          </span>
+        ) : (
+          <span className={styles.subChevSpacer} />
+        )}
         <span className={`mono ${styles.subCode}`}>{sub.code}</span>
         <span className={styles.subTitle}>{sub.title}</span>
         <span
@@ -398,6 +449,17 @@ export function Sidebar({ drawer = false, onAfterSelect }: SidebarProps) {
   const [creatingSubFor, setCreatingSubFor] = useState<string | null>(null);
   const [dropId, setDropId] = useState<string | null>(null);
 
+  // Contenedores cuyo subárbol no tiene partidas (esqueleto de taxonomía en
+  // bancos tipo BCCA): se atenúan en el árbol para distinguir contenido de
+  // clasificación vacía. Un solo Set (los ids de sub son únicos entre capítulos).
+  const partidas = useObraStore((s) => s.partidas);
+  const emptySubs = useMemo(() => {
+    const out = new Set<string>();
+    for (const ch of chapters)
+      for (const id of emptyContainers(ch, partidas[ch.id] ?? [])) out.add(id);
+    return out;
+  }, [chapters, partidas]);
+
   // Drop de partidas de Referencia (F5.2): sólo activo mientras se arrastra.
   const drop: DropHandlers | undefined = refDrag
     ? {
@@ -426,10 +488,19 @@ export function Sidebar({ drawer = false, onAfterSelect }: SidebarProps) {
     setView('presupuesto');
     onAfterSelect?.();
   };
-  // `parentId` puede ser el capítulo o un sub a cualquier profundidad (T-17);
-  // el despliegue del sidebar va por capítulo, así que se abre el dueño.
+  // `parentId` puede ser el capítulo o un sub a cualquier profundidad (T-17).
+  // Con subs colapsables hay que abrir la CADENA entera de ancestros (y el
+  // propio padre, para que el hijo recién creado quede a la vista).
   const onAddSub = (chId: string, parentId: string = chId) => {
     toggleExpanded(chId, true);
+    if (parentId !== chId) {
+      const ch = chapters.find((c) => c.id === chId);
+      if (ch) {
+        const up = new Map(flattenContainers(ch).map((f) => [f.sub.id, f.parentId]));
+        for (let cur: string | undefined = parentId; cur && cur !== chId; cur = up.get(cur))
+          toggleExpanded(cur, true);
+      }
+    }
     setCreatingSubFor(parentId);
   };
   const onDeleteChapter = (id: string) => {
@@ -496,7 +567,7 @@ export function Sidebar({ drawer = false, onAfterSelect }: SidebarProps) {
             />
             {ch.children && expanded[ch.id] && (
               <div className={styles.subList}>
-                {flattenContainers(ch).map((f) => (
+                {visibleContainers(ch, expanded).map((f) => (
                   <Fragment key={f.sub.id}>
                     <SubRow
                       sub={f.sub}
@@ -505,14 +576,17 @@ export function Sidebar({ drawer = false, onAfterSelect }: SidebarProps) {
                       parentId={f.parentId}
                       chapters={chapters}
                       active={active}
+                      empty={emptySubs.has(f.sub.id)}
+                      open={!!expanded[f.sub.id]}
                       onSelect={select}
                       onDelete={onDeleteSub}
                       onAddChild={onAddSub}
+                      onToggle={toggleExpanded}
                       drop={drop}
                     />
                     {/* Alta de un HIJO de este sub (T-17), sangrada a su nivel. */}
                     {creatingSubFor === f.sub.id && (
-                      <div style={{ marginLeft: f.depth * 14 }}>
+                      <div style={{ marginLeft: 8 + f.depth * 14 }}>
                         <InlineCreate
                           placeholder="Nombre del subcapítulo…"
                           onCommit={(t) => {

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Chapter, Partida, SubChapter } from './types';
 import {
   buildChapterTree,
+  emptyContainers,
   findChapterIdForContainer,
   findNode,
   flattenContainers,
@@ -162,6 +163,19 @@ describe('groupBySub (pre-orden + depth) y rollupByDepth', () => {
     expect(groupsForFocus(ch, ps, null)).toEqual(groupBySub(ch, ps));
     expect(groupsForFocus(ch, ps, '01')).toEqual(groupBySub(ch, ps));
     expect(groupsForFocus(ch, ps, 'no-existe')).toEqual(groupBySub(ch, ps));
+  });
+
+  it('emptyContainers: vacío = SUBÁRBOL entero sin partidas (esqueleto de taxonomía)', () => {
+    const ch = deepChapter();
+    // Una sola partida, en el nieto 1.1.1.
+    const empties = emptyContainers(ch, [P('a', '01.01.01')]);
+    expect(empties.has('01.01')).toBe(false); // su subárbol tiene contenido
+    expect(empties.has('01.01.01')).toBe(false);
+    expect(empties.has('01.01.02')).toBe(true);
+    expect(empties.has('01.02')).toBe(true);
+    // Sin partidas: los 4 contenedores vacíos; sin children: set vacío.
+    expect(emptyContainers(ch, []).size).toBe(4);
+    expect(emptyContainers({ id: '02', code: '2', title: 'X' }, [P('b', undefined)]).size).toBe(0);
   });
 
   it('rollupByDepth acumula descendientes y trata el grupo sin sub como hoja', () => {

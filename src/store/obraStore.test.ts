@@ -51,7 +51,7 @@ describe('estado sembrado', () => {
     const s = state();
     expect(s.view).toBe('presupuesto');
     expect(s.active).toBe('01');
-    expect(s.expanded).toEqual({ '01': true });
+    expect(s.expanded).toEqual({}); // árbol colapsado por defecto
     expect(s.curCert).toBe(2); // 3 certs → índice 2
   });
 
@@ -929,7 +929,7 @@ describe('loadObra (importar .bc3, F5.3)', () => {
     expect(s.obra.denominacion).toBe('Obra X');
     expect(s.view).toBe('presupuesto');
     expect(s.active).toBe('01');
-    expect(s.expanded).toEqual({ '01': true });
+    expect(s.expanded).toEqual({}); // una obra importada se explora colapsada
     expect(s.curCert).toBe(0);
     expect(s.refOpen).toBe(false);
   });

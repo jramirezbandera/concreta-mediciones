@@ -281,6 +281,36 @@
   color: var(--accent);
   font-weight: 500;
 }
+/* contenedor cuyo subárbol no tiene partidas (esqueleto de taxonomía): se
+   atenúa para distinguir contenido real de clasificación vacía */
+.subRow.dim .subCode,
+.subRow.dim .subTitle {
+  color: var(--text-disabled);
+}
+.subRow.dim:hover .subCode,
+.subRow.dim:hover .subTitle {
+  color: var(--text-secondary);
+}
+/* chevron de despliegue de un sub con hijos (espejo del .chev de capítulo) */
+.subChev {
+  display: grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  margin-left: -3px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-disabled);
+  flex-shrink: 0;
+}
+.subChev:hover {
+  color: var(--text-primary);
+}
+.subChevSpacer {
+  width: 12px;
+  flex-shrink: 0;
+}
 .subCode {
   font-size: 10.5px;
   opacity: 0.8;
