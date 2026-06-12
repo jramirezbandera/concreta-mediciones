@@ -79,8 +79,8 @@ describe('bc3ToObra — banco de precios (BCCA 2023, sin mediciones ~M)', () => 
   const { data, report } = bc3ToObra(sample('BCCA2023_V02.bc3'));
 
   it('detecta los capítulos por el marcador FIEBDC «#»: 3 capítulos · 20 subcapítulos cada uno', () => {
-    // La raíz «##» y las raíces sueltas («-AUX»/«-UNI», que el parser no enlaza
-    // por empezar por «-») se resuelven a los 3 capítulos reales del banco.
+    // El ~D de la raíz «##» referencia «-BAS»/«-AUX»/«-UNI»; el parser (fork)
+    // ya enlaza códigos con prefijo no alfanumérico → los 3 capítulos reales.
     expect(data.chapters.map((c) => c.title)).toEqual([
       'Precios Básicos',
       'Precios Auxiliares',
@@ -89,6 +89,18 @@ describe('bc3ToObra — banco de precios (BCCA 2023, sin mediciones ~M)', () => 
     expect(data.chapters.every((c) => c.children?.length === 20)).toBe(true);
     expect(report.partidas).toBe(11798);
     expect(report.recursos).toBeGreaterThan(4000);
+  });
+
+  it('el BCCA importa SIN avisos del parser: los códigos «-XXX»/byte raro enlazan (fork)', () => {
+    // Antes del fork: 4 avisos «child code "1"» (el parser descartaba el código
+    // real del ~D y leía su factor como código hijo) y DOS conceptos PERDIDOS
+    // («�KLLKJKJ»/«�LKKJJHDD»: ~C reales con precio cuyo código empieza por un
+    // byte no ASCII). Ahora todo enlaza y no queda ningún aviso.
+    expect(report.warnings.filter((w) => w.includes('Aviso del parser'))).toEqual([]);
+    // Los dos conceptos antes perdidos entran al banco como recursos reales.
+    const codes = Object.keys(data.recursos);
+    expect(codes.some((c) => c.endsWith('KLLKJKJ'))).toBe(true);
+    expect(codes.some((c) => c.endsWith('LKKJJHDD'))).toBe(true);
   });
 
   it('conserva los niveles profundos del banco (ÁRIDOS Y PIEDRAS → Arenas → precios)', () => {
@@ -285,6 +297,44 @@ describe('bc3ToObra — semántica FIEBDC (fixtures sintéticos)', () => {
     );
     expect(r.report.partidas).toBe(1);
     expect(r.report.warnings.some((w) => w.includes('GHOST'))).toBe(true);
+  });
+
+  it('códigos con prefijo no alfanumérico («-BAS») enlazan en el ~D (quirk BCCA, parser fork)', () => {
+    const r = bc3ToObra(
+      bc3(
+        '~C|R##||Obra|0|010101|0|',
+        '~C|-BAS#||Basicos|0|010101|0|',
+        '~C|P1|m2|Part|10|010101|0|',
+        '~D|R##|-BAS\\1\\1|',
+        '~D|-BAS#|P1\\1\\2|',
+      ),
+    );
+    expect(r.data.chapters.map((c) => c.title)).toEqual(['Basicos']);
+    expect(allPartidas(r)).toHaveLength(1);
+    expect(allPartidas(r)[0]!.cantidad).toBe(2);
+    expect(r.report.warnings.filter((w) => w.includes('child code'))).toEqual([]);
+  });
+
+  it('un código marca-de-agua (byte no ASCII, sin ~C) no desalinea el triplete del ~D', () => {
+    const r = bc3ToObra(
+      bc3(
+        ...OBRA_MIN,
+        '~C|P1|m2|Part|10|010101|0|',
+        '~C|MO1|h|Peon|10|010101|1|',
+        '~C|MA1|t|Arena|5|010101|3|',
+        '~D|C1#|P1\\1\\2|',
+        '~D|P1|MO1\\1\\0.5\\MA1\\1\\0.25\\ñXXWATER\\1\\1|',
+      ),
+    );
+    const p = allPartidas(r)[0]!;
+    // Los recursos reales sobreviven con sus rendimientos SIN desalinear
+    // (antes el código fantasma rompía el triplete y su factor «1» se leía
+    // como código hijo).
+    expect(p.items.map((i) => i.code)).toEqual(['MO1', 'MA1']);
+    expect(p.items.map((i) => i.cantidad)).toEqual([0.5, 0.25]);
+    // El aviso nombra el código fantasma REAL, no un «1» desalineado.
+    expect(r.report.warnings.some((w) => w.includes('XXWATER'))).toBe(true);
+    expect(r.report.warnings.some((w) => w.includes('"1"'))).toBe(false);
   });
 
   it('importa GG/BI/IVA del ~K cuando vienen > 0 y avisa de la BAJA', () => {

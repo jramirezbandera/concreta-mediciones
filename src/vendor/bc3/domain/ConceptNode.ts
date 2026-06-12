@@ -1,0 +1,136 @@
+import { type Attachment } from './Attachment';
+import { type Decomposition } from './Decomposition';
+import { type ITCodes } from './ITCode';
+import { type Measurement } from './Measurement';
+import { type Specification } from './Specification';
+import { type Thesaurus } from './Thesaurus';
+import { type Concept } from './types/Concept';
+
+/**
+ * ConceptNode represents a node in the hierarchical BC3 structure.
+ *
+ * It uses the Composite pattern to represent chapters, subchapters, and items uniformly.
+ * Each node can have children (forming the hierarchy) and associated measurements,
+ * decompositions, attachments, pliegos, IT codes, and thesaurus.
+ */
+export class ConceptNode {
+  readonly concept: Concept;
+  readonly children: ConceptNode[] = [];
+  readonly measurements: Measurement[] = [];
+  readonly decompositions: Decomposition[] = [];
+  readonly attachments: Attachment[] = [];
+  specification?: Specification;
+  itCodes?: ITCodes;
+  thesaurus?: Thesaurus;
+
+  constructor(concept: Concept) {
+    this.concept = concept;
+  }
+
+  /**
+   * Adds a child node to this node.
+   */
+  addChild(node: ConceptNode): void {
+    this.children.push(node);
+  }
+
+  /**
+   * Adds a measurement to this node.
+   */
+  addMeasurement(measurement: Measurement): void {
+    this.measurements.push(measurement);
+  }
+
+  /**
+   * Adds a decomposition to this node.
+   */
+  addDecomposition(decomposition: Decomposition): void {
+    this.decompositions.push(decomposition);
+  }
+
+  /**
+   * Adds an attachment to this node.
+   */
+  addAttachment(attachment: Attachment): void {
+    this.attachments.push(attachment);
+  }
+
+  /**
+   * Sets the specification for this node.
+   */
+  setSpecification(specification: Specification): void {
+    this.specification = specification;
+  }
+
+  /**
+   * Sets the IT codes for this node.
+   */
+  setITCodes(itCodes: ITCodes): void {
+    this.itCodes = itCodes;
+  }
+
+  /**
+   * Sets the thesaurus for this node.
+   */
+  setThesaurus(thesaurus: Thesaurus): void {
+    this.thesaurus = thesaurus;
+  }
+
+  /**
+   * Checks if this node is a leaf (has no children).
+   */
+  isLeaf(): boolean {
+    return this.children.length === 0;
+  }
+
+  /**
+   * Gets the depth of this node in the tree.
+   * Requires walking up to root, so this is O(n) where n is tree height.
+   * For better performance, use BC3Document.getPathToConcept().
+   */
+  getDepth(findParent: (node: ConceptNode) => ConceptNode | undefined): number {
+    let depth = 0;
+    let current: ConceptNode | undefined = this;
+    const visited = new Set<ConceptNode>();
+
+    while (current) {
+      if (visited.has(current)) break; // Prevent infinite loops
+      visited.add(current);
+
+      const parent = findParent(current);
+      if (!parent) break;
+      depth++;
+      current = parent;
+    }
+
+    return depth;
+  }
+
+  /**
+   * Gets all descendant nodes (children, grandchildren, etc.) in depth-first order.
+   */
+  getAllDescendants(): ConceptNode[] {
+    const descendants: ConceptNode[] = [];
+
+    const collect = (node: ConceptNode) => {
+      for (const child of node.children) {
+        descendants.push(child);
+        collect(child);
+      }
+    };
+
+    collect(this);
+    return descendants;
+  }
+
+  /**
+   * Gets the total number of descendants (including all nested levels).
+   */
+  getDescendantCount(): number {
+    let count = 0;
+    for (const child of this.children) {
+      count += 1 + child.getDescendantCount();
+    }
+    return count;
+  }
+}

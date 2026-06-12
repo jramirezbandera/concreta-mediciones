@@ -21,7 +21,7 @@
    presenta Arquímedes; solo los ciclos reales (un ancestro de la propia rama)
    se cortan, con aviso.
    =========================================================================== */
-import { BC3, type BC3Document, type ConceptNode } from 'bc3';
+import { BC3, type BC3Document, type ConceptNode } from '../vendor/bc3';
 import { descompUnit } from './banco';
 import { round2, toCents, type Cents } from './money';
 import { pem as pemOf } from './totales';
@@ -345,9 +345,10 @@ export function bc3ToObra(bytes: Uint8Array): Bc3ImportResult {
 
   // Capítulos de primer nivel = descomposición de la raíz (marcador «##») o,
   // si no hay descomposición, sus children. Las raíces SUELTAS se añaden como
-  // capítulos extra: en bancos tipo BCCA el ~D de la raíz referencia códigos
-  // «-XXX» que el parser no enlaza, y «Precios Auxiliares»/«Unitarios» quedan
-  // huérfanos pese a ser capítulos reales.
+  // capítulos extra (robustez genérica: archivos con varios árboles). Nota:
+  // los códigos «-XXX» del ~D raíz (BCCA) ya los enlaza el parser propio
+  // (src/vendor/bc3, fix en DParser.looksLikeChildCode) — el fallback queda
+  // para raíces genuinamente sueltas.
   const roots = doc.roots;
   const root =
     roots.find((n) => n.concept.code.endsWith('##')) ?? (roots.length === 1 ? roots[0]! : null);
