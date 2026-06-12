@@ -43,7 +43,10 @@ describe('bc3ToObra — import de obra real (Presto)', () => {
 
   it('importa el banco de recursos y las líneas de medición de algunas partidas', () => {
     expect(report.recursos).toBeGreaterThan(100);
-    expect(report.medVisible).toBeGreaterThan(0);
+    // 120/167 con la alineación por POSICIÓN (por índice eran 111: el ~M que
+    // falta en C03 desplazaba el resto). Las 47 restantes no traen ~M o su
+    // detalle no reproduce la cantidad (fórmulas, etc.).
+    expect(report.medVisible).toBe(120);
     // ningún recurso del banco es de tipo %CI (los % no entran al banco)
     expect(Object.values(data.recursos).every((r) => r.type !== '%CI')).toBe(true);
   });
@@ -60,11 +63,170 @@ describe('bc3ToObra — import de obra real (Presto)', () => {
     expect(report.charset).toBe('windows-1252');
     expect(report.program).toContain('Presto');
   });
+
+  it('conserva los subcapítulos como children y agrupa sus partidas (sub/pos)', () => {
+    const withSubs = data.chapters.filter((c) => c.children?.length);
+    expect(withSubs.length).toBeGreaterThan(0);
+    const ch = withSubs[0]!;
+    const sub = ch.children![0]!;
+    const grouped = data.partidas[ch.id]!.filter((p) => p.sub === sub.id);
+    expect(grouped.length).toBeGreaterThan(0);
+    expect(grouped[0]!.pos.startsWith(`${sub.code}.`)).toBe(true);
+  });
+});
+
+describe('bc3ToObra — banco de precios (BCCA 2023, sin mediciones ~M)', () => {
+  const { data, report } = bc3ToObra(sample('BCCA2023_V02.bc3'));
+
+  it('detecta los capítulos por el marcador FIEBDC «#»: 3 capítulos · 20 subcapítulos cada uno', () => {
+    // La raíz «##» y las raíces sueltas («-AUX»/«-UNI», que el parser no enlaza
+    // por empezar por «-») se resuelven a los 3 capítulos reales del banco.
+    expect(data.chapters.map((c) => c.title)).toEqual([
+      'Precios Básicos',
+      'Precios Auxiliares',
+      'Precios Unitarios',
+    ]);
+    expect(data.chapters.every((c) => c.children?.length === 20)).toBe(true);
+    expect(report.partidas).toBe(11798);
+    expect(report.recursos).toBeGreaterThan(4000);
+  });
+
+  it('las partidas hoja llegan con código, ud y precio del banco', () => {
+    const arena = Object.values(data.partidas)
+      .flat()
+      .find((p) => p.code === 'AA00100')!;
+    expect(arena.title).toBe('ARENA CERNIDA');
+    expect(arena.ud).toBe('m3');
+    expect(arena.precio).toBe(12.76); // ×1,13 (K del ~K) = 14,42 €, como muestra Arquímedes
+    expect(arena.sub).toBeTruthy();
+    // El banco trae rendimiento explícito 0 en los ~D hoja → cantidad 0 y PEM 0.
+    expect(arena.cantidad).toBe(0);
+    expect(report.pemCents).toBe(0);
+  });
+
+  it('la denominación y el K vienen de la raíz «##» pese a las raíces sueltas', () => {
+    expect(data.obra.denominacion).toBe('BANCO DE COSTE DE LA CONSTRUCCIÓN DE ANDALUCÍA');
+    expect(report.coefK).toBe(1.13);
+    expect(data.rates.iva).toBe(0.21); // el ~K del BCCA declara IVA 21
+  });
 });
 
 describe('bc3ToObra — errores', () => {
   it('lanza Bc3ImportError ante un archivo no .bc3', () => {
     const bytes = new TextEncoder().encode('esto no es un fichero FIEBDC');
     expect(() => bc3ToObra(bytes)).toThrow(Bc3ImportError);
+  });
+});
+
+/* ---- fixtures sintéticos FIEBDC (auditoría 2026-06) ------------------------ */
+const bc3 = (...recs: string[]): Uint8Array =>
+  new TextEncoder().encode(['~V|prog|FIEBDC-3/2016|prog|||ANSI||2|||', ...recs].join('\r\n') + '\r\n');
+const OBRA_MIN = [
+  '~C|R##||Obra|100|010101|0|',
+  '~C|C1#||Cap|100|010101|0|',
+  '~D|R##|C1\\1\\1|',
+];
+const allPartidas = (r: ReturnType<typeof bc3ToObra>) => Object.values(r.data.partidas).flat();
+
+describe('bc3ToObra — semántica FIEBDC (fixtures sintéticos)', () => {
+  it('cantidad = FACTOR × RENDIMIENTO, en partidas y en la justificación', () => {
+    const r = bc3ToObra(
+      bc3(
+        ...OBRA_MIN,
+        '~C|P1|m2|Part|5|010101|0|',
+        '~C|MAT1|u|Mat|1|010101|3|',
+        '~D|C1#|P1\\2\\5|', // 2 × 5 = 10
+        '~D|P1|MAT1\\3\\2|', // 3 × 2 = 6
+      ),
+    );
+    const p = allPartidas(r)[0]!;
+    expect(p.cantidad).toBe(10);
+    expect(p.items[0]!.cantidad).toBe(6);
+  });
+
+  it('factor/rendimiento VACÍOS valen 1 (espec); el 0 explícito se conserva', () => {
+    const r = bc3ToObra(
+      bc3(
+        ...OBRA_MIN,
+        '~C|P1|m2|Sin rendimiento|5|010101|0|',
+        '~C|P2|m2|Rendimiento cero|5|010101|0|',
+        '~D|C1#|P1\\\\\\P2\\1\\0|',
+      ),
+    );
+    const [p1, p2] = allPartidas(r);
+    expect(p1!.cantidad).toBe(1);
+    expect(p2!.cantidad).toBe(0);
+  });
+
+  it('alinea cada ~M con su partida por POSICIÓN, no por orden de archivo', () => {
+    const r = bc3ToObra(
+      bc3(
+        ...OBRA_MIN,
+        '~C|P1|m2|P uno|1|010101|0|',
+        '~C|P2|m2|P dos|1|010101|0|',
+        '~D|C1#|P1\\1\\10\\P2\\1\\10|',
+        // ~M en orden INVERSO al ~D y con totales iguales: por índice, cada
+        // partida heredaría la medición de la otra sin que el guard lo detecte.
+        '~M|C1#\\P2|1\\2\\|10|\\linea de P2\\2\\5\\\\\\|',
+        '~M|C1#\\P1|1\\1\\|10|\\linea de P1\\1\\10\\\\\\|',
+      ),
+    );
+    const [p1, p2] = allPartidas(r);
+    expect(p1!.med.map((m) => m.comment)).toEqual(['linea de P1']);
+    expect(p2!.med.map((m) => m.comment)).toEqual(['linea de P2']);
+  });
+
+  it('ignora líneas de subtotal/fórmula (TIPO 1/2/3) del ~M', () => {
+    const r = bc3ToObra(
+      bc3(
+        ...OBRA_MIN,
+        '~C|P1|m2|Part|1|010101|0|',
+        '~D|C1#|P1\\1\\2|',
+        // línea normal (suma 2) + subtotal TIPO 1 con uds que corrompería la suma
+        '~M|C1#\\P1|1\\1\\|2|\\linea\\2\\\\\\\\1\\Subtotal\\2\\\\\\|',
+      ),
+    );
+    const p = allPartidas(r)[0]!;
+    expect(p.med.map((m) => m.comment)).toEqual(['linea']);
+  });
+
+  it('un ~D cíclico no revienta: se corta y se avisa', () => {
+    const r = bc3ToObra(
+      bc3(
+        '~C|R##||Obra|100|010101|0|',
+        '~C|A#||CapA|100|010101|0|',
+        '~C|B#||CapB|100|010101|0|',
+        '~C|P1|m2|Part|5|010101|0|',
+        '~D|R##|A\\1\\1|',
+        '~D|A#|B\\1\\1|',
+        '~D|B#|A\\1\\1\\P1\\1\\2|',
+      ),
+    );
+    expect(r.report.partidas).toBe(1);
+    expect(r.report.warnings.some((w) => w.includes('circulares'))).toBe(true);
+  });
+
+  it('un hijo referenciado sin ~C genera aviso visible (antes se perdía en silencio)', () => {
+    const r = bc3ToObra(
+      bc3(...OBRA_MIN, '~C|P1|m2|Part|5|010101|0|', '~D|C1#|P1\\1\\2\\GHOST\\1\\3|'),
+    );
+    expect(r.report.partidas).toBe(1);
+    expect(r.report.warnings.some((w) => w.includes('GHOST'))).toBe(true);
+  });
+
+  it('importa GG/BI/IVA del ~K cuando vienen > 0 y avisa de la BAJA', () => {
+    const r = bc3ToObra(
+      bc3(
+        '~K|\\2\\2\\2\\2\\2\\2\\2\\EUR\\|13\\17\\6\\10\\21|',
+        ...OBRA_MIN,
+        '~C|P1|m2|Part|5|010101|0|',
+        '~D|C1#|P1\\1\\2|',
+      ),
+    );
+    expect(r.report.coefK).toBe(1.13);
+    expect(r.data.rates.gg).toBe(0.17);
+    expect(r.data.rates.bi).toBe(0.06);
+    expect(r.data.rates.iva).toBe(0.21);
+    expect(r.report.warnings.some((w) => w.includes('baja del 10%'))).toBe(true);
   });
 });

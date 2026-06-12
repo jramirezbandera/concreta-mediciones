@@ -12,15 +12,18 @@
      · Marca `precioManual` donde el precio del .bc3 ≠ descompuesto (autoridad de
        la fuente), igual que `seedObraData`.
    El mapeo de estructura usa la DESCOMPOSICIÓN como verdad: raíz → capítulos →
-   partidas → recursos; un nodo CON medición es un contenedor (capítulo/sub).
-   Subcapítulos se APLANAN en su capítulo (fiel al spike; 1 nivel de partidas).
+   subcapítulos → partidas → recursos. Un nodo es contenedor (capítulo/sub) si
+   tiene mediciones de hijos (~M, obras) O si su código lleva el marcador «#»
+   de capítulo FIEBDC (bancos de precios, que no traen ~M). El primer nivel de
+   contenedores bajo un capítulo se conserva como subcapítulo; los más
+   profundos se APLANAN en su subcapítulo (el modelo tiene 2 niveles).
    =========================================================================== */
 import { BC3, type BC3Document, type ConceptNode } from 'bc3';
 import { descompUnit } from './banco';
 import { round2, toCents, type Cents } from './money';
 import { pem as pemOf } from './totales';
 import { DEFAULT_OBRA, DEFAULT_RATES } from './seed';
-import type { Banco, Cert, Chapter, Item, MedLine, Obra, PartidasMap, Rates, ResourceType } from './types';
+import type { Banco, Cert, Chapter, Item, MedLine, Obra, PartidasMap, Rates, ResourceType, SubChapter } from './types';
 
 /**
  * Payload de dominio importado (sin `schemaVersion`; lo estampa el store al
@@ -131,16 +134,46 @@ function parseDocument(bytes: Uint8Array, warnings: string[]): { doc: BC3Documen
     const errs = parsed.diagnostics.filter((d) => d.level === 'error').slice(0, 20).map((d) => d.message);
     throw new Bc3ImportError('No se pudo parsear el archivo .bc3.', errs);
   }
+  // Los diagnostics no-info del parser van a warnings: un hijo referenciado en
+  // ~D sin ~C se DESCARTA del árbol (partida perdida) y el usuario debe verlo.
+  const issues = parsed.diagnostics.filter((d) => d.level !== 'info').map((d) => d.message);
+  const MAX_ISSUES = 8;
+  for (const msg of issues.slice(0, MAX_ISSUES)) warnings.push(`Aviso del parser: ${msg}`);
+  if (issues.length > MAX_ISSUES) warnings.push(`… y ${issues.length - MAX_ISSUES} avisos más del parser.`);
   return { doc: parsed.document, charset: enc, declared };
 }
 
-/* ---- coeficiente K del registro ~K ---------------------------------------- */
-function coefKOf(doc: BC3Document): number {
+/* ---- tasas del registro ~K -------------------------------------------------
+   El campo 1 del ~K es CI\GG\BI\BAJA\IVA (la librería solo lo expone en `raw`).
+   El «coeficiente K» del modelo es el CI (costes indirectos): escala los
+   precios base, igual que hacen Presto/Arquímedes al presentarlos — validado
+   contra `obra ejemplo.bc3` (PEM cuadra con la raíz) y el BCCA (14,42 € =
+   12,76 × 1,13). GG/BI/IVA se importan a `rates` solo si vienen > 0 (un 0 en
+   bancos suele significar «no definido»). La BAJA no se aplica (el modelo no
+   la contempla): si viene, se avisa para que el usuario sepa que el PEM no
+   cuadrará con el objetivo de adjudicación. */
+function ratesFromK(doc: BC3Document, warnings: string[]): Rates {
   const raw = doc.coefficients?.raw ?? '';
   const parts = raw.replace(/\r?\n/g, '').split('|');
-  const kPct = parseFloat(parts[2] ?? '');
-  if (Number.isNaN(kPct) || kPct === 0) return 1;
-  return Math.round((1 + kPct / 100) * 1e6) / 1e6;
+  const sub = (parts[2] ?? '').split('\\');
+  const num = (s: string | undefined): number | null => {
+    const v = parseFloat(s ?? '');
+    return Number.isFinite(v) ? v : null;
+  };
+  const ci = num(sub[0]);
+  const gg = num(sub[1]);
+  const bi = num(sub[2]);
+  const baja = num(sub[3]);
+  const iva = num(sub[4]);
+  if (baja != null && baja !== 0)
+    warnings.push(`El ~K declara una baja del ${baja}% que el modelo no aplica al PEM.`);
+  return {
+    ...DEFAULT_RATES,
+    coefK: ci != null && ci !== 0 ? Math.round((1 + ci / 100) * 1e6) / 1e6 : 1,
+    ...(gg != null && gg > 0 ? { gg: gg / 100 } : {}),
+    ...(bi != null && bi > 0 ? { bi: bi / 100 } : {}),
+    ...(iva != null && iva > 0 ? { iva: iva / 100 } : {}),
+  };
 }
 
 /* ===========================================================================
@@ -157,15 +190,30 @@ export function bc3ToObra(bytes: Uint8Array): Bc3ImportResult {
     if (t != null) typeByCode.set(code, t);
   }
 
-  const isContainer = (node: ConceptNode): boolean => node.measurements.length > 0;
+  // Contenedor: tiene mediciones de hijos (obras) o lleva el marcador FIEBDC
+  // de capítulo/raíz «#»/«##» en el código original (bancos de precios sin ~M).
+  const isContainer = (node: ConceptNode): boolean =>
+    node.measurements.length > 0 || node.concept.code.endsWith('#');
   const isSectionLine = (d: { units?: number; length?: number; latitude?: number; height?: number }): boolean =>
     d.units == null && d.length == null && d.latitude == null && d.height == null;
+  // Líneas auxiliares del ~M que no son medición: 1/2 = subtotales, 3 = fórmula
+  // (la librería no evalúa fórmulas; su `partial` saldría 1 y corrompería la suma).
+  const isAuxLine = (t: string | undefined): boolean => t === '1' || t === '2' || t === '3';
+
+  // FIEBDC: CANTIDAD = FACTOR × RENDIMIENTO; los campos VACÍOS valen 1 (el
+  // BCCA trae rendimiento 0 explícito y debe quedarse en 0). La librería no
+  // valida los números (puede entregar NaN) → un no-finito cuenta como ausente.
+  const fin = (x: number | undefined): number | null =>
+    x != null && Number.isFinite(x) ? x : null;
+  const cantidadDe = (d: { factor?: number; performance?: number }): number =>
+    (fin(d.factor) ?? 1) * (fin(d.performance) ?? 1);
 
   const chapters: Chapter[] = [];
   const partidas: PartidasMap = {};
   const recursos: Banco = {};
   let medVisible = 0;
   let medSeq = 0;
+  let cyclesSkipped = 0;
 
   /** Registra un recurso en el banco sin pisar el primero visto (homónimos). */
   function registerRecurso(code: string, type: ResourceType, node: ConceptNode | undefined): void {
@@ -178,28 +226,69 @@ export function bc3ToObra(bytes: Uint8Array): Bc3ImportResult {
     };
   }
 
-  /** Recorre la descomposición de un contenedor y emite sus partidas. */
-  function collectPartidas(container: ConceptNode, chId: string, chCode: string): void {
-    const meas = container.measurements;
+  /**
+   * Recorre la descomposición de un contenedor y emite sus partidas. Un
+   * contenedor hijo directo del capítulo (`sub === null`) abre un subcapítulo;
+   * los contenedores más profundos se aplanan en el subcapítulo heredado.
+   * `counts` numera `pos` por grupo (subcapítulo o capítulo), como `renumberChapter`.
+   * `visited` (códigos de contenedor ya recorridos en el capítulo) corta los
+   * ~D cíclicos o duplicados, que de otro modo recursarían hasta reventar la
+   * pila (la librería no protege ciclos).
+   */
+  function collectPartidas(
+    container: ConceptNode,
+    ch: Chapter,
+    sub: SubChapter | null,
+    counts: Record<string, number>,
+    visited: Set<string>,
+  ): void {
+    // Alineación ~M↔hijo por el campo POSICIÓN (1-based dentro de la descompo-
+    // sición del padre): la librería pierde el código del hijo del ~M y las
+    // cuelga del padre en orden de archivo, así que alinear por índice se
+    // desplaza en cuanto un hijo no tiene ~M (y puede colgar la medición de
+    // OTRA partida si las cantidades coinciden). Primero-visto gana: los ~N de
+    // certificación caen al MISMO array y no deben pisar al ~M.
+    const measByPos = new Map<number, ConceptNode['measurements'][number]>();
+    container.measurements.forEach((m, i) => {
+      const last = [...m.positions].reverse().find((s) => s.trim() !== '');
+      const p = last != null ? Number.parseInt(last, 10) : i + 1;
+      const pos = Number.isInteger(p) && p >= 1 ? p : i + 1;
+      if (!measByPos.has(pos)) measByPos.set(pos, m);
+    });
     container.decompositions.forEach((d, i) => {
       const child = doc.getConcept(d.childCode);
       if (!child) return;
       if (isContainer(child)) {
-        collectPartidas(child, chId, chCode); // subcapítulo → se aplana en el capítulo
+        if (visited.has(child.concept.codeNorm)) {
+          cyclesSkipped += 1;
+          return;
+        }
+        visited.add(child.concept.codeNorm);
+        let next = sub;
+        if (!next) {
+          const k = (ch.children ??= []).length + 1;
+          next = {
+            id: `${ch.id}.${String(k).padStart(2, '0')}`,
+            code: `${ch.code}.${k}`,
+            title: (child.concept.summary || d.childCode).slice(0, 120),
+          };
+          ch.children.push(next);
+        }
+        collectPartidas(child, ch, next, counts, visited);
         return;
       }
-      const list = partidas[chId]!;
-      const qty = round2(d.performance ?? 0);
+      const list = partidas[ch.id]!;
+      const qty = round2(cantidadDe(d));
       const precio = child.concept.prices?.[0] ?? 0;
-      const n = list.length + 1;
-      const pid = `b3-${chId}-${n}`;
+      const n = (counts[sub?.id ?? '_'] = (counts[sub?.id ?? '_'] ?? 0) + 1);
+      const pid = `b3-${ch.id}-${list.length + 1}`;
 
-      // Medición: alinea la línea i del contenedor SOLO si reproduce la cantidad.
+      // Medición: alinea el ~M en la posición i+1 SOLO si reproduce la cantidad.
       let med: MedLine[] = [];
-      const m = meas[i];
+      const m = measByPos.get(i + 1);
       if (m && round2(m.total ?? 0) === qty) {
         const lines = m.details
-          .filter((x) => !isSectionLine(x))
+          .filter((x) => !isAuxLine(x.type) && !isSectionLine(x))
           .map((x) => ({
             comment: x.comment ?? '',
             uds: x.units ?? 1,
@@ -217,7 +306,7 @@ export function bc3ToObra(bytes: Uint8Array): Bc3ImportResult {
         const rc = doc.getConcept(dc.childCode);
         const type = badgeOf(dc.childCode, rc?.concept.type ?? undefined);
         registerRecurso(dc.childCode, type, rc);
-        const raw = dc.performance ?? dc.factor ?? 0;
+        const raw = cantidadDe(dc);
         // Convención FIEBDC/Presto de los conceptos %: el rendimiento viaja
         // como FRACCIÓN (0.02 = 2 %); nuestro modelo guarda el PORCENTAJE (2).
         // Verificado con la trazadora F7.4a en Presto real (importe = base ×
@@ -228,7 +317,8 @@ export function bc3ToObra(bytes: Uint8Array): Bc3ImportResult {
 
       list.push({
         id: pid,
-        pos: `${chCode}.${n}`,
+        sub: sub?.id,
+        pos: `${sub ? sub.code : ch.code}.${n}`,
         code: d.childCode,
         title: (child.concept.summary || d.childCode).slice(0, 120),
         ud: child.concept.unit ?? '',
@@ -243,14 +333,21 @@ export function bc3ToObra(bytes: Uint8Array): Bc3ImportResult {
     });
   }
 
-  // Capítulos de primer nivel = descomposición de la raíz (o sus children).
+  // Capítulos de primer nivel = descomposición de la raíz (marcador «##») o,
+  // si no hay descomposición, sus children. Las raíces SUELTAS se añaden como
+  // capítulos extra: en bancos tipo BCCA el ~D de la raíz referencia códigos
+  // «-XXX» que el parser no enlaza, y «Precios Auxiliares»/«Unitarios» quedan
+  // huérfanos pese a ser capítulos reales.
   const roots = doc.roots;
-  const root = roots.length === 1 ? roots[0]! : null;
+  const root =
+    roots.find((n) => n.concept.code.endsWith('##')) ?? (roots.length === 1 ? roots[0]! : null);
   const rootPrice = root ? root.concept.prices?.[0] ?? null : null;
-  let topCodes: string[];
-  if (root && root.decompositions.length) topCodes = root.decompositions.map((d) => d.childCode);
-  else if (root) topCodes = root.children.map((n) => n.concept.codeNorm);
-  else topCodes = roots.map((n) => n.concept.codeNorm);
+  const topCodes: string[] = [];
+  if (root && root.decompositions.length) topCodes.push(...root.decompositions.map((d) => d.childCode));
+  else if (root) topCodes.push(...root.children.map((n) => n.concept.codeNorm));
+  for (const n of roots) {
+    if (n !== root && !topCodes.includes(n.concept.codeNorm)) topCodes.push(n.concept.codeNorm);
+  }
 
   let ci = 0;
   for (const code of topCodes) {
@@ -259,10 +356,15 @@ export function bc3ToObra(bytes: Uint8Array): Bc3ImportResult {
     if (!chNode || (t != null && t >= 1)) continue; // un recurso no es capítulo
     ci += 1;
     const id = String(ci).padStart(2, '0');
-    chapters.push({ id, code: String(ci), title: chNode.concept.summary || code });
+    const ch: Chapter = { id, code: String(ci), title: chNode.concept.summary || code };
+    chapters.push(ch);
     partidas[id] = [];
-    collectPartidas(chNode, id, String(ci));
+    collectPartidas(chNode, ch, null, {}, new Set([chNode.concept.codeNorm]));
   }
+  if (cyclesSkipped > 0)
+    warnings.push(
+      `Se ignoraron ${cyclesSkipped} referencias circulares o duplicadas en la descomposición (archivo malformado).`,
+    );
 
   if (chapters.length === 0) {
     throw new Bc3ImportError(
@@ -279,14 +381,15 @@ export function bc3ToObra(bytes: Uint8Array): Bc3ImportResult {
       if (items.length && round2(p.precio) !== descompUnit(items, recursos)) p.precioManual = true;
     }
 
-  const coefK = coefKOf(doc);
+  const rates = ratesFromK(doc, warnings);
+  const coefK = rates.coefK;
   const certs: Cert[] = [{ id: 'c1', num: 1, period: 'Certificación nº 1', retencion: 0.05, data: {} }];
   const data: ImportedObra = {
     chapters,
     partidas,
     recursos,
     certs,
-    rates: { ...DEFAULT_RATES, coefK },
+    rates,
     obra: { ...DEFAULT_OBRA, denominacion: root?.concept.summary || 'Obra importada' },
   };
 
