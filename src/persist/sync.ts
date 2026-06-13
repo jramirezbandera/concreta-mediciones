@@ -149,7 +149,7 @@ function orderActiveFirst(idx: ObraIndex): string[] {
 export async function hydrate(): Promise<void> {
   try {
     await migrateLegacy(); // one-shot, idempotente
-    const idx = await reconcile(await loadIndex());
+    const idx = await reconcile();
     useSessionStore.getState().setObras(idx.obras);
 
     // Instalación nueva (sin obras): demo en memoria, arma autosave. La 1ª
@@ -188,12 +188,29 @@ export async function hydrate(): Promise<void> {
 }
 
 /* ---- orquestación multi-obra (PR2) ---------------------------------------- */
+/** Serializa las operaciones de obra (conmutar/crear/borrar) para que no se
+ *  solapen entre sí (doble clic, conmutar a mitad de un borrado…). El índice ya
+ *  es atómico por su lado (registry.updateIndex); esto evita además que se
+ *  entrelacen loadObra/setActiveId de dos operaciones. */
+let opsChain: Promise<unknown> = Promise.resolve();
+function serializeOp<T>(fn: () => Promise<T>): Promise<T> {
+  const run = opsChain.then(fn);
+  opsChain = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}
+
 /**
  * Conmuta a otra obra: guarda la actual (blob+índice), carga la destino y solo
  * ENTONCES marca la activa (Codex: no marcar activa antes de cargar; si el
  * destino falla, no perder la obra en pantalla). No-op si ya es la activa.
  */
-export async function switchObra(id: string): Promise<void> {
+export function switchObra(id: string): Promise<void> {
+  return serializeOp(() => switchObraImpl(id));
+}
+async function switchObraImpl(id: string): Promise<void> {
   if (id === activeId()) return;
   useSessionStore.getState().setSwitching(true);
   try {
@@ -212,7 +229,10 @@ export async function switchObra(id: string): Promise<void> {
 }
 
 /** Crea una obra EN BLANCO, la persiste y conmuta a ella. Devuelve su id. */
-export async function newObra(name?: string): Promise<string> {
+export function newObra(name?: string): Promise<string> {
+  return serializeOp(() => newObraImpl(name));
+}
+async function newObraImpl(name?: string): Promise<string> {
   await flushPending(); // guarda la actual
   const data = blankObraData(name);
   const id = await createObra(data); // persiste + registra (no activa aún)
@@ -235,7 +255,10 @@ export async function newObra(name?: string): Promise<string> {
  * (siempre queda ≥1 obra). Borrar una NO activa conserva intactas (y sin perder
  * el autosave) las ediciones de la obra en pantalla.
  */
-export async function deleteObraById(id: string): Promise<void> {
+export function deleteObraById(id: string): Promise<void> {
+  return serializeOp(() => deleteObraByIdImpl(id));
+}
+async function deleteObraByIdImpl(id: string): Promise<void> {
   const wasActive = id === activeId();
   const onlyOne = useSessionStore.getState().obras.length <= 1;
 

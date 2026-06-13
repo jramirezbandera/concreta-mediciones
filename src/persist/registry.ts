@@ -83,6 +83,30 @@ async function saveIndex(idx: ObraIndex): Promise<void> {
   await set(INDEX_KEY, idx);
 }
 
+/**
+ * Read-modify-write ATÓMICO del índice. Las escrituras de blobs van por la cola
+ * de `persist`, pero el índice es UN blob que varias operaciones tocan
+ * (autosave + crear/borrar/conmutar). Sin serializar, dos que se solapen en sus
+ * `await` leen el mismo snapshot y la última pisa a la primera (pierde una obra
+ * o revierte la activa). Esta cola de un carril garantiza que cada
+ * load→mutate→save corre entero antes del siguiente. Guarda solo si cambió la
+ * referencia (el mutador devuelve el mismo objeto = sin cambios → sin escritura).
+ */
+let indexChain: Promise<unknown> = Promise.resolve();
+function updateIndex(mutate: (idx: ObraIndex) => ObraIndex | Promise<ObraIndex>): Promise<ObraIndex> {
+  const run = indexChain.then(async () => {
+    const idx = await loadIndex();
+    const next = await mutate(idx);
+    if (next !== idx) await saveIndex(next);
+    return next;
+  });
+  indexChain = run.then(
+    () => undefined,
+    () => undefined, // un fallo no envenena la cadena (la siguiente op reintenta)
+  );
+  return run;
+}
+
 /* ---- reconciliación índice ↔ blobs (auto-cura) ---------------------------- */
 /**
  * Alinea el índice con los blobs realmente presentes en IndexedDB:
@@ -93,34 +117,36 @@ async function saveIndex(idx: ObraIndex): Promise<void> {
  * Persiste el índice solo si cambió. Lee claves (barato) y, como mucho, los
  * blobs huérfanos — no escanea todas las obras.
  */
-export async function reconcile(idx: ObraIndex): Promise<ObraIndex> {
-  const present = new Set((await obraKeys()).map((k) => k.slice(OBRA_KEY_PREFIX.length)));
-  // 1) entradas con blob presente, en su orden original
-  const obras: ObraMeta[] = idx.obras.filter((m) => present.has(m.id));
-  // 2) blobs huérfanos (no en el índice) → leer su sobre y registrarlos
-  const known = new Set(obras.map((m) => m.id));
-  for (const id of present) {
-    if (known.has(id)) continue;
-    const res = await loadObraEnvelope(obraKey(id));
-    if (res.kind === 'ok') {
-      obras.push({
-        id,
-        name: nameOf(res.envelope.data),
-        savedAt: res.envelope.savedAt,
-        schemaVersion: res.envelope.schemaVersion,
-      });
+export function reconcile(): Promise<ObraIndex> {
+  return updateIndex(async (idx) => {
+    const present = new Set((await obraKeys()).map((k) => k.slice(OBRA_KEY_PREFIX.length)));
+    // 1) entradas con blob presente, en su orden original
+    const obras: ObraMeta[] = idx.obras.filter((m) => present.has(m.id));
+    // 2) blobs huérfanos (no en el índice) → leer su sobre y registrarlos
+    const known = new Set(obras.map((m) => m.id));
+    for (const id of present) {
+      if (known.has(id)) continue;
+      const res = await loadObraEnvelope(obraKey(id));
+      if (res.kind === 'ok') {
+        obras.push({
+          id,
+          name: nameOf(res.envelope.data),
+          savedAt: res.envelope.savedAt,
+          schemaVersion: res.envelope.schemaVersion,
+        });
+      }
+      // huérfano corrupto: fuera del índice (no listable), pero el blob se conserva
+      // para recuperación manual.
     }
-    // huérfano corrupto: fuera del índice (no listable), pero el blob se conserva
-    // para recuperación manual.
-  }
-  // 3) activeId válido, o el primero, o null
-  const activeId =
-    idx.activeId && obras.some((m) => m.id === idx.activeId)
-      ? idx.activeId
-      : (obras[0]?.id ?? null);
-  const next: ObraIndex = { activeId, obras };
-  if (JSON.stringify(next) !== JSON.stringify(idx)) await saveIndex(next);
-  return next;
+    // 3) activeId válido, o el primero, o null
+    const activeId =
+      idx.activeId && obras.some((m) => m.id === idx.activeId)
+        ? idx.activeId
+        : (obras[0]?.id ?? null);
+    const next: ObraIndex = { activeId, obras };
+    // Sin cambios → devuelve el MISMO objeto para que updateIndex no reescriba.
+    return JSON.stringify(next) === JSON.stringify(idx) ? idx : next;
+  });
 }
 
 /* ---- migración one-shot del proyecto único legacy ------------------------- */
@@ -160,7 +186,7 @@ export async function migrateLegacy(): Promise<void> {
 
 /* ---- CRUD de obras -------------------------------------------------------- */
 export async function listObras(): Promise<ObraMeta[]> {
-  return (await reconcile(await loadIndex())).obras;
+  return (await reconcile()).obras;
 }
 
 export async function getActiveId(): Promise<string | null> {
@@ -168,7 +194,7 @@ export async function getActiveId(): Promise<string | null> {
 }
 
 export async function setActiveId(id: string | null): Promise<void> {
-  await saveIndex({ ...(await loadIndex()), activeId: id });
+  await updateIndex((idx) => ({ ...idx, activeId: id }));
 }
 
 /** Crea una obra: persiste su blob INMEDIATAMENTE (Codex: no esperar a la 1ª
@@ -176,11 +202,10 @@ export async function setActiveId(id: string | null): Promise<void> {
 export async function createObra(data: ObraData): Promise<string> {
   const id = newObraId();
   await saveObra(obraKey(id), data);
-  const idx = await loadIndex();
-  await saveIndex({
+  await updateIndex((idx) => ({
     activeId: idx.activeId,
     obras: [...idx.obras.filter((m) => m.id !== id), metaOf(id, data)],
-  });
+  }));
   return id;
 }
 
@@ -189,12 +214,13 @@ export async function createObra(data: ObraData): Promise<string> {
  *  activa. Actualiza la meta EN SITIO para no alterar el orden de las pestañas. */
 export async function saveActiveObra(id: string, data: ObraData): Promise<void> {
   await saveObra(obraKey(id), data);
-  const idx = await loadIndex();
-  const meta = metaOf(id, data);
-  const obras = idx.obras.some((m) => m.id === id)
-    ? idx.obras.map((m) => (m.id === id ? meta : m))
-    : [...idx.obras, meta];
-  await saveIndex({ activeId: id, obras });
+  await updateIndex((idx) => {
+    const meta = metaOf(id, data);
+    const obras = idx.obras.some((m) => m.id === id)
+      ? idx.obras.map((m) => (m.id === id ? meta : m))
+      : [...idx.obras, meta];
+    return { activeId: id, obras };
+  });
 }
 
 /** Borra una obra: blob + entrada del índice. Si era la activa, salta a la
@@ -202,10 +228,11 @@ export async function saveActiveObra(id: string, data: ObraData): Promise<void> 
  *  es del store (crea una semilla nueva). */
 export async function deleteObra(id: string): Promise<void> {
   await clearObra(obraKey(id));
-  const idx = await loadIndex();
-  const obras = idx.obras.filter((m) => m.id !== id);
-  const activeId = idx.activeId === id ? (obras[0]?.id ?? null) : idx.activeId;
-  await saveIndex({ activeId, obras });
+  await updateIndex((idx) => {
+    const obras = idx.obras.filter((m) => m.id !== id);
+    const activeId = idx.activeId === id ? (obras[0]?.id ?? null) : idx.activeId;
+    return { activeId, obras };
+  });
 }
 
 function metaOf(id: string, data: ObraData): ObraMeta {

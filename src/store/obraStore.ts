@@ -262,7 +262,9 @@ function applyCopy(
       ud: p.ud,
       precio: p.precio,
       mainType: p.mainType,
-      desc: REF_DESC[p.code] ?? p.desc ?? '',
+      // La desc propia de la partida (obras como fuente) manda sobre la canónica
+      // por código (bases); coincide con lo que previsualiza el panel (RefPartidaRow).
+      desc: p.desc ?? REF_DESC[p.code] ?? '',
       med: [],
       items: newItems,
       fromBase: !contra,

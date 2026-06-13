@@ -63,12 +63,32 @@ describe('registry · reconcile (auto-cura índice ↔ blobs)', () => {
     // blob huérfano (sin entrada en el índice)
     await saveObra(obraKey('orphan-1'), data('Huérfana'));
 
-    const idx = await reconcile(await loadIndex());
+    const idx = await reconcile();
     const ids = idx.obras.map((m) => m.id);
     expect(ids).toContain(a); // conservada
     expect(ids).toContain('orphan-1'); // huérfano añadido
     expect(ids).not.toContain('fantasma'); // fantasma quitado
     expect(idx.activeId).not.toBe('fantasma'); // activeId saneado
+  });
+});
+
+describe('registry · escrituras de índice ATÓMICAS (sin clobber)', () => {
+  it('createObra concurrentes: ambas quedan en el índice (read-modify-write serializado)', async () => {
+    const [a, b] = await Promise.all([createObra(data('A')), createObra(data('B'))]);
+    // Se comprueba sobre loadIndex (NO listObras, que reconcilia y enmascararía el clobber).
+    const ids = (await loadIndex()).obras.map((m) => m.id);
+    expect(ids).toContain(a);
+    expect(ids).toContain(b);
+    expect(ids.length).toBe(2);
+  });
+
+  it('saveActiveObra + createObra concurrentes no pierden ninguna entrada', async () => {
+    const a = await createObra(data('A'));
+    const [, b] = await Promise.all([saveActiveObra(a, data('A2')), createObra(data('B'))]);
+    const ids = (await loadIndex()).obras.map((m) => m.id);
+    expect(ids).toContain(a);
+    expect(ids).toContain(b);
+    expect(ids.length).toBe(2);
   });
 });
 

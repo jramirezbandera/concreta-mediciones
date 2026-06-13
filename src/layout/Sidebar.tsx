@@ -592,7 +592,7 @@ export function Sidebar({ drawer = false, onAfterSelect }: SidebarProps) {
   const deleteSubchapter = useObraStore((s) => s.deleteSubchapter);
   const refDrag = useObraStore((s) => s.refDrag);
   const setRefDrag = useObraStore((s) => s.setRefDrag);
-  const copyRefPartidas = useObraStore((s) => s.copyRefPartidas);
+  const requestCopyRefPartidas = useObraStore((s) => s.requestCopyRefPartidas);
 
   const [creatingChapter, setCreatingChapter] = useState(false);
   const [creatingSubFor, setCreatingSubFor] = useState<string | null>(null);
@@ -623,7 +623,9 @@ export function Sidebar({ drawer = false, onAfterSelect }: SidebarProps) {
             onDragLeave: () => setDropId((d) => (d === id ? null : d)),
             onDrop: (e) => {
               e.preventDefault();
-              if (refDrag) copyRefPartidas(refDrag.items, { chId, subId }, refDrag.contra);
+              // Mismo preflight de colisión que el resto de vías de copia (T-1/D2):
+              // soltar sobre el árbol también puede abrir el diálogo de resolución.
+              if (refDrag) requestCopyRefPartidas(refDrag.items, { chId, subId }, refDrag.contra);
               setRefDrag(null);
               setDropId(null);
             },

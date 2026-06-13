@@ -108,7 +108,7 @@ const pending = new Map<string, ObraData>();
 /** Encola un guardado del dominio bajo `key`. Devuelve la promesa de la cola. */
 export function saveObra(key: string, data: ObraData): Promise<void> {
   pending.set(key, data); // coalesce por clave: solo la última de cada obra
-  chain = chain.then(async () => {
+  const run = chain.then(async () => {
     // Drena TODO lo pendiente en este carril (orden de inserción del Map).
     while (pending.size) {
       const next = pending.entries().next().value as [string, ObraData];
@@ -123,7 +123,11 @@ export function saveObra(key: string, data: ObraData): Promise<void> {
       await set(k, env);
     }
   });
-  return chain;
+  // La cadena base NO se envenena si un `set` falla (cuota/abort): la siguiente
+  // escritura reintenta lo que quede pendiente. El llamador SÍ recibe el rechazo
+  // (autosave → estado 'error'); el dato perdido se re-encola en el próximo save.
+  chain = run.catch(() => undefined);
+  return run;
 }
 
 /** Espera a que se vacíe la cola de escritura (import/reset/cerrar pestaña). */

@@ -281,6 +281,27 @@ export function ReferenciaPanel() {
     setExpanded(first ? { [first.id]: true } : {});
   }, [source]);
 
+  // Invalida la caché de fuentes-obra que pueden haber cambiado: la obra ACTIVA
+  // (se está editando ahora) y las que ya no existen (borradas). El resto se
+  // mantiene cacheado. Sin esto, reabrir como fuente una obra editada/borrada
+  // serviría un snapshot viejo (o una obra fantasma).
+  useEffect(() => {
+    setObraCache((c) => {
+      const liveKeys = new Set(obras.map((o) => `obra:${o.id}`));
+      const activeKey = activeObraId ? `obra:${activeObraId}` : null;
+      let changed = false;
+      const next: Record<string, RefSource> = {};
+      for (const k of Object.keys(c)) {
+        if (k === activeKey || !liveKeys.has(k)) {
+          changed = true; // purga: activa (editable) o borrada
+          continue;
+        }
+        next[k] = c[k]!;
+      }
+      return changed ? next : c;
+    });
+  }, [activeObraId, obras]);
+
   const refKey = (p: RefPartida) => `${refSourceId}::${p.id}`;
   const query = q.trim().toLowerCase();
   const matchP = (p: RefPartida) => !query || `${p.title} ${p.code}`.toLowerCase().includes(query);

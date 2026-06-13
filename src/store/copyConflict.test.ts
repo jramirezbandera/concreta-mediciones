@@ -59,6 +59,27 @@ describe('copia entre obras · preflight de colisión', () => {
     expect(copied()!.items[0]!.code).toBe('mo001~2'); // el item apunta al derivado
   });
 
+  it('la desc copiada usa la de la partida origen, no la canónica del código base', () => {
+    // 'ADE010' SÍ está en REF_DESC; sin la corrección, la copia tomaría ese texto.
+    const it: RefCopyItem = {
+      sourceName: 'Otra obra',
+      partida: {
+        id: 'rd',
+        pos: '9.9',
+        code: 'ADE010',
+        title: 'X',
+        ud: 'm³',
+        precio: 50,
+        desc: 'Mi descripción editada',
+        items: [],
+      } as RefPartida,
+    };
+    state().requestCopyRefPartidas([it], null, false); // sin items → sin colisión → copia directa
+    expect(state().partidas['01']!.find((p) => p.code === 'ADE010')!.desc).toBe(
+      'Mi descripción editada',
+    );
+  });
+
   it('cancelar limpia pendingCopy sin copiar', () => {
     const before = state().partidas['01']!.length;
     state().requestCopyRefPartidas([refItem('mo001', 20)], null, false);
