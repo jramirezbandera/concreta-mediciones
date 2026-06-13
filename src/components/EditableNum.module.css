@@ -37,3 +37,27 @@
   border: 1px solid var(--accent);
   box-shadow: var(--ring-accent);
 }
+/* Entrada rechazada (Enter con un valor no numérico): aviso visible, el campo
+   queda abierto para corregir. El borde/anillo es la señal sin movimiento; el
+   shake es una mejora que respeta prefers-reduced-motion. */
+.input.invalid {
+  border-color: var(--state-warn);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--state-warn) 30%, transparent);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .input.invalid {
+    animation: enShake 0.18s ease;
+  }
+}
+@keyframes enShake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-3px);
+  }
+  75% {
+    transform: translateX(3px);
+  }
+}

@@ -54,4 +54,42 @@ describe('EditableNum', () => {
     fireEvent.keyDown(input, { key: 'Enter' });
     expect(onCommit).not.toHaveBeenCalled();
   });
+
+  it('Enter inválido NO descarta en silencio: mantiene el campo abierto y lo marca', () => {
+    const onCommit = vi.fn();
+    render(<EditableNum value={10} onCommit={onCommit} ariaLabel="Cantidad" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Cantidad' }));
+    const input = screen.getByRole('textbox', { name: 'Cantidad' });
+    fireEvent.change(input, { target: { value: '12,a' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    // sigue editando (no volvió al botón) y queda marcado como inválido
+    expect(screen.getByRole('textbox', { name: 'Cantidad' })).toBeInTheDocument();
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(onCommit).not.toHaveBeenCalled();
+  });
+
+  it('tras corregir un valor rechazado, Enter confirma y limpia el aviso', () => {
+    const onCommit = vi.fn();
+    render(<EditableNum value={10} onCommit={onCommit} ariaLabel="Cantidad" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Cantidad' }));
+    const input = screen.getByRole('textbox', { name: 'Cantidad' });
+    fireEvent.change(input, { target: { value: 'x' } });
+    fireEvent.keyDown(input, { key: 'Enter' }); // rechazado, sigue abierto
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    fireEvent.change(input, { target: { value: '8,5' } }); // corrige
+    expect(input).not.toHaveAttribute('aria-invalid'); // el aviso desaparece al teclear
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onCommit).toHaveBeenCalledWith(8.5);
+  });
+
+  it('blur con valor inválido revierte sin commit (no atrapa el foco)', () => {
+    const onCommit = vi.fn();
+    render(<EditableNum value={10} onCommit={onCommit} ariaLabel="Cantidad" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Cantidad' }));
+    const input = screen.getByRole('textbox', { name: 'Cantidad' });
+    fireEvent.change(input, { target: { value: 'nope' } });
+    fireEvent.blur(input);
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Cantidad' })).toHaveTextContent('10,00');
+  });
 });

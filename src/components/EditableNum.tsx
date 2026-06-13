@@ -27,6 +27,7 @@ export function EditableNum({
 }: EditableNumProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
+  const [invalid, setInvalid] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -36,13 +37,36 @@ export function EditableNum({
   function start() {
     // Edita sin separadores de miles: "1.234,50" → "1234,50".
     setDraft(fmtNum(value, dec).replace(/\./g, ''));
+    setInvalid(false);
     setEditing(true);
   }
 
-  function commit() {
+  function close() {
     setEditing(false);
+    setInvalid(false);
+  }
+
+  // Confirmación explícita (Enter): si la entrada NO es un número válido no se
+  // cierra ni se descarta en silencio —en una herramienta de dinero perder un
+  // número tecleado sin avisar erosiona la confianza—: se marca el campo en
+  // aviso y se mantiene abierto, con el texto seleccionado, para corregir.
+  function confirm() {
+    const n = parseEsNumber(draft);
+    if (n === null) {
+      setInvalid(true);
+      inputRef.current?.select();
+      return;
+    }
+    onCommit(n);
+    close();
+  }
+
+  // Salir del campo (blur/Tab): el usuario se va; no se le atrapa el foco. Si el
+  // borrador es válido se confirma; si no, se cancela revirtiendo (sin commit).
+  function leave() {
     const n = parseEsNumber(draft);
     if (n !== null) onCommit(n);
+    close();
   }
 
   if (editing) {
@@ -52,14 +76,18 @@ export function EditableNum({
         value={draft}
         inputMode="decimal"
         aria-label={ariaLabel}
+        aria-invalid={invalid || undefined}
         size={1} // sin esto el ancho intrínseco (~20ch) deforma la columna al editar
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') commit();
-          if (e.key === 'Escape') setEditing(false);
+        onChange={(e) => {
+          setDraft(e.target.value);
+          if (invalid) setInvalid(false); // está corrigiendo: quita el aviso
         }}
-        className={`mono ${styles.input}`}
+        onBlur={leave}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') confirm();
+          if (e.key === 'Escape') close();
+        }}
+        className={`mono ${styles.input} ${invalid ? styles.invalid : ''}`}
       />
     );
   }
