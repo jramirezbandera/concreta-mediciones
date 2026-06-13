@@ -665,10 +665,24 @@
 
 /* celda de precio editable en la fila (deja respirar al EditableNum) */
 .priceCellEdit {
+  position: relative;
   text-align: right;
   width: 92px;
   padding-left: 4px;
   padding-right: 4px;
+}
+/* Señal sutil y NO alarmante (neutral, ni rojo ni ámbar): el precio está fijado
+   a mano y no coincide con su descompuesto. Es informativo, no un error; el
+   tooltip de la celda da el valor del descompuesto. */
+.overrideDot {
+  position: absolute;
+  left: 3px;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--state-neutral);
+  transform: translateY(-50%);
 }
 
 /* ===========================================================================

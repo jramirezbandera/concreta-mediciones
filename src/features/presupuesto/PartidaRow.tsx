@@ -38,7 +38,7 @@ export function PartidaRow({
   chapterTotal: Cents;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const { cantidad, importe, pct } = usePartidaRow(p, chapterTotal);
+  const { cantidad, importe, pct, isOverride, descompUnit } = usePartidaRow(p, chapterTotal);
   const editPartidaField = useObraStore((s) => s.editPartidaField);
   const setPrecio = useObraStore((s) => s.setPrecio);
 
@@ -85,7 +85,16 @@ export function PartidaRow({
         <td className={`mono ${styles.cQty}`}>
           <span className={styles.qtyNum}>{fmtNum(cantidad)}</span>
         </td>
-        <td className={styles.priceCellEdit} onClick={stop}>
+        <td
+          className={styles.priceCellEdit}
+          onClick={stop}
+          title={
+            isOverride
+              ? `Precio fijado a mano (no coincide con su descompuesto: ${fmtNum(descompUnit)} €)`
+              : undefined
+          }
+        >
+          {isOverride && <span className={styles.overrideDot} aria-hidden="true" />}
           <EditableNum
             value={p.precio}
             dec={2}

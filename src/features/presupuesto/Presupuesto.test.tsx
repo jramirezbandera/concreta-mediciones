@@ -43,6 +43,15 @@ describe('PresupuestoView (F2.1 lectura + F2.2 detalle)', () => {
     expect(screen.getByText(/fijado a mano/)).toBeInTheDocument();
   });
 
+  it('marca el precio override en la propia fila (señal sutil + tooltip con el descompuesto)', () => {
+    render(<PresupuestoView compact={false} />);
+    // p111 es override en el seed (precio 18,42 ≠ descompuesto 9,27): la celda
+    // de precio lleva el aviso con el valor del descompuesto, sin desplegar nada.
+    const marks = screen.getAllByTitle(/fijado a mano/);
+    expect(marks.length).toBeGreaterThan(0);
+    expect(marks.some((el) => /9,27/.test(el.getAttribute('title') ?? ''))).toBe(true);
+  });
+
   it('"Añadir partida" inserta una fila en el subcapítulo (F2.4)', () => {
     render(<PresupuestoView compact={false} />);
     const before = useObraStore.getState().partidas['01']!.length;
