@@ -1,4 +1,4 @@
-export { hydrate, armAutosave, flushPending, __resetSyncForTests } from './sync';
+export { hydrate, armAutosave, flushPending, getActiveObraId, __resetSyncForTests } from './sync';
 export {
   loadObraEnvelope,
   loadRaw,
@@ -6,10 +6,28 @@ export {
   flush,
   clearObra,
   isObraData,
+  obraKey,
+  obraKeys,
   OBRA_KEY,
+  OBRA_KEY_PREFIX,
   type ObraEnvelope,
   type LoadResult,
 } from './persist';
+export {
+  INDEX_KEY,
+  listObras,
+  loadIndex,
+  getActiveId,
+  setActiveId,
+  createObra,
+  deleteObra,
+  saveActiveObra,
+  reconcile,
+  migrateLegacy,
+  newObraId,
+  type ObraMeta,
+  type ObraIndex,
+} from './registry';
 export { usePersistStore, type SaveStatus } from './persistStore';
 export { PersistUI } from './PersistUI';
 export {

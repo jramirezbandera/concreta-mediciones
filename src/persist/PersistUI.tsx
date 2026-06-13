@@ -4,14 +4,14 @@
    =========================================================================== */
 import { useEffect, useState } from 'react';
 import { Icon } from '../components';
-import { clearObra, loadRaw } from './persist';
+import { OBRA_KEY, clearObra, loadRaw } from './persist';
 import { armAutosave } from './sync';
 import { usePersistStore } from './persistStore';
 import styles from './PersistUI.module.css';
 
 /** Descarga el blob crudo guardado como .json (copia de seguridad de recuperación). */
-async function exportRaw(): Promise<void> {
-  const raw = await loadRaw();
+async function exportRaw(key: string): Promise<void> {
+  const raw = await loadRaw(key);
   const blob = new Blob([JSON.stringify(raw, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -55,8 +55,10 @@ function SaveChip() {
 
 function RecoveryBanner() {
   const recovery = usePersistStore((s) => s.recovery);
+  const recoveryKey = usePersistStore((s) => s.recoveryKey);
   const setRecovery = usePersistStore((s) => s.setRecovery);
   if (recovery == null) return null;
+  const key = recoveryKey ?? OBRA_KEY;
   return (
     <div className={`${styles.banner} no-print`} role="alert">
       <Icon name="alert" size={16} />
@@ -64,14 +66,14 @@ function RecoveryBanner() {
         No se pudieron leer los datos guardados (versión antigua o dañados). Tu trabajo guardado no
         se ha sobrescrito.
       </span>
-      <button type="button" className={styles.bannerBtn} onClick={() => void exportRaw()}>
+      <button type="button" className={styles.bannerBtn} onClick={() => void exportRaw(key)}>
         Exportar copia
       </button>
       <button
         type="button"
         className={`${styles.bannerBtn} ${styles.danger}`}
         onClick={async () => {
-          await clearObra();
+          await clearObra(key);
           setRecovery(null);
           armAutosave(); // ahora sí guardamos los cambios nuevos
         }}

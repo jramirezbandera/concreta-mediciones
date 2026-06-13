@@ -12,6 +12,7 @@ Origen: revisión de ingeniería (`/plan-eng-review`) + voz externa Codex, 2026-
 - **Cons:** clave compuesta (fuente+código) o namespacing añade complejidad al modelo del banco y a `recursoUsage`.
 - **Contexto / dónde empezar:** hoy `Item` guarda `{code, type, cantidad}` y el banco es `recursos[code]`. Diseñar clave `{source, code}` o un id interno con alias por fuente. Mantener el invariante de edición compartida dentro de una misma fuente.
 - **Depende de / bloqueado por:** F5 (Referencia) e import multi-base. Aplazado tras el Hito 1.
+- **DISPARADO por multi-obra (eng-review 2026-06-13):** copiar partidas ENTRE TUS PROPIAS obras hace la colisión de código mucho más probable (el mismo estudio reusa `mo113`, `mt10haf010`… con precios que derivan año a año). `copyRefPartidas` con `if(!recursos[code])` se queda con el existente → el descompuesto copiado calcula con el precio equivocado en silencio. **Mitigación v1 (no T-1 completo):** AVISO interactivo de colisión al copiar (detectar código existente con precio/desc distinto, con tolerancia/normalización para no avisar por redondeo/espacios/mayúsculas) + opción fusionar vs **bifurcar** (crear el recurso entrante bajo código derivado y reescribir `item.code` de forma consistente en todas las partidas copiadas, con id único estable). La **clave compuesta `{source,code}` completa SIGUE aplazada** aquí; v1 resuelve el caso de copia sin rehacer el modelo del banco.
 
 ## T-2 · Inmutabilidad y auditoría de certificaciones
 - **Qué:** al emitir una certificación debería quedar "congelada" (snapshot). Hoy editar una cert antigua recalcula en silencio las siguientes vía el encadenado "anterior".
@@ -98,7 +99,8 @@ Origen: revisión de ingeniería (`/plan-eng-review`) + voz externa Codex, 2026-
 
 > Añadidos en `/plan-eng-review` de F6 (eng run 5, 2026-06-10). Aplazados por decisión del fundador (D2-A / Issue 4-A).
 
-## T-10 · Gestión multi-proyecto (lista de obras)
+## T-10 · Gestión multi-proyecto (lista de obras) — EN CURSO (eng-review 2026-06-13)
+> **EN IMPLEMENTACIÓN** (diseño `Javier-main-design-20260613-175339.md` + esta eng-review). Enfoque: store de UNA obra viva + registro multi-obra; pestañas que CONMUTAN (no N vivas). Decisiones clave: **índice persistido** de obras (no derivar de blobs — por rendimiento de arranque: leer un blob pequeño de metadatos + cargar solo la obra activa, las demás perezosas) con reconciliación barata vía `keys()`; selector de obra como **dropdown** junto al nombre (no pestañas en la fila de vistas); ✕ = borrar con confirmación (no se borra la última → semilla); copiar entre obras reusa `copyRefPartidas` con **aviso de colisión de recurso** (ver T-1). Se aterriza en 3 PRs (registro+migración / pestañas / Referencia-desde-obra). Restos abiertos: T-19 (multi-pestaña navegador), T-1 (clave compuesta completa).
 - **Qué:** poder tener VARIAS obras: lista/selector de proyectos, crear/duplicar/borrar, "obra activa", cambiar entre ellas.
 - **Por qué:** hoy el dogfood es una obra y F6 persiste UN proyecto. Cuando el fundador maneje varias obras a la vez (lo normal en un estudio), hará falta. El plan ya lo marcaba "(opcional)"; se aplazó en F6 (D2-A) para no gastar UI/estado en valor aún no necesitado.
 - **Pros:** soporta el flujo real de un estudio con varias obras; aprovecha de pleno una BD local.
@@ -166,3 +168,16 @@ Origen: revisión de ingeniería (`/plan-eng-review`) + voz externa Codex, 2026-
 - **Cons:** es el camino de escritura, el más espinoso. `movePartida`/`moveSubtree` entre capítulos arrastra partidas entre buckets de `PartidasMap` (la clave sigue siendo el capítulo); `deleteSubchapter` recursivo debe decidir promover vs borrar en cascada. Diff grande, riesgo de dejar `sub` huérfanos.
 - **Contexto / dónde empezar:** la Fase 1 ya deja `core/tree.ts` (helper de estructura acotado a view-model), `findNode`/`findChapterIdForContainer`, el tipo recursivo y `addPartida`/`movePartida` endurecidos para RECHAZAR subId inexistente. Fase 2 = generalizar esas acciones del store a profundidad + UI. Empezar por `addSubchapter(parentId)` a cualquier nivel y `moveSubtree(fromChId, nodeId, toChId, toParentId)`.
 - **Depende de / bloqueado por:** Fase 1 mergeada (plan en `docs/plan-jerarquia-n-niveles.md`).
+
+---
+
+> Añadidos en `/plan-eng-review` de multi-obra (2026-06-13, voz externa Codex).
+
+## T-19 · Coordinación multi-pestaña del navegador (Web Locks / BroadcastChannel)
+- **Qué:** evitar que dos pestañas/ventanas del navegador con obras distintas (o la misma) se pisen el autosave. Hoy `activeId` en IndexedDB NO es un cerrojo.
+- **Por qué:** con multi-obra, dos pestañas abiertas pueden autosalvar sobre la misma clave o cruzar escrituras → pérdida silenciosa de datos. Cazado por Codex (voz externa) en la eng-review de multi-obra.
+- **Pros:** integridad de datos con varias pestañas abiertas (caso normal en escritorio); base para colaboración futura.
+- **Cons:** Web Locks API / BroadcastChannel + lógica de "esta pestaña es la dueña de la obra X"; superficie de test nueva. Gasta esfuerzo en un caso que el dogfooding en solitario (una ventana) casi nunca toca.
+- **Contexto / dónde empezar:** la cola de escritura de `persist.ts` y el armado del autosave en `sync.ts`. Adquirir un Web Lock por `concreta.obra.<id>` antes de autosalvar, o difundir "obra X tomada" por BroadcastChannel y degradar a solo-lectura la segunda pestaña. Decisión: bloquear la 2ª pestaña vs. fusionar.
+- **Depende de / bloqueado por:** T-10 (registro multi-obra). No bloquea el dogfooding solo; abordar antes de uso externo.
+- **Decisión (eng-review 2026-06-13):** aplazado a TODO (dogfooding en solitario no lo dispara).

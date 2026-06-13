@@ -1,16 +1,28 @@
 /* ===========================================================================
-   persist/sync — hidratación + autosave (F6.1). Pega la capa `persist` al store
-   de dominio. Diseño de eng-review F6:
-     · `hydrate()` corre ANTES de `createRoot().render()` (main.tsx): muta el
-       store si hay datos sanos, deja la demo en memoria si está vacío, y NO pisa
-       si está corrupto (marca recuperación). Idempotente (StrictMode-safe).
+   persist/sync — hidratación + autosave (F6.1 → multi-obra T-10). Pega la capa
+   `persist` + `registry` al store de dominio.
+     · `hydrate()` corre ANTES de `createRoot().render()` (main.tsx): migra el
+       proyecto legacy al registro, reconcilia índice↔blobs, y carga PEREZOSAMENTE
+       solo la obra ACTIVA (D7: arranque plano). Si la activa falla, cae a la
+       primera obra que cargue (fallback por obra). Si ninguna carga, marca
+       recuperación y NO pisa la demo. Idempotente (StrictMode-safe).
      · El autosave se ARMA tras hidratar, escucha SOLO el slice de dominio
-       (navegar no guarda), debounced, y persiste solo tras la 1ª mutación real
-       (la demo no se fosiliza). Las escrituras van por la cola de `persist`.
+       (navegar no guarda), debounced, y persiste la obra activa bajo su clave.
+       La 1ª edición de la demo (instalación nueva) le asigna un id y crea el
+       registro (la demo no se fosiliza hasta entonces).
    =========================================================================== */
 import { shallow } from 'zustand/shallow';
 import { fromSerializable, toSerializable, useObraStore, type ObraState } from '../store';
-import { flush, loadObraEnvelope, saveObra } from './persist';
+import { flush, loadObraEnvelope, obraKey } from './persist';
+import {
+  loadIndex,
+  migrateLegacy,
+  newObraId,
+  reconcile,
+  saveActiveObra,
+  setActiveId,
+  type ObraIndex,
+} from './registry';
 import { usePersistStore } from './persistStore';
 
 const DEBOUNCE_MS = 600;
@@ -18,6 +30,18 @@ const DEBOUNCE_MS = 600;
 let armed = false;
 let timer: ReturnType<typeof setTimeout> | null = null;
 let unsub: (() => void) | null = null;
+/** Última persistencia COMPLETA en vuelo (blob + índice). `flush()` de `persist`
+ *  solo cubre el blob; el índice se escribe DESPUÉS en `saveActiveObra`, así que
+ *  `flushPending` debe esperar a esta promesa o la obra activa queda sin sellar. */
+let lastPersist: Promise<void> = Promise.resolve();
+/** Id de la obra activa (la que se autoguarda). `null` = demo en memoria aún sin
+ *  registrar (instalación nueva, antes de la 1ª edición). */
+let activeId: string | null = null;
+
+/** Id de la obra activa en memoria (lo necesita PR2 para conmutar). */
+export function getActiveObraId(): string | null {
+  return activeId;
+}
 
 /** Slice de DOMINIO: el autosave solo reacciona a estos (no a la navegación). */
 function domainSlice(s: ObraState) {
@@ -26,11 +50,13 @@ function domainSlice(s: ObraState) {
 
 function persistNow(): Promise<void> {
   const data = toSerializable(useObraStore.getState());
+  if (!activeId) activeId = newObraId(); // 1ª edición de la demo: nace su id
   usePersistStore.getState().setStatus('saving');
-  return saveObra(data).then(
+  lastPersist = saveActiveObra(activeId, data).then(
     () => usePersistStore.getState().setStatus('saved'),
     () => usePersistStore.getState().setStatus('error'),
   );
+  return lastPersist;
 }
 
 /** Arma el autosave una sola vez. Suscribe al slice de dominio con shallow-eq;
@@ -52,46 +78,76 @@ export function armAutosave(): void {
 }
 
 /** Fuerza el guardado pendiente y espera a la cola. Para operaciones de riesgo
- *  (importar, reset, cerrar pestaña): no perder la última edición por el debounce. */
+ *  (importar, reset, conmutar, cerrar pestaña): no perder la última edición por el debounce. */
 export function flushPending(): Promise<void> {
   if (timer) {
     clearTimeout(timer);
     timer = null;
     void persistNow();
   }
-  return flush();
+  // Espera al blob (cola de persist) Y al índice (continuación de saveActiveObra).
+  return Promise.all([flush(), lastPersist]).then(() => undefined);
 }
 
-/** Carga la obra persistida y arma el autosave. Llamar antes de render. */
+/** Las obras a intentar cargar, la activa primero (resto como fallback). */
+function orderActiveFirst(idx: ObraIndex): string[] {
+  const ids = idx.obras.map((m) => m.id);
+  if (idx.activeId && ids.includes(idx.activeId)) {
+    return [idx.activeId, ...ids.filter((id) => id !== idx.activeId)];
+  }
+  return ids;
+}
+
+/** Migra/reconcilia el registro y carga la obra activa. Llamar antes de render. */
 export async function hydrate(): Promise<void> {
   try {
-    const res = await loadObraEnvelope();
-    if (res.kind === 'ok') {
-      try {
-        const data = fromSerializable(res.envelope.data); // migra por schemaVersion
-        useObraStore.getState().loadObra(data);
-      } catch {
-        // versión no soportada → recuperación, NO pisar, NO armar autosave
-        usePersistStore.getState().setRecovery(res.envelope);
-        return;
-      }
-    } else if (res.kind === 'corrupt') {
-      usePersistStore.getState().setRecovery(res.raw);
-      return; // datos corruptos: no pisar con la demo, esperar decisión del usuario
+    await migrateLegacy(); // one-shot, idempotente
+    const idx = await reconcile(await loadIndex());
+
+    // Instalación nueva (sin obras): demo en memoria, arma autosave. La 1ª
+    // edición creará el registro; la demo NO se fosiliza hasta entonces.
+    if (idx.obras.length === 0) {
+      activeId = null;
+      armAutosave();
+      return;
     }
-    // 'empty' (demo en memoria, sin persistir aún) u 'ok' (obra cargada): armar.
-    armAutosave();
+
+    // Carga la activa; si falla, cae a la primera obra que cargue (fallback por
+    // obra, Codex). Recuerda la 1ª corrupta para ofrecer recuperación si NINGUNA carga.
+    let firstCorrupt: { raw: unknown; key: string } | null = null;
+    for (const id of orderActiveFirst(idx)) {
+      const key = obraKey(id);
+      const res = await loadObraEnvelope(key);
+      if (res.kind === 'ok') {
+        try {
+          useObraStore.getState().loadObra(fromSerializable(res.envelope.data));
+          activeId = id;
+          if (idx.activeId !== id) await setActiveId(id); // el fallback cambió la activa
+          armAutosave(); // tras cargar (la mutación de loadObra no debe disparar guardado)
+          return;
+        } catch {
+          if (!firstCorrupt) firstCorrupt = { raw: res.envelope, key }; // versión no soportada
+        }
+      } else if (res.kind === 'corrupt') {
+        if (!firstCorrupt) firstCorrupt = { raw: res.raw, key };
+      }
+    }
+
+    // Ninguna obra cargó → recuperación (no pisar la demo, no armar autosave).
+    if (firstCorrupt) usePersistStore.getState().setRecovery(firstCorrupt.raw, firstCorrupt.key);
   } catch {
     // IndexedDB no disponible (incógnito/bloqueado/cuota): seguimos en memoria.
     usePersistStore.getState().setStatus('error');
   }
 }
 
-/** Reset de testing: desuscribe, olvida el armado y el debounce (no toca IDB). */
+/** Reset de testing: desuscribe, olvida el armado, el debounce y la obra activa. */
 export function __resetSyncForTests(): void {
   if (unsub) unsub();
   unsub = null;
   armed = false;
   if (timer) clearTimeout(timer);
   timer = null;
+  activeId = null;
+  lastPersist = Promise.resolve();
 }
