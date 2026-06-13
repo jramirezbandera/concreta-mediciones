@@ -170,7 +170,8 @@
 .chapCode {
   font-size: 11px;
   flex-shrink: 0;
-  color: var(--text-disabled);
+  /* nº de capítulo (info identificativa) → --secondary para pasar AA */
+  color: var(--text-secondary);
 }
 .chap.on .chapCode {
   color: var(--accent);

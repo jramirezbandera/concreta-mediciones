@@ -11,8 +11,8 @@ import { Sandbox } from './features/sandbox/Sandbox';
 import { PersistUI, flushPending } from './persist';
 import { useBreakpoint } from './hooks/useBreakpoint';
 import { useTheme } from './hooks/useTheme';
-import { BottomTabBar, Drawer, Sidebar, StatusBar, TopBar, type View } from './layout';
-import { selectCounts, selectPec, selectPem, useObraStore } from './store';
+import { BottomTabBar, Drawer, MobileSummaryBar, Sidebar, StatusBar, TopBar, type View } from './layout';
+import { selectCounts, selectPec, selectPem, selectTotalConIva, useObraStore } from './store';
 import styles from './App.module.css';
 
 /** Por encima de este ancho de ventana el panel Referencia abre en split; si no, overlay. */
@@ -34,6 +34,7 @@ export default function App() {
   const counts = useObraStore(selectCounts);
   const pem = useObraStore(selectPem);
   const pec = useObraStore(selectPec);
+  const total = useObraStore(selectTotalConIva);
 
   const refOpen = useObraStore((s) => s.refOpen);
   const refWidth = useObraStore((s) => s.refWidth);
@@ -212,7 +213,10 @@ export default function App() {
       </div>
 
       {bp.isMobile ? (
-        <BottomTabBar view={view} onView={changeView} />
+        <>
+          <MobileSummaryBar pem={pem} total={total} onOpen={() => setDrawerOpen(true)} />
+          <BottomTabBar view={view} onView={changeView} />
+        </>
       ) : (
         <StatusBar counts={counts} pem={pem} pec={pec} onSandbox={goSandbox} />
       )}

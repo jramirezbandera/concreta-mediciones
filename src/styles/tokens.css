@@ -103,7 +103,9 @@ button, input, select, textarea { font-family:inherit; }
 /* section header (10px caps) */
 .sec-head {
   font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.11em;
-  color:var(--text-disabled);
+  /* Texto informativo (etiquetas de sección): --secondary pasa AA (6,8:1);
+     --disabled daba 2,3:1 y fallaba incluso el umbral UI. */
+  color:var(--text-secondary);
 }
 
 /* verdict / resource badge */
@@ -118,7 +120,8 @@ button, input, select, textarea { font-family:inherit; }
 .ctable { width:100%; border-collapse:collapse; }
 .ctable th {
   font-weight:600; font-size:9.5px; letter-spacing:.09em; text-transform:uppercase;
-  color:var(--text-disabled); padding:11px 8px; border-bottom:1px solid var(--border-main);
+  /* Cabeceras de columna: info real → --secondary (AA); --disabled fallaba. */
+  color:var(--text-secondary); padding:11px 8px; border-bottom:1px solid var(--border-main);
   background:var(--bg-surface); white-space:nowrap;
 }
 .ctable td { border-bottom:1px solid var(--border-sub); color:var(--text-secondary); }

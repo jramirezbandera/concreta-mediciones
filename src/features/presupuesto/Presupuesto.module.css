@@ -184,7 +184,8 @@
 }
 .code {
   font-size: 10.5px;
-  color: var(--text-disabled);
+  /* código de partida (info identificativa) → --secondary para pasar AA */
+  color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

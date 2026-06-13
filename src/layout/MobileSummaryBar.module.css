@@ -1,0 +1,41 @@
+.bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 30px;
+  padding: 0 14px;
+  border: 0;
+  border-top: 1px solid var(--border-main);
+  background: var(--bg-surface);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  text-align: left;
+}
+.bar:active {
+  background: var(--bg-elevated);
+}
+.item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.label {
+  font-size: 9px;
+  color: var(--text-disabled);
+}
+.sep {
+  color: var(--text-disabled);
+}
+.total {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.chev {
+  margin-left: auto;
+  color: var(--text-disabled);
+  transform: rotate(-90deg); /* apunta hacia arriba: "abre el resumen" */
+}
