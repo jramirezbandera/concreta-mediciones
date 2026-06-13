@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
-import { Bar, Icon, InlineCreate, IvaSelect } from '../components';
-import { fmtCents, fmtNum, toEur, type Cents } from '../core/money';
+import { Bar, EditableNum, Icon, InlineCreate, IvaSelect, Modal } from '../components';
+import { fmtCents, fmtNum, parseEsNumber, toCents, toEur, type Cents } from '../core/money';
+import { coefKParaObjetivo, pem as pemCore } from '../core/totales';
 import {
   emptyContainers,
   findNode,
@@ -31,15 +32,131 @@ function k(cents: Cents): string {
   return `${fmtNum(toEur(cents) / 1000, 1)}k`;
 }
 
+/* ---------- Modal "Ajusta": K que cuadra el PEM a un objetivo -------------- */
+/**
+ * Calcula el coeficiente K que lleva el PEM a la cifra objetivo que teclea el
+ * usuario (rebaja/subida del constructor, cuadrar un PEM contractual). La base
+ * del cálculo es el PEM a K=1, así que reajustar al mismo objetivo es idempotente.
+ * El preview muestra el K resultante y el PEM REAL que saldrá (con el redondeo
+ * por partida, que puede dejar una desviación de céntimos respecto al objetivo).
+ */
+function AjustaModal({
+  open,
+  onClose,
+  baseCents,
+  currentPem,
+  pemAt,
+  onApply,
+  compact,
+}: {
+  open: boolean;
+  onClose: () => void;
+  baseCents: Cents; // PEM a K=1 (base de la razón)
+  currentPem: Cents; // PEM con el K vigente (semilla del objetivo)
+  pemAt: (coefK: number) => Cents; // PEM real con un K dado (redondeo por partida)
+  onApply: (coefK: number) => void;
+  compact: boolean;
+}) {
+  const [draft, setDraft] = useState('');
+  // Al abrir, precarga el objetivo con el PEM actual: el punto de partida natural.
+  useEffect(() => {
+    if (open) setDraft(fmtNum(toEur(currentPem), 2).replace(/\./g, ''));
+  }, [open, currentPem]);
+
+  const target = parseEsNumber(draft);
+  const targetCents = target != null ? toCents(target) : null;
+  const valido = targetCents != null && targetCents > 0 && baseCents > 0;
+  const k = valido ? coefKParaObjetivo(baseCents, targetCents) : null;
+  // PEM real que saldrá al aplicar ese K (redondeo por partida, no escalar el total).
+  const resultPem = k != null ? pemAt(k) : null;
+  const delta = resultPem != null && targetCents != null ? resultPem - targetCents : null;
+
+  function apply() {
+    if (k == null) return;
+    onApply(k);
+    onClose();
+  }
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Ajustar a un PEM objetivo"
+      subtitle="Calcula el coeficiente K que cuadra el presupuesto con la cifra que indiques"
+      icon="target"
+      compact={compact}
+      footer={
+        <>
+          <button type="button" className={styles.ajustaCancel} onClick={onClose}>
+            Cancelar
+          </button>
+          <button type="button" className={styles.ajustaApply} onClick={apply} disabled={k == null}>
+            Aplicar K {k != null ? `×${fmtNum(k, 4)}` : ''}
+          </button>
+        </>
+      }
+    >
+      <div className={styles.ajustaBody}>
+        <label className={styles.ajustaField}>
+          <span className={`caps ${styles.ajustaLabel}`}>PEM objetivo</span>
+          <span className={styles.ajustaInputWrap}>
+            <input
+              className={`mono ${styles.ajustaInput}`}
+              value={draft}
+              inputMode="decimal"
+              aria-label="PEM objetivo en euros"
+              autoFocus
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') apply();
+              }}
+            />
+            <span className={styles.ajustaUnit}>€</span>
+          </span>
+        </label>
+
+        <div className={styles.ajustaPreview}>
+          <div className={styles.ajustaPrevRow}>
+            <span className={styles.ajustaPrevLabel}>PEM actual (K ×1)</span>
+            <span className="mono">{fmtCents(baseCents)}</span>
+          </div>
+          <div className={styles.ajustaPrevRow}>
+            <span className={styles.ajustaPrevLabel}>Coeficiente K</span>
+            <span className={`mono ${styles.ajustaPrevK}`}>{k != null ? `×${fmtNum(k, 4)}` : '—'}</span>
+          </div>
+          <div className={styles.ajustaPrevRow}>
+            <span className={styles.ajustaPrevLabel}>PEM resultante</span>
+            <span className={`mono ${styles.ajustaPrevStrong}`}>
+              {resultPem != null ? fmtCents(resultPem) : '—'}
+            </span>
+          </div>
+          {delta != null && Math.abs(delta) >= 1 && (
+            <div className={styles.ajustaNote}>
+              <Icon name="alert" size={12} /> Desvío de {fmtNum(toEur(delta))} € por el redondeo de
+              precios por partida (inevitable; queda dentro de la tolerancia habitual).
+            </div>
+          )}
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 /* ---------- Tarjeta Resumen (composición del presupuesto) ----------------- */
-function ResumenCard() {
+function ResumenCard({ compact }: { compact: boolean }) {
   const pem = useObraStore(selectPem);
   const pec = useObraStore(selectPec);
   const total = useObraStore(selectTotalConIva);
   const gg = useObraStore((s) => s.rates.gg);
   const bi = useObraStore((s) => s.rates.bi);
   const iva = useObraStore((s) => s.rates.iva);
+  const coefK = useObraStore((s) => s.rates.coefK);
   const setRates = useObraStore((s) => s.setRates);
+  const partidas = useObraStore((s) => s.partidas);
+
+  // PEM a K=1: base del ajuste por objetivo, independiente del K vigente.
+  const baseCents = useMemo(() => pemCore(partidas, 1), [partidas]);
+  const [targeting, setTargeting] = useState(false);
 
   const ggbi: Cents = pec - pem;
   const ivaCents: Cents = total - pec;
@@ -54,7 +171,29 @@ function ResumenCard() {
 
   return (
     <div className={styles.resumen}>
-      <div className={`sec-head ${styles.resHead}`}>Resumen</div>
+      <div className={styles.resTop}>
+        <div className={`sec-head ${styles.resHeadInline}`}>Resumen</div>
+        <div className={styles.kBox} title="Coeficiente K global de la obra (1 = sin ajuste)">
+          <span className={`caps ${styles.kCap}`}>K</span>
+          <span className={styles.kNum}>
+            <EditableNum
+              value={coefK}
+              dec={4}
+              ariaLabel="Coeficiente K"
+              onCommit={(v) => setRates({ coefK: v })}
+            />
+          </span>
+          <button
+            type="button"
+            className={styles.kBtn}
+            onClick={() => setTargeting(true)}
+            disabled={baseCents <= 0}
+            title="Ajustar K a un PEM objetivo"
+          >
+            <Icon name="target" size={11} /> Ajusta
+          </button>
+        </div>
+      </div>
       <div className={styles.compBar}>
         {segs.map(([value, color], i) => (
           <div
@@ -95,6 +234,16 @@ function ResumenCard() {
         <span className={styles.resTotalLabel}>Total</span>
         <span className={`mono ${styles.resTotalVal}`}>{fmtCents(total)}</span>
       </div>
+
+      <AjustaModal
+        open={targeting}
+        onClose={() => setTargeting(false)}
+        baseCents={baseCents}
+        currentPem={pem}
+        pemAt={(k) => pemCore(partidas, k)}
+        onApply={(k) => setRates({ coefK: k })}
+        compact={compact}
+      />
     </div>
   );
 }
@@ -630,7 +779,7 @@ export function Sidebar({ drawer = false, onAfterSelect }: SidebarProps) {
       </nav>
 
       <div className={styles.footer}>
-        <ResumenCard />
+        <ResumenCard compact={drawer} />
       </div>
     </aside>
   );

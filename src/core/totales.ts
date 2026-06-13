@@ -31,6 +31,21 @@ export function pec(pemCents: Cents, rates: Rates): Cents {
 }
 
 /**
+ * Coeficiente K que lleva el PEM lo más cerca posible de un objetivo: la razón
+ * directa objetivo/base, donde `baseCents` es el PEM calculado a K=1 (el que ve
+ * `pem(map, 1)`). Como K multiplica cada precio ANTES del redondeo por partida
+ * (`partidaImporte`), el PEM no es exactamente lineal en K: aplicar el K
+ * resultante puede dejar una desviación de pocos céntimos respecto al objetivo
+ * —la misma tolerancia con la que el resto del motor cuadra contra el .bc3—.
+ * 6 decimales: precisión sobrada para cuadrar al céntimo sin floats absurdos.
+ * Devuelve 1 si la base o el objetivo no son positivos (no se puede escalar 0).
+ */
+export function coefKParaObjetivo(baseCents: Cents, targetCents: Cents): number {
+  if (baseCents <= 0 || targetCents <= 0) return 1;
+  return Math.round((targetCents / baseCents) * 1e6) / 1e6;
+}
+
+/**
  * Total con IVA = round2((PEM + round2(PEM·(gg+bi))) · (1 + iva)).
  * Réplica exacta del prototipo: el GG+BI se redondea aparte antes del IVA
  * (puede diferir en un céntimo de `pec`).

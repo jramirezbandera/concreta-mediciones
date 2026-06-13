@@ -28,6 +28,7 @@ import {
   Search,
   Sun,
   Moon,
+  Target,
   Trash2,
   Upload,
   X,
@@ -72,6 +73,7 @@ export const ICONS = {
   moon: Moon,
   loader: Loader2,
   alert: AlertTriangle,
+  target: Target,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICONS;

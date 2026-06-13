@@ -464,6 +464,156 @@
 .resHead {
   margin-bottom: 11px;
 }
+.resTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 11px;
+}
+.resHeadInline {
+  margin: 0;
+}
+/* Píldora del coeficiente K: etiqueta + valor editable + botón "Ajusta". */
+.kBox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px 3px 8px;
+  border: 1px solid var(--border-main);
+  border-radius: 999px;
+  background: var(--bg-primary);
+}
+.kCap {
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: var(--text-disabled);
+}
+.kNum {
+  font-size: 12px;
+  font-weight: 600;
+}
+.kBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border: none;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+.kBtn:hover {
+  filter: brightness(1.08);
+}
+.kBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+/* ---- Modal "Ajustar a un PEM objetivo" ---- */
+.ajustaBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.ajustaField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ajustaLabel {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+}
+.ajustaInputWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-main);
+  border-radius: 9px;
+  background: var(--bg-primary);
+}
+.ajustaInputWrap:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.ajustaInput {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.ajustaUnit {
+  font-size: 16px;
+  color: var(--text-secondary);
+}
+.ajustaPreview {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 14px;
+  border-radius: 9px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-main);
+}
+.ajustaPrevRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.ajustaPrevK {
+  font-weight: 600;
+  color: var(--accent);
+}
+.ajustaPrevStrong {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.ajustaNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+.ajustaCancel,
+.ajustaApply {
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ajustaCancel {
+  border: 1px solid var(--border-main);
+  background: transparent;
+  color: var(--text-secondary);
+}
+.ajustaApply {
+  border: none;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.ajustaApply:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 .compBar {
   display: flex;
   width: 100%;

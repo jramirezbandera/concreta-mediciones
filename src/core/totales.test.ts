@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { partidaImporte } from './medicion';
 import { toEur } from './money';
 import { CHAPTERS, DEFAULT_RATES, PARTIDAS } from './seed';
-import { chapterTotal, chapterTotals, pec, pem, totalConIva } from './totales';
+import { chapterTotal, chapterTotals, coefKParaObjetivo, pec, pem, totalConIva } from './totales';
 
 // Localiza una partida por id en el seed.
 const find = (id: string) =>
@@ -53,6 +53,31 @@ describe('totales del presupuesto seed', () => {
     const base = pem(PARTIDAS);
     const conK = pem(PARTIDAS, 1.13);
     expect(toEur(conK)).toBeGreaterThan(toEur(base));
+  });
+});
+
+describe('coefKParaObjetivo (ajuste de K a un PEM objetivo)', () => {
+  const base = pem(PARTIDAS); // 26.291,91 € a K=1
+
+  it('razón directa objetivo/base, a 6 decimales', () => {
+    // objetivo 30.000 € sobre base 26.291,91 € → 1,141035…
+    expect(coefKParaObjetivo(base, 3_000_000)).toBe(1.141035);
+  });
+
+  it('el K resultante cuadra el PEM con el objetivo dentro de la tolerancia (<1 €)', () => {
+    const target = 3_000_000; // 30.000,00 €
+    const k = coefKParaObjetivo(base, target);
+    expect(Math.abs(pem(PARTIDAS, k) - target)).toBeLessThan(100); // <1 € (redondeo por partida)
+  });
+
+  it('objetivo = base → K = 1 (a 6 decimales)', () => {
+    expect(coefKParaObjetivo(base, base)).toBe(1);
+  });
+
+  it('protege contra base/objetivo no positivos (no se puede escalar 0)', () => {
+    expect(coefKParaObjetivo(0, 3_000_000)).toBe(1);
+    expect(coefKParaObjetivo(base, 0)).toBe(1);
+    expect(coefKParaObjetivo(base, -100)).toBe(1);
   });
 });
 
