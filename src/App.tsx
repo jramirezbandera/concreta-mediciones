@@ -5,7 +5,7 @@ import { ImportarView } from './features/importar';
 import { ObraModal } from './features/obra';
 import { PresupuestoView } from './features/presupuesto';
 import { PrintDoc, type PrintTarget } from './features/print';
-import { ReferenciaPanel, refStyles } from './features/referencia';
+import { ConflictModal, ReferenciaPanel, refStyles } from './features/referencia';
 import { ResumenView } from './features/resumen';
 import { Sandbox } from './features/sandbox/Sandbox';
 import { PersistUI, flushPending } from './persist';
@@ -42,7 +42,7 @@ export default function App() {
   const setRefOpen = useObraStore((s) => s.setRefOpen);
   const setRefWidth = useObraStore((s) => s.setRefWidth);
   const setRefDrag = useObraStore((s) => s.setRefDrag);
-  const copyRefPartidas = useObraStore((s) => s.copyRefPartidas);
+  const requestCopyRefPartidas = useObraStore((s) => s.requestCopyRefPartidas);
 
   // Redimensionar el panel en split: se arrastra el tirador (320–640 lo clampa el store).
   const startRefResize = useCallback(
@@ -172,8 +172,9 @@ export default function App() {
             refDrag
               ? (e) => {
                   e.preventDefault();
-                  // Soltar en el área de presupuesto = capítulo/sub activo.
-                  copyRefPartidas(refDrag.items, null, refDrag.contra);
+                  // Soltar en el área de presupuesto = capítulo/sub activo (con
+                  // preflight de colisión: puede abrir el diálogo de resolución).
+                  requestCopyRefPartidas(refDrag.items, null, refDrag.contra);
                   setRefDrag(null);
                 }
               : undefined
@@ -235,6 +236,7 @@ export default function App() {
       />
       {printTarget && <PrintDoc target={printTarget} onDone={closePrint} />}
 
+      <ConflictModal />
       <PersistUI />
     </div>
   );

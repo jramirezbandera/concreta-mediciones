@@ -7,10 +7,11 @@
    al integrarlos NO se pisan los homónimos ya existentes.
    Portado verbatim de design_handoff/refdata.js.
    =========================================================================== */
-import type { Chapter, Item, ResourceType } from './types';
+import type { Banco, Chapter, Item, PartidasMap, ResourceType } from './types';
 
-/** Partida de una fuente de referencia (subconjunto de `Partida`: sin `med`; la
- *  descripción larga vive en `REF_DESC` por código). */
+/** Partida de una fuente de referencia (subconjunto de `Partida`: sin `med`). La
+ *  descripción larga viene de `REF_DESC` por código (bases estáticas) o de `desc`
+ *  (obras propias, que la traen en la propia partida). */
 export interface RefPartida {
   id: string;
   sub?: string;
@@ -21,6 +22,8 @@ export interface RefPartida {
   precio: number;
   mainType?: ResourceType;
   items: Item[];
+  /** Descripción larga propia (obras como fuente; las bases la traen en REF_DESC). */
+  desc?: string;
 }
 
 /** Fuente de referencia: base de precios o presupuesto ajeno. */
@@ -327,3 +330,117 @@ export const REF_DESC: Record<string, string> = {
   CSV010:
     'Viga de atado de hormigón armado, realizada con hormigón HA-25/B/20/IIa fabricado en central y vertido con cubilote, y acero UNE-EN 10080 B 500 S, con una cuantía aproximada de 60 kg/m³. Incluso p/p de separadores y armaduras de espera. Según EHE-08 y CTE DB SE-C.',
 };
+
+/* ===========================================================================
+   Multi-obra (T-10, PR3): usar OTRA obra propia como fuente de Referencia.
+   =========================================================================== */
+
+/**
+ * Hidrata un `Item` de partida para mostrarlo en el panel: en runtime el item
+ * solo guarda `{code,type,cantidad}`; `desc/ud/precio` viven en el banco por
+ * código. El panel SÍ necesita esos campos (descomposición + importe), así que
+ * los rellenamos desde `recursos` (Codex: el adaptador no puede descartarlos).
+ */
+function hydrateItem(it: Item, recursos: Banco): Item {
+  if (it.type === '%CI') {
+    return { code: '%CI', type: '%CI', cantidad: it.cantidad, desc: it.desc ?? 'Costes indirectos', ud: '%', precio: 0 };
+  }
+  const r = recursos[it.code];
+  return {
+    code: it.code,
+    type: it.type,
+    cantidad: it.cantidad,
+    desc: r?.desc ?? it.desc ?? '',
+    ud: r?.ud ?? it.ud ?? '',
+    precio: r?.precio ?? it.precio ?? 0,
+  };
+}
+
+/**
+ * Adapta una obra propia (capítulos + partidas + banco) a `RefSource` para el
+ * panel. Hidrata los items desde el banco y trae la descripción larga de la
+ * propia partida (`Partida.desc`, no `REF_DESC`). `med`/`precioManual`/`fromBase`
+ * no viajan (la fuente no los necesita). El id se prefija `obra:` para distinguir
+ * las obras propias de las bases estáticas.
+ */
+export function obraToRefSource(
+  id: string,
+  name: string,
+  chapters: Chapter[],
+  partidas: PartidasMap,
+  recursos: Banco,
+): RefSource {
+  const out: Record<string, RefPartida[]> = {};
+  for (const chId in partidas) {
+    out[chId] = (partidas[chId] ?? []).map((p) => ({
+      id: p.id,
+      sub: p.sub,
+      pos: p.pos,
+      code: p.code,
+      title: p.title,
+      ud: p.ud,
+      precio: p.precio,
+      mainType: p.mainType,
+      desc: p.desc,
+      items: p.items.map((it) => hydrateItem(it, recursos)),
+    }));
+  }
+  return {
+    id: `obra:${id}`,
+    kind: 'presupuesto',
+    name: name || 'Obra sin nombre',
+    org: 'Obra propia',
+    chapters,
+    partidas: out,
+  };
+}
+
+/* ---- colisión de recurso al copiar (T-1, decisión eng-review D2) ----------- */
+
+/** Valores comparables de un recurso (para detectar colisión de código). */
+export interface RecursoVals {
+  desc: string;
+  ud: string;
+  precio: number;
+}
+
+/** Una colisión: un código entrante que YA existe en el banco a precio/desc distinto. */
+export interface Collision {
+  code: string;
+  existing: RecursoVals;
+  incoming: RecursoVals;
+}
+
+/** Resolución por código: fusionar (mantener el existente) o bifurcar (código nuevo). */
+export type Resolution = Record<string, 'merge' | 'fork'>;
+
+/** Precios "iguales" dentro de medio céntimo (evita avisos por redondeo). */
+const priceClose = (a: number, b: number): boolean => Math.abs(a - b) < 0.005;
+
+/**
+ * Detecta colisiones al copiar `items`: un código entrante presente en el banco
+ * a otro PRECIO (con tolerancia de céntimo). Solo el precio dispara el aviso: es
+ * lo que envenena el descompuesto/importe. Una descripción distinta al mismo
+ * código y precio es ruido cosmético (mismas bases redactan distinto el concepto)
+ * y se fusiona en silencio (Codex: no avisar por ruido). %CI nunca colisiona.
+ * Un código por colisión (la primera vez que aparece).
+ */
+export function detectCollisions(items: RefCopyItem[], recursos: Banco): Collision[] {
+  const seen = new Map<string, Collision>();
+  for (const it of items) {
+    for (const r of it.partida.items) {
+      if (r.type === '%CI' || seen.has(r.code)) continue;
+      const ex = recursos[r.code];
+      if (!ex) continue; // no existe → se integra sin más, no es colisión
+      const incoming: RecursoVals = { desc: r.desc ?? '', ud: r.ud ?? '', precio: r.precio ?? 0 };
+      if (!priceClose(ex.precio, incoming.precio)) {
+        seen.set(r.code, {
+          code: r.code,
+          existing: { desc: ex.desc, ud: ex.ud, precio: ex.precio },
+          incoming,
+        });
+      }
+    }
+  }
+  return [...seen.values()];
+}

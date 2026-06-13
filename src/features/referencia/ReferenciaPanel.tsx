@@ -3,8 +3,18 @@ import { Badge, Icon } from '../../components';
 import { fmtNum, round2 } from '../../core/money';
 import { REF_DESC, REF_SOURCES, type RefCopyItem, type RefPartida, type RefSource } from '../../core/refdata';
 import type { View } from '../../layout';
+import { useSessionStore } from '../../persist';
 import { selectCopyTarget, useObraStore } from '../../store';
+import { loadObraRefSource } from './obraSource';
 import styles from './Referencia.module.css';
+
+/** Descriptor ligero de fuente para el selector (sin cargar la obra entera). */
+interface SourceDesc {
+  id: string;
+  kind: 'base' | 'presupuesto';
+  name: string;
+  org: string;
+}
 
 /** Item de copia desde una partida de referencia. */
 function copyItem(source: RefSource, p: RefPartida): RefCopyItem {
@@ -30,7 +40,7 @@ function SourceSelect({
   onSelect,
   onImport,
 }: {
-  sources: RefSource[];
+  sources: SourceDesc[];
   curId: string;
   onSelect: (id: string) => void;
   onImport: () => void;
@@ -125,7 +135,8 @@ function RefPartidaRow({
   onDragEnd: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const desc = REF_DESC[p.code] ?? '';
+  // Las bases traen la desc por código (REF_DESC); las obras propias en la partida.
+  const desc = p.desc ?? REF_DESC[p.code] ?? '';
   return (
     <div className={`${styles.part} ${open ? styles.open : ''}`}>
       <div
@@ -198,50 +209,89 @@ function RefPartidaRow({
 }
 
 /* ===========================================================================
-   Panel de Referencia (F5): abre una base/presupuesto en solo lectura y copia
-   partidas/capítulos al presupuesto propio (botón o selección múltiple).
-   El arrastre (F5.2) se conectará sobre `onDragStart`.
+   Panel de Referencia (F5 → multi-obra T-10): abre una base/otra obra propia en
+   solo lectura y copia partidas/capítulos al presupuesto propio. Las obras
+   guardadas se cargan PEREZOSAMENTE desde IndexedDB (loading/error + guarda
+   anti-respuesta-obsoleta). La copia pasa por el PREFLIGHT de colisión del store.
    =========================================================================== */
 export function ReferenciaPanel() {
   const refSourceId = useObraStore((s) => s.refSourceId);
   const setRefSource = useObraStore((s) => s.setRefSource);
   const setRefOpen = useObraStore((s) => s.setRefOpen);
   const setView = useObraStore((s) => s.setView);
-  const copyRefPartidas = useObraStore((s) => s.copyRefPartidas);
+  const requestCopyRefPartidas = useObraStore((s) => s.requestCopyRefPartidas);
   const setRefDrag = useObraStore((s) => s.setRefDrag);
   const target = useObraStore(selectCopyTarget);
+  const obras = useSessionStore((s) => s.obras);
+  const activeObraId = useSessionStore((s) => s.activeId);
 
-  const source = REF_SOURCES.find((s) => s.id === refSourceId) ?? REF_SOURCES[0]!;
-  const [expanded, setExpanded] = useState<Record<string, boolean>>(() => {
-    const e: Record<string, boolean> = {};
-    source.chapters.forEach((c, i) => {
-      if (i === 0) e[c.id] = true;
+  // Lista de fuentes: bases estáticas + tus obras guardadas (menos la activa).
+  const sourceList = useMemo<SourceDesc[]>(() => {
+    const bases: SourceDesc[] = REF_SOURCES.map((s) => ({ id: s.id, kind: s.kind, name: s.name, org: s.org }));
+    const propias: SourceDesc[] = obras
+      .filter((o) => o.id !== activeObraId)
+      .map((o) => ({ id: `obra:${o.id}`, kind: 'presupuesto', name: o.name, org: 'Obra propia' }));
+    return [...bases, ...propias];
+  }, [obras, activeObraId]);
+
+  // Caché de obras propias ya cargadas como fuente (no re-leer el blob al volver).
+  const [obraCache, setObraCache] = useState<Record<string, RefSource>>({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const reqRef = useRef(0);
+
+  const isObraSrc = refSourceId.startsWith('obra:');
+  const source: RefSource | undefined = isObraSrc
+    ? obraCache[refSourceId]
+    : (REF_SOURCES.find((s) => s.id === refSourceId) ?? REF_SOURCES[0]);
+
+  // Carga perezosa de la obra seleccionada como fuente (con guarda anti-stale).
+  useEffect(() => {
+    if (!isObraSrc || obraCache[refSourceId]) {
+      setError(null);
+      return;
+    }
+    const obraId = refSourceId.slice('obra:'.length);
+    const meta = obras.find((o) => o.id === obraId);
+    const myReq = ++reqRef.current;
+    setLoading(true);
+    setError(null);
+    void loadObraRefSource(obraId, meta?.name ?? 'Obra').then((rs) => {
+      if (myReq !== reqRef.current) return; // el usuario cambió de fuente: descarta
+      setLoading(false);
+      if (rs) setObraCache((c) => ({ ...c, [refSourceId]: rs }));
+      else setError('No se pudo cargar la obra (datos dañados).');
     });
-    return e;
-  });
+  }, [refSourceId, isObraSrc, obraCache, obras]);
+
   const [sel, setSel] = useState<Record<string, RefCopyItem>>({});
   const [q, setQ] = useState('');
   const [contra, setContra] = useState(false);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
-  // Al cambiar de fuente, limpia selección/búsqueda y abre su primer capítulo.
+  // Al cambiar de fuente, limpia selección/búsqueda.
   useEffect(() => {
     setSel({});
     setQ('');
-    const src = REF_SOURCES.find((s) => s.id === refSourceId);
-    const first = src?.chapters[0];
-    setExpanded(first ? { [first.id]: true } : {});
   }, [refSourceId]);
 
-  const refKey = (p: RefPartida) => `${source.id}::${p.id}`;
+  // Al resolverse la fuente (estática o cargada), abre su primer capítulo.
+  useEffect(() => {
+    const first = source?.chapters[0];
+    setExpanded(first ? { [first.id]: true } : {});
+  }, [source]);
+
+  const refKey = (p: RefPartida) => `${refSourceId}::${p.id}`;
   const query = q.trim().toLowerCase();
   const matchP = (p: RefPartida) => !query || `${p.title} ${p.code}`.toLowerCase().includes(query);
 
   const chapterData = useMemo(
-    () => source.chapters.map((ch) => ({ ch, ps: source.partidas[ch.id] ?? [] })),
+    () => (source ? source.chapters.map((ch) => ({ ch, ps: source.partidas[ch.id] ?? [] })) : []),
     [source],
   );
 
   function toggleSel(p: RefPartida) {
+    if (!source) return;
     const k = refKey(p);
     setSel((prev) => {
       const n = { ...prev };
@@ -265,11 +315,13 @@ export function ReferenciaPanel() {
     setRefDrag({ items, contra });
   }
   function dragStart(e: React.DragEvent, p: RefPartida) {
+    if (!source) return;
     const k = refKey(p);
     // Si la partida arrastrada está en la selección, arrastra TODA la selección.
     beginDrag(e, sel[k] ? Object.values(sel) : [copyItem(source, p)]);
   }
   function dragStartChapter(e: React.DragEvent, ps: RefPartida[]) {
+    if (!source) return;
     beginDrag(e, ps.map((p) => copyItem(source, p)));
   }
   const endDrag = () => setRefDrag(null);
@@ -294,7 +346,7 @@ export function ReferenciaPanel() {
             <Icon name="x" size={16} />
           </button>
         </div>
-        <SourceSelect sources={REF_SOURCES} curId={refSourceId} onSelect={setRefSource} onImport={openImport} />
+        <SourceSelect sources={sourceList} curId={refSourceId} onSelect={setRefSource} onImport={openImport} />
         <div className={styles.search}>
           <Icon name="search" size={15} style={{ color: 'var(--text-disabled)', flexShrink: 0 }} />
           <input
@@ -324,57 +376,69 @@ export function ReferenciaPanel() {
       </div>
 
       <div className={`scroll-thin ${styles.tree}`}>
-        {chapterData.map(({ ch, ps }) => {
-          const filtered = ps.filter(matchP);
-          if (query && !filtered.length) return null;
-          const open = query ? true : !!expanded[ch.id];
-          return (
-            <div key={ch.id} className={styles.chap}>
-              <div
-                draggable
-                onDragStart={(e) => dragStartChapter(e, ps)}
-                onDragEnd={endDrag}
-                className={styles.chapRow}
-              >
-                <button
-                  type="button"
-                  onClick={() => setExpanded((e) => ({ ...e, [ch.id]: !e[ch.id] }))}
-                  className={`tcol ${styles.chapChev}`}
-                  aria-label={open ? `Colapsar ${ch.title}` : `Desplegar ${ch.title}`}
+        {loading ? (
+          <div className={styles.state}>
+            <Icon name="loader" size={16} className={styles.spin} /> Cargando obra…
+          </div>
+        ) : error ? (
+          <div className={styles.state}>
+            <Icon name="alert" size={16} /> {error}
+          </div>
+        ) : (
+          chapterData.map(({ ch, ps }) => {
+            const filtered = ps.filter(matchP);
+            if (query && !filtered.length) return null;
+            const open = query ? true : !!expanded[ch.id];
+            return (
+              <div key={ch.id} className={styles.chap}>
+                <div
+                  draggable
+                  onDragStart={(e) => dragStartChapter(e, ps)}
+                  onDragEnd={endDrag}
+                  className={styles.chapRow}
                 >
-                  <Icon name={open ? 'chevronDown' : 'chevron'} size={14} />
-                </button>
-                <span className={`mono ${styles.chapCode}`}>{ch.code}</span>
-                <span className={`caps ${styles.chapTitle}`}>{ch.title}</span>
-                <span className={styles.chapCount}>{ps.length}</span>
-                <button
-                  type="button"
-                  onClick={() => copyRefPartidas(ps.map((p) => copyItem(source, p)), null, contra)}
-                  title="Copiar capítulo entero"
-                  aria-label={`Copiar capítulo ${ch.code} entero`}
-                  className={`tcol ${styles.chapCopy}`}
-                >
-                  <Icon name="arrowLeft" size={14} />
-                </button>
-              </div>
-              {open && (
-                <div className={styles.partList}>
-                  {(query ? filtered : ps).map((p) => (
-                    <RefPartidaRow
-                      key={p.id}
-                      p={p}
-                      selected={!!sel[refKey(p)]}
-                      onToggleSel={toggleSel}
-                      onCopyOne={(pp) => copyRefPartidas([copyItem(source, pp)], null, contra)}
-                      onDragStart={dragStart}
-                      onDragEnd={endDrag}
-                    />
-                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setExpanded((e) => ({ ...e, [ch.id]: !e[ch.id] }))}
+                    className={`tcol ${styles.chapChev}`}
+                    aria-label={open ? `Colapsar ${ch.title}` : `Desplegar ${ch.title}`}
+                  >
+                    <Icon name={open ? 'chevronDown' : 'chevron'} size={14} />
+                  </button>
+                  <span className={`mono ${styles.chapCode}`}>{ch.code}</span>
+                  <span className={`caps ${styles.chapTitle}`}>{ch.title}</span>
+                  <span className={styles.chapCount}>{ps.length}</span>
+                  <button
+                    type="button"
+                    onClick={() => source && requestCopyRefPartidas(ps.map((p) => copyItem(source, p)), null, contra)}
+                    title="Copiar capítulo entero"
+                    aria-label={`Copiar capítulo ${ch.code} entero`}
+                    className={`tcol ${styles.chapCopy}`}
+                  >
+                    <Icon name="arrowLeft" size={14} />
+                  </button>
                 </div>
-              )}
-            </div>
-          );
-        })}
+                {open && (
+                  <div className={styles.partList}>
+                    {(query ? filtered : ps).map((p) => (
+                      <RefPartidaRow
+                        key={p.id}
+                        p={p}
+                        selected={!!sel[refKey(p)]}
+                        onToggleSel={toggleSel}
+                        onCopyOne={(pp) =>
+                          source && requestCopyRefPartidas([copyItem(source, pp)], null, contra)
+                        }
+                        onDragStart={dragStart}
+                        onDragEnd={endDrag}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
       </div>
 
       <div className={styles.actionBar}>
@@ -392,7 +456,7 @@ export function ReferenciaPanel() {
             <button
               type="button"
               onClick={() => {
-                copyRefPartidas(Object.values(sel), null, contra);
+                requestCopyRefPartidas(Object.values(sel), null, contra);
                 setSel({});
               }}
               className={styles.copyToBtn}

@@ -22,7 +22,15 @@ import { round2 } from '../core/money';
 import { renumberChapter } from '../core/numbering';
 import { findNode, flattenContainers, subtreeIds } from '../core/tree';
 import type { ImportedObra } from '../core/bc3import';
-import { REF_DESC, REF_SOURCES, type RefCopyItem, type RefDrag } from '../core/refdata';
+import {
+  REF_DESC,
+  REF_SOURCES,
+  detectCollisions,
+  type Collision,
+  type RefCopyItem,
+  type RefDrag,
+  type Resolution,
+} from '../core/refdata';
 import { CHAPTERS, DEFAULT_OBRA, DEFAULT_RATES, PARTIDAS, makeCertsInit } from '../core/seed';
 import type { View } from '../layout/types';
 
@@ -156,6 +164,14 @@ export interface CopyTarget {
   subId: string | null;
   label: string;
 }
+
+/** Copia en espera de resolver colisiones de recurso (T-1, decisión D2). */
+export interface PendingCopy {
+  items: RefCopyItem[];
+  target: { chId: string; subId: string | null } | null;
+  contra: boolean;
+  collisions: Collision[];
+}
 export function copyTargetOf(chapters: Chapter[], active: string): CopyTarget {
   if (active !== ALL) {
     // Resolución a CUALQUIER profundidad (jerarquía N niveles): un sub-sub
@@ -170,6 +186,91 @@ export function copyTargetOf(chapters: Chapter[], active: string): CopyTarget {
   }
   const c = chapters[0];
   return c ? { chId: c.id, subId: null, label: `${c.code} · ${c.title}` } : { chId: '', subId: null, label: '' };
+}
+
+/** Siguiente código derivado libre para BIFURCAR un recurso en colisión (`code~2`, `code~3`…). */
+function forkCode(recursos: Banco, code: string): string {
+  let i = 2;
+  let c = `${code}~${i}`;
+  while (recursos[c]) c = `${code}~${++i}`;
+  return c;
+}
+
+/**
+ * Ejecuta la copia de partidas de referencia sobre el draft `s` (lo comparten la
+ * copia directa y la resuelta tras colisión). `resolution[code] === 'fork'` crea
+ * el recurso entrante bajo un código derivado y reescribe los items que lo usan;
+ * el resto integra SIN pisar homónimos (fusionar = comportamiento histórico).
+ */
+function applyCopy(
+  s: ObraState,
+  items: RefCopyItem[],
+  target: { chId: string; subId: string | null } | null,
+  contra: boolean,
+  resolution?: Resolution,
+): void {
+  if (!items.length) return;
+  const t = target ?? copyTargetOf(s.chapters, s.active);
+  const ch = s.chapters.find((c) => c.id === t.chId);
+  if (!ch) return;
+  const subId = t.subId;
+  // Destino a cualquier profundidad; un subId inexistente se RECHAZA (no-op).
+  const sub = subId ? subIn(ch, subId) : undefined;
+  if (subId && !sub) return;
+  const base = sub ? sub.code : ch.code;
+  const list = (s.partidas[t.chId] ??= []);
+
+  // 0) Bifurcaciones: por cada código resuelto a 'fork' que choca, crea el recurso
+  //    ENTRANTE bajo un código derivado (una vez por código de origen).
+  const forkMap: Record<string, string> = {};
+  for (const it of items)
+    for (const r of it.partida.items) {
+      if (r.type === '%CI') continue;
+      if (resolution?.[r.code] === 'fork' && s.recursos[r.code] && !forkMap[r.code]) {
+        const fc = forkCode(s.recursos, r.code);
+        forkMap[r.code] = fc;
+        s.recursos[fc] = { type: r.type, desc: r.desc ?? '', ud: r.ud ?? '', precio: r.precio ?? 0 };
+      }
+    }
+
+  // 1) Recursos no bifurcados al banco SIN pisar homónimos (coherencia §0 / fusionar).
+  for (const it of items)
+    for (const r of it.partida.items) {
+      if (r.type === '%CI') continue;
+      const code = forkMap[r.code] ?? r.code;
+      if (!s.recursos[code])
+        s.recursos[code] = { type: r.type, desc: r.desc ?? '', ud: r.ud ?? '', precio: r.precio ?? 0 };
+    }
+
+  // 2) Partidas nuevas (pos correlativa dentro del sub destino; precio de la base
+  //    es autoridad, sin recomputar). Los items 'fork' apuntan al código derivado.
+  let sameSub = list.filter((p) => (subId ? p.sub === subId : !p.sub)).length;
+  for (const it of items) {
+    const p = it.partida;
+    sameSub += 1;
+    const newItems = p.items.map((r) =>
+      r.type === '%CI'
+        ? { code: '%CI', type: '%CI' as const, cantidad: r.cantidad }
+        : { code: forkMap[r.code] ?? r.code, type: r.type, cantidad: r.cantidad },
+    );
+    list.push({
+      id: nextPartidaId(),
+      sub: subId || undefined,
+      pos: `${base}.${sameSub}`,
+      code: p.code,
+      title: p.title,
+      ud: p.ud,
+      precio: p.precio,
+      mainType: p.mainType,
+      desc: REF_DESC[p.code] ?? p.desc ?? '',
+      med: [],
+      items: newItems,
+      fromBase: !contra,
+      contradictorio: contra || undefined,
+      baseSource: it.sourceName,
+    });
+  }
+  s.expanded[t.chId] = true;
 }
 
 /** Estado de dominio de la obra (lo que persistiría en F6). Serializable. */
@@ -202,6 +303,8 @@ export interface ObraState extends ObraData {
   refWidth: number;
   /** Arrastre en curso desde el panel Referencia (F5.2); null = nada arrastrándose. */
   refDrag: RefDrag | null;
+  /** Copia con colisiones pendiente de resolver (T-1, D2); null = sin conflicto. */
+  pendingCopy: PendingCopy | null;
 
   /* ---- acciones (F1) ---- */
   setView: (v: View) => void;
@@ -281,7 +384,24 @@ export interface ObraState extends ObraData {
     items: RefCopyItem[],
     target: { chId: string; subId: string | null } | null,
     contra: boolean,
+    resolution?: Resolution,
   ) => void;
+  /**
+   * Punto de entrada de copia con PREFLIGHT de colisión (T-1, D2). Detecta
+   * códigos de recurso entrantes que chocan con el banco a precio/desc distinto.
+   * Sin colisiones → copia directa. Con colisiones → deja `pendingCopy` para que
+   * la UI pregunte (fusionar/bifurcar) y luego llame a `resolveCopyRefPartidas`.
+   * Lo usan TODAS las vías de copia (botón, selección, capítulo y drag&drop).
+   */
+  requestCopyRefPartidas: (
+    items: RefCopyItem[],
+    target: { chId: string; subId: string | null } | null,
+    contra: boolean,
+  ) => void;
+  /** Ejecuta la copia pendiente con la resolución elegida y limpia `pendingCopy`. */
+  resolveCopyRefPartidas: (resolution: Resolution) => void;
+  /** Cancela la copia pendiente (cierra el diálogo de colisión sin copiar). */
+  cancelCopyRefPartidas: () => void;
 
   /* ---- acciones F2 (edición in-situ de partidas) ---- */
   /** Edita un campo de texto de la partida (title/ud/code/desc) y quita el chip BASE. */
@@ -479,6 +599,7 @@ function seedUi(certs: Cert[]) {
     refSourceId: REF_SOURCES[0]?.id ?? '',
     refWidth: 400,
     refDrag: null as RefDrag | null,
+    pendingCopy: null as PendingCopy | null,
   };
 }
 
@@ -688,60 +809,33 @@ export const useObraStore = create<ObraState>()(
           s.refOpen = false;
         }),
 
-      copyRefPartidas: (items, target, contra) =>
+      copyRefPartidas: (items, target, contra, resolution) =>
+        set((s) => {
+          applyCopy(s, items, target, contra, resolution);
+        }),
+
+      requestCopyRefPartidas: (items, target, contra) =>
         set((s) => {
           if (!items.length) return;
-          const t = target ?? copyTargetOf(s.chapters, s.active);
-          const ch = s.chapters.find((c) => c.id === t.chId);
-          if (!ch) return;
-          const subId = t.subId;
-          // Destino a cualquier profundidad; un subId inexistente se RECHAZA
-          // (no-op): nunca crear partidas con `sub` huérfano.
-          const sub = subId ? subIn(ch, subId) : undefined;
-          if (subId && !sub) return;
-          const base = sub ? sub.code : ch.code;
-          const list = (s.partidas[t.chId] ??= []);
-          // 1) recursos al banco SIN pisar los homónimos (coherencia, §0).
-          for (const it of items)
-            for (const r of it.partida.items) {
-              if (r.type === '%CI') continue;
-              if (!s.recursos[r.code])
-                s.recursos[r.code] = {
-                  type: r.type,
-                  desc: r.desc ?? '',
-                  ud: r.ud ?? '',
-                  precio: r.precio ?? 0,
-                };
-            }
-          // 2) partidas nuevas (pos correlativa dentro del sub destino; el precio
-          //    de la base es autoridad, igual que la semilla, sin recomputar).
-          let sameSub = list.filter((p) => (subId ? p.sub === subId : !p.sub)).length;
-          for (const it of items) {
-            const p = it.partida;
-            sameSub += 1;
-            const newItems = p.items.map((r) =>
-              r.type === '%CI'
-                ? { code: '%CI', type: '%CI' as const, cantidad: r.cantidad }
-                : { code: r.code, type: r.type, cantidad: r.cantidad },
-            );
-            list.push({
-              id: nextPartidaId(),
-              sub: subId || undefined,
-              pos: `${base}.${sameSub}`,
-              code: p.code,
-              title: p.title,
-              ud: p.ud,
-              precio: p.precio,
-              mainType: p.mainType,
-              desc: REF_DESC[p.code] ?? '',
-              med: [],
-              items: newItems,
-              fromBase: !contra,
-              contradictorio: contra || undefined,
-              baseSource: it.sourceName,
-            });
+          const collisions = detectCollisions(items, s.recursos);
+          if (collisions.length === 0) {
+            applyCopy(s, items, target, contra); // sin colisión: copia directa
+          } else {
+            s.pendingCopy = { items, target, contra, collisions }; // pregunta a la UI
           }
-          s.expanded[t.chId] = true;
+        }),
+
+      resolveCopyRefPartidas: (resolution) =>
+        set((s) => {
+          const pc = s.pendingCopy;
+          if (!pc) return;
+          applyCopy(s, pc.items, pc.target, pc.contra, resolution);
+          s.pendingCopy = null;
+        }),
+
+      cancelCopyRefPartidas: () =>
+        set((s) => {
+          s.pendingCopy = null;
         }),
 
       editPartidaField: (chapterId, partidaId, field, value) =>
