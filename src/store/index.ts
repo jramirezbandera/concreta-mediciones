@@ -4,6 +4,7 @@ export {
   SCHEMA_VERSION,
   useObraStore,
   seedObraData,
+  blankObraData,
   toSerializable,
   fromSerializable,
   copyTargetOf,

@@ -11,7 +11,7 @@ import { Sandbox } from './features/sandbox/Sandbox';
 import { PersistUI, flushPending } from './persist';
 import { useBreakpoint } from './hooks/useBreakpoint';
 import { useTheme } from './hooks/useTheme';
-import { BottomTabBar, Drawer, MobileSummaryBar, Sidebar, StatusBar, TopBar, type View } from './layout';
+import { BottomTabBar, Drawer, MobileSummaryBar, ObraSwitcher, Sidebar, StatusBar, TopBar, type View } from './layout';
 import { selectCounts, selectPec, selectPem, selectTotalConIva, useObraStore } from './store';
 import styles from './App.module.css';
 
@@ -146,6 +146,7 @@ export default function App() {
         onToggleRef={() => setRefOpen()}
         onExport={() => setExportOpen(true)}
         onObra={() => setObraOpen(true)}
+        obraSwitcher={<ObraSwitcher />}
       />
 
       <div className={styles.body}>

@@ -1,4 +1,5 @@
 export { TopBar } from './TopBar';
+export { ObraSwitcher } from './ObraSwitcher';
 export { Sidebar } from './Sidebar';
 export { StatusBar, type Counts } from './StatusBar';
 export { BottomTabBar } from './BottomTabBar';

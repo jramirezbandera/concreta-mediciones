@@ -16,6 +16,8 @@ export interface TopBarProps {
   onToggleRef?: () => void;
   onExport?: () => void;
   onObra?: () => void;
+  /** Selector de obra (multi-obra, PR2). Si se pasa, sustituye al nombre de obra inline. */
+  obraSwitcher?: React.ReactNode;
 }
 
 /** Barra superior: lockup de marca Concreta, breadcrumb, tabs y acciones. */
@@ -31,6 +33,7 @@ export function TopBar({
   onToggleRef,
   onExport,
   onObra,
+  obraSwitcher,
 }: TopBarProps) {
   const { isMobile, isTablet, isCompact } = bp;
 
@@ -66,19 +69,26 @@ export function TopBar({
         <span className={`mono caps hide-md ${styles.kicker}`}>Mediciones</span>
         <span className={`hide-sm ${styles.slash}`}>/</span>
         <span className={`hide-sm ${styles.crumb}`}>{VIEW_LABEL[view]}</span>
-        {onObra && (
+        {obraSwitcher ? (
           <>
-            <span className={`hide-lg ${styles.dotSep}`}>·</span>
-            <button
-              type="button"
-              onClick={onObra}
-              title="Datos de la obra"
-              className={`tcol hide-lg ${styles.obra}`}
-            >
-              {obraName}
-              <Icon name="pencil" size={12} style={{ opacity: 0.5, flexShrink: 0 }} />
-            </button>
+            <span className={`hide-sm ${styles.dotSep}`}>·</span>
+            {obraSwitcher}
           </>
+        ) : (
+          onObra && (
+            <>
+              <span className={`hide-lg ${styles.dotSep}`}>·</span>
+              <button
+                type="button"
+                onClick={onObra}
+                title="Datos de la obra"
+                className={`tcol hide-lg ${styles.obra}`}
+              >
+                {obraName}
+                <Icon name="pencil" size={12} style={{ opacity: 0.5, flexShrink: 0 }} />
+              </button>
+            </>
+          )
         )}
       </div>
 

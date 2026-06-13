@@ -1,4 +1,14 @@
-export { hydrate, armAutosave, flushPending, getActiveObraId, __resetSyncForTests } from './sync';
+export {
+  hydrate,
+  armAutosave,
+  flushPending,
+  getActiveObraId,
+  switchObra,
+  newObra,
+  deleteObraById,
+  __resetSyncForTests,
+} from './sync';
+export { useSessionStore } from './sessionStore';
 export {
   loadObraEnvelope,
   loadRaw,

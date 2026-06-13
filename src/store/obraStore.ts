@@ -405,6 +405,24 @@ export function seedObraData(): ObraData {
   };
 }
 
+/**
+ * Obra EN BLANCO para "nueva obra" (multi-obra, T-10): sin capítulos/partidas/
+ * recursos, una certificación vacía lista para editar, tasas por defecto. No
+ * arrastra el contenido demo del seed (eso confundiría: cada obra nueva con
+ * "Movimiento de tierras" de ejemplo). El usuario añade capítulos con el "+".
+ */
+export function blankObraData(name = 'Obra nueva'): ObraData {
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    chapters: [],
+    partidas: {},
+    recursos: {},
+    certs: [{ id: 'c1', num: 1, period: '', retencion: 0, data: {} }],
+    rates: { ...DEFAULT_RATES },
+    obra: { denominacion: name, direccion: '', localidad: '' },
+  };
+}
+
 /** Extrae el estado de dominio serializable (sin estado de UI). Lo usa F6. */
 export function toSerializable(s: ObraData): ObraData {
   return {
