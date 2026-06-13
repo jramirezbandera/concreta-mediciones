@@ -108,7 +108,10 @@
   top: 0;
   z-index: 10;
 }
-.thNum {
+/* `.table` sube la especificidad para ganar al global `.ctable th` (padding
+   8px), que si no deja la leyenda a 8px y desalineada de los códigos de
+   subnivel (sangrados 14px). */
+.table .thNum {
   text-align: left;
   padding-left: 14px;
   width: 124px;
