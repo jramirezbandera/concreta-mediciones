@@ -2,6 +2,7 @@ import { EditableNum, IvaSelect } from '../../components';
 import type { CertChapterRow, CertTotals } from '../../core/certificacion';
 import { fmtCents, fmtNum, round2, toEur, type Cents } from '../../core/money';
 import { useObraStore } from '../../store';
+import { certPctState } from './certPctState';
 import styles from './Certificaciones.module.css';
 
 const GGBI_COLOR = 'color-mix(in srgb, var(--accent) 45%, var(--bg-elevated))';
@@ -47,17 +48,28 @@ export function CertSummary({ totals, retencion }: { totals: CertTotals; retenci
       <div className={styles.sumGroup}>
         <Row label="PEM presupuesto" value={totals.budgetPEM} />
         <Row label="PEM certificado a origen" value={totals.certPEM} accent />
-        <div className={styles.globalBar}>
-          <div className={styles.globalBarTrack}>
+        {(() => {
+          const gSt = certPctState(totals.pctGlobal);
+          const gCls = gSt === 'over' ? styles.over : gSt === 'full' ? styles.full : '';
+          const gColor =
+            gSt === 'over' ? 'var(--state-warn)' : gSt === 'full' ? 'var(--state-ok)' : 'var(--accent)';
+          return (
             <div
-              className={styles.globalBarFill}
-              style={{ width: `${Math.min(100, totals.pctGlobal)}%` }}
-            />
-          </div>
-          <span className="mono" style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 600 }}>
-            {fmtNum(totals.pctGlobal, 1)}%
-          </span>
-        </div>
+              className={styles.globalBar}
+              title={gSt === 'over' ? 'Sobre-certificado: supera el 100 % del presupuesto' : undefined}
+            >
+              <div className={styles.globalBarTrack}>
+                <div
+                  className={`${styles.globalBarFill} ${gCls}`}
+                  style={{ width: `${Math.min(100, totals.pctGlobal)}%` }}
+                />
+              </div>
+              <span className="mono" style={{ fontSize: 11.5, color: gColor, fontWeight: 600 }}>
+                {fmtNum(totals.pctGlobal, 1)}%
+              </span>
+            </div>
+          );
+        })()}
       </div>
 
       <div className={styles.sumDivider} />
@@ -118,15 +130,20 @@ export function CertChapterSummary({ rows }: { rows: CertChapterRow[] }) {
     <div className={styles.chapSummary}>
       <div className={`sec-head ${styles.chapSumHead}`}>Resumen por capítulos</div>
       {rows.map((r) => {
-        const full = r.pct >= 99.5;
+        const st = certPctState(r.pct);
+        const stCls = st === 'over' ? styles.over : st === 'full' ? styles.full : '';
         return (
-          <div key={r.id} className={styles.chapSumRow}>
+          <div
+            key={r.id}
+            className={styles.chapSumRow}
+            title={st === 'over' ? 'Sobre-certificado: supera el 100 % del presupuesto' : undefined}
+          >
             <span className={`mono ${styles.chapSumCode}`}>{r.code}</span>
             <div className={styles.chapSumBody}>
               <div className={styles.chapSumTitle}>{r.title}</div>
               <div className={styles.chapSumTrack}>
                 <div
-                  className={`${styles.chapSumFill} ${full ? styles.full : ''}`}
+                  className={`${styles.chapSumFill} ${stCls}`}
                   style={{ width: `${Math.min(100, r.pct)}%` }}
                 />
               </div>
@@ -135,9 +152,7 @@ export function CertChapterSummary({ rows }: { rows: CertChapterRow[] }) {
               <div className={`mono ${styles.chapSumCert}`}>{fmtNum(toEur(r.cert))}</div>
               <div className={`mono ${styles.chapSumBudget}`}>de {fmtNum(toEur(r.budget))}</div>
             </div>
-            <span className={`mono ${styles.chapSumPct} ${full ? styles.full : ''}`}>
-              {fmtNum(r.pct, 0)}%
-            </span>
+            <span className={`mono ${styles.chapSumPct} ${stCls}`}>{fmtNum(r.pct, 0)}%</span>
           </div>
         );
       })}

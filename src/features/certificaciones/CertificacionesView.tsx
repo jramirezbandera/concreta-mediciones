@@ -13,6 +13,7 @@ import { CertChapterCards } from './CertChapterCards';
 import { CertChapterTable, CertHead } from './CertTable';
 import { CertChapterSummary, CertSummary } from './CertSummary';
 import { CertSelector } from './CertSelector';
+import { certPctState } from './certPctState';
 import styles from './Certificaciones.module.css';
 
 /** Por debajo de este ancho ÚTIL la tabla conmuta a tarjetas (igual que F2.5). */
@@ -140,14 +141,18 @@ export function CertificacionesView({
           }),
         ]);
         const pct = chapterRows.find((r) => r.id === ch.id)?.pct ?? 0;
-        const full = pct >= 99.5;
+        const st = certPctState(pct);
+        const stCls = st === 'over' ? styles.over : st === 'full' ? styles.full : '';
         return (
           <section key={ch.id}>
             <div className={styles.chapBand}>
               <span className={`mono ${styles.chapCode}`}>{ch.code}</span>
               <span className={styles.chapTitle}>{ch.title}</span>
               <div className={styles.chapRight}>
-                <span className={`mono ${styles.chapPct} ${full ? styles.full : ''}`}>
+                <span
+                  className={`mono ${styles.chapPct} ${stCls}`}
+                  title={st === 'over' ? 'Sobre-certificado: supera el 100 % del presupuesto' : undefined}
+                >
                   {fmtNum(pct, 1)}% ejec.
                 </span>
                 <span className={`mono ${styles.chapImporte}`}>{fmtNum(toEur(totalByMode))}</span>

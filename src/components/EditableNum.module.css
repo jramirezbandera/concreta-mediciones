@@ -9,9 +9,19 @@
   cursor: text;
   background: transparent;
   font-size: 12.5px;
+  /* Affordance PERSISTENTE de editabilidad: un punteado tenue que abraza el
+     número (no toda la celda) para que se vea editable sin tener que pasar el
+     ratón —en móvil no hay hover—, manteniéndolo sutil en tablas densas. */
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: color-mix(in srgb, var(--text-disabled) 55%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  transition: background 150ms ease, text-decoration-color 150ms ease;
 }
 .display:hover {
   background: var(--bg-elevated);
+  text-decoration-color: var(--accent);
 }
 
 .input {

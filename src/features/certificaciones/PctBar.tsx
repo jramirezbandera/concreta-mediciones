@@ -1,5 +1,6 @@
 import { EditableNum } from '../../components';
 import { fmtNum, round2 } from '../../core/money';
+import { certPctState } from './certPctState';
 import styles from './Certificaciones.module.css';
 
 /**
@@ -9,12 +10,14 @@ import styles from './Certificaciones.module.css';
  * del MODO en curso (a origen / esta cert).
  */
 export function PctBar({ pct, onCommitPct }: { pct: number; onCommitPct?: (pct: number) => void }) {
-  const full = pct >= 99.5;
+  const state = certPctState(pct);
+  const stCls = state === 'over' ? styles.over : state === 'full' ? styles.full : '';
+  const overTitle = state === 'over' ? 'Sobre-certificado: supera el 100 % del presupuesto' : undefined;
   return (
-    <div className={styles.pctBar}>
+    <div className={styles.pctBar} title={overTitle}>
       <div className={styles.pctTrack}>
         <div
-          className={`${styles.pctFill} ${full ? styles.full : ''}`}
+          className={`${styles.pctFill} ${stCls}`}
           style={{ width: `${Math.max(2, Math.min(100, pct))}%` }}
         />
       </div>
@@ -23,10 +26,10 @@ export function PctBar({ pct, onCommitPct }: { pct: number; onCommitPct?: (pct: 
           <span className={styles.pctEditBox}>
             <EditableNum value={round2(pct)} dec={1} ariaLabel="% de ejecución" onCommit={onCommitPct} />
           </span>
-          <span className={`mono ${styles.pctPct}`}>%</span>
+          <span className={`mono ${styles.pctPct} ${stCls}`}>%</span>
         </span>
       ) : (
-        <span className={`mono ${styles.pctNum} ${full ? styles.full : ''}`}>{fmtNum(pct, 1)}%</span>
+        <span className={`mono ${styles.pctNum} ${stCls}`}>{fmtNum(pct, 1)}%</span>
       )}
     </div>
   );
