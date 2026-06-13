@@ -1,7 +1,7 @@
 ﻿import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { bc3ToObra, Bc3ImportError } from './bc3import';
+import { bc3ToObra, Bc3ImportError, summarizeParserWarnings } from './bc3import';
 import { toEur } from './money';
 import { pem as pemOf } from './totales';
 
@@ -21,19 +21,19 @@ describe('bc3ToObra — import de obra real (Presto)', () => {
     expect(Object.values(data.partidas).reduce((s, ps) => s + ps.length, 0)).toBe(167);
   });
 
-  it('lee el coeficiente K del ~K (+13% → 1,13)', () => {
-    expect(report.coefK).toBe(1.13);
-    expect(data.rates.coefK).toBe(1.13);
+  it('el CI del ~K (+13%) entra como línea %CI, no como coefK (K = palanca del usuario)', () => {
+    expect(report.coefK).toBe(1); // K queda en 1; ya NO carga el CI del banco
+    expect(data.rates.coefK).toBe(1);
+    expect(report.ciPct).toBe(13); // el 13% del ~K va como «Costes indirectos»
   });
 
-  it('el PEM (motor, céntimos) cuadra con el precio raíz del .bc3 (rounding noise < 1 €)', () => {
-    // El precio NO se pre-multiplica: el K es una tasa que el motor aplica al
-    // calcular (PEM = Σ(cant·precio·K)). La desviación frente a la raíz es ruido
-    // de redondeo (orden del redondeo del precio unitario × K); el cuadre exacto
-    // al céntimo exigiría recalcular cada precio desde su descomposición a plena
-    // precisión. Sobre ~491.298 € son ~0,11 € → estructura/K correctos.
+  it('el PEM (motor) cuadra con el precio raíz del .bc3 (ruido de redondeo)', () => {
+    // El CI va horneado en el precio de cada partida como línea %CI (coefK=1).
+    // La desviación frente a la raíz es ruido de redondeo del unitario a 2
+    // decimales + el redondeo de la línea %CI (anidada sobre medios auxiliares
+    // en las partidas que los traen); sobre ~491.298 € son ~1,8 € (0,0004%).
     expect(report.rootPriceCents).not.toBeNull();
-    expect(Math.abs(report.deltaCents!)).toBeLessThan(100); // < 1 €
+    expect(Math.abs(report.deltaCents!)).toBeLessThan(300); // < 3 €
     // y el motor recalcula el mismo PEM que el report.
     expect(pemOf(data.partidas, data.rates.coefK)).toBe(report.pemCents);
     // sanity: ~491.298 €
@@ -124,16 +124,19 @@ describe('bc3ToObra — banco de precios (BCCA 2023, sin mediciones ~M)', () => 
       .find((p) => p.code === 'AA00100')!;
     expect(arena.title).toBe('ARENA CERNIDA');
     expect(arena.ud).toBe('m3');
-    expect(arena.precio).toBe(12.76); // ×1,13 (K del ~K) = 14,42 €, como muestra Arquímedes
+    // Un precio BÁSICO (recurso type 3) NO lleva CI: Arquímedes lo muestra a su
+    // valor de cuadro (12,76). El CI solo entra en las partidas compuestas.
+    expect(arena.precio).toBe(12.76);
     expect(arena.sub).toBeTruthy();
     // El banco trae rendimiento explícito 0 en los ~D hoja → cantidad 0 y PEM 0.
     expect(arena.cantidad).toBe(0);
     expect(report.pemCents).toBe(0);
   });
 
-  it('la denominación y el K vienen de la raíz «##» pese a las raíces sueltas', () => {
+  it('la denominación e IVA vienen del ~K; el CI (13%) va como línea, K=1', () => {
     expect(data.obra.denominacion).toBe('BANCO DE COSTE DE LA CONSTRUCCIÓN DE ANDALUCÍA');
-    expect(report.coefK).toBe(1.13);
+    expect(report.coefK).toBe(1); // K en 1; el 13% del ~K va como %CI
+    expect(report.ciPct).toBe(13);
     expect(data.rates.iva).toBe(0.21); // el ~K del BCCA declara IVA 21
   });
 });
@@ -299,6 +302,31 @@ describe('bc3ToObra — semántica FIEBDC (fixtures sintéticos)', () => {
     expect(r.report.warnings.some((w) => w.includes('GHOST'))).toBe(true);
   });
 
+  it('summarizeParserWarnings agrupa miles de diags por categoría (no los vuelca crudos)', () => {
+    const diags = [
+      // 3 missing-child de DOS códigos distintos + 1500 registros ~F + 16 ~P.
+      { level: 'warn', code: 'BC3_D_MISSING_CHILD_CODE', message: '~D child code "AAA" under parent "P"' },
+      { level: 'warn', code: 'BC3_D_MISSING_CHILD_CODE', message: '~D child code "AAA" under parent "Q"' },
+      { level: 'warn', code: 'BC3_D_MISSING_CHILD_CODE', message: '~D child code "BBB" under parent "R"' },
+      ...Array.from({ length: 1500 }, () => ({ level: 'warn', code: 'BC3_UNKNOWN_RECORD', message: 'x', recordType: 'F' })),
+      ...Array.from({ length: 16 }, () => ({ level: 'warn', code: 'BC3_UNKNOWN_RECORD', message: 'x', recordType: 'P' })),
+      { level: 'info', code: 'X', message: 'INFO_NO_DEBE_SALIR' },
+    ];
+    const out = summarizeParserWarnings(diags);
+    // Una línea por categoría (missing-child y unknown-record), no 1519.
+    expect(out).toHaveLength(2);
+    const mc = out.find((w) => w.includes('conceptos inexistentes'))!;
+    expect(mc).toContain('3 referencias');
+    expect(mc).toContain('«AAA»'); // ejemplos del código, deduplicados
+    expect(mc).toContain('«BBB»');
+    const ur = out.find((w) => w.includes('no soportado'))!;
+    expect(ur).toContain('1516 registros');
+    expect(ur).toContain('~F (ficheros adjuntos (PDF/fichas)) ×1500');
+    expect(ur).toContain('~P (conceptos paramétricos) ×16');
+    // info fuera.
+    expect(out.some((w) => w.includes('INFO_NO_DEBE_SALIR'))).toBe(false);
+  });
+
   it('códigos con prefijo no alfanumérico («-BAS») enlazan en el ~D (quirk BCCA, parser fork)', () => {
     const r = bc3ToObra(
       bc3(
@@ -346,7 +374,8 @@ describe('bc3ToObra — semántica FIEBDC (fixtures sintéticos)', () => {
         '~D|C1#|P1\\1\\2|',
       ),
     );
-    expect(r.report.coefK).toBe(1.13);
+    expect(r.report.coefK).toBe(1); // K en 1; el CI (13%) va como %CI / precio
+    expect(r.report.ciPct).toBe(13);
     expect(r.data.rates.gg).toBe(0.17);
     expect(r.data.rates.bi).toBe(0.06);
     expect(r.data.rates.iva).toBe(0.21);

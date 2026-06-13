@@ -167,7 +167,13 @@ export function ImportarView({ compact }: { compact: boolean }) {
               <Stat label="Capítulos" value={String(r.chapters)} />
               <Stat label="Partidas" value={String(r.partidas)} />
               <Stat label="Recursos" value={String(r.recursos)} />
-              <Stat label="Coef. K" value={`×${fmtNum(r.coefK, 4)}`} />
+              {/* El CI del ~K entra como línea «Costes indirectos» en cada
+                  partida (K queda en 1). Se muestra el % si lo hay. */}
+              {r.ciPct > 0 ? (
+                <Stat label="Costes indir." value={`${fmtNum(r.ciPct, 2)} %`} />
+              ) : (
+                <Stat label="Coef. K" value={`×${fmtNum(r.coefK, 4)}`} />
+              )}
               <Stat label="PEM" value={fmtCents(r.pemCents)} accent />
               {r.rootPriceCents != null && (
                 <Stat label="PEM en el .bc3" value={fmtCents(r.rootPriceCents)} />

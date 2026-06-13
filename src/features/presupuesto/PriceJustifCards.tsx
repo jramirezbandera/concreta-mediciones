@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Badge, EditableNum, EditableText, Icon, UdSelect } from '../../components';
-import { descompUnit, itemImporteRec, precioCuadraDescompuesto, recursoBase } from '../../core/banco';
+import { baseAcumulada, descompUnit, itemImporteRec, precioCuadraDescompuesto } from '../../core/banco';
 import { fmtNum } from '../../core/money';
 import type { Partida } from '../../core/types';
 import { selectRecursoUsage, useObraStore } from '../../store';
@@ -26,7 +26,6 @@ export function PriceJustifCards({ p, chapterId }: { p: Partida; chapterId: stri
   const deleteItem = useObraStore((s) => s.deleteItem);
 
   const items = p.items ?? [];
-  const base = recursoBase(items, recursos);
   const descomp = descompUnit(items, recursos);
   const isOverride = !precioCuadraDescompuesto(p, recursos);
 
@@ -35,6 +34,8 @@ export function PriceJustifCards({ p, chapterId }: { p: Partida; chapterId: stri
       {items.map((it, i) => {
         const isCI = it.type === '%CI';
         const rec = recursos[it.code];
+        // Base ACUMULADA hasta esta fila (directos + líneas anteriores).
+        const base = isCI ? baseAcumulada(items, recursos, i) : 0;
         const precio = isCI ? base : (rec?.precio ?? it.precio ?? 0);
         const desc = isCI ? it.desc || 'Costes indirectos' : (rec?.desc ?? it.desc ?? '');
         const ud = isCI ? '%' : (rec?.ud ?? it.ud ?? '');

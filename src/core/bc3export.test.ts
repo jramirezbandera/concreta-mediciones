@@ -546,11 +546,15 @@ describe('round-trip del seed: obraToBc3 → bc3ToObra EXACTO', () => {
     expect(report.medVisible).toBe(seedPs.filter((p) => p.med.length).length);
   });
 
-  it('con K=1,13: ~K viaja, PEM CON K exacto y raíz = PEM (delta 0)', () => {
+  it('con K=1,13: el export escribe el K como CI del ~K; al reimportar se hornea (K→1) y el PEM se conserva', () => {
+    const before = pem(PARTIDAS, 1.13);
     const { data, report } = bc3ToObra(obraToBc3(seedObra(1.13)));
-    expect(data.rates.coefK).toBe(1.13);
-    expect(pem(data.partidas, 1.13)).toBe(pem(PARTIDAS, 1.13));
-    expect(report.deltaCents).toBe(0);
+    // coefK ya no round-trippea como multiplicador: viaja como CI del ~K y al
+    // reimportar se hornea en los precios (línea %CI), dejando coefK=1.
+    expect(data.rates.coefK).toBe(1);
+    expect(report.ciPct).toBe(13);
+    // El PEM se conserva salvo el redondeo del unitario a 2 decimales al hornear.
+    expect(Math.abs(pem(data.partidas, 1) - before)).toBeLessThan(50); // < 0,50 €
   });
 
   it('regresión dims=0 (D4): el import descarta la línea pero la cantidad y el PEM quedan', () => {
@@ -587,32 +591,36 @@ describe('gate capa 3: fixture Presto anonimizado', () => {
     const { data, report } = bc3ToObra(bytes);
     expect(report.chapters).toBe(2);
     expect(report.partidas).toBe(3);
-    expect(report.coefK).toBe(1.1);
+    expect(report.coefK).toBe(1); // K en 1; el CI (10%) del ~K va como línea %CI
+    expect(report.ciPct).toBe(10);
     expect(report.medVisible).toBe(2); // E01 (sección filtrada sin romper la suma) y E02; E03 sin ~M
-    // la raíz de Presto redondea precio×K por partida → tolerancia <1 € (D8)
-    expect(Math.abs(report.deltaCents!)).toBeLessThan(100);
-    expect(report.deltaCents).not.toBe(0); // el fixture reproduce esa divergencia a propósito (−0,30 €)
+    // E01: los directos + auxiliares originales, MÁS la línea «Costes indirectos»
+    // (%CI) que añade el import; el % de la línea va anidado sobre el auxiliar.
     const e01 = Object.values(data.partidas).flat().find((p) => p.code === 'E01')!;
-    expect(e01.items.map((it) => [it.code, it.cantidad])).toEqual([
+    expect(e01.items.slice(0, 2).map((it) => [it.code, it.cantidad])).toEqual([
       ['MO01', 0.2],
       ['%AUX', 2], // 0.02 del archivo → 2 % en el modelo (drive-by del import)
     ]);
+    expect(e01.items.at(-1)).toMatchObject({ code: '%CI', type: '%CI' });
     expect(data.recursos['MO01']).toMatchObject({ type: 'MO', precio: 17 });
   });
 
-  it('re-export → re-import: PEM, estructura y mediciones ESTABLES (idempotencia, sin tolerancia)', () => {
+  it('re-export → re-import: PEM, estructura y mediciones ESTABLES (idempotencia)', () => {
     const a = bc3ToObra(bytes);
     const b = bc3ToObra(obraToBc3(a.data));
+    // El CI ya viaja horneado (líneas %CI), así que el re-import no añade más
+    // (su ~K no trae CI → coefK=1, ciPct=0): el árbol queda ESTABLE.
     expect(pem(b.data.partidas, b.data.rates.coefK)).toBe(pem(a.data.partidas, a.data.rates.coefK));
     expect(b.report.chapters).toBe(a.report.chapters);
     expect(b.report.partidas).toBe(a.report.partidas);
     expect(b.report.medVisible).toBe(a.report.medVisible);
     expect(b.report.deltaCents).toBe(0); // nuestra raíz = nuestro PEM exacto
-    const e01 = Object.values(b.data.partidas).flat().find((p) => p.code === 'E01')!;
-    expect(e01.items.map((it) => [it.code, it.cantidad])).toEqual([
-      ['MO01', 0.2],
-      ['%AUX', 2], // el % sobrevive el viaje completo (E01 cuadra con su descompuesto)
-    ]);
+    const ea = Object.values(a.data.partidas).flat().find((p) => p.code === 'E01')!;
+    const eb = Object.values(b.data.partidas).flat().find((p) => p.code === 'E01')!;
+    // Mismos items (incl. la línea %CI) tras el viaje completo.
+    expect(eb.items.map((it) => [it.code, it.cantidad])).toEqual(
+      ea.items.map((it) => [it.code, it.cantidad]),
+    );
   });
 });
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  baseAcumulada,
   buildRecursos,
   descompUnit,
   itemImporteRec,
@@ -92,6 +93,20 @@ describe('recursoBase / descompUnit', () => {
 
   it('descompUnit 0 sin items', () => {
     expect(descompUnit([], banco)).toBe(0);
+  });
+
+  it('ACUMULATIVO: el CI anida sobre (directos + medios auxiliares), como Arquímedes', () => {
+    // Directos 9,00; medios aux 2% → sobre 9,00 = 0,18 (running 9,18); CI 13% →
+    // sobre 9,18 = round2(1,1934)=1,19 (NO sobre 9,00). Total 10,37.
+    const aux: Item = { code: '%MA', type: '%CI', desc: 'Medios auxiliares', ud: '%', cantidad: 2 };
+    const ci: Item = { code: '%CI', type: '%CI', desc: 'Costes indirectos', ud: '%', cantidad: 13 };
+    const items = [moItem, mqItem, aux, ci];
+    // base acumulada de cada %: el aux porcentúa los directos (9,00); el CI
+    // porcentúa directos + aux (9,18).
+    expect(baseAcumulada(items, banco, 2)).toBe(9.0);
+    expect(baseAcumulada(items, banco, 3)).toBe(9.18);
+    expect(itemImporteRec(ci, banco, baseAcumulada(items, banco, 3))).toBe(1.19);
+    expect(descompUnit(items, banco)).toBe(10.37);
   });
 });
 

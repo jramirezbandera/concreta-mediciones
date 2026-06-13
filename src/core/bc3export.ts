@@ -211,7 +211,7 @@ export function obraToBc3(input: Bc3ExportObra): Uint8Array {
   // Recursos usados por el árbol, código del banco → código final (huérfanos
   // fuera). Para los % se guarda el porcentaje del primer uso (precio del ~C).
   const recFinal = new Map<string, string>();
-  const used = new Map<string, { orig: string; type: ResourceType; pct?: number }>();
+  const used = new Map<string, { orig: string; type: ResourceType; pct?: number; desc?: string }>();
   let genR = 0;
   function recursoCode(it: Item): string {
     const hit = recFinal.get(it.code);
@@ -225,6 +225,9 @@ export function obraToBc3(input: Bc3ExportObra): Uint8Array {
       orig: it.code,
       type: recursos[it.code]?.type ?? it.type,
       pct: it.type === '%CI' ? it.cantidad : undefined,
+      // La descripción del `%` distingue «Costes indirectos» de «Medios
+      // auxiliares»…: viaja para no perderla en el round-trip.
+      desc: it.type === '%CI' ? it.desc : undefined,
     });
     return fin;
   }
@@ -319,7 +322,7 @@ export function obraToBc3(input: Bc3ExportObra): Uint8Array {
 
   for (const [code, u] of used) {
     if (u.type === '%CI') {
-      recs.push(`~C|${code}|%|Costes indirectos|${num(u.pct ?? 0, 4)}||0|`);
+      recs.push(`~C|${code}|%|${field(u.desc || 'Costes indirectos')}|${num(u.pct ?? 0, 4)}||0|`);
     } else {
       const r = recursos[u.orig];
       recs.push(`~C|${code}|${field(r?.ud ?? '')}|${field(r?.desc ?? '')}|${num(r?.precio ?? 0, 2)}||${TYPE_NUM[u.type]}|`);

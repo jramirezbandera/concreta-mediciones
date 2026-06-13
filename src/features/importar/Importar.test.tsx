@@ -28,7 +28,8 @@ describe('ImportarView (F5.3)', () => {
     // El parseo es asíncrono (File.arrayBuffer): esperamos al resumen.
     expect(await screen.findByText('Cargar al presupuesto')).toBeInTheDocument();
     expect(screen.getByText('obra ejemplo.bc3')).toBeInTheDocument();
-    expect(screen.getByText('×1,1300')).toBeInTheDocument(); // coef K
+    // El ~K (13 % CI) se muestra como costes indirectos (ya no como coef K).
+    expect(screen.getByText('13,00 %')).toBeInTheDocument();
 
     // El botón NO reemplaza directamente: abre el modal de confirmación, que
     // enseña qué se pierde (obra actual) y qué entra (la del .bc3).
@@ -42,7 +43,7 @@ describe('ImportarView (F5.3)', () => {
     expect(s.chapters).toHaveLength(19);
     expect(Object.values(s.partidas).reduce((a, ps) => a + ps.length, 0)).toBe(167);
     expect(s.view).toBe('presupuesto');
-    expect(s.rates.coefK).toBe(1.13);
+    expect(s.rates.coefK).toBe(1); // K en 1; el CI (13 %) va como línea %CI
   });
 
   it('cancelar el modal no toca la obra actual', async () => {

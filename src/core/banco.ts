@@ -64,19 +64,36 @@ export function recursoBase(items: Item[], banco: Banco): number {
   return round2(b);
 }
 
-/** Importe (€) de una línea leyendo el precio del banco compartido. */
+/** Importe (€) de una línea con su BASE dada. Una línea `%` porcentúa la base
+ *  (que el llamante calcula ACUMULADA: directos + líneas anteriores). */
 export function itemImporteRec(it: Item, banco: Banco, base: number): number {
   if (it.type === '%CI') return round2((base * it.cantidad) / 100);
   return round2(it.cantidad * recPrecio(it, banco));
 }
 
-/** Precio unitario resultante de la descomposición (€): coste directo + %CI. */
+/**
+ * Base ACUMULADA sobre la que porcentúa la línea en `index`: Σ de los importes
+ * de las líneas anteriores (directos + `%` previos). Es la columna «Precio» que
+ * Arquímedes muestra en una línea de porcentaje — así un `%` de costes
+ * indirectos se aplica sobre (directos + medios auxiliares), no solo directos.
+ */
+export function baseAcumulada(items: Item[], banco: Banco, index: number): number {
+  let running = 0;
+  for (let i = 0; i < index; i++) running += itemImporteRec(items[i]!, banco, running);
+  return round2(running);
+}
+
+/**
+ * Precio unitario resultante de la descomposición (€), ACUMULATIVO: cada línea
+ * (incluidos los `%`) se suma sobre el total que llevan las anteriores. Así el
+ * CI anida sobre (directos + medios auxiliares), como Arquímedes; con una sola
+ * línea `%` es idéntico al modelo plano anterior.
+ */
 export function descompUnit(items: Item[], banco: Banco): number {
   if (!items || !items.length) return 0;
-  const base = recursoBase(items, banco);
-  let total = base;
-  for (const it of items) if (it.type === '%CI') total += round2((base * it.cantidad) / 100);
-  return round2(total);
+  let running = 0;
+  for (const it of items) running += itemImporteRec(it, banco, running);
+  return round2(running);
 }
 
 /* ---------- Precio descompuesto vs override manual (§0 decisión 6) ---------- */

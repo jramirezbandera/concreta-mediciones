@@ -41,7 +41,7 @@ const TRAZADORA: Bc3ExportObra = {
         code: 'DEM010',
         title: 'Demolición de tabique de ladrillo hueco sencillo',
         ud: 'm²',
-        // = su descompuesto (7,88 + 103,32 + 3 % = 114,54) → la ~D viaja
+        // = su descompuesto (7,88 + 103,32 + 3 % medios aux = 114,54) → la ~D viaja
         precio: 114.54,
         desc:
           'Demolición de tabique de ladrillo hueco sencillo, con medios manuales, sin afectar a la estabilidad de los elementos contiguos.\n' +
@@ -54,7 +54,10 @@ const TRAZADORA: Bc3ExportObra = {
         items: [
           { code: 'mo001', type: 'MO', cantidad: 0.45 },
           { code: 'mt001', type: 'MAT', cantidad: 1.05 },
-          { code: '%CI', type: '%CI', cantidad: 3 },
+          // Un `%` de MEDIOS AUXILIARES (no costes indirectos): su descripción
+          // viaja y al reimportar el ~K (13 %) añade su PROPIA línea «Costes
+          // indirectos» encima, sin confundirse (modelo de % distinguidos).
+          { code: '%CI', type: '%CI', cantidad: 3, desc: 'Medios auxiliares' },
         ],
       },
       {
@@ -104,9 +107,10 @@ describe('trazadora — el archivo mínimo para el gate manual en Presto', () =>
     expect(text).toContain(String.raw`~M|C1#\DEM010|1\1\|30.04|`);
     expect(text).toContain(String.raw`~M|C1#\TRA020|1\2\|18.5||`); // sin med: 0 líneas, ancla el índice
     expect(text).toContain('~T|DEM010|');
-    // %CI como fracción (3 % → 0.03) y el porcentaje en el precio del concepto %
+    // %CI como fracción (3 % → 0.03) y el porcentaje en el precio del concepto %;
+    // su descripción REAL viaja (medios auxiliares, no «Costes indirectos»).
     expect(text).toContain(String.raw`~D|DEM010|mo001\1\0.45\mt001\1\1.05\%CI\1\0.03\|`);
-    expect(text).toContain('~C|%CI|%|Costes indirectos|3||0|');
+    expect(text).toContain('~C|%CI|%|Medios auxiliares|3||0|');
   });
 
   it('precio manual (TRA020) → precio cerrado SIN ~D, que Presto respeta', () => {
@@ -126,27 +130,34 @@ describe('trazadora — el archivo mínimo para el gate manual en Presto', () =>
     expect(bytes).not.toContain(0x3f); // ningún '?': todo el texto es mapeable
   });
 
-  it('round-trip propio EXACTO: estructura, K, PEM al céntimo y mediciones', () => {
+  it('round-trip: el ~K (13 %) se hornea como línea «Costes indirectos», K→1, sobre los medios auxiliares', () => {
     const { data, report } = bc3ToObra(bytes);
     expect(report.chapters).toBe(1);
     expect(report.partidas).toBe(2);
     expect(Object.keys(data.recursos).sort()).toEqual(['mo001', 'mt001']);
-    expect(data.rates.coefK).toBe(1.13);
-    expect(pem(data.partidas, 1.13)).toBe(407413);
-    expect(report.deltaCents).toBe(0);
+    // El CI del ~K ya NO es coefK: viaja como línea %CI; K queda en 1.
+    expect(data.rates.coefK).toBe(1);
+    expect(report.ciPct).toBe(13);
     const [p1, p2] = Object.values(data.partidas).flat();
     if (!p1 || !p2) throw new Error('faltan partidas en el reimport');
-    expect(p1.precio).toBe(114.54);
     expect(partidaCantidad(p1)).toBe(30.04);
     expect(p1.med.map((l) => l.comment)).toEqual(['Salón y cocina', 'A deducir hueco de puerta', 'Pasillo']);
-    expect(p1.items.map((it) => [it.code, it.cantidad])).toEqual([
-      ['mo001', 0.45],
-      ['mt001', 1.05],
-      ['%CI', 3],
+    // Dos líneas % DISTINTAS: medios auxiliares (3 %, del archivo) y costes
+    // indirectos (13 %, del ~K), cada una con su nombre — el modelo ya no las
+    // confunde. El CI anida sobre (directos + medios aux): 111,20 → 114,54 → 129,43.
+    expect(p1.items.map((it) => [it.code, it.cantidad, it.desc])).toEqual([
+      ['mo001', 0.45, undefined],
+      ['mt001', 1.05, undefined],
+      ['%CI', 3, 'Medios auxiliares'],
+      ['%CI', 13, 'Costes indirectos'],
     ]);
-    expect(p2.precio).toBe(8.9);
+    expect(p1.precio).toBe(129.43);
+    // p2 (alzada, precio cerrado): el CI escala su precio (8,90 → 10,06).
+    expect(p2.precio).toBe(10.06);
     expect(partidaCantidad(p2)).toBe(18.5);
     expect(p2.med).toHaveLength(0);
+    // PEM conservado salvo el redondeo del unitario (raíz 4.074,13 → 4.074,19).
+    expect(Math.abs(report.deltaCents!)).toBeLessThan(50);
   });
 
   it('docs/trazadora-presto.bc3 está sincronizada con el writer (se regenera sola)', () => {
