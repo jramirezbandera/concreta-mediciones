@@ -41,7 +41,7 @@ export function PartidasCards({
           {g.sub && (
             <div
               className={`${styles.cardsSubHead} ${gi === 0 ? styles.first : ''}`}
-              style={{ paddingLeft: (g.depth - 1) * 14 }}
+              style={{ paddingLeft: 2 + (g.depth - 1) * 14 }}
             >
               <span className={`mono ${styles.cardsSubCode}`}>{g.sub.code}</span>
               <span className={`caps ${styles.cardsSubTitle}`}>{g.sub.title}</span>

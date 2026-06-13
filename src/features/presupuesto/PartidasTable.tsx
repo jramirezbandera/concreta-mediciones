@@ -16,7 +16,7 @@ function SubHeaderRow({ sub, depth, importe }: { sub: SubChapter; depth: number;
   return (
     <tr className={styles.subRow}>
       <td colSpan={5}>
-        <div className={styles.subLabel} style={{ paddingLeft: (depth - 1) * 16 }}>
+        <div className={styles.subLabel} style={{ paddingLeft: 14 + (depth - 1) * 16 }}>
           <span className={`mono ${styles.subCode}`}>{sub.code}</span>
           <span className={`caps ${styles.subTitle}`}>{sub.title}</span>
         </div>
