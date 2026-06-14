@@ -6,6 +6,7 @@ export {
   switchObra,
   newObra,
   deleteObraById,
+  discardRecovery,
   __resetSyncForTests,
 } from './sync';
 export { useSessionStore } from './sessionStore';
@@ -35,6 +36,7 @@ export {
   reconcile,
   migrateLegacy,
   newObraId,
+  loadObraData,
   type ObraMeta,
   type ObraIndex,
 } from './registry';

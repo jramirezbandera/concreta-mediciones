@@ -66,10 +66,10 @@ export function ConflictModal() {
                 </div>
                 <div className={styles.compare}>
                   <span className={styles.cell}>
-                    Tu banco: <span className="mono">{fmtNum(c.existing.precio)}</span>
+                    Tu banco: <span className="mono">{fmtNum(c.existing.precio)} €/{c.existing.ud}</span>
                   </span>
                   <span className={styles.cell}>
-                    Obra origen: <span className="mono">{fmtNum(c.incoming.precio)}</span>
+                    Obra origen: <span className="mono">{fmtNum(c.incoming.precio)} €/{c.incoming.ud}</span>
                   </span>
                 </div>
                 <div className={styles.seg} role="radiogroup" aria-label={`Resolución de ${c.code}`}>

@@ -416,14 +416,15 @@ export type Resolution = Record<string, 'merge' | 'fork'>;
 
 /** Precios "iguales" dentro de medio céntimo (evita avisos por redondeo). */
 const priceClose = (a: number, b: number): boolean => Math.abs(a - b) < 0.005;
+const normUd = (s: string): string => s.trim().toLowerCase();
 
 /**
  * Detecta colisiones al copiar `items`: un código entrante presente en el banco
- * a otro PRECIO (con tolerancia de céntimo). Solo el precio dispara el aviso: es
- * lo que envenena el descompuesto/importe. Una descripción distinta al mismo
- * código y precio es ruido cosmético (mismas bases redactan distinto el concepto)
- * y se fusiona en silencio (Codex: no avisar por ruido). %CI nunca colisiona.
- * Un código por colisión (la primera vez que aparece).
+ * a otro PRECIO (tolerancia de céntimo) o con otra UNIDAD. Ambos envenenan el
+ * descompuesto: el precio cambia el importe; la unidad cambia el SIGNIFICADO de
+ * la cantidad (autorizada contra la unidad de origen). Una descripción distinta
+ * al mismo precio+unidad es ruido cosmético y se fusiona en silencio (Codex: no
+ * avisar por ruido). %CI nunca colisiona. Un código por colisión.
  */
 export function detectCollisions(items: RefCopyItem[], recursos: Banco): Collision[] {
   const seen = new Map<string, Collision>();
@@ -433,7 +434,7 @@ export function detectCollisions(items: RefCopyItem[], recursos: Banco): Collisi
       const ex = recursos[r.code];
       if (!ex) continue; // no existe → se integra sin más, no es colisión
       const incoming: RecursoVals = { desc: r.desc ?? '', ud: r.ud ?? '', precio: r.precio ?? 0 };
-      if (!priceClose(ex.precio, incoming.precio)) {
+      if (!priceClose(ex.precio, incoming.precio) || normUd(ex.ud) !== normUd(incoming.ud)) {
         seen.set(r.code, {
           code: r.code,
           existing: { desc: ex.desc, ud: ex.ud, precio: ex.precio },

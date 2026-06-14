@@ -1,13 +1,14 @@
 import 'fake-indexeddb/auto';
 import { clear, set } from 'idb-keyval';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { useObraStore } from '../store';
+import { blankObraData, useObraStore } from '../store';
 import { loadObraEnvelope, obraKey } from './persist';
-import { listObras } from './registry';
+import { createObra, listObras, setActiveId } from './registry';
 import { usePersistStore } from './persistStore';
 import {
   __resetSyncForTests,
   deleteObraById,
+  discardRecovery,
   flushPending,
   getActiveObraId,
   hydrate,
@@ -107,5 +108,39 @@ describe('deleteObraById', () => {
     expect(list[0]!.id).not.toBe(aId); // obra nueva, no la borrada
     expect(getActiveObraId()).toBe(list[0]!.id);
     expect(state().chapters.length).toBe(0); // en blanco
+  });
+
+  it('borrar la activa salta SOBRE una obra corrupta hasta una sana (#6)', async () => {
+    const aId = await bootWithDemoA(); // [A]
+    const bId = await newObra('B'); // [A,B]
+    const cId = await newObra('C'); // [A,B,C], activa C
+    await set(obraKey(aId), { schemaVersion: 1, data: { roto: true } }); // A (será obras[0]) corrupta
+    await deleteObraById(cId); // borra activa C → índice activeId=A (corrupta) → fallback B
+    expect(getActiveObraId()).toBe(bId);
+    expect(state().obra.denominacion).toBe('B');
+    expect(usePersistStore.getState().recovery).toBeNull();
+  });
+
+  it('borrar la activa con TODAS las demás corruptas → recuperación (#6)', async () => {
+    const aId = await bootWithDemoA();
+    const bId = await newObra('B'); // activa B
+    await set(obraKey(aId), { schemaVersion: 1, data: { roto: true } });
+    await deleteObraById(bId); // borra B → activeId=A corrupta, ninguna sana → recuperación
+    expect(usePersistStore.getState().recovery).not.toBeNull();
+  });
+});
+
+describe('discardRecovery (#7)', () => {
+  it('elimina la obra dañada del registro (sin fantasma) y deja una en blanco', async () => {
+    const bId = await createObra(blankObraData('B'));
+    await setActiveId(bId);
+    await set(obraKey(bId), { schemaVersion: 1, data: { roto: true } }); // corromper
+    await hydrate(); // B activa y corrupta, única → recuperación
+    expect(usePersistStore.getState().recovery).not.toBeNull();
+
+    await discardRecovery(obraKey(bId));
+    const list = await listObras();
+    expect(list.map((m) => m.id)).not.toContain(bId); // no queda fantasma
+    expect(list.length).toBe(1); // una obra en blanco la reemplaza
   });
 });

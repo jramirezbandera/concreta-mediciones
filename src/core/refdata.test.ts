@@ -73,6 +73,17 @@ describe('detectCollisions', () => {
     expect(detectCollisions([item('mo1', 18, 'Otra redacción')], banco)).toHaveLength(0);
   });
 
+  it('mismo código y precio pero OTRA unidad → colisión', () => {
+    const itUd: RefCopyItem = {
+      sourceName: 's',
+      partida: {
+        id: 'r', pos: '1.1', code: 'R', title: 'T', ud: 'm', precio: 1,
+        items: [{ code: 'mo1', type: 'MO', cantidad: 1, desc: 'D', ud: 'jornada', precio: 18 }],
+      } as RefPartida,
+    };
+    expect(detectCollisions([itUd], banco)).toHaveLength(1); // banco mo1 es €/h
+  });
+
   it('precio dentro de medio céntimo → NO colisión (tolerancia)', () => {
     expect(detectCollisions([item('mo1', 18.004)], banco)).toHaveLength(0);
   });

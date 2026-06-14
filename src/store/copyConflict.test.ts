@@ -80,6 +80,15 @@ describe('copia entre obras · preflight de colisión', () => {
     );
   });
 
+  it('bifurcar un recurso YA bifurcado no encadena el sufijo (~3, no ~2~2)', () => {
+    state().requestCopyRefPartidas([refItem('mo001', 20)], null, false);
+    state().resolveCopyRefPartidas({ mo001: 'fork' }); // crea mo001~2 @ 20
+    state().requestCopyRefPartidas([refItem('mo001~2', 30)], null, false); // choca con mo001~2
+    state().resolveCopyRefPartidas({ 'mo001~2': 'fork' });
+    expect(state().recursos['mo001~3']!.precio).toBe(30); // siguiente libre de la base
+    expect(state().recursos['mo001~2~2']).toBeUndefined(); // no se encadena
+  });
+
   it('cancelar limpia pendingCopy sin copiar', () => {
     const before = state().partidas['01']!.length;
     state().requestCopyRefPartidas([refItem('mo001', 20)], null, false);

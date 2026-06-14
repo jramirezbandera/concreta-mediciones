@@ -247,13 +247,17 @@ export function ReferenciaPanel() {
 
   // Carga perezosa de la obra seleccionada como fuente (con guarda anti-stale).
   useEffect(() => {
+    // Bump SIEMPRE: cualquier cambio de fuente invalida una carga en vuelo, también
+    // al pasar a una base o a una obra ya cacheada (si no, esa carga pintaría un
+    // error/loading sobre la fuente ya seleccionada).
+    const myReq = ++reqRef.current;
     if (!isObraSrc || obraCache[refSourceId]) {
+      setLoading(false);
       setError(null);
       return;
     }
     const obraId = refSourceId.slice('obra:'.length);
     const meta = obras.find((o) => o.id === obraId);
-    const myReq = ++reqRef.current;
     setLoading(true);
     setError(null);
     void loadObraRefSource(obraId, meta?.name ?? 'Obra').then((rs) => {

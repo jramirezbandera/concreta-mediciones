@@ -13,16 +13,16 @@
 import { shallow } from 'zustand/shallow';
 import {
   blankObraData,
-  fromSerializable,
   toSerializable,
   useObraStore,
+  type ObraData,
   type ObraState,
 } from '../store';
-import { flush, loadObraEnvelope, loadRaw, obraKey } from './persist';
+import { OBRA_KEY_PREFIX, clearObra, flush, loadObraEnvelope, loadRaw, obraKey } from './persist';
 import {
   createObra,
   deleteObra as registryDeleteObra,
-  loadIndex,
+  loadObraData,
   migrateLegacy,
   newObraId,
   reconcile,
@@ -68,9 +68,9 @@ function persistNow(): Promise<void> {
   const target = id;
   usePersistStore.getState().setStatus('saving');
   lastPersist = saveActiveObra(target, data).then(
-    async () => {
-      // Refresca la lista del selector (nombre/fecha) leyendo solo el índice (barato).
-      useSessionStore.getState().setObras((await loadIndex()).obras);
+    (idx) => {
+      // saveActiveObra ya devuelve el índice escrito → refresca el selector sin re-leer.
+      useSessionStore.getState().setObras(idx.obras);
       usePersistStore.getState().setStatus('saved');
     },
     () => usePersistStore.getState().setStatus('error'),
@@ -116,23 +116,22 @@ function cancelPending(): void {
 }
 
 /* ---- carga de una obra en el store de dominio ----------------------------- */
-/** Carga el blob de `id` en el store (migrando schema), con el autosave
- *  SUPRIMIDO durante la mutación. `false` si el blob falta o no es válido. */
-async function loadObraIntoStore(id: string): Promise<boolean> {
-  const res = await loadObraEnvelope(obraKey(id));
-  if (res.kind !== 'ok') return false;
-  let data;
-  try {
-    data = fromSerializable(res.envelope.data);
-  } catch {
-    return false; // versión no soportada
-  }
+/** Vuelca un `ObraData` ya decodificado en el store con el autosave SUPRIMIDO
+ *  durante la mutación (loadObra muta el dominio y no debe disparar guardado). */
+function loadDataIntoStore(data: ObraData): void {
   suppress = true;
   try {
     useObraStore.getState().loadObra(data);
   } finally {
     suppress = false;
   }
+}
+
+/** Carga el blob de `id` en el store (migrando schema). `false` si falta/inválido. */
+async function loadObraIntoStore(id: string): Promise<boolean> {
+  const data = await loadObraData(id);
+  if (!data) return false;
+  loadDataIntoStore(data);
   return true;
 }
 
@@ -221,8 +220,8 @@ async function switchObraImpl(id: string): Promise<void> {
       return;
     }
     useSessionStore.getState().setActiveId(id); // solo tras carga OK
-    await persistActiveId(id); // sella la activa en el índice
-    useSessionStore.getState().setObras((await loadIndex()).obras);
+    const idx = await persistActiveId(id); // sella la activa y devuelve el índice
+    useSessionStore.getState().setObras(idx.obras);
   } finally {
     useSessionStore.getState().setSwitching(false);
   }
@@ -236,15 +235,10 @@ async function newObraImpl(name?: string): Promise<string> {
   await flushPending(); // guarda la actual
   const data = blankObraData(name);
   const id = await createObra(data); // persiste + registra (no activa aún)
-  suppress = true;
-  try {
-    useObraStore.getState().loadObra(data);
-  } finally {
-    suppress = false;
-  }
+  loadDataIntoStore(data);
   useSessionStore.getState().setActiveId(id);
-  await persistActiveId(id);
-  useSessionStore.getState().setObras((await loadIndex()).obras);
+  const idx = await persistActiveId(id);
+  useSessionStore.getState().setObras(idx.obras);
   armAutosave(); // por si veníamos de un arranque vacío sin armar
   return id;
 }
@@ -268,27 +262,51 @@ async function deleteObraByIdImpl(id: string): Promise<void> {
     const data = blankObraData();
     await registryDeleteObra(id);
     const newId = await createObra(data);
-    suppress = true;
-    try {
-      useObraStore.getState().loadObra(data);
-    } finally {
-      suppress = false;
-    }
+    loadDataIntoStore(data);
     useSessionStore.getState().setActiveId(newId);
-    await persistActiveId(newId);
-    useSessionStore.getState().setObras((await loadIndex()).obras);
+    const idx = await persistActiveId(newId);
+    useSessionStore.getState().setObras(idx.obras);
     return;
   }
 
   if (wasActive) cancelPending(); // descarta ediciones de la obra que se borra
-  await registryDeleteObra(id); // borra blob+entrada; avanza activeId si era la activa
-  const idx = await loadIndex();
+  const idx = await registryDeleteObra(id); // borra blob+entrada; avanza activeId si era la activa
   useSessionStore.getState().setObras(idx.obras);
-  if (wasActive && idx.activeId) {
-    if (await loadObraIntoStore(idx.activeId)) {
-      useSessionStore.getState().setActiveId(idx.activeId);
+  if (!wasActive) return;
+
+  // Borramos la activa: carga la nueva activa; si está corrupta, cae a otra obra
+  // que cargue; si NINGUNA carga, marca recuperación (no dejar una activa fantasma).
+  const candidates = [idx.activeId, ...idx.obras.map((m) => m.id)].filter(
+    (x): x is string => x != null,
+  );
+  for (const cand of candidates) {
+    if (await loadObraIntoStore(cand)) {
+      useSessionStore.getState().setActiveId(cand);
+      if (cand !== idx.activeId) await persistActiveId(cand);
+      return;
     }
   }
+  if (idx.activeId) {
+    usePersistStore
+      .getState()
+      .setRecovery(await loadRaw(obraKey(idx.activeId)), obraKey(idx.activeId));
+  }
+}
+
+/**
+ * Descarta una obra en recuperación (banner de datos dañados). Para una obra del
+ * registro REUSA `deleteObraById` (borra blob + entrada del índice, carga la
+ * siguiente o crea una en blanco si era la única) → no deja una obra fantasma en
+ * el selector. Para la clave legacy solo borra el blob. Arma el autosave (la
+ * hidratación no lo armó en la rama de recuperación).
+ */
+export async function discardRecovery(key: string): Promise<void> {
+  if (key.startsWith(OBRA_KEY_PREFIX)) {
+    await deleteObraById(key.slice(OBRA_KEY_PREFIX.length));
+  } else {
+    await clearObra(key); // legacy (concreta.obra.v1)
+  }
+  armAutosave();
 }
 
 /** Reset de testing: desuscribe, olvida armado/debounce/activa/supresión. */

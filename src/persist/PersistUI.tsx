@@ -4,8 +4,8 @@
    =========================================================================== */
 import { useEffect, useState } from 'react';
 import { Icon } from '../components';
-import { OBRA_KEY, clearObra, loadRaw } from './persist';
-import { armAutosave } from './sync';
+import { OBRA_KEY, loadRaw } from './persist';
+import { discardRecovery } from './sync';
 import { usePersistStore } from './persistStore';
 import styles from './PersistUI.module.css';
 
@@ -73,9 +73,9 @@ function RecoveryBanner() {
         type="button"
         className={`${styles.bannerBtn} ${styles.danger}`}
         onClick={async () => {
-          await clearObra(key);
+          // Borra la obra dañada del registro (no deja fantasma) y arma el autosave.
+          await discardRecovery(key);
           setRecovery(null);
-          armAutosave(); // ahora sí guardamos los cambios nuevos
         }}
       >
         Descartar y empezar

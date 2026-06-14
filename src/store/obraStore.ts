@@ -18,6 +18,7 @@ import { immer } from 'zustand/middleware/immer';
 import type { Banco, Cert, Chapter, MedLine, Obra, Partida, PartidasMap, Rates, SubChapter } from '../core/types';
 import { buildRecursos, precioCuadraDescompuesto, precioSegunModo } from '../core/banco';
 import { estaCertToOrigen, prevDataOf, sumLineQty } from '../core/certificacion';
+import { rawUuid } from '../core/id';
 import { round2 } from '../core/money';
 import { renumberChapter } from '../core/numbering';
 import { findNode, flattenContainers, subtreeIds } from '../core/tree';
@@ -111,11 +112,7 @@ export type CertMode = 'origen' | 'esta';
  * (no salen de aquí) y no cambian.
  */
 function uid(prefix: string): string {
-  const c = globalThis.crypto;
-  const raw = c?.randomUUID
-    ? c.randomUUID()
-    : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
-  return `${prefix}-${raw}`;
+  return `${prefix}-${rawUuid()}`;
 }
 const nextRecursoCode = (): string => uid('r');
 const nextPartidaId = (): string => uid('p');
@@ -188,11 +185,14 @@ export function copyTargetOf(chapters: Chapter[], active: string): CopyTarget {
   return c ? { chId: c.id, subId: null, label: `${c.code} · ${c.title}` } : { chId: '', subId: null, label: '' };
 }
 
-/** Siguiente código derivado libre para BIFURCAR un recurso en colisión (`code~2`, `code~3`…). */
+/** Siguiente código derivado libre para BIFURCAR un recurso en colisión (`code~2`,
+ *  `code~3`…). Despoja un sufijo `~N` previo para no encadenar `code~2~2` al
+ *  re-copiar entre tres o más obras un recurso ya bifurcado. */
 function forkCode(recursos: Banco, code: string): string {
+  const base = code.replace(/~\d+$/, '');
   let i = 2;
-  let c = `${code}~${i}`;
-  while (recursos[c]) c = `${code}~${++i}`;
+  let c = `${base}~${i}`;
+  while (recursos[c]) c = `${base}~${++i}`;
   return c;
 }
 

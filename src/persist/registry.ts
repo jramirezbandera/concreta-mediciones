@@ -12,7 +12,8 @@
    desincronizaciones (blob sin entrada, entrada sin blob).
    =========================================================================== */
 import { del, get, set } from 'idb-keyval';
-import type { ObraData } from '../store';
+import { rawUuid } from '../core/id';
+import { fromSerializable, type ObraData } from '../store';
 import {
   OBRA_KEY,
   OBRA_KEY_PREFIX,
@@ -65,10 +66,23 @@ function isIndex(x: unknown): x is ObraIndex {
 
 /** Id único de obra (mismo origen de unicidad que los ids del dominio). */
 export function newObraId(): string {
-  const c = globalThis.crypto;
-  return c?.randomUUID
-    ? c.randomUUID()
-    : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+  return rawUuid();
+}
+
+/**
+ * Carga el blob de la obra `id` y migra su esquema (`fromSerializable`). `null`
+ * si falta o no es válida. Punto único de decodificación: lo comparten la carga
+ * al store (`sync.loadObraIntoStore`) y la carga como fuente de Referencia
+ * (`obraSource.loadObraRefSource`).
+ */
+export async function loadObraData(id: string): Promise<ObraData | null> {
+  const res = await loadObraEnvelope(obraKey(id));
+  if (res.kind !== 'ok') return null;
+  try {
+    return fromSerializable(res.envelope.data);
+  } catch {
+    return null; // versión no soportada
+  }
 }
 
 const nameOf = (data: ObraData): string => data.obra.denominacion || 'Obra sin nombre';
@@ -193,8 +207,8 @@ export async function getActiveId(): Promise<string | null> {
   return (await loadIndex()).activeId;
 }
 
-export async function setActiveId(id: string | null): Promise<void> {
-  await updateIndex((idx) => ({ ...idx, activeId: id }));
+export function setActiveId(id: string | null): Promise<ObraIndex> {
+  return updateIndex((idx) => ({ ...idx, activeId: id }));
 }
 
 /** Crea una obra: persiste su blob INMEDIATAMENTE (Codex: no esperar a la 1ª
@@ -212,9 +226,9 @@ export async function createObra(data: ObraData): Promise<string> {
 /** Guarda la obra ACTIVA (blob + meta en el índice). Lo usa el autosave. Si la
  *  obra aún no estaba registrada (1ª edición de la demo), la registra y la marca
  *  activa. Actualiza la meta EN SITIO para no alterar el orden de las pestañas. */
-export async function saveActiveObra(id: string, data: ObraData): Promise<void> {
+export async function saveActiveObra(id: string, data: ObraData): Promise<ObraIndex> {
   await saveObra(obraKey(id), data);
-  await updateIndex((idx) => {
+  return updateIndex((idx) => {
     const meta = metaOf(id, data);
     const obras = idx.obras.some((m) => m.id === id)
       ? idx.obras.map((m) => (m.id === id ? meta : m))
@@ -226,9 +240,9 @@ export async function saveActiveObra(id: string, data: ObraData): Promise<void> 
 /** Borra una obra: blob + entrada del índice. Si era la activa, salta a la
  *  primera restante (o null). NO aplica la política "no borrar la última" — eso
  *  es del store (crea una semilla nueva). */
-export async function deleteObra(id: string): Promise<void> {
+export async function deleteObra(id: string): Promise<ObraIndex> {
   await clearObra(obraKey(id));
-  await updateIndex((idx) => {
+  return updateIndex((idx) => {
     const obras = idx.obras.filter((m) => m.id !== id);
     const activeId = idx.activeId === id ? (obras[0]?.id ?? null) : idx.activeId;
     return { activeId, obras };
