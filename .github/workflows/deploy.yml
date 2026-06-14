@@ -32,6 +32,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Gate de verificación: un lint sucio o un test roto FALLA el job → no se
+      # despliega (deploy depende de build). Antes solo lo bloqueaba un error de
+      # tipos (vía `tsc -b` dentro de build).
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
       - name: Build
         run: npm run build
         env:
