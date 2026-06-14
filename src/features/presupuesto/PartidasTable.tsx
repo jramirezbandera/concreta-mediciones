@@ -9,7 +9,7 @@ import { useGridNav } from '../../hooks/useGridNav';
 import { usePartidaClipboard } from '../../hooks/usePartidaClipboard';
 import { useObraStore } from '../../store';
 import { PartidaRow } from './PartidaRow';
-import { WeightContext } from './WeightBar';
+import { WeightContext } from './weightContext';
 import styles from './Presupuesto.module.css';
 
 /** Fila separadora de subcapítulo: sangrada por profundidad, con el subtotal
