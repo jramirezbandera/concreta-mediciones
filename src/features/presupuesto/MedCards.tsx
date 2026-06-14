@@ -33,7 +33,8 @@ export function MedCards({ p, chapterId }: { p: Partida; chapterId: string }) {
   if (med.length === 0) {
     return (
       <div className={styles.medCardsEmpty}>
-        Sin líneas de medición. Añade la primera para calcular la cantidad.
+        Sin líneas de medición. Añade la primera para calcular la cantidad; encadena celdas con
+        Tab y baja con Enter.
       </div>
     );
   }

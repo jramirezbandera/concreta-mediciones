@@ -15,7 +15,8 @@ import { useAppHotkeys } from './hooks/useAppHotkeys';
 import { useBreakpoint } from './hooks/useBreakpoint';
 import { useClipboardHotkeys } from './hooks/usePartidaClipboard';
 import { useTheme } from './hooks/useTheme';
-import { ShortcutsHelp } from './layout/ShortcutsHelp';
+import { AyudaCenter } from './layout/AyudaCenter';
+import type { HelpTab } from './layout/ayudaContent';
 import { BottomTabBar, Drawer, MobileSummaryBar, ObraSwitcher, Sidebar, StatusBar, TopBar, type View } from './layout';
 import { selectCounts, selectPec, selectPem, selectTotalConIva, useObraStore } from './store';
 import styles from './App.module.css';
@@ -32,9 +33,10 @@ export default function App() {
   const { theme, toggleTheme } = useTheme();
   const bp = useBreakpoint();
   useClipboardHotkeys(); // Ctrl/Cmd+C copiar partida · Ctrl/Cmd+V pegar (T8)
-  const [helpOpen, setHelpOpen] = useState(false);
-  const openHelp = useCallback(() => setHelpOpen(true), []);
-  useAppHotkeys({ onHelp: openHelp }); // Ctrl/Cmd+K buscar · Supr borrar · Esc · ?
+  // Centro de Ayuda: `null` = cerrado; el botón abre en 'inicio', la tecla `?` en 'atajos'.
+  const [helpTab, setHelpTab] = useState<HelpTab | null>(null);
+  const openHelp = useCallback((tab: HelpTab = 'inicio') => setHelpTab(tab), []);
+  useAppHotkeys({ onHelp: () => setHelpTab('atajos') }); // Ctrl/Cmd+K · Supr · Esc · ?
 
   // La vista activa vive en el store (única fuente; el sandbox sigue local).
   const view = useObraStore((s) => s.view);
@@ -104,10 +106,8 @@ export default function App() {
     return () => window.removeEventListener('pagehide', onHide);
   }, []);
 
-  const goSandbox = useCallback(() => {
-    window.location.hash = 'sandbox';
-    setSandbox(true);
-  }, []);
+  // Sandbox (galería de primitivas de dev): sin enlace visible; se entra escribiendo
+  // `#sandbox` en la URL (lo capta el listener de `hashchange`).
   const leaveSandbox = useCallback(() => {
     window.location.hash = '';
     setSandbox(false);
@@ -158,6 +158,7 @@ export default function App() {
         onToggleRef={() => setRefOpen()}
         onExport={() => setExportOpen(true)}
         onObra={() => setObraOpen(true)}
+        onHelp={() => openHelp('inicio')}
         obraSwitcher={<ObraSwitcher />}
       />
 
@@ -193,7 +194,11 @@ export default function App() {
           }
         >
           {view === 'presupuesto' ? (
-            <PresupuestoView compact={bp.isMobile} onImport={() => changeView('import')} />
+            <PresupuestoView
+              compact={bp.isMobile}
+              onImport={() => changeView('import')}
+              onOpenHelp={() => openHelp('inicio')}
+            />
           ) : view === 'certificaciones' ? (
             <CertificacionesView
               compact={bp.isMobile}
@@ -232,7 +237,7 @@ export default function App() {
           <BottomTabBar view={view} onView={changeView} />
         </>
       ) : (
-        <StatusBar counts={counts} pem={pem} pec={pec} onSandbox={goSandbox} onHelp={openHelp} />
+        <StatusBar counts={counts} pem={pem} pec={pec} onHelp={() => openHelp('inicio')} />
       )}
 
       <ObraModal open={obraOpen} onClose={() => setObraOpen(false)} compact={bp.isMobile} />
@@ -254,7 +259,16 @@ export default function App() {
         compact={bp.isMobile}
       />
 
-      <ShortcutsHelp open={helpOpen} onClose={() => setHelpOpen(false)} compact={bp.isMobile} />
+      <AyudaCenter
+        open={helpTab !== null}
+        initialTab={helpTab ?? 'inicio'}
+        onClose={() => setHelpTab(null)}
+        onNavigate={(v) => {
+          changeView(v);
+          setHelpTab(null);
+        }}
+        compact={bp.isMobile}
+      />
 
       <ConflictModal />
       <ClipboardToast />

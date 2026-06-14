@@ -14,14 +14,12 @@ export interface StatusBarProps {
   /** PEM y PEC en céntimos enteros (mismos valores que los selectores). */
   pem: Cents;
   pec: Cents;
-  /** Acceso al sandbox de primitivas (dev). */
-  onSandbox?: () => void;
-  /** Abre la chuleta de atajos de teclado (tecla `?`). */
+  /** Abre el Centro de Ayuda (Primeros pasos · Funcionalidades · Atajos). */
   onHelp?: () => void;
 }
 
 /** Barra de estado inferior (24px, mono): conteos + portapapeles + PEM/PEC. */
-export function StatusBar({ counts, pem, pec, onSandbox, onHelp }: StatusBarProps) {
+export function StatusBar({ counts, pem, pec, onHelp }: StatusBarProps) {
   const clip = useClipboardStore((s) => s.items);
   const clearClip = useClipboardStore((s) => s.clear);
   const clipHead = clip?.[0]?.partida;
@@ -65,18 +63,10 @@ export function StatusBar({ counts, pem, pec, onSandbox, onHelp }: StatusBarProp
               type="button"
               className={styles.devLink}
               onClick={onHelp}
-              title="Atajos de teclado (?)"
-              aria-label="Atajos de teclado"
+              title="Ayuda y atajos (?)"
+              aria-label="Ayuda"
             >
-              <Icon name="command" size={12} /> Atajos
-            </button>
-            <span>·</span>
-          </>
-        )}
-        {onSandbox && (
-          <>
-            <button type="button" className={styles.devLink} onClick={onSandbox}>
-              Sandbox
+              <Icon name="help" size={12} /> Ayuda
             </button>
             <span>·</span>
           </>

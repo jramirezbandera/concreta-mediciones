@@ -16,6 +16,8 @@ export interface TopBarProps {
   onToggleRef?: () => void;
   onExport?: () => void;
   onObra?: () => void;
+  /** Abre el Centro de Ayuda. Punto de entrada universal (también en móvil). */
+  onHelp?: () => void;
   /** Selector de obra (multi-obra, PR2). Si se pasa, sustituye al nombre de obra inline. */
   obraSwitcher?: React.ReactNode;
 }
@@ -33,6 +35,7 @@ export function TopBar({
   onToggleRef,
   onExport,
   onObra,
+  onHelp,
   obraSwitcher,
 }: TopBarProps) {
   const { isMobile, isTablet, isCompact } = bp;
@@ -114,6 +117,17 @@ export function TopBar({
 
       {/* Acciones */}
       <div className={styles.actions}>
+        {onHelp && (
+          <button
+            type="button"
+            title="Ayuda y atajos"
+            aria-label="Ayuda"
+            onClick={onHelp}
+            className="tcol icon-btn"
+          >
+            <Icon name="help" size={16} />
+          </button>
+        )}
         {onObra && (
           <button
             type="button"

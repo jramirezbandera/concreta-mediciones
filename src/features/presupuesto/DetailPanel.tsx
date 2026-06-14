@@ -163,7 +163,8 @@ export function DetailPanel({
                 {med.length === 0 && (
                   <tr>
                     <td colSpan={7} className={styles.medEmpty}>
-                      Sin líneas de medición. Añade la primera para calcular la cantidad.
+                      Sin líneas de medición. Añade la primera para calcular la cantidad; luego
+                      encadena celdas con Tab y baja con Enter.
                     </td>
                   </tr>
                 )}

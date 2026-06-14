@@ -51,10 +51,13 @@ function EmptyChapter({ chapter, sub }: { chapter: Chapter; sub?: SubChapter | n
 export function PresupuestoView({
   compact: mobile,
   onImport,
+  onOpenHelp,
 }: {
   compact: boolean;
   /** Lleva a la vista Importar (CTA del estado vacío de obra, F8.3). */
   onImport?: () => void;
+  /** Abre el Centro de Ayuda en Primeros pasos (onboarding del primerizo). */
+  onOpenHelp?: () => void;
 }) {
   const viewRef = useRef<HTMLDivElement>(null);
   const width = useElementWidth(viewRef);
@@ -143,6 +146,7 @@ export function PresupuestoView({
             </EmptyAction>
           )}
           <EmptyAction onClick={() => addChapter('Capítulo 1')}>Añadir capítulo</EmptyAction>
+          {onOpenHelp && <EmptyAction onClick={onOpenHelp}>¿Primera vez? Cómo funciona</EmptyAction>}
         </EmptyState>
       </div>
     );
