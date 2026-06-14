@@ -1,15 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { CertificacionesView } from './features/certificaciones';
 import { ExportModal, exportBc3, exportDocx, exportXlsx } from './features/exportar';
-import { ImportarView, ReferenciaImportModal } from './features/importar';
 import { ObraModal } from './features/obra';
 import { PresupuestoView } from './features/presupuesto';
-import { PrintDoc, type PrintTarget } from './features/print';
+import { type PrintTarget } from './features/print';
 import { ConflictModal, ReferenciaPanel, refStyles } from './features/referencia';
 import { ClipboardToast } from './layout/ClipboardToast';
 import { Toast } from './layout/Toast';
 import { ResumenView } from './features/resumen';
-import { Sandbox } from './features/sandbox/Sandbox';
 import { PersistUI, flushPending } from './persist';
 import { useAppHotkeys } from './hooks/useAppHotkeys';
 import { useBreakpoint } from './hooks/useBreakpoint';
@@ -20,6 +18,17 @@ import type { HelpTab } from './layout/ayudaContent';
 import { BottomTabBar, Drawer, MobileSummaryBar, ObraSwitcher, Sidebar, StatusBar, TopBar, type View } from './layout';
 import { selectCounts, selectPec, selectPem, selectTotalConIva, useObraStore } from './store';
 import styles from './App.module.css';
+
+// Code-splitting (T3): vistas/modales pesados o poco usados salen del bundle
+// inicial. El feature `importar` arrastra el parser FIEBDC (~117 KB de vendor/bc3)
+// → al diferir ImportarView + ReferenciaImportModal todo ese feature se carga solo
+// al usarlo. Sandbox es solo de dev; PrintDoc renderiza la obra entera para imprimir.
+const Sandbox = lazy(() => import('./features/sandbox/Sandbox').then((m) => ({ default: m.Sandbox })));
+const ImportarView = lazy(() => import('./features/importar').then((m) => ({ default: m.ImportarView })));
+const ReferenciaImportModal = lazy(() =>
+  import('./features/importar').then((m) => ({ default: m.ReferenciaImportModal })),
+);
+const PrintDoc = lazy(() => import('./features/print').then((m) => ({ default: m.PrintDoc })));
 
 /** Por encima de este ancho de ventana el panel Referencia abre en split; si no, overlay. */
 const SPLIT_WIDTH = 1100;
@@ -140,7 +149,12 @@ export default function App() {
     [setView],
   );
 
-  if (sandbox) return <Sandbox onBack={leaveSandbox} />;
+  if (sandbox)
+    return (
+      <Suspense fallback={null}>
+        <Sandbox onBack={leaveSandbox} />
+      </Suspense>
+    );
 
   const sidebar = <Sidebar drawer={!bp.isDesktop} onAfterSelect={() => setDrawerOpen(false)} />;
 
@@ -205,7 +219,9 @@ export default function App() {
               onGoPresupuesto={() => changeView('presupuesto')}
             />
           ) : view === 'import' ? (
-            <ImportarView compact={bp.isMobile} />
+            <Suspense fallback={<div style={{ padding: 24, color: 'var(--text-disabled)' }}>Cargando…</div>}>
+              <ImportarView compact={bp.isMobile} />
+            </Suspense>
           ) : (
             <ResumenView compact={bp.isMobile} />
           )}
@@ -251,13 +267,17 @@ export default function App() {
         onExportDocx={exportWord}
         onExportBc3={exportObraBc3}
       />
-      {printTarget && <PrintDoc target={printTarget} onDone={closePrint} />}
+      {printTarget && (
+        <Suspense fallback={null}>
+          <PrintDoc target={printTarget} onDone={closePrint} />
+        </Suspense>
+      )}
 
-      <ReferenciaImportModal
-        open={refImportOpen}
-        onClose={() => setRefImportOpen(false)}
-        compact={bp.isMobile}
-      />
+      {refImportOpen && (
+        <Suspense fallback={null}>
+          <ReferenciaImportModal open onClose={() => setRefImportOpen(false)} compact={bp.isMobile} />
+        </Suspense>
+      )}
 
       <AyudaCenter
         open={helpTab !== null}
