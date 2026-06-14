@@ -40,16 +40,6 @@
   color: var(--text-disabled);
 }
 
-.slash {
-  color: var(--text-disabled);
-}
-
-.crumb {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
 .dotSep {
   color: var(--text-disabled);
   font-size: 13px;

@@ -6,7 +6,6 @@ import { useJustRevealed } from '../../hooks/useJustRevealed';
 import { usePartidaRow } from '../../hooks/usePartidaRow';
 import { useObraStore } from '../../store';
 import { DetailPanel } from './DetailPanel';
-import { BaseChip } from './PartidaRow';
 import { PartidaMenu } from './PartidaMenu';
 import styles from './Presupuesto.module.css';
 
@@ -66,7 +65,6 @@ export const PartidaCard = memo(function PartidaCard({
             className={styles.title}
             onCommit={(v) => editPartidaField(chapterId, p.id, 'title', v)}
           />
-          {p.fromBase && <BaseChip source={p.baseSource} />}
           {p.contradictorio && <ContraChip />}
         </div>
 

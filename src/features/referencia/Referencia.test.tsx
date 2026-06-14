@@ -43,13 +43,6 @@ describe('ReferenciaPanel (F5.1)', () => {
     expect(list.at(-1)!.fromBase).toBe(true);
   });
 
-  it('el toggle "contradictorio" hace que la copia se marque P.C.', () => {
-    render(<ReferenciaPanel onImport={() => {}} />);
-    fireEvent.click(screen.getByText('Copiar como precio contradictorio'));
-    fireEvent.click(screen.getByLabelText('Copiar ADE010 a mi presupuesto'));
-    expect(useObraStore.getState().partidas['01']!.at(-1)!.contradictorio).toBe(true);
-  });
-
   it('seleccionar varias y "Copiar a" las vuelca al capítulo activo', () => {
     render(<ReferenciaPanel onImport={() => {}} />);
     const n0 = useObraStore.getState().partidas['01']!.length;
@@ -87,12 +80,5 @@ describe('ReferenciaPanel (F5.1)', () => {
     expect(drag!.contra).toBe(false);
     fireEvent.dragEnd(screen.getByText('ADE010'));
     expect(useObraStore.getState().refDrag).toBeNull();
-  });
-
-  it('el toggle contradictorio se congela en el payload de arrastre (F5.2)', () => {
-    render(<ReferenciaPanel onImport={() => {}} />);
-    fireEvent.click(screen.getByText('Copiar como precio contradictorio'));
-    fireEvent.dragStart(screen.getByText('ADE010'), { dataTransfer: { effectAllowed: '', setData: () => {} } });
-    expect(useObraStore.getState().refDrag!.contra).toBe(true);
   });
 });

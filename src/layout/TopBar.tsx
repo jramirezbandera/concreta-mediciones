@@ -1,7 +1,7 @@
 import { Icon } from '../components/Icon';
 import type { Breakpoint } from '../hooks/useBreakpoint';
 import type { Theme } from '../hooks/useTheme';
-import { TABS, VIEW_LABEL, type View } from './types';
+import { TABS, type View } from './types';
 import styles from './TopBar.module.css';
 
 export interface TopBarProps {
@@ -70,8 +70,6 @@ export function TopBar({
         {!isTablet && <span className={styles.name}>Concreta</span>}
         <span className={`hide-sm ${styles.sep}`} />
         <span className={`mono caps hide-md ${styles.kicker}`}>Mediciones</span>
-        <span className={`hide-sm ${styles.slash}`}>/</span>
-        <span className={`hide-sm ${styles.crumb}`}>{VIEW_LABEL[view]}</span>
         {obraSwitcher ? (
           <>
             <span className={`hide-sm ${styles.dotSep}`}>·</span>
@@ -117,7 +115,9 @@ export function TopBar({
 
       {/* Acciones */}
       <div className={styles.actions}>
-        {onHelp && (
+        {/* La ayuda vive en la barra de estado inferior (desktop). En móvil no hay
+            StatusBar, así que se mantiene aquí como único punto de entrada. */}
+        {onHelp && isMobile && (
           <button
             type="button"
             title="Ayuda y atajos"

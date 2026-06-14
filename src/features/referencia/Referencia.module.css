@@ -193,59 +193,6 @@
   display: inline-flex;
 }
 
-/* ---- toggle "copiar como contradictorio" ---- */
-.contraBtn {
-  margin-top: 8px;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  height: 32px;
-  padding: 0 8px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-family: inherit;
-  border: 1px solid var(--border-main);
-  background: transparent;
-}
-.contraBtn.on {
-  border-color: color-mix(in srgb, var(--state-warn) 50%, var(--border-main));
-  background: color-mix(in srgb, var(--state-warn) 10%, transparent);
-}
-.contraTrack {
-  display: flex;
-  align-items: center;
-  width: 30px;
-  height: 18px;
-  border-radius: 20px;
-  flex-shrink: 0;
-  padding: 2px;
-  justify-content: flex-start;
-  background: var(--border-main);
-  transition: background 0.15s;
-}
-.contraTrack.on {
-  justify-content: flex-end;
-  background: var(--state-warn);
-}
-.contraKnob {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #fff;
-  display: block;
-}
-.contraLabel {
-  flex: 1;
-  text-align: left;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-.contraBtn.on .contraLabel {
-  color: var(--state-warn);
-}
-
 /* ---- árbol ---- */
 .tree {
   flex: 1;
@@ -562,19 +509,6 @@
   white-space: nowrap;
   opacity: 0.9;
 }
-.hint {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11.5px;
-  color: var(--text-disabled);
-  line-height: 1.4;
-}
-.hintTarget {
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
 /* ---- contenedor split/overlay (en App) ---- */
 .divider {
   width: 6px;

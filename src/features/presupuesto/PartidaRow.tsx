@@ -10,15 +10,6 @@ import { PartidaMenu } from './PartidaMenu';
 import { WeightBar } from './WeightBar';
 import styles from './Presupuesto.module.css';
 
-/** Chip "BASE": partida copiada de una base de precios hasta que se edita. */
-export function BaseChip({ source }: { source?: string }) {
-  return (
-    <span className={styles.baseChip} title={`Copiada de ${source || 'una base'} · edítala para confirmarla`}>
-      BASE
-    </span>
-  );
-}
-
 /** No propagar el click al `<tr>` (que selecciona/despliega) desde un control
  *  editable. Se envuelve SOLO el widget, no la celda entera, para que el espacio
  *  vacío de la fila (incluida la banda de la descripción) siga seleccionando. */
@@ -85,7 +76,6 @@ export const PartidaRow = memo(function PartidaRow({
                 onCommit={(v) => editPartidaField(chapterId, p.id, 'title', v)}
               />
             </span>
-            {p.fromBase && <BaseChip source={p.baseSource} />}
             {p.contradictorio && <ContraChip />}
           </div>
         </td>

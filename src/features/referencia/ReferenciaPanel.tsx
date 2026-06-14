@@ -302,7 +302,6 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
 
   const [sel, setSel] = useState<Record<string, RefCopyItem>>({});
   const [q, setQ] = useState('');
-  const [contra, setContra] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   // Al cambiar de fuente, limpia selección/búsqueda.
@@ -410,7 +409,9 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
         /* algunos entornos (jsdom) no soportan setData */
       }
     }
-    setRefDrag({ items, contra });
+    // Un precio es "contradictorio" solo si se introduce desde Certificaciones;
+    // copiar desde la referencia nunca lo marca como tal.
+    setRefDrag({ items, contra: false });
   }
   function dragStart(e: React.DragEvent, p: RefPartida) {
     if (!source) return;
@@ -469,17 +470,6 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
             </button>
           )}
         </div>
-        <button
-          type="button"
-          onClick={() => setContra((c) => !c)}
-          className={`tcol ${styles.contraBtn} ${contra ? styles.on : ''}`}
-          aria-pressed={contra}
-        >
-          <span className={`${styles.contraTrack} ${contra ? styles.on : ''}`}>
-            <span className={styles.contraKnob} />
-          </span>
-          <span className={styles.contraLabel}>Copiar como precio contradictorio</span>
-        </button>
       </div>
 
       <div className={`scroll-thin ${styles.tree}`}>
@@ -530,7 +520,7 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
                     <span className={styles.chapCount}>{searching ? rows.length : ps.length}</span>
                     <button
                       type="button"
-                      onClick={() => source && requestCopyRefPartidas(ps.map((p) => copyItem(source, p)), null, contra)}
+                      onClick={() => source && requestCopyRefPartidas(ps.map((p) => copyItem(source, p)), null, false)}
                       title="Copiar capítulo entero"
                       aria-label={`Copiar capítulo ${ch.code} entero`}
                       className={`tcol ${styles.chapCopy}`}
@@ -547,7 +537,7 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
                           selected={!!sel[refKey(p)]}
                           onToggleSel={toggleSel}
                           onCopyOne={(pp) =>
-                            source && requestCopyRefPartidas([copyItem(source, pp)], null, contra)
+                            source && requestCopyRefPartidas([copyItem(source, pp)], null, false)
                           }
                           onDragStart={dragStart}
                           onDragEnd={endDrag}
@@ -568,8 +558,8 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
         )}
       </div>
 
-      <div className={styles.actionBar}>
-        {selCount > 0 ? (
+      {selCount > 0 && (
+        <div className={styles.actionBar}>
           <div className={styles.selBox}>
             <div className={styles.selInfo}>
               <span className={styles.selText}>
@@ -583,7 +573,7 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
             <button
               type="button"
               onClick={() => {
-                requestCopyRefPartidas(Object.values(sel), null, contra);
+                requestCopyRefPartidas(Object.values(sel), null, false);
                 setSel({});
               }}
               className={styles.copyToBtn}
@@ -593,14 +583,8 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
               <span className={styles.copyToLabel}>{target.label}</span>
             </button>
           </div>
-        ) : (
-          <div className={styles.hint}>
-            <Icon name="grip" size={14} style={{ flexShrink: 0 }} />
-            Arrastra una partida al árbol de tu presupuesto, o marca varias y cópialas a{' '}
-            <span className={styles.hintTarget}>{target.label}</span>.
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
