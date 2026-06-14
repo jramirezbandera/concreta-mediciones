@@ -20,21 +20,21 @@ afterEach(() => {
 
 describe('ReferenciaPanel (F5.1)', () => {
   it('muestra la fuente activa y su árbol de partidas', () => {
-    render(<ReferenciaPanel />);
+    render(<ReferenciaPanel onImport={() => {}} />);
     expect(screen.getByText('Base de Precios de la Construcción 2025')).toBeInTheDocument();
     // capítulo A abierto por defecto → su primera partida visible
     expect(screen.getByText('ADE010')).toBeInTheDocument();
   });
 
   it('el buscador filtra por código/título', () => {
-    render(<ReferenciaPanel />);
+    render(<ReferenciaPanel onImport={() => {}} />);
     fireEvent.change(screen.getByLabelText('Buscar partida o código'), { target: { value: 'colector' } });
     expect(screen.getByText('ASA010')).toBeInTheDocument();
     expect(screen.queryByText('ADE010')).toBeNull();
   });
 
   it('copiar una partida con "←" la añade al presupuesto activo con chip BASE', () => {
-    render(<ReferenciaPanel />);
+    render(<ReferenciaPanel onImport={() => {}} />);
     const n0 = useObraStore.getState().partidas['01']!.length;
     fireEvent.click(screen.getByLabelText('Copiar ADE010 a mi presupuesto'));
     const list = useObraStore.getState().partidas['01']!;
@@ -44,14 +44,14 @@ describe('ReferenciaPanel (F5.1)', () => {
   });
 
   it('el toggle "contradictorio" hace que la copia se marque P.C.', () => {
-    render(<ReferenciaPanel />);
+    render(<ReferenciaPanel onImport={() => {}} />);
     fireEvent.click(screen.getByText('Copiar como precio contradictorio'));
     fireEvent.click(screen.getByLabelText('Copiar ADE010 a mi presupuesto'));
     expect(useObraStore.getState().partidas['01']!.at(-1)!.contradictorio).toBe(true);
   });
 
   it('seleccionar varias y "Copiar a" las vuelca al capítulo activo', () => {
-    render(<ReferenciaPanel />);
+    render(<ReferenciaPanel onImport={() => {}} />);
     const n0 = useObraStore.getState().partidas['01']!.length;
     fireEvent.click(screen.getByLabelText('Seleccionar ADE010'));
     fireEvent.click(screen.getByLabelText('Seleccionar ADR010'));
@@ -61,7 +61,7 @@ describe('ReferenciaPanel (F5.1)', () => {
   });
 
   it('cambiar de fuente actualiza el árbol', () => {
-    render(<ReferenciaPanel />);
+    render(<ReferenciaPanel onImport={() => {}} />);
     fireEvent.click(screen.getByText('Base de Precios de la Construcción 2025'));
     fireEvent.click(screen.getByText('Reforma local C/ Goya 28'));
     // partida de la nueva fuente visible (cap "Demoliciones" abierto por defecto)
@@ -70,7 +70,7 @@ describe('ReferenciaPanel (F5.1)', () => {
   });
 
   it('copiar capítulo entero vuelca todas sus partidas', () => {
-    render(<ReferenciaPanel />);
+    render(<ReferenciaPanel onImport={() => {}} />);
     const n0 = useObraStore.getState().partidas['01']!.length;
     fireEvent.click(screen.getByLabelText('Copiar capítulo A entero'));
     // capítulo A de la base BDT = 3 partidas (ADE010, ADR010, ASA010)
@@ -78,7 +78,7 @@ describe('ReferenciaPanel (F5.1)', () => {
   });
 
   it('arrastrar una partida publica el payload y soltar lo limpia (F5.2)', () => {
-    render(<ReferenciaPanel />);
+    render(<ReferenciaPanel onImport={() => {}} />);
     const dt = { effectAllowed: '', setData: () => {} };
     fireEvent.dragStart(screen.getByText('ADE010'), { dataTransfer: dt });
     const drag = useObraStore.getState().refDrag;
@@ -90,7 +90,7 @@ describe('ReferenciaPanel (F5.1)', () => {
   });
 
   it('el toggle contradictorio se congela en el payload de arrastre (F5.2)', () => {
-    render(<ReferenciaPanel />);
+    render(<ReferenciaPanel onImport={() => {}} />);
     fireEvent.click(screen.getByText('Copiar como precio contradictorio'));
     fireEvent.dragStart(screen.getByText('ADE010'), { dataTransfer: { effectAllowed: '', setData: () => {} } });
     expect(useObraStore.getState().refDrag!.contra).toBe(true);

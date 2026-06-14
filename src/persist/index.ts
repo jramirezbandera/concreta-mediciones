@@ -5,6 +5,7 @@ export {
   getActiveObraId,
   switchObra,
   newObra,
+  importObraAsReference,
   deleteObraById,
   discardRecovery,
   __resetSyncForTests,

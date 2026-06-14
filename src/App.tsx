@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { CertificacionesView } from './features/certificaciones';
 import { ExportModal, exportBc3, exportDocx, exportXlsx } from './features/exportar';
-import { ImportarView } from './features/importar';
+import { ImportarView, ReferenciaImportModal } from './features/importar';
 import { ObraModal } from './features/obra';
 import { PresupuestoView } from './features/presupuesto';
 import { PrintDoc, type PrintTarget } from './features/print';
 import { ConflictModal, ReferenciaPanel, refStyles } from './features/referencia';
 import { ClipboardToast } from './layout/ClipboardToast';
+import { Toast } from './layout/Toast';
 import { ResumenView } from './features/resumen';
 import { Sandbox } from './features/sandbox/Sandbox';
 import { PersistUI, flushPending } from './persist';
@@ -67,6 +68,9 @@ export default function App() {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [obraOpen, setObraOpen] = useState(false);
+  // Importar como obra de REFERENCIA (no reemplaza la activa): modal sobre el
+  // panel, disparado desde la Referencia. Distinto de la vista Importar (reemplaza).
+  const [refImportOpen, setRefImportOpen] = useState(false);
   // F7.1: chooser de export + doc de impresión montado BAJO DEMANDA (portal).
   const [exportOpen, setExportOpen] = useState(false);
   const [printTarget, setPrintTarget] = useState<PrintTarget | null>(null);
@@ -197,7 +201,7 @@ export default function App() {
           )}
           {overlayOpen && (
             <div className={`no-print ${refStyles.overlay}`}>
-              <ReferenciaPanel />
+              <ReferenciaPanel onImport={() => setRefImportOpen(true)} />
             </div>
           )}
         </main>
@@ -211,7 +215,7 @@ export default function App() {
               aria-orientation="vertical"
             />
             <aside className={refStyles.aside} style={{ width: refWidth }}>
-              <ReferenciaPanel />
+              <ReferenciaPanel onImport={() => setRefImportOpen(true)} />
             </aside>
           </>
         )}
@@ -239,8 +243,15 @@ export default function App() {
       />
       {printTarget && <PrintDoc target={printTarget} onDone={closePrint} />}
 
+      <ReferenciaImportModal
+        open={refImportOpen}
+        onClose={() => setRefImportOpen(false)}
+        compact={bp.isMobile}
+      />
+
       <ConflictModal />
       <ClipboardToast />
+      <Toast />
       <PersistUI />
     </div>
   );

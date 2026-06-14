@@ -2,8 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Badge, Icon } from '../../components';
 import { fmtNum, round2 } from '../../core/money';
 import { REF_DESC, REF_SOURCES, type RefCopyItem, type RefPartida, type RefSource } from '../../core/refdata';
-import type { View } from '../../layout';
-import { useSessionStore } from '../../persist';
+import { deleteObraById, useSessionStore } from '../../persist';
 import { selectCopyTarget, useObraStore } from '../../store';
 import { loadObraRefSource } from './obraSource';
 import styles from './Referencia.module.css';
@@ -14,6 +13,8 @@ interface SourceDesc {
   kind: 'base' | 'presupuesto';
   name: string;
   org: string;
+  /** Obra de solo-referencia (importada): se puede quitar desde el selector. */
+  removable?: boolean;
 }
 
 /** Item de copia desde una partida de referencia. */
@@ -39,11 +40,13 @@ function SourceSelect({
   curId,
   onSelect,
   onImport,
+  onDelete,
 }: {
   sources: SourceDesc[];
   curId: string;
   onSelect: (id: string) => void;
   onImport: () => void;
+  onDelete: (id: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -65,7 +68,7 @@ function SourceSelect({
         </span>
         <span className={styles.srcText}>
           <span className={styles.srcName}>{cur ? cur.name : 'Sin fuentes de referencia'}</span>
-          <span className={styles.srcOrg}>{cur ? cur.org : 'Importa una base o crea otra obra'}</span>
+          <span className={styles.srcOrg}>{cur ? cur.org : 'Añade una base o crea otra obra'}</span>
         </span>
         <Icon name="chevronDown" size={15} style={{ color: 'var(--text-disabled)', flexShrink: 0 }} />
       </button>
@@ -74,25 +77,40 @@ function SourceSelect({
           {sources.map((s) => {
             const on = s.id === curId;
             return (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => {
-                  onSelect(s.id);
-                  setOpen(false);
-                }}
-                className={`tcol ${styles.srcOpt} ${on ? styles.on : ''}`}
-              >
-                <span className={`${styles.srcOptIcon} ${on ? styles.on : ''}`}>
-                  <Icon name={s.kind === 'base' ? 'layers' : 'doc'} size={14} />
-                </span>
-                <span className={styles.srcText}>
-                  <span className={`${styles.srcName} ${on ? styles.on : ''}`}>{s.name}</span>
-                  <span className={styles.srcOrg}>
-                    {s.org} · {s.kind === 'base' ? 'Base de precios' : 'Presupuesto'}
+              <div key={s.id} className={styles.srcRow}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSelect(s.id);
+                    setOpen(false);
+                  }}
+                  className={`tcol ${styles.srcOpt} ${on ? styles.on : ''}`}
+                >
+                  <span className={`${styles.srcOptIcon} ${on ? styles.on : ''}`}>
+                    <Icon name={s.kind === 'base' ? 'layers' : 'doc'} size={14} />
                   </span>
-                </span>
-              </button>
+                  <span className={styles.srcText}>
+                    <span className={`${styles.srcName} ${on ? styles.on : ''}`}>{s.name}</span>
+                    <span className={styles.srcOrg}>
+                      {s.org} · {s.kind === 'base' ? 'Base de precios' : 'Presupuesto'}
+                    </span>
+                  </span>
+                </button>
+                {s.removable && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onDelete(s.id);
+                      setOpen(false);
+                    }}
+                    title={`Quitar ${s.name} de las referencias`}
+                    aria-label={`Quitar ${s.name} de las referencias`}
+                    className={`tcol ${styles.srcDel}`}
+                  >
+                    <Icon name="trash" size={13} />
+                  </button>
+                )}
+              </div>
             );
           })}
           {sources.length > 0 && <div className={styles.srcDivider} />}
@@ -109,7 +127,7 @@ function SourceSelect({
             </span>
             <span className={styles.srcText}>
               <span className={styles.srcName} style={{ color: 'var(--accent)' }}>
-                Importar base de precios…
+                Añadir base de referencia…
               </span>
               <span className={styles.srcOrg}>Archivo .bc3 (FIEBDC-3) · CYPE, Presto, ITeC…</span>
             </span>
@@ -216,11 +234,10 @@ function RefPartidaRow({
    guardadas se cargan PEREZOSAMENTE desde IndexedDB (loading/error + guarda
    anti-respuesta-obsoleta). La copia pasa por el PREFLIGHT de colisión del store.
    =========================================================================== */
-export function ReferenciaPanel() {
+export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
   const refSourceId = useObraStore((s) => s.refSourceId);
   const setRefSource = useObraStore((s) => s.setRefSource);
   const setRefOpen = useObraStore((s) => s.setRefOpen);
-  const setView = useObraStore((s) => s.setView);
   const requestCopyRefPartidas = useObraStore((s) => s.requestCopyRefPartidas);
   const setRefDrag = useObraStore((s) => s.setRefDrag);
   const target = useObraStore(selectCopyTarget);
@@ -232,7 +249,13 @@ export function ReferenciaPanel() {
     const bases: SourceDesc[] = REF_SOURCES.map((s) => ({ id: s.id, kind: s.kind, name: s.name, org: s.org }));
     const propias: SourceDesc[] = obras
       .filter((o) => o.id !== activeObraId)
-      .map((o) => ({ id: `obra:${o.id}`, kind: 'presupuesto', name: o.name, org: 'Obra propia' }));
+      .map((o) => ({
+        id: `obra:${o.id}`,
+        kind: 'presupuesto',
+        name: o.name,
+        org: o.kind === 'reference' ? 'Referencia importada' : 'Obra propia',
+        removable: o.kind === 'reference',
+      }));
     return [...bases, ...propias];
   }, [obras, activeObraId]);
 
@@ -353,9 +376,12 @@ export function ReferenciaPanel() {
   }
   const endDrag = () => setRefDrag(null);
 
-  function openImport() {
-    setView('import' as View);
-    setRefOpen(false);
+  // Quitar una obra de solo-referencia (importada) de la lista. Si era la fuente
+  // seleccionada, deselecciona antes de borrar (el efecto de invalidación de caché
+  // ya purga la borrada; sin deseleccionar, la fuente quedaría "datos dañados").
+  function deleteSource(id: string) {
+    if (refSourceId === id) setRefSource('');
+    void deleteObraById(id.slice('obra:'.length));
   }
 
   return (
@@ -373,7 +399,13 @@ export function ReferenciaPanel() {
             <Icon name="x" size={16} />
           </button>
         </div>
-        <SourceSelect sources={sourceList} curId={refSourceId} onSelect={setRefSource} onImport={openImport} />
+        <SourceSelect
+          sources={sourceList}
+          curId={refSourceId}
+          onSelect={setRefSource}
+          onImport={onImport}
+          onDelete={deleteSource}
+        />
         <div className={styles.search}>
           <Icon name="search" size={15} style={{ color: 'var(--text-disabled)', flexShrink: 0 }} />
           <input
@@ -412,9 +444,15 @@ export function ReferenciaPanel() {
             <Icon name="alert" size={16} /> {error}
           </div>
         ) : !source ? (
-          <div className={styles.state}>
-            <Icon name="layers" size={16} /> No hay fuentes de referencia. Importa una base de
-            precios .bc3 o crea otra obra para copiar partidas.
+          <div className={styles.empty}>
+            <Icon name="layers" size={22} className={styles.emptyIcon} />
+            <p className={styles.emptyText}>
+              No hay fuentes de referencia. Añade una base de precios .bc3 (no reemplaza tu
+              obra) o usa otra de tus obras para copiar partidas.
+            </p>
+            <button type="button" onClick={onImport} className={styles.emptyCta}>
+              <Icon name="upload" size={14} /> Añadir base de referencia
+            </button>
           </div>
         ) : (
           chapterData.map(({ ch, ps }) => {

@@ -49,6 +49,9 @@ export function ObraSwitcher() {
   }, [naming]);
 
   const activeName = obras.find((o) => o.id === activeId)?.name || liveName;
+  // El selector lista solo obras de TRABAJO; las de solo-referencia (importadas
+  // para copiar) viven en el panel de Referencia, no aquí.
+  const workObras = obras.filter((o) => o.kind !== 'reference');
 
   const close = () => {
     setOpen(false);
@@ -84,8 +87,8 @@ export function ObraSwitcher() {
 
       {open && (
         <div className={styles.menu} role="menu">
-          {obras.length > 0 ? (
-            obras.map((o) => {
+          {workObras.length > 0 ? (
+            workObras.map((o) => {
               const on = o.id === activeId;
               const confirming = confirmId === o.id;
               return (

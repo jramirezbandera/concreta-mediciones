@@ -27,12 +27,19 @@ import {
 /** Clave del índice de obras (metadatos + obra activa). */
 export const INDEX_KEY = 'concreta.obras.index.v1';
 
+/** Tipo de obra: de trabajo (la editas/certificas) o solo de referencia
+ *  (importada para copiar partidas; no aparece en el selector de obras). Las
+ *  entradas legacy sin `kind` se tratan como `'obra'`. */
+export type ObraKind = 'obra' | 'reference';
+
 /** Metadatos de una obra para listar/pintar pestañas SIN leer su blob entero. */
 export interface ObraMeta {
   id: string;
   name: string;
   savedAt: string; // ISO 8601
   schemaVersion: number;
+  /** Ausente = obra de trabajo (compat). `'reference'` = solo fuente de copia. */
+  kind?: ObraKind;
 }
 
 /** Índice persistido: la obra activa + los metadatos de todas las guardadas. */
@@ -52,7 +59,8 @@ function isMeta(x: unknown): x is ObraMeta {
     typeof x.id === 'string' &&
     typeof x.name === 'string' &&
     typeof x.savedAt === 'string' &&
-    typeof x.schemaVersion === 'number'
+    typeof x.schemaVersion === 'number' &&
+    (x.kind === undefined || x.kind === 'obra' || x.kind === 'reference')
   );
 }
 function isIndex(x: unknown): x is ObraIndex {
@@ -212,13 +220,14 @@ export function setActiveId(id: string | null): Promise<ObraIndex> {
 }
 
 /** Crea una obra: persiste su blob INMEDIATAMENTE (Codex: no esperar a la 1ª
- *  edición) y la registra. NO la marca activa (eso lo decide el llamador). */
-export async function createObra(data: ObraData): Promise<string> {
+ *  edición) y la registra. NO la marca activa (eso lo decide el llamador).
+ *  `kind` marca las obras de solo-referencia (importadas para copiar). */
+export async function createObra(data: ObraData, kind?: ObraKind): Promise<string> {
   const id = newObraId();
   await saveObra(obraKey(id), data);
   await updateIndex((idx) => ({
     activeId: idx.activeId,
-    obras: [...idx.obras.filter((m) => m.id !== id), metaOf(id, data)],
+    obras: [...idx.obras.filter((m) => m.id !== id), metaOf(id, data, kind)],
   }));
   return id;
 }
@@ -249,11 +258,15 @@ export async function deleteObra(id: string): Promise<ObraIndex> {
   });
 }
 
-function metaOf(id: string, data: ObraData): ObraMeta {
+/** Construye la meta de índice de una obra. Exportada para que la orquestación
+ *  (importar como referencia) refresque `sessionStore` con la MISMA forma de meta
+ *  sin re-leer el índice. `kind` ausente = obra de trabajo (compat). */
+export function metaOf(id: string, data: ObraData, kind?: ObraKind): ObraMeta {
   return {
     id,
     name: nameOf(data),
     savedAt: new Date().toISOString(),
     schemaVersion: data.schemaVersion,
+    ...(kind ? { kind } : {}),
   };
 }

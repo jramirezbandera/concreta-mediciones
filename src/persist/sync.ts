@@ -11,7 +11,9 @@
        UI (selector) solo llama a estas funciones y lee `sessionStore`.
    =========================================================================== */
 import { shallow } from 'zustand/shallow';
+import type { ImportedObra } from '../core/bc3import';
 import {
+  SCHEMA_VERSION,
   blankObraData,
   toSerializable,
   useObraStore,
@@ -23,6 +25,7 @@ import {
   createObra,
   deleteObra as registryDeleteObra,
   loadObraData,
+  metaOf,
   migrateLegacy,
   newObraId,
   reconcile,
@@ -225,6 +228,27 @@ async function switchObraImpl(id: string): Promise<void> {
   } finally {
     useSessionStore.getState().setSwitching(false);
   }
+}
+
+/**
+ * Importa un .bc3 ya parseado como obra NUEVA de SOLO REFERENCIA: la persiste y
+ * registra (tag `reference`) SIN activarla, sin tocar la obra en pantalla ni su
+ * autosave. Devuelve su id para que el panel la seleccione como fuente.
+ *
+ * `result.data` es un `ImportedObra` (sin `schemaVersion` a propósito: lo estampa
+ * `loadObra` en la ruta normal). Aquí saltamos `loadObra`, así que ESTAMPAMOS el
+ * schema antes de persistir — sin ello el blob/índice quedarían inválidos. La
+ * lista del selector se refresca con `upsertObra` (no `loadIndex`+`setObras`
+ * entero, que podría regresar la meta de la activa si entra un autosave en medio).
+ */
+export function importObraAsReference(data: ImportedObra): Promise<string> {
+  return serializeOp(() => importObraAsReferenceImpl(data));
+}
+async function importObraAsReferenceImpl(data: ImportedObra): Promise<string> {
+  const obraData: ObraData = { schemaVersion: SCHEMA_VERSION, ...data };
+  const id = await createObra(obraData, 'reference');
+  useSessionStore.getState().upsertObra(metaOf(id, obraData, 'reference'));
+  return id;
 }
 
 /** Crea una obra EN BLANCO, la persiste y conmuta a ella. Devuelve su id. */

@@ -17,6 +17,10 @@ interface SessionState {
   /** Cambio de obra en curso (deshabilita el selector mientras carga). */
   switching: boolean;
   setObras: (obras: ObraMeta[]) => void;
+  /** Inserta/actualiza UNA obra sin tocar las demás. Lo usa la importación como
+   *  referencia: añade la obra nueva al selector sin pisar la meta de la activa
+   *  (un `setObras` con lista entera leída aparte podría regresarla). */
+  upsertObra: (meta: ObraMeta) => void;
   setActiveId: (activeId: string | null) => void;
   setSwitching: (switching: boolean) => void;
 }
@@ -26,6 +30,12 @@ export const useSessionStore = create<SessionState>((set) => ({
   activeId: null,
   switching: false,
   setObras: (obras) => set({ obras }),
+  upsertObra: (meta) =>
+    set((s) => ({
+      obras: s.obras.some((o) => o.id === meta.id)
+        ? s.obras.map((o) => (o.id === meta.id ? meta : o))
+        : [...s.obras, meta],
+    })),
   setActiveId: (activeId) => set({ activeId }),
   setSwitching: (switching) => set({ switching }),
 }));
