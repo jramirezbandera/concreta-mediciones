@@ -41,3 +41,38 @@
 .devLink:hover {
   color: var(--accent);
 }
+
+/* Indicador de portapapeles: confirma la copia y recuerda qué llevas cargado
+   (sobrevive el cambio de obra). La ✕ lo vacía. */
+.clip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 280px;
+  padding: 1px 4px 1px 7px;
+  border-radius: 5px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.clipName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.clipMore {
+  color: var(--accent);
+  opacity: 0.7;
+}
+.clipClear {
+  display: inline-flex;
+  align-items: center;
+  border: 0;
+  padding: 1px;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+}
+.clipClear:hover {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}

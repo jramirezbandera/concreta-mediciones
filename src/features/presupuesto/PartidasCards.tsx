@@ -5,6 +5,7 @@ import { fmtNum, sumCents, toEur, type Cents } from '../../core/money';
 import type { Chapter, Partida } from '../../core/types';
 import { groupsForFocus } from '../../core/grouping';
 import { rollupByDepth } from '../../core/tree';
+import { usePartidaClipboard } from '../../hooks/usePartidaClipboard';
 import { useObraStore } from '../../store';
 import { PartidaCard } from './PartidaCard';
 import styles from './Presupuesto.module.css';
@@ -24,6 +25,7 @@ export function PartidasCards({
 }) {
   const coefK = useObraStore((s) => s.rates.coefK);
   const addPartida = useObraStore((s) => s.addPartida);
+  const { hasClip, paste } = usePartidaClipboard();
   const groups = useMemo(
     () => groupsForFocus(chapter, partidas, focus),
     [chapter, partidas, focus],
@@ -51,13 +53,25 @@ export function PartidasCards({
           {g.items.map((p) => (
             <PartidaCard key={p.id} p={p} chapterId={chapter.id} chapterTotal={chapterTotal} />
           ))}
-          <button
-            type="button"
-            className={`tcol ${styles.cardsAdd}`}
-            onClick={() => addPartida(chapter.id, g.sub?.id ?? null)}
-          >
-            <Icon name="plus" size={15} /> Añadir partida{g.sub ? ` a ${g.sub.code}` : ''}
-          </button>
+          <div className={styles.cardsBtns}>
+            <button
+              type="button"
+              className={`tcol ${styles.cardsAdd}`}
+              onClick={() => addPartida(chapter.id, g.sub?.id ?? null)}
+            >
+              <Icon name="plus" size={15} /> Añadir partida{g.sub ? ` a ${g.sub.code}` : ''}
+            </button>
+            {hasClip && (
+              <button
+                type="button"
+                title="Pegar la partida copiada aquí"
+                className={`tcol tap-target ${styles.cardsPaste}`}
+                onClick={() => paste({ chId: chapter.id, subId: g.sub?.id ?? null })}
+              >
+                <Icon name="paste" size={15} /> Pegar
+              </button>
+            )}
+          </div>
         </Fragment>
       ))}
     </div>

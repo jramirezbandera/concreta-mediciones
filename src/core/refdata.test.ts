@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { detectCollisions, obraToRefSource, type RefCopyItem, type RefPartida } from './refdata';
+import {
+  detectCollisions,
+  obraToRefSource,
+  partidaToRefCopyItem,
+  type RefCopyItem,
+  type RefPartida,
+} from './refdata';
 import type { Banco, Chapter, PartidasMap, Partida } from './types';
 
 /* ---- obraToRefSource (adaptar obra propia → fuente) ----------------------- */
@@ -44,6 +50,39 @@ describe('obraToRefSource', () => {
 
   it('nombre vacío → "Obra sin nombre"', () => {
     expect(obraToRefSource('x', '', [], {}, {}).name).toBe('Obra sin nombre');
+  });
+});
+
+/* ---- partidaToRefCopyItem (snapshot para el portapapeles) ----------------- */
+describe('partidaToRefCopyItem', () => {
+  const recursos: Banco = { mo1: { type: 'MO', desc: 'Peón ordinario', ud: 'h', precio: 18.5 } };
+  const partida = (): Partida => ({
+    id: 'p1',
+    pos: '1.1',
+    code: 'X01',
+    title: 'Mi partida',
+    ud: 'm²',
+    precio: 10,
+    desc: 'Descripción propia',
+    med: [{ id: 'm1', comment: '', dims: {} } as never],
+    items: [{ code: 'mo1', type: 'MO', cantidad: 2 }],
+  });
+
+  it('hidrata los items desde el banco y conserva desc/precio/ud de la partida', () => {
+    const ci = partidaToRefCopyItem(partida(), recursos, 'Obra A');
+    expect(ci.sourceName).toBe('Obra A');
+    expect(ci.partida.desc).toBe('Descripción propia');
+    expect(ci.partida.items[0]).toMatchObject({ code: 'mo1', desc: 'Peón ordinario', ud: 'h', precio: 18.5 });
+  });
+
+  it('es un snapshot INMUTABLE: editar la partida origen no muta el portapapeles', () => {
+    const src = partida();
+    const ci = partidaToRefCopyItem(src, recursos, 'Obra A');
+    // mutar el origen después de copiar
+    src.title = 'CAMBIADO';
+    src.items[0]!.cantidad = 999;
+    expect(ci.partida.title).toBe('Mi partida');
+    expect(ci.partida.items[0]!.cantidad).toBe(2);
   });
 });
 

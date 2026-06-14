@@ -2,14 +2,16 @@ import { useEffect, useRef, useState } from 'react';
 import { Icon } from '../../components';
 import { flattenContainers } from '../../core/tree';
 import type { Partida } from '../../core/types';
+import { usePartidaClipboard } from '../../hooks/usePartidaClipboard';
 import { useObraStore } from '../../store';
 import styles from './Presupuesto.module.css';
 
-/** Menú ⋮ de una partida (F2.4): mover a otro capítulo/subcapítulo o eliminar. */
+/** Menú ⋮ de una partida (F2.4): copiar, mover a otro capítulo/subcapítulo o eliminar. */
 export function PartidaMenu({ p, chapterId }: { p: Partida; chapterId: string }) {
   const chapters = useObraStore((s) => s.chapters);
   const movePartida = useObraStore((s) => s.movePartida);
   const deletePartida = useObraStore((s) => s.deletePartida);
+  const { copy } = usePartidaClipboard();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -63,6 +65,18 @@ export function PartidaMenu({ p, chapterId }: { p: Partida; chapterId: string })
       </button>
       {open && (
         <div className={styles.menuPop} onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            title="Copiar partida (Ctrl+C)"
+            className={`tcol ${styles.menuCopy}`}
+            onClick={() => {
+              copy(p);
+              setOpen(false);
+            }}
+          >
+            <Icon name="copy" size={15} /> Copiar partida
+          </button>
+          <div className={styles.menuDivider} />
           <div className={`sec-head ${styles.menuHead}`}>Mover a</div>
           <div className={`scroll-thin ${styles.menuList}`}>
             {/* Destinos a CUALQUIER profundidad (T-17), sangrados por nivel. */}

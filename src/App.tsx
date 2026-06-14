@@ -6,10 +6,12 @@ import { ObraModal } from './features/obra';
 import { PresupuestoView } from './features/presupuesto';
 import { PrintDoc, type PrintTarget } from './features/print';
 import { ConflictModal, ReferenciaPanel, refStyles } from './features/referencia';
+import { ClipboardToast } from './layout/ClipboardToast';
 import { ResumenView } from './features/resumen';
 import { Sandbox } from './features/sandbox/Sandbox';
 import { PersistUI, flushPending } from './persist';
 import { useBreakpoint } from './hooks/useBreakpoint';
+import { useClipboardHotkeys } from './hooks/usePartidaClipboard';
 import { useTheme } from './hooks/useTheme';
 import { BottomTabBar, Drawer, MobileSummaryBar, ObraSwitcher, Sidebar, StatusBar, TopBar, type View } from './layout';
 import { selectCounts, selectPec, selectPem, selectTotalConIva, useObraStore } from './store';
@@ -26,6 +28,7 @@ function isSandboxHash(): boolean {
 export default function App() {
   const { theme, toggleTheme } = useTheme();
   const bp = useBreakpoint();
+  useClipboardHotkeys(); // Ctrl/Cmd+C copiar partida · Ctrl/Cmd+V pegar (T8)
 
   // La vista activa vive en el store (única fuente; el sandbox sigue local).
   const view = useObraStore((s) => s.view);
@@ -237,6 +240,7 @@ export default function App() {
       {printTarget && <PrintDoc target={printTarget} onDone={closePrint} />}
 
       <ConflictModal />
+      <ClipboardToast />
       <PersistUI />
     </div>
   );

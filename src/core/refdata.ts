@@ -7,7 +7,7 @@
    al integrarlos NO se pisan los homónimos ya existentes.
    Portado verbatim de design_handoff/refdata.js.
    =========================================================================== */
-import type { Banco, Chapter, Item, PartidasMap, ResourceType } from './types';
+import type { Banco, Chapter, Item, Partida, PartidasMap, ResourceType } from './types';
 
 /** Partida de una fuente de referencia (subconjunto de `Partida`: sin `med`). La
  *  descripción larga viene de `REF_DESC` por código (bases estáticas) o de `desc`
@@ -354,7 +354,7 @@ export const REF_DESC: Record<string, string> = {
  * código. El panel SÍ necesita esos campos (descomposición + importe), así que
  * los rellenamos desde `recursos` (Codex: el adaptador no puede descartarlos).
  */
-function hydrateItem(it: Item, recursos: Banco): Item {
+export function hydrateItem(it: Item, recursos: Banco): Item {
   if (it.type === '%CI') {
     return { code: '%CI', type: '%CI', cantidad: it.cantidad, desc: it.desc ?? 'Costes indirectos', ud: '%', precio: 0 };
   }
@@ -366,6 +366,32 @@ function hydrateItem(it: Item, recursos: Banco): Item {
     desc: r?.desc ?? it.desc ?? '',
     ud: r?.ud ?? it.ud ?? '',
     precio: r?.precio ?? it.precio ?? 0,
+  };
+}
+
+/**
+ * Construye un `RefCopyItem` (snapshot HIDRATADO e INMUTABLE) desde una partida
+ * VIVA de la obra, para el portapapeles de copiar/pegar. Hidrata los items desde
+ * el banco (desc/ud/precio) igual que `obraToRefSource`, y crea objetos nuevos
+ * (no comparte referencias con la partida origen): editar el origen tras copiar
+ * NO muta el portapapeles. No viajan `med` (se pega sin mediciones) ni
+ * `precioManual`/`fromBase`/`baseSource` (el pegado nace como partida limpia).
+ */
+export function partidaToRefCopyItem(p: Partida, recursos: Banco, sourceName: string): RefCopyItem {
+  return {
+    sourceName,
+    partida: {
+      id: p.id,
+      sub: p.sub,
+      pos: p.pos,
+      code: p.code,
+      title: p.title,
+      ud: p.ud,
+      precio: p.precio,
+      mainType: p.mainType,
+      desc: p.desc,
+      items: p.items.map((it) => hydrateItem(it, recursos)),
+    },
   };
 }
 

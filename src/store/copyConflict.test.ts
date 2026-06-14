@@ -97,3 +97,36 @@ describe('copia entre obras · preflight de colisión', () => {
     expect(state().partidas['01']!.length).toBe(before);
   });
 });
+
+describe('procedencia (base vs portapapeles)', () => {
+  it('base (Referencia): copia directa marca chip BASE + baseSource', () => {
+    state().requestCopyRefPartidas([refItem('codigo-nuevo', 5)], null, false); // default 'base'
+    expect(copied()!.fromBase).toBe(true);
+    expect(copied()!.baseSource).toBe('Otra obra');
+  });
+
+  it("clip (portapapeles): copia directa SIN chip BASE ni baseSource (partida limpia)", () => {
+    state().requestCopyRefPartidas([refItem('codigo-nuevo', 5)], null, false, 'clip');
+    expect(copied()!.fromBase).toBeUndefined();
+    expect(copied()!.baseSource).toBeUndefined();
+  });
+
+  it('clip: la procedencia SOBREVIVE la resolución de colisión (no reaparece BASE)', () => {
+    state().requestCopyRefPartidas([refItem('mo001', 20)], null, false, 'clip');
+    expect(state().pendingCopy!.provenance).toBe('clip');
+    state().resolveCopyRefPartidas({ mo001: 'merge' });
+    expect(copied()!.fromBase).toBeUndefined();
+    expect(copied()!.baseSource).toBeUndefined();
+  });
+
+  it('target CONGELADO: pega en el destino dado aunque cambie el activo entremedias', () => {
+    // pegar en sub explícito '01' (cap) con colisión → pendingCopy guarda target
+    state().setActive('02'); // el usuario cambia de capítulo activo...
+    state().requestCopyRefPartidas([refItem('mo001', 20)], { chId: '01', subId: null }, false, 'clip');
+    state().setActive('03'); // ...y vuelve a cambiar mientras el modal está abierto
+    state().resolveCopyRefPartidas({ mo001: 'merge' });
+    // aterriza en '01' (target congelado), no en el capítulo activo actual ('03')
+    expect(state().partidas['01']!.some((p) => p.code === 'NEW')).toBe(true);
+    expect((state().partidas['03'] ?? []).some((p) => p.code === 'NEW')).toBe(false);
+  });
+});

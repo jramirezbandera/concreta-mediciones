@@ -6,6 +6,7 @@ import type { Chapter, Partida, SubChapter } from '../../core/types';
 import { groupsForFocus } from '../../core/grouping';
 import { rollupByDepth } from '../../core/tree';
 import { useGridNav } from '../../hooks/useGridNav';
+import { usePartidaClipboard } from '../../hooks/usePartidaClipboard';
 import { useObraStore } from '../../store';
 import { PartidaRow } from './PartidaRow';
 import styles from './Presupuesto.module.css';
@@ -48,6 +49,7 @@ export function PartidasTable({
 }) {
   const coefK = useObraStore((s) => s.rates.coefK);
   const addPartida = useObraStore((s) => s.addPartida);
+  const { hasClip, paste } = usePartidaClipboard();
   const gridNav = useGridNav();
   const groups = useMemo(
     () => groupsForFocus(chapter, partidas, focus),
@@ -85,13 +87,25 @@ export function PartidasTable({
               ))}
               <tr className={styles.addRow}>
                 <td colSpan={7}>
-                  <button
-                    type="button"
-                    className={`tcol add-partida ${styles.addBtn}`}
-                    onClick={() => addPartida(chapter.id, g.sub?.id ?? null)}
-                  >
-                    <Icon name="plus" size={13} /> Añadir partida{g.sub ? ` a ${g.sub.code}` : ''}
-                  </button>
+                  <div className={styles.addRowBtns}>
+                    <button
+                      type="button"
+                      className={`tcol add-partida ${styles.addBtn}`}
+                      onClick={() => addPartida(chapter.id, g.sub?.id ?? null)}
+                    >
+                      <Icon name="plus" size={13} /> Añadir partida{g.sub ? ` a ${g.sub.code}` : ''}
+                    </button>
+                    {hasClip && (
+                      <button
+                        type="button"
+                        title="Pegar la partida copiada aquí (Ctrl+V)"
+                        className={`tcol ${styles.pasteBtn}`}
+                        onClick={() => paste({ chId: chapter.id, subId: g.sub?.id ?? null })}
+                      >
+                        <Icon name="paste" size={13} /> Pegar aquí
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             </Fragment>

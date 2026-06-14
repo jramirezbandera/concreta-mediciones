@@ -23,3 +23,4 @@ export {
   selectTotalConIva,
 } from './selectors';
 export type { Counts } from './selectors';
+export { useClipboardStore } from './clipboardStore';

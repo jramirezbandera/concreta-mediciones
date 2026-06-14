@@ -1,4 +1,4 @@
-import { useState, type MouseEvent } from 'react';
+import { type MouseEvent } from 'react';
 import { Badge, ContraChip, EditableNum, EditableText, Icon, UdSelect } from '../../components';
 import { fmtNum, toEur, type Cents } from '../../core/money';
 import type { Partida } from '../../core/types';
@@ -27,19 +27,20 @@ export function PartidaCard({
   chapterId: string;
   chapterTotal: Cents;
 }) {
-  const [expanded, setExpanded] = useState(false);
   const { cantidad, importe } = usePartidaRow(p, chapterTotal);
   const editPartidaField = useObraStore((s) => s.editPartidaField);
   const setPrecio = useObraStore((s) => s.setPrecio);
+  const open = useObraStore((s) => s.openPartidaId === p.id);
+  const togglePartida = useObraStore((s) => s.togglePartida);
 
   return (
-    <div className={`${styles.pCard} ${expanded ? styles.open : ''}`}>
-      <div className={styles.pCardHead} onClick={() => setExpanded((v) => !v)}>
+    <div className={`${styles.pCard} ${open ? `${styles.open} ${styles.selected}` : ''}`} aria-selected={open}>
+      <div className={styles.pCardHead} onClick={() => togglePartida(p.id)}>
         <div className={styles.pCardTop}>
           <Icon
-            name={expanded ? 'chevronDown' : 'chevron'}
+            name={open ? 'chevronDown' : 'chevron'}
             size={15}
-            className={`${styles.chevIcon} ${expanded ? styles.open : ''}`}
+            className={`${styles.chevIcon} ${open ? styles.open : ''}`}
           />
           <div className={styles.pCardId}>
             <span className={`mono ${styles.pCardPos}`}>{p.pos}</span>
@@ -93,7 +94,7 @@ export function PartidaCard({
         </div>
       </div>
 
-      {expanded && <DetailPanel p={p} chapterId={chapterId} compact />}
+      {open && <DetailPanel p={p} chapterId={chapterId} compact />}
     </div>
   );
 }

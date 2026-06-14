@@ -168,6 +168,8 @@ export interface PendingCopy {
   target: { chId: string; subId: string | null } | null;
   contra: boolean;
   collisions: Collision[];
+  /** Procedencia para que la copia, tras resolver colisiones, respete BASE vs limpia. */
+  provenance: 'base' | 'clip';
 }
 export function copyTargetOf(chapters: Chapter[], active: string): CopyTarget {
   if (active !== ALL) {
@@ -208,6 +210,7 @@ function applyCopy(
   target: { chId: string; subId: string | null } | null,
   contra: boolean,
   resolution?: Resolution,
+  provenance: 'base' | 'clip' = 'base',
 ): void {
   if (!items.length) return;
   const t = target ?? copyTargetOf(s.chapters, s.active);
@@ -267,9 +270,11 @@ function applyCopy(
       desc: p.desc ?? REF_DESC[p.code] ?? '',
       med: [],
       items: newItems,
-      fromBase: !contra,
+      // Procedencia 'clip' (portapapeles) = trabajo tuyo → partida limpia, sin
+      // chip BASE ni baseSource. 'base' (panel Referencia) mantiene el chip.
+      fromBase: provenance === 'clip' ? undefined : !contra,
       contradictorio: contra || undefined,
-      baseSource: it.sourceName,
+      baseSource: provenance === 'clip' ? undefined : it.sourceName,
     });
   }
   s.expanded[t.chId] = true;
@@ -307,10 +312,24 @@ export interface ObraState extends ObraData {
   refDrag: RefDrag | null;
   /** Copia con colisiones pendiente de resolver (T-1, D2); null = sin conflicto. */
   pendingCopy: PendingCopy | null;
+  /**
+   * Partida desplegada Y seleccionada en el presupuesto (modelo unificado: la
+   * fila abierta ES la seleccionada, una a la vez). `null` = ninguna. Es estado
+   * de UI por-obra: `loadObra`/`reset` lo resetean (vía `seedUi`), y cambiar de
+   * vista/capítulo o borrar/mover la partida lo limpian (no dejar selección
+   * fantasma sobre una fila invisible).
+   */
+  openPartidaId: string | null;
 
   /* ---- acciones (F1) ---- */
   setView: (v: View) => void;
   setActive: (id: string) => void;
+  /**
+   * Despliega/selecciona una partida (o la colapsa/deselecciona si ya lo estaba).
+   * Single-open: abrir una cierra la anterior. Es el gesto de "click en zona
+   * vacía de la fila" del presupuesto.
+   */
+  togglePartida: (id: string) => void;
   /**
    * Despliega/colapsa un contenedor (capítulo o sub) en el árbol del sidebar
    * (estado de UI). `force` fija el estado (true = desplegar) en vez de
@@ -387,6 +406,7 @@ export interface ObraState extends ObraData {
     target: { chId: string; subId: string | null } | null,
     contra: boolean,
     resolution?: Resolution,
+    provenance?: 'base' | 'clip',
   ) => void;
   /**
    * Punto de entrada de copia con PREFLIGHT de colisión (T-1, D2). Detecta
@@ -399,6 +419,7 @@ export interface ObraState extends ObraData {
     items: RefCopyItem[],
     target: { chId: string; subId: string | null } | null,
     contra: boolean,
+    provenance?: 'base' | 'clip',
   ) => void;
   /** Ejecuta la copia pendiente con la resolución elegida y limpia `pendingCopy`. */
   resolveCopyRefPartidas: (resolution: Resolution) => void;
@@ -602,6 +623,7 @@ function seedUi(certs: Cert[]) {
     refWidth: 400,
     refDrag: null as RefDrag | null,
     pendingCopy: null as PendingCopy | null,
+    openPartidaId: null as string | null,
   };
 }
 
@@ -620,11 +642,18 @@ export const useObraStore = create<ObraState>()(
       setView: (v) =>
         set((s) => {
           s.view = v;
+          s.openPartidaId = null; // la selección es contextual a lo que se mira
         }),
 
       setActive: (id) =>
         set((s) => {
           s.active = id;
+          s.openPartidaId = null; // cambiar de capítulo deselecciona la partida
+        }),
+
+      togglePartida: (id) =>
+        set((s) => {
+          s.openPartidaId = s.openPartidaId === id ? null : id;
         }),
 
       toggleExpanded: (chId, force) =>
@@ -815,19 +844,21 @@ export const useObraStore = create<ObraState>()(
           s.refOpen = false;
         }),
 
-      copyRefPartidas: (items, target, contra, resolution) =>
+      copyRefPartidas: (items, target, contra, resolution, provenance = 'base') =>
         set((s) => {
-          applyCopy(s, items, target, contra, resolution);
+          applyCopy(s, items, target, contra, resolution, provenance);
         }),
 
-      requestCopyRefPartidas: (items, target, contra) =>
+      requestCopyRefPartidas: (items, target, contra, provenance = 'base') =>
         set((s) => {
           if (!items.length) return;
           const collisions = detectCollisions(items, s.recursos);
           if (collisions.length === 0) {
-            applyCopy(s, items, target, contra); // sin colisión: copia directa
+            applyCopy(s, items, target, contra, undefined, provenance); // sin colisión: copia directa
           } else {
-            s.pendingCopy = { items, target, contra, collisions }; // pregunta a la UI
+            // Guarda la procedencia: tras resolver la colisión, la copia debe
+            // seguir respetando BASE (Referencia) vs limpia (portapapeles).
+            s.pendingCopy = { items, target, contra, collisions, provenance };
           }
         }),
 
@@ -835,7 +866,7 @@ export const useObraStore = create<ObraState>()(
         set((s) => {
           const pc = s.pendingCopy;
           if (!pc) return;
-          applyCopy(s, pc.items, pc.target, pc.contra, resolution);
+          applyCopy(s, pc.items, pc.target, pc.contra, resolution, pc.provenance);
           s.pendingCopy = null;
         }),
 
@@ -1071,6 +1102,7 @@ export const useObraStore = create<ObraState>()(
           const idx = list?.findIndex((p) => p.id === partidaId) ?? -1;
           if (!list || idx < 0) return;
           list.splice(idx, 1);
+          if (s.openPartidaId === partidaId) s.openPartidaId = null; // no dejar selección fantasma
           renumberInPlace(
             s.chapters.find((c) => c.id === chapterId),
             list,
@@ -1102,6 +1134,7 @@ export const useObraStore = create<ObraState>()(
             toList,
           );
           s.expanded[toChapterId] = true;
+          if (s.openPartidaId === partidaId) s.openPartidaId = null; // se movió: deselecciona
         }),
 
       setObraPath: (path, value) =>

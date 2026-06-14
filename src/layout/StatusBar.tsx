@@ -1,4 +1,6 @@
+import { Icon } from '../components';
 import { fmtCents, type Cents } from '../core/money';
+import { useClipboardStore } from '../store';
 import styles from './StatusBar.module.css';
 
 export interface Counts {
@@ -16,8 +18,11 @@ export interface StatusBarProps {
   onSandbox?: () => void;
 }
 
-/** Barra de estado inferior (24px, mono): conteos + PEM/PEC. */
+/** Barra de estado inferior (24px, mono): conteos + portapapeles + PEM/PEC. */
 export function StatusBar({ counts, pem, pec, onSandbox }: StatusBarProps) {
+  const clip = useClipboardStore((s) => s.items);
+  const clearClip = useClipboardStore((s) => s.clear);
+  const clipHead = clip?.[0]?.partida;
   return (
     <footer className={`mono no-print ${styles.bar}`}>
       <div className={styles.group}>
@@ -34,6 +39,24 @@ export function StatusBar({ counts, pem, pec, onSandbox }: StatusBarProps) {
         </span>
       </div>
       <div className={`${styles.group} ${styles.dim}`}>
+        {clipHead && (
+          <span className={styles.clip} title={`En el portapapeles: ${clipHead.code} · ${clipHead.title}`}>
+            <Icon name="copy" size={12} />
+            <span className={styles.clipName}>
+              {clipHead.code} {clipHead.title}
+            </span>
+            {clip && clip.length > 1 && <span className={styles.clipMore}>+{clip.length - 1}</span>}
+            <button
+              type="button"
+              className={styles.clipClear}
+              onClick={clearClip}
+              aria-label="Vaciar el portapapeles"
+              title="Vaciar el portapapeles"
+            >
+              <Icon name="x" size={12} />
+            </button>
+          </span>
+        )}
         {onSandbox && (
           <>
             <button type="button" className={styles.devLink} onClick={onSandbox}>

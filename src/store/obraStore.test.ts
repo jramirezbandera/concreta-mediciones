@@ -937,6 +937,41 @@ describe('loadObra (importar .bc3, F5.3)', () => {
   });
 });
 
+describe('selección/despliegue de partida (openPartidaId, single-open)', () => {
+  it('togglePartida abre/cierra; abrir otra cierra la anterior (single-open)', () => {
+    const [a, b] = allPartidas();
+    state().togglePartida(a!.id);
+    expect(state().openPartidaId).toBe(a!.id);
+    state().togglePartida(b!.id); // abrir otra
+    expect(state().openPartidaId).toBe(b!.id); // la anterior se cerró
+    state().togglePartida(b!.id); // volver a pulsar la abierta
+    expect(state().openPartidaId).toBeNull(); // se cierra/deselecciona
+  });
+
+  it('cambiar de vista o de capítulo activo deselecciona', () => {
+    const a = allPartidas()[0]!.id;
+    state().togglePartida(a);
+    state().setActive('02');
+    expect(state().openPartidaId).toBeNull();
+    state().togglePartida(a);
+    state().setView('resumen');
+    expect(state().openPartidaId).toBeNull();
+  });
+
+  it('borrar la partida seleccionada limpia la selección (no queda fantasma)', () => {
+    const p = state().partidas['01']![0]!;
+    state().togglePartida(p.id);
+    state().deletePartida('01', p.id);
+    expect(state().openPartidaId).toBeNull();
+  });
+
+  it('loadObra resetea la selección', () => {
+    state().togglePartida('p111');
+    state().loadObra(toSerializable(state()));
+    expect(state().openPartidaId).toBeNull();
+  });
+});
+
 describe('reset', () => {
   it('restaura datos y UI tras editar', () => {
     const s = state();

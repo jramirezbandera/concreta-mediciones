@@ -1,4 +1,4 @@
-import { useState, type MouseEvent } from 'react';
+import { type MouseEvent } from 'react';
 import { Badge, ContraChip, EditableNum, EditableText, Icon, UdSelect } from '../../components';
 import { fmtNum, toEur, type Cents } from '../../core/money';
 import type { Partida } from '../../core/types';
@@ -17,7 +17,9 @@ export function BaseChip({ source }: { source?: string }) {
   );
 }
 
-/** No propagar el click al `<tr>` (que despliega) desde las celdas editables. */
+/** No propagar el click al `<tr>` (que selecciona/despliega) desde un control
+ *  editable. Se envuelve SOLO el widget, no la celda entera, para que el espacio
+ *  vacío de la fila (incluida la banda de la descripción) siga seleccionando. */
 function stop(e: MouseEvent) {
   e.stopPropagation();
 }
@@ -25,8 +27,10 @@ function stop(e: MouseEvent) {
 /**
  * Fila de partida (F2.2): Nº·Código (con chevron), descripción (badge + título
  * editable + chips), Ud, Cantidad (derivada), Precio editable, Importe (+barra
- * de peso). Click en la fila despliega el panel de detalle (medición/descripción);
- * las celdas editables paran la propagación. Derivados vía `usePartidaRow` (T6).
+ * de peso). Click en la ZONA VACÍA de la fila la selecciona y despliega su panel
+ * de detalle (medición/descripción); los controles editables paran la
+ * propagación. La fila abierta ES la seleccionada (single-open, en el store).
+ * Derivados vía `usePartidaRow` (T6).
  */
 export function PartidaRow({
   p,
@@ -37,23 +41,25 @@ export function PartidaRow({
   chapterId: string;
   chapterTotal: Cents;
 }) {
-  const [expanded, setExpanded] = useState(false);
   const { cantidad, importe, pct, isOverride, descompUnit } = usePartidaRow(p, chapterTotal);
   const editPartidaField = useObraStore((s) => s.editPartidaField);
   const setPrecio = useObraStore((s) => s.setPrecio);
+  const open = useObraStore((s) => s.openPartidaId === p.id);
+  const togglePartida = useObraStore((s) => s.togglePartida);
 
   return (
     <>
       <tr
-        className={`tcol ${styles.row} ${expanded ? styles.expanded : ''}`}
-        onClick={() => setExpanded((v) => !v)}
+        className={`tcol ${styles.row} ${open ? `${styles.expanded} ${styles.selected}` : ''}`}
+        aria-selected={open}
+        onClick={() => togglePartida(p.id)}
       >
         <td className={styles.cNum}>
           <div className={styles.numFlex}>
             <Icon
-              name={expanded ? 'chevronDown' : 'chevron'}
+              name={open ? 'chevronDown' : 'chevron'}
               size={13}
-              className={`${styles.chevIcon} ${expanded ? styles.open : ''}`}
+              className={`${styles.chevIcon} ${open ? styles.open : ''}`}
             />
             <div className={styles.numInner}>
               <div className={`mono ${styles.pos}`}>{p.pos}</div>
@@ -61,33 +67,36 @@ export function PartidaRow({
             </div>
           </div>
         </td>
-        <td className={styles.cDesc} onClick={stop}>
+        <td className={styles.cDesc}>
           <div className={styles.descInner}>
             {p.mainType && <Badge type={p.mainType} />}
-            <EditableText
-              value={p.title}
-              ariaLabel="Título de la partida"
-              placeholder="Título de la partida…"
-              className={styles.title}
-              onCommit={(v) => editPartidaField(chapterId, p.id, 'title', v)}
-            />
+            <span onClick={stop}>
+              <EditableText
+                value={p.title}
+                ariaLabel="Título de la partida"
+                placeholder="Título de la partida…"
+                className={styles.title}
+                onCommit={(v) => editPartidaField(chapterId, p.id, 'title', v)}
+              />
+            </span>
             {p.fromBase && <BaseChip source={p.baseSource} />}
             {p.contradictorio && <ContraChip />}
           </div>
         </td>
-        <td className={`mono ${styles.cUd}`} onClick={stop}>
-          <UdSelect
-            value={p.ud}
-            ariaLabel="Unidad de medida de la partida"
-            onCommit={(v) => editPartidaField(chapterId, p.id, 'ud', v)}
-          />
+        <td className={`mono ${styles.cUd}`}>
+          <span onClick={stop}>
+            <UdSelect
+              value={p.ud}
+              ariaLabel="Unidad de medida de la partida"
+              onCommit={(v) => editPartidaField(chapterId, p.id, 'ud', v)}
+            />
+          </span>
         </td>
         <td className={`mono ${styles.cQty}`}>
           <span className={styles.qtyNum}>{fmtNum(cantidad)}</span>
         </td>
         <td
           className={styles.priceCellEdit}
-          onClick={stop}
           title={
             isOverride
               ? `Precio fijado a mano (no coincide con su descompuesto: ${fmtNum(descompUnit)} €)`
@@ -95,12 +104,14 @@ export function PartidaRow({
           }
         >
           {isOverride && <span className={styles.overrideDot} aria-hidden="true" />}
-          <EditableNum
-            value={p.precio}
-            dec={2}
-            ariaLabel="Precio unitario"
-            onCommit={(v) => setPrecio(chapterId, p.id, v)}
-          />
+          <span onClick={stop}>
+            <EditableNum
+              value={p.precio}
+              dec={2}
+              ariaLabel="Precio unitario"
+              onCommit={(v) => setPrecio(chapterId, p.id, v)}
+            />
+          </span>
         </td>
         <td className={styles.cImporte}>
           <div className={`mono ${styles.importeNum}`}>{fmtNum(toEur(importe))}</div>
@@ -112,7 +123,7 @@ export function PartidaRow({
           <PartidaMenu p={p} chapterId={chapterId} />
         </td>
       </tr>
-      {expanded && (
+      {open && (
         <tr>
           <td colSpan={7} className={styles.detailCell}>
             <DetailPanel p={p} chapterId={chapterId} />
