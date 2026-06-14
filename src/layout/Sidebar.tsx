@@ -3,12 +3,14 @@ import { Bar, EditableNum, Icon, InlineCreate, IvaSelect, Modal } from '../compo
 import { fmtCents, fmtNum, parseEsNumber, toCents, toEur, type Cents } from '../core/money';
 import { coefKParaObjetivo, pem as pemCore } from '../core/totales';
 import {
+  ancestorIds,
   emptyContainers,
   findNode,
   flattenContainers,
   subtreeIds,
   type FlatContainer,
 } from '../core/tree';
+import { BuscarPartidas } from '../features/presupuesto/BuscarPartidas';
 import type { Chapter, SubChapter } from '../core/types';
 import {
   ALL,
@@ -643,15 +645,9 @@ export function Sidebar({ drawer = false, onAfterSelect }: SidebarProps) {
   // Con subs colapsables hay que abrir la CADENA entera de ancestros (y el
   // propio padre, para que el hijo recién creado quede a la vista).
   const onAddSub = (chId: string, parentId: string = chId) => {
-    toggleExpanded(chId, true);
-    if (parentId !== chId) {
-      const ch = chapters.find((c) => c.id === chId);
-      if (ch) {
-        const up = new Map(flattenContainers(ch).map((f) => [f.sub.id, f.parentId]));
-        for (let cur: string | undefined = parentId; cur && cur !== chId; cur = up.get(cur))
-          toggleExpanded(cur, true);
-      }
-    }
+    // Abrir la cadena de ancestros (capítulo → … → padre) para que el hijo
+    // recién creado quede a la vista. Mismo walk que `revealPartida`, vía helper.
+    for (const id of ancestorIds(chapters, parentId)) toggleExpanded(id, true);
     setCreatingSubFor(parentId);
   };
   const onDeleteChapter = (id: string) => {
@@ -674,6 +670,8 @@ export function Sidebar({ drawer = false, onAfterSelect }: SidebarProps) {
       className={`${styles.sidebar} ${drawer ? styles.drawer : ''}`}
       aria-label="Capítulos de la obra"
     >
+      <BuscarPartidas onAfterSelect={onAfterSelect} />
+
       <div className={styles.allWrap}>
         <button
           type="button"

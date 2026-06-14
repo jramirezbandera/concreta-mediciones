@@ -89,6 +89,32 @@ export function findChapterIdForContainer(chapters: Chapter[], id: string): stri
 }
 
 /**
+ * Cadena de ancestros de un contenedor: `[chapterId, …ancestros, containerId]`,
+ * o `[]` si el id no existe. El capítulo es SIEMPRE el primer elemento. La usan
+ * `revealPartida` (store) para expandir el árbol hasta dejar la partida a la
+ * vista, y `Sidebar.onAddSub` (que repetía este walk en una closure). Guard de
+ * visitados: un árbol cíclico (dato corrupto) corta en vez de colgar.
+ */
+export function ancestorIds(chapters: Chapter[], containerId: string): string[] {
+  const hit = findNode(chapters, containerId);
+  if (!hit) return [];
+  if (hit.depth === 0) return [hit.chapter.id]; // es el propio capítulo
+  const parentOf = new Map(flattenContainers(hit.chapter).map((f) => [f.sub.id, f.parentId]));
+  const chain: string[] = [];
+  const seen = new Set<string>();
+  for (
+    let cur: string | undefined = containerId;
+    cur && cur !== hit.chapter.id && !seen.has(cur);
+    cur = parentOf.get(cur)
+  ) {
+    seen.add(cur);
+    chain.push(cur);
+  }
+  chain.push(hit.chapter.id);
+  return chain.reverse();
+}
+
+/**
  * Índice partidas-por-contenedor en UNA pasada. Las directas del capítulo y
  * las HUÉRFANAS (con `sub` que no existe en el capítulo) van bajo `null`,
  * como el grupo sin subcabecera de `groupBySub`.

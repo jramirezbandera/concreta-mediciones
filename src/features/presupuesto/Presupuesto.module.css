@@ -1307,3 +1307,60 @@
 .jOverrideCard {
   border-radius: 9px;
 }
+
+/* ---- miga de ubicación en cabecera (sub aislado por el buscador) -------- */
+.chCrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 7px;
+  font-size: 11.5px;
+  color: var(--text-disabled);
+}
+.chCrumbSep {
+  color: var(--text-disabled);
+}
+.chCrumbLink {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 11.5px;
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+.chCrumbLink:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.chCrumbCur {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.chCrumb .mono {
+  font-size: 10.5px;
+}
+
+/* ---- pulso "aquí está" (buscador → revealPartida) ----------------------- */
+@keyframes partidaPulse {
+  0%,
+  22% {
+    background: color-mix(in srgb, var(--accent) 26%, transparent);
+  }
+  100% {
+    background: transparent;
+  }
+}
+.row.justRevealed,
+.pCard.justRevealed {
+  animation: partidaPulse 1.3s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .row.justRevealed,
+  .pCard.justRevealed {
+    animation: none;
+    background: var(--accent-soft);
+  }
+}

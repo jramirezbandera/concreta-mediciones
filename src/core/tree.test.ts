@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Chapter, Partida, SubChapter } from './types';
 import {
+  ancestorIds,
   buildChapterTree,
   emptyContainers,
   findChapterIdForContainer,
@@ -75,6 +76,26 @@ describe('flattenContainers / findNode', () => {
     const flat = flattenContainers(ch);
     expect(flat.map((f) => f.sub.id)).toEqual(['a', 'b']);
     expect(buildChapterTree(ch, []).count).toBe(0);
+  });
+});
+
+describe('ancestorIds', () => {
+  const chapters = [deepChapter()];
+
+  it('cadena capítulo→…→sub para un sub profundo', () => {
+    expect(ancestorIds(chapters, '01.01.02')).toEqual(['01', '01.01', '01.01.02']);
+  });
+
+  it('sub de primer nivel → [capítulo, sub]', () => {
+    expect(ancestorIds(chapters, '01.02')).toEqual(['01', '01.02']);
+  });
+
+  it('el propio capítulo → [capítulo]', () => {
+    expect(ancestorIds(chapters, '01')).toEqual(['01']);
+  });
+
+  it('id inexistente → []', () => {
+    expect(ancestorIds(chapters, 'nope')).toEqual([]);
   });
 });
 

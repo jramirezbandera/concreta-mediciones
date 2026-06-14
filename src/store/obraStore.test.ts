@@ -972,6 +972,54 @@ describe('selección/despliegue de partida (openPartidaId, single-open)', () => 
   });
 });
 
+describe('revealPartida (buscador del presupuesto)', () => {
+  it('partida en sub: marca el sub, expande ancestros, abre detalle y deja vista presupuesto', () => {
+    state().setView('resumen'); // partir de otra vista
+    state().revealPartida('p111', '01', '01.01');
+    const r = state();
+    expect(r.active).toBe('01.01');
+    expect(r.expanded['01']).toBe(true);
+    expect(r.expanded['01.01']).toBe(true);
+    expect(r.view).toBe('presupuesto');
+    // NO queda en null: revealPartida no delega en setActive/setView (que lo borran).
+    expect(r.openPartidaId).toBe('p111');
+  });
+
+  it('partida directa de capítulo: active = capítulo', () => {
+    state().revealPartida('p211', '02', null);
+    const r = state();
+    expect(r.active).toBe('02');
+    expect(r.openPartidaId).toBe('p211');
+  });
+
+  it('sub huérfano → cae al capítulo (no a un id desconocido)', () => {
+    state().revealPartida('p211', '02', 'sub-fantasma');
+    expect(state().active).toBe('02');
+  });
+
+  it('revelar otra partida cierra la anterior', () => {
+    state().revealPartida('p111', '01', '01.01');
+    state().revealPartida('p121', '01', '01.02');
+    expect(state().openPartidaId).toBe('p121');
+    expect(state().active).toBe('01.02');
+  });
+
+  it('revealNonce incrementa en cada salto, incluso re-revelando la misma', () => {
+    const n0 = state().revealNonce;
+    state().revealPartida('p111', '01', '01.01');
+    const n1 = state().revealNonce;
+    expect(n1).toBe(n0 + 1);
+    state().revealPartida('p111', '01', '01.01');
+    expect(state().revealNonce).toBe(n1 + 1);
+  });
+
+  it('capítulo inexistente → no-op seguro', () => {
+    const before = state().active;
+    state().revealPartida('pX', 'no-existe', null);
+    expect(state().active).toBe(before);
+  });
+});
+
 describe('reset', () => {
   it('restaura datos y UI tras editar', () => {
     const s = state();

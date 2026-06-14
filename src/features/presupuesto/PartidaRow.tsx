@@ -2,6 +2,7 @@ import { type MouseEvent } from 'react';
 import { Badge, ContraChip, EditableNum, EditableText, Icon, UdSelect } from '../../components';
 import { fmtNum, toEur, type Cents } from '../../core/money';
 import type { Partida } from '../../core/types';
+import { useJustRevealed } from '../../hooks/useJustRevealed';
 import { usePartidaRow } from '../../hooks/usePartidaRow';
 import { useObraStore } from '../../store';
 import { DetailPanel } from './DetailPanel';
@@ -46,11 +47,13 @@ export function PartidaRow({
   const setPrecio = useObraStore((s) => s.setPrecio);
   const open = useObraStore((s) => s.openPartidaId === p.id);
   const togglePartida = useObraStore((s) => s.togglePartida);
+  const justRevealed = useJustRevealed(p.id);
 
   return (
     <>
       <tr
-        className={`tcol ${styles.row} ${open ? `${styles.expanded} ${styles.selected}` : ''}`}
+        id={`partida-${p.id}`}
+        className={`tcol ${styles.row} ${open ? `${styles.expanded} ${styles.selected}` : ''} ${justRevealed ? styles.justRevealed : ''}`}
         aria-selected={open}
         onClick={() => togglePartida(p.id)}
       >

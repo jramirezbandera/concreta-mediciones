@@ -2,6 +2,7 @@ import { type MouseEvent } from 'react';
 import { Badge, ContraChip, EditableNum, EditableText, Icon, UdSelect } from '../../components';
 import { fmtNum, toEur, type Cents } from '../../core/money';
 import type { Partida } from '../../core/types';
+import { useJustRevealed } from '../../hooks/useJustRevealed';
 import { usePartidaRow } from '../../hooks/usePartidaRow';
 import { useObraStore } from '../../store';
 import { DetailPanel } from './DetailPanel';
@@ -32,9 +33,14 @@ export function PartidaCard({
   const setPrecio = useObraStore((s) => s.setPrecio);
   const open = useObraStore((s) => s.openPartidaId === p.id);
   const togglePartida = useObraStore((s) => s.togglePartida);
+  const justRevealed = useJustRevealed(p.id);
 
   return (
-    <div className={`${styles.pCard} ${open ? `${styles.open} ${styles.selected}` : ''}`} aria-selected={open}>
+    <div
+      id={`partida-${p.id}`}
+      className={`${styles.pCard} ${open ? `${styles.open} ${styles.selected}` : ''} ${justRevealed ? styles.justRevealed : ''}`}
+      aria-selected={open}
+    >
       <div className={styles.pCardHead} onClick={() => togglePartida(p.id)}>
         <div className={styles.pCardTop}>
           <Icon

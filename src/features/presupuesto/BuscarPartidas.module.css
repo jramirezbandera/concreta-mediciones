@@ -1,0 +1,126 @@
+/* ===========================================================================
+   BuscarPartidas — buscador-saltador de la obra activa (T-20).
+   Estilos levantados del buscador de Referencia (`.search`/`.searchInput`) y de
+   sus filas de opción (`.srcOpt`) para que ambos buscadores se vean idénticos.
+   El dropdown vive en un PORTAL (document.body) → `position: fixed` con coords
+   de viewport (las que da getBoundingClientRect).
+   =========================================================================== */
+.wrap {
+  position: relative;
+  padding: 12px 10px 10px;
+  border-bottom: 1px solid var(--border-main);
+}
+
+/* ---- caja de búsqueda (igual que Referencia .search) -------------------- */
+.search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-main);
+}
+.search:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border-main));
+}
+.input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 13px;
+  color: var(--text-primary);
+  font-family: inherit;
+}
+.clear {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-disabled);
+  padding: 2px;
+  display: inline-flex;
+}
+.clear:hover {
+  color: var(--text-primary);
+}
+
+/* ---- dropdown de resultados (portal) ------------------------------------ */
+.menu {
+  position: fixed;
+  z-index: 300;
+  max-height: min(60vh, 380px);
+  overflow-y: auto;
+  padding: 6px;
+  border-radius: 11px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-main);
+  box-shadow: var(--shadow-float);
+}
+.opt {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  border: 0;
+  cursor: pointer;
+  background: transparent;
+  text-align: left;
+  font-family: inherit;
+}
+.opt:hover,
+.opt.active {
+  background: var(--accent-soft);
+}
+.optTop {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.optCode {
+  font-size: 11px;
+  color: var(--text-disabled);
+  flex-shrink: 0;
+}
+.opt.active .optCode {
+  color: var(--accent);
+}
+.optTitle {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.opt.active .optTitle {
+  color: var(--accent);
+}
+.optLoc {
+  font-size: 10.5px;
+  color: var(--text-disabled);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- estados ------------------------------------------------------------ */
+.empty {
+  padding: 12px 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+.more {
+  padding: 7px 9px 4px;
+  font-size: 10.5px;
+  color: var(--text-disabled);
+  text-align: center;
+}

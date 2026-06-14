@@ -1,9 +1,9 @@
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { EmptyAction, EmptyState, Icon } from '../../components';
 import type { Chapter, SubChapter } from '../../core/types';
 import { partidaImporte } from '../../core/medicion';
 import { sumCents } from '../../core/money';
-import { findNode, subtreeIds } from '../../core/tree';
+import { ancestorIds, findNode, subtreeIds } from '../../core/tree';
 import { useElementWidth } from '../../hooks/useElementWidth';
 import { ALL, selectChapterTotals, selectPem, useObraStore } from '../../store';
 import { AllChapters } from './AllChapters';
@@ -66,8 +66,35 @@ export function PresupuestoView({
   const chapterTotals = useObraStore(selectChapterTotals);
   const pem = useObraStore(selectPem);
   const addChapter = useObraStore((s) => s.addChapter);
+  const setActive = useObraStore((s) => s.setActive);
+  const revealNonce = useObraStore((s) => s.revealNonce);
 
   const coefK = useObraStore((s) => s.rates.coefK);
+
+  // Scroll a la partida revelada por el buscador. Atado a `revealNonce` (no a
+  // `openPartidaId`) para NO hacer scroll en cada apertura manual. Reintento
+  // acotado por frames: el nodo puede no estar montado aún tras renavegar
+  // (swap del subárbol focused, flip tabla↔tarjetas, cierre del drawer móvil).
+  const lastNonce = useRef(0);
+  useEffect(() => {
+    if (revealNonce === 0 || revealNonce === lastNonce.current) return;
+    lastNonce.current = revealNonce;
+    const openId = useObraStore.getState().openPartidaId;
+    if (!openId) return;
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    let raf = 0;
+    let tries = 0;
+    const attempt = () => {
+      const el = document.getElementById(`partida-${openId}`);
+      if (el) {
+        el.scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' });
+        return;
+      }
+      if (tries++ < 6) raf = requestAnimationFrame(attempt);
+    };
+    raf = requestAnimationFrame(attempt);
+    return () => cancelAnimationFrame(raf);
+  }, [revealNonce]);
 
   // Resuelve el id activo (capítulo o sub a CUALQUIER profundidad) a su capítulo.
   const activeChapter = useMemo(
@@ -86,6 +113,16 @@ export function PresupuestoView({
     const ps = (partidas[hit.chapter.id] ?? []).filter((p) => p.sub != null && ids.has(p.sub));
     return { sub, ps };
   }, [active, chapters, partidas]);
+
+  // Miga capítulo → … → sub cuando se aísla un sub: hace legible que la vista se
+  // ha estrechado (el salto del buscador) y da vía de vuelta (clic al capítulo).
+  const headerPath = useMemo(() => {
+    if (!focused) return undefined;
+    return ancestorIds(chapters, focused.sub.id).map((id) => {
+      const node = findNode(chapters, id)?.node;
+      return { id, code: node?.code ?? '', title: node?.title ?? '' };
+    });
+  }, [focused, chapters]);
 
   // fadeUp: entrada sutil al cambiar de vista (gated en reduced-motion global).
   const cls = `fadeUp ${styles.view}${compact ? ` ${styles.compact}` : ''}`;
@@ -130,6 +167,8 @@ export function PresupuestoView({
           importe={importe}
           count={shown.length}
           pem={pem}
+          path={headerPath}
+          onNavigate={setActive}
         />
         {shown.length > 0 ? (
           <Partidas

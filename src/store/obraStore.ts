@@ -21,7 +21,7 @@ import { estaCertToOrigen, prevDataOf, sumLineQty } from '../core/certificacion'
 import { rawUuid } from '../core/id';
 import { round2 } from '../core/money';
 import { renumberChapter } from '../core/numbering';
-import { findNode, flattenContainers, subtreeIds } from '../core/tree';
+import { ancestorIds, findNode, flattenContainers, subtreeIds } from '../core/tree';
 import type { ImportedObra } from '../core/bc3import';
 import {
   REF_DESC,
@@ -320,10 +320,27 @@ export interface ObraState extends ObraData {
    * fantasma sobre una fila invisible).
    */
   openPartidaId: string | null;
+  /**
+   * Contador que dispara el scroll + pulso "ir a la partida" del buscador del
+   * presupuesto (`revealPartida`). Lo incrementa cada salto (también al re-revelar
+   * la ya abierta) y lo escucha `PresupuestoView`; atarse a él (y no a
+   * `openPartidaId`) evita hacer scroll en cada apertura manual.
+   */
+  revealNonce: number;
 
   /* ---- acciones (F1) ---- */
   setView: (v: View) => void;
   setActive: (id: string) => void;
+  /**
+   * Navega a una partida concreta y la deja lista para editar (buscador del
+   * presupuesto, T-20): marca su subcapítulo —o capítulo si es directa— en el
+   * sidebar, aísla su subárbol, expande la cadena de ancestros, despliega su
+   * detalle y dispara el scroll/pulso. ATÓMICA: no delega en
+   * `setActive`/`setView`/`togglePartida` (que resetean/alternan `openPartidaId`),
+   * y fija `openPartidaId` el ÚLTIMO. `chapterId`/`subId` vienen del hit del
+   * índice (O(1), sin re-escaneo); un `subId` huérfano cae al capítulo.
+   */
+  revealPartida: (partidaId: string, chapterId: string, subId: string | null) => void;
   /**
    * Despliega/selecciona una partida (o la colapsa/deselecciona si ya lo estaba).
    * Single-open: abrir una cierra la anterior. Es el gesto de "click en zona
@@ -624,6 +641,7 @@ function seedUi(certs: Cert[]) {
     refDrag: null as RefDrag | null,
     pendingCopy: null as PendingCopy | null,
     openPartidaId: null as string | null,
+    revealNonce: 0,
   };
 }
 
@@ -654,6 +672,23 @@ export const useObraStore = create<ObraState>()(
       togglePartida: (id) =>
         set((s) => {
           s.openPartidaId = s.openPartidaId === id ? null : id;
+        }),
+
+      revealPartida: (partidaId, chapterId, subId) =>
+        set((s) => {
+          const ch = s.chapters.find((c) => c.id === chapterId);
+          if (!ch) return; // no-op seguro: capítulo inexistente
+          // `subId` válido sólo si existe en ESTE capítulo; si no (huérfano o
+          // cruzado), se trata como partida directa del capítulo (sin esto,
+          // `active` apuntaría a un id desconocido → la vista caería a chapters[0]).
+          const validSub =
+            subId && findNode(s.chapters, subId)?.chapter.id === chapterId ? subId : null;
+          s.active = validSub ?? chapterId;
+          // Expandir la cadena de ancestros para dejar el contenedor a la vista.
+          for (const id of ancestorIds(s.chapters, validSub ?? chapterId)) s.expanded[id] = true;
+          s.view = 'presupuesto';
+          s.openPartidaId = partidaId; // ÚLTIMO: ningún reset previo lo borra
+          s.revealNonce += 1; // dispara scroll/pulso (también al re-revelar la abierta)
         }),
 
       toggleExpanded: (chId, force) =>
