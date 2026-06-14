@@ -44,12 +44,12 @@ export function ConflictModal() {
           <div>
             <div className={styles.title}>
               {collisions.length === 1
-                ? '1 recurso ya existe con otro precio'
-                : `${collisions.length} recursos ya existen con otro precio`}
+                ? '1 recurso ya existe con otro precio o unidad'
+                : `${collisions.length} recursos ya existen con otro precio o unidad`}
             </div>
             <div className={styles.sub}>
-              Estos códigos ya están en tu banco a un precio o descripción distintos. Elige qué
-              hacer con cada uno: <strong>fusionar</strong> usa el precio de tu presupuesto;{' '}
+              Estos códigos ya están en tu banco a un precio o unidad distintos. Elige qué hacer
+              con cada uno: <strong>fusionar</strong> usa el de tu presupuesto;{' '}
               <strong>bifurcar</strong> crea un código nuevo y conserva el de la obra de origen.
             </div>
           </div>

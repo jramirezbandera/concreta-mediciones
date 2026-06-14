@@ -18,7 +18,7 @@ import {
   type ObraData,
   type ObraState,
 } from '../store';
-import { OBRA_KEY_PREFIX, clearObra, flush, loadObraEnvelope, loadRaw, obraKey } from './persist';
+import { OBRA_KEY, OBRA_KEY_PREFIX, clearObra, flush, loadObraEnvelope, loadRaw, obraKey } from './persist';
 import {
   createObra,
   deleteObra as registryDeleteObra,
@@ -244,69 +244,83 @@ async function newObraImpl(name?: string): Promise<string> {
 }
 
 /**
- * Borra una obra. Si era la activa, descarta sus ediciones pendientes y carga la
- * siguiente. No se puede borrar la ÚLTIMA: se reemplaza por una obra en blanco
- * (siempre queda ≥1 obra). Borrar una NO activa conserva intactas (y sin perder
- * el autosave) las ediciones de la obra en pantalla.
+ * Tras quedarse SIN obra activa (borrado/descarte): activa la PRIMERA obra de
+ * `ids` que cargue (sella la activa + arma autosave). Si quedan obras pero
+ * NINGUNA carga, marca recuperación con la primera corrupta (el banner reaparece;
+ * descartar de nuevo procesa la siguiente). Si no queda ninguna, crea una obra en
+ * blanco (invariante "siempre ≥1 obra"). Compartida por borrar-la-activa y
+ * descartar-recuperación.
+ */
+async function activateFirstLoadable(ids: string[]): Promise<void> {
+  let firstCorrupt: { raw: unknown; key: string } | null = null;
+  for (const m of ids) {
+    if (await loadObraIntoStore(m)) {
+      useSessionStore.getState().setActiveId(m);
+      await persistActiveId(m);
+      armAutosave();
+      return;
+    }
+    if (!firstCorrupt) firstCorrupt = { raw: await loadRaw(obraKey(m)), key: obraKey(m) };
+  }
+  if (firstCorrupt) {
+    // Quedan obras pero todas corruptas: recuperación (no armar; no activar fantasma).
+    useSessionStore.getState().setActiveId(null);
+    usePersistStore.getState().setRecovery(firstCorrupt.raw, firstCorrupt.key);
+    return;
+  }
+  // No queda ninguna obra → una en blanco.
+  const data = blankObraData();
+  const newId = await createObra(data);
+  loadDataIntoStore(data);
+  useSessionStore.getState().setActiveId(newId);
+  const idx = await persistActiveId(newId);
+  useSessionStore.getState().setObras(idx.obras);
+  armAutosave();
+}
+
+/**
+ * Borra una obra. Si era la activa, descarta sus ediciones pendientes y activa la
+ * siguiente que cargue (o una en blanco si no queda ninguna — invariante ≥1).
+ * Borrar una NO activa conserva intactas (sin perder el autosave) las ediciones
+ * de la obra en pantalla.
  */
 export function deleteObraById(id: string): Promise<void> {
   return serializeOp(() => deleteObraByIdImpl(id));
 }
 async function deleteObraByIdImpl(id: string): Promise<void> {
   const wasActive = id === activeId();
-  const onlyOne = useSessionStore.getState().obras.length <= 1;
-
-  if (onlyOne) {
-    // Reemplazar la última por una en blanco SIN re-guardar la que se borra.
-    cancelPending();
-    const data = blankObraData();
-    await registryDeleteObra(id);
-    const newId = await createObra(data);
-    loadDataIntoStore(data);
-    useSessionStore.getState().setActiveId(newId);
-    const idx = await persistActiveId(newId);
-    useSessionStore.getState().setObras(idx.obras);
-    return;
-  }
-
   if (wasActive) cancelPending(); // descarta ediciones de la obra que se borra
-  const idx = await registryDeleteObra(id); // borra blob+entrada; avanza activeId si era la activa
+  const idx = await registryDeleteObra(id); // borra blob+entrada; avanza activeId si procede
   useSessionStore.getState().setObras(idx.obras);
   if (!wasActive) return;
-
-  // Borramos la activa: carga la nueva activa; si está corrupta, cae a otra obra
-  // que cargue; si NINGUNA carga, marca recuperación (no dejar una activa fantasma).
-  const candidates = [idx.activeId, ...idx.obras.map((m) => m.id)].filter(
-    (x): x is string => x != null,
-  );
-  for (const cand of candidates) {
-    if (await loadObraIntoStore(cand)) {
-      useSessionStore.getState().setActiveId(cand);
-      if (cand !== idx.activeId) await persistActiveId(cand);
-      return;
-    }
-  }
-  if (idx.activeId) {
-    usePersistStore
-      .getState()
-      .setRecovery(await loadRaw(obraKey(idx.activeId)), obraKey(idx.activeId));
-  }
+  // `idx.obras` excluye la borrada y su primer elemento es la nueva activeId
+  // (registry la promovió) → sin duplicar como hacía la lista anterior.
+  await activateFirstLoadable(idx.obras.map((m) => m.id));
 }
 
 /**
- * Descarta una obra en recuperación (banner de datos dañados). Para una obra del
- * registro REUSA `deleteObraById` (borra blob + entrada del índice, carga la
- * siguiente o crea una en blanco si era la única) → no deja una obra fantasma en
- * el selector. Para la clave legacy solo borra el blob. Arma el autosave (la
- * hidratación no lo armó en la rama de recuperación).
+ * Descarta una obra en recuperación (banner de datos dañados). Borra esa obra del
+ * registro y activa la siguiente que cargue (o una en blanco). Si quedaban VARIAS
+ * obras corruptas, `activateFirstLoadable` vuelve a poner en recuperación la
+ * siguiente → descartar de nuevo la procesa (no deja fantasmas). Para la clave
+ * legacy (`concreta.obra.v1`, sin entrada en el registro) solo borra el blob.
  */
-export async function discardRecovery(key: string): Promise<void> {
-  if (key.startsWith(OBRA_KEY_PREFIX)) {
-    await deleteObraById(key.slice(OBRA_KEY_PREFIX.length));
+export function discardRecovery(key: string): Promise<void> {
+  return serializeOp(() => discardRecoveryImpl(key));
+}
+async function discardRecoveryImpl(key: string): Promise<void> {
+  // `discardRecovery` es dueño del banner: lo cierra aquí; si quedan obras
+  // corruptas, `activateFirstLoadable` lo vuelve a abrir para la siguiente.
+  usePersistStore.getState().setRecovery(null);
+  // OBRA_KEY también empieza por OBRA_KEY_PREFIX → excluirla explícitamente.
+  if (key.startsWith(OBRA_KEY_PREFIX) && key !== OBRA_KEY) {
+    const idx = await registryDeleteObra(key.slice(OBRA_KEY_PREFIX.length));
+    useSessionStore.getState().setObras(idx.obras);
+    await activateFirstLoadable(idx.obras.map((m) => m.id));
   } else {
-    await clearObra(key); // legacy (concreta.obra.v1)
+    await clearObra(key); // legacy: solo blob (no hay entrada de registro)
+    armAutosave();
   }
-  armAutosave();
 }
 
 /** Reset de testing: desuscribe, olvida armado/debounce/activa/supresión. */

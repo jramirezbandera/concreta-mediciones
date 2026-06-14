@@ -56,7 +56,6 @@ function SaveChip() {
 function RecoveryBanner() {
   const recovery = usePersistStore((s) => s.recovery);
   const recoveryKey = usePersistStore((s) => s.recoveryKey);
-  const setRecovery = usePersistStore((s) => s.setRecovery);
   if (recovery == null) return null;
   const key = recoveryKey ?? OBRA_KEY;
   return (
@@ -72,10 +71,10 @@ function RecoveryBanner() {
       <button
         type="button"
         className={`${styles.bannerBtn} ${styles.danger}`}
-        onClick={async () => {
-          // Borra la obra dañada del registro (no deja fantasma) y arma el autosave.
-          await discardRecovery(key);
-          setRecovery(null);
+        onClick={() => {
+          // discardRecovery es dueño del banner: borra la obra dañada del registro,
+          // activa otra (o una en blanco) y reabre el banner si quedan más corruptas.
+          void discardRecovery(key);
         }}
       >
         Descartar y empezar

@@ -111,9 +111,7 @@ export function saveObra(key: string, data: ObraData): Promise<void> {
   const run = chain.then(async () => {
     // Drena TODO lo pendiente en este carril (orden de inserción del Map).
     while (pending.size) {
-      const next = pending.entries().next().value as [string, ObraData];
-      const [k, d] = next;
-      pending.delete(k);
+      const [k, d] = pending.entries().next().value as [string, ObraData];
       const env: ObraEnvelope = {
         schemaVersion: d.schemaVersion,
         savedAt: new Date().toISOString(),
@@ -121,11 +119,16 @@ export function saveObra(key: string, data: ObraData): Promise<void> {
         data: d,
       };
       await set(k, env);
+      // Borra SOLO tras escribir OK: si `set` rechaza (cuota/abort) la entrada
+      // SIGUE en `pending` y el próximo drain la reintenta (no se pierde el dato).
+      // Si un save más nuevo de la misma obra llega entre medias, coalesce (gana
+      // el último, mismo key en el Map).
+      if (pending.get(k) === d) pending.delete(k);
     }
   });
-  // La cadena base NO se envenena si un `set` falla (cuota/abort): la siguiente
-  // escritura reintenta lo que quede pendiente. El llamador SÍ recibe el rechazo
-  // (autosave → estado 'error'); el dato perdido se re-encola en el próximo save.
+  // La cadena base NO se envenena si un `set` falla: queda resuelta para que la
+  // siguiente escritura corra y reintente lo pendiente. El llamador SÍ recibe el
+  // rechazo (autosave → estado 'error').
   chain = run.catch(() => undefined);
   return run;
 }

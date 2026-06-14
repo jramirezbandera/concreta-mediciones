@@ -143,4 +143,27 @@ describe('discardRecovery (#7)', () => {
     expect(list.map((m) => m.id)).not.toContain(bId); // no queda fantasma
     expect(list.length).toBe(1); // una obra en blanco la reemplaza
   });
+
+  it('con VARIAS obras corruptas las procesa una a una (sin fantasma)', async () => {
+    const aId = await createObra(blankObraData('A'));
+    const bId = await createObra(blankObraData('B'));
+    await setActiveId(aId);
+    await set(obraKey(aId), { schemaVersion: 1, data: { roto: true } });
+    await set(obraKey(bId), { schemaVersion: 1, data: { roto: true } });
+    await hydrate(); // ambas corruptas → recuperación (A primero, es la activa)
+    const key1 = usePersistStore.getState().recoveryKey!;
+    expect(key1).toBe(obraKey(aId));
+
+    await discardRecovery(key1); // borra A; B sigue corrupta → recuperación de B
+    expect((await listObras()).map((m) => m.id)).toEqual([bId]);
+    const key2 = usePersistStore.getState().recoveryKey;
+    expect(key2).toBe(obraKey(bId));
+
+    await discardRecovery(key2!); // borra B; no quedan → obra en blanco
+    expect(usePersistStore.getState().recovery).toBeNull();
+    const list = await listObras();
+    expect(list.length).toBe(1);
+    expect(list.map((m) => m.id)).not.toContain(aId);
+    expect(list.map((m) => m.id)).not.toContain(bId);
+  });
 });
