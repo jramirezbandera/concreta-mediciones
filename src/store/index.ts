@@ -24,4 +24,4 @@ export {
 } from './selectors';
 export type { Counts } from './selectors';
 export { useClipboardStore } from './clipboardStore';
-export { useToastStore } from './toastStore';
+export { useToastStore, type ToastAction } from './toastStore';

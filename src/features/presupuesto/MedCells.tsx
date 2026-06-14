@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { fmtNum, parseEsNumber } from '../../core/money';
+import { consumeArmNextEdit } from '../../hooks/editGridNav';
 import styles from './Presupuesto.module.css';
 
 type Align = 'left' | 'center' | 'right';
@@ -8,6 +9,12 @@ type Align = 'left' | 'center' | 'right';
  * Celda numérica de medición. Admite VACÍO (= factor 1, se pinta "·"), a
  * diferencia de `EditableNum`. Enter confirma, Esc cancela. El valor vacío se
  * propaga como `''` (la dimensión no anula la línea).
+ *
+ * Tab/Enter encadenan edición (hoja de cálculo) vía `useMedGridTab` colgado del
+ * contenedor: al recibir el foco con la apertura ARMADA, la celda en reposo
+ * entra en edición sola (`onFocus` → `consumeArmNextEdit`). El input hace
+ * `focus()+select()` (sin el `focus()` el Tab dejaba el input sin foco). Esc
+ * cancela y DEVUELVE el foco a la celda en reposo (no se pierde la posición).
  */
 export function MedNum({
   value,
@@ -25,8 +32,17 @@ export function MedNum({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const ref = useRef<HTMLInputElement>(null);
+  const displayRef = useRef<HTMLButtonElement>(null);
+  const wantRefocus = useRef(false);
+
   useEffect(() => {
-    if (editing) ref.current?.select();
+    if (editing) {
+      ref.current?.focus();
+      ref.current?.select();
+    } else if (wantRefocus.current) {
+      wantRefocus.current = false;
+      displayRef.current?.focus();
+    }
   }, [editing]);
 
   const isBlank = value === '' || value == null || Number.isNaN(Number(value));
@@ -45,6 +61,10 @@ export function MedNum({
     const n = parseEsNumber(s);
     if (n !== null) onCommit(n);
   }
+  function cancel() {
+    wantRefocus.current = true; // Esc: vuelve el foco a la celda en reposo
+    setEditing(false);
+  }
 
   if (editing) {
     return (
@@ -60,19 +80,23 @@ export function MedNum({
         onBlur={commit}
         onKeyDown={(e) => {
           if (e.key === 'Enter') commit();
-          if (e.key === 'Escape') setEditing(false);
+          if (e.key === 'Escape') cancel();
         }}
       />
     );
   }
   return (
     <button
+      ref={displayRef}
       type="button"
       aria-label={ariaLabel}
       data-editcell=""
       className={`mono tcol ${styles.medCellBtn} ${isBlank ? styles.blank : ''}`}
       style={{ textAlign: align }}
       onClick={start}
+      onFocus={(e) => {
+        if (consumeArmNextEdit(e.currentTarget)) start();
+      }}
     >
       {isBlank ? '·' : fmtNum(Number(value), dec)}
     </button>
@@ -92,8 +116,17 @@ export function MedComment({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const ref = useRef<HTMLInputElement>(null);
+  const displayRef = useRef<HTMLSpanElement>(null);
+  const wantRefocus = useRef(false);
+
   useEffect(() => {
-    if (editing) ref.current?.select();
+    if (editing) {
+      ref.current?.focus();
+      ref.current?.select();
+    } else if (wantRefocus.current) {
+      wantRefocus.current = false;
+      displayRef.current?.focus();
+    }
   }, [editing]);
 
   function start() {
@@ -103,6 +136,10 @@ export function MedComment({
   function commit() {
     setEditing(false);
     onCommit(draft);
+  }
+  function cancel() {
+    wantRefocus.current = true;
+    setEditing(false);
   }
 
   if (editing) {
@@ -118,19 +155,23 @@ export function MedComment({
         onBlur={commit}
         onKeyDown={(e) => {
           if (e.key === 'Enter') commit();
-          if (e.key === 'Escape') setEditing(false);
+          if (e.key === 'Escape') cancel();
         }}
       />
     );
   }
   return (
     <span
+      ref={displayRef}
       role="textbox"
       tabIndex={0}
       aria-label={ariaLabel}
       data-editcell=""
       className={`tcol ${styles.medComment} ${value ? '' : styles.empty}`}
       onClick={start}
+      onFocus={(e) => {
+        if (consumeArmNextEdit(e.currentTarget)) start();
+      }}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();

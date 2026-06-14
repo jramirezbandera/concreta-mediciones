@@ -11,9 +11,11 @@ import { Toast } from './layout/Toast';
 import { ResumenView } from './features/resumen';
 import { Sandbox } from './features/sandbox/Sandbox';
 import { PersistUI, flushPending } from './persist';
+import { useAppHotkeys } from './hooks/useAppHotkeys';
 import { useBreakpoint } from './hooks/useBreakpoint';
 import { useClipboardHotkeys } from './hooks/usePartidaClipboard';
 import { useTheme } from './hooks/useTheme';
+import { ShortcutsHelp } from './layout/ShortcutsHelp';
 import { BottomTabBar, Drawer, MobileSummaryBar, ObraSwitcher, Sidebar, StatusBar, TopBar, type View } from './layout';
 import { selectCounts, selectPec, selectPem, selectTotalConIva, useObraStore } from './store';
 import styles from './App.module.css';
@@ -30,6 +32,9 @@ export default function App() {
   const { theme, toggleTheme } = useTheme();
   const bp = useBreakpoint();
   useClipboardHotkeys(); // Ctrl/Cmd+C copiar partida · Ctrl/Cmd+V pegar (T8)
+  const [helpOpen, setHelpOpen] = useState(false);
+  const openHelp = useCallback(() => setHelpOpen(true), []);
+  useAppHotkeys({ onHelp: openHelp }); // Ctrl/Cmd+K buscar · Supr borrar · Esc · ?
 
   // La vista activa vive en el store (única fuente; el sandbox sigue local).
   const view = useObraStore((s) => s.view);
@@ -227,7 +232,7 @@ export default function App() {
           <BottomTabBar view={view} onView={changeView} />
         </>
       ) : (
-        <StatusBar counts={counts} pem={pem} pec={pec} onSandbox={goSandbox} />
+        <StatusBar counts={counts} pem={pem} pec={pec} onSandbox={goSandbox} onHelp={openHelp} />
       )}
 
       <ObraModal open={obraOpen} onClose={() => setObraOpen(false)} compact={bp.isMobile} />
@@ -248,6 +253,8 @@ export default function App() {
         onClose={() => setRefImportOpen(false)}
         compact={bp.isMobile}
       />
+
+      <ShortcutsHelp open={helpOpen} onClose={() => setHelpOpen(false)} compact={bp.isMobile} />
 
       <ConflictModal />
       <ClipboardToast />

@@ -4,6 +4,7 @@ import { lineParcial, medTotal } from '../../core/medicion';
 import { fmtNum } from '../../core/money';
 import type { Partida } from '../../core/types';
 import { useGridNav } from '../../hooks/useGridNav';
+import { useMedGridTab } from '../../hooks/useMedGridTab';
 import { useObraStore } from '../../store';
 import { decOf } from './format';
 import { MedCards } from './MedCards';
@@ -38,6 +39,8 @@ export function DetailPanel({
 
   const med = p.med ?? [];
   const total = medTotal(med);
+  // Tab/Enter encadenan edición y crean fila al final (hoja de cálculo).
+  const medTab = useMedGridTab(() => addMedLine(chapterId, p.id), med.length);
 
   return (
     <div className={`${styles.detail} ${compact ? styles.compact : ''}`}>
@@ -84,7 +87,15 @@ export function DetailPanel({
           {compact ? (
             <MedCards p={p} chapterId={chapterId} />
           ) : (
-            <div className={styles.medWrap} onKeyDown={gridNav}>
+            <div
+              ref={medTab.ref}
+              data-editgrid=""
+              className={styles.medWrap}
+              onKeyDown={(e) => {
+                gridNav(e);
+                medTab.onKeyDown(e);
+              }}
+            >
             <table className={styles.medTable}>
               <thead>
                 <tr>
@@ -99,15 +110,15 @@ export function DetailPanel({
               </thead>
               <tbody>
                 {med.map((l, i) => (
-                  <tr key={i} className="med-row">
-                    <td className={`${styles.medTd} ${styles.medTdComment}`}>
+                  <tr key={l.id} className="med-row" data-editrow="">
+                    <td className={`${styles.medTd} ${styles.medTdComment}`} data-editfield="" data-col="0">
                       <MedComment
                         value={l.comment}
                         ariaLabel="Comentario de la línea"
                         onCommit={(v) => editMedLine(chapterId, p.id, i, 'comment', v)}
                       />
                     </td>
-                    <td className={styles.medTd}>
+                    <td className={styles.medTd} data-editfield="" data-col="1">
                       <MedNum
                         value={l.uds}
                         dec={decOf(l.uds)}
@@ -115,21 +126,21 @@ export function DetailPanel({
                         onCommit={(v) => editMedLine(chapterId, p.id, i, 'uds', v)}
                       />
                     </td>
-                    <td className={styles.medTd}>
+                    <td className={styles.medTd} data-editfield="" data-col="2">
                       <MedNum
                         value={l.largo}
                         ariaLabel="Longitud"
                         onCommit={(v) => editMedLine(chapterId, p.id, i, 'largo', v)}
                       />
                     </td>
-                    <td className={styles.medTd}>
+                    <td className={styles.medTd} data-editfield="" data-col="3">
                       <MedNum
                         value={l.ancho}
                         ariaLabel="Anchura"
                         onCommit={(v) => editMedLine(chapterId, p.id, i, 'ancho', v)}
                       />
                     </td>
-                    <td className={styles.medTd}>
+                    <td className={styles.medTd} data-editfield="" data-col="4">
                       <MedNum
                         value={l.alto}
                         ariaLabel="Altura"
@@ -163,6 +174,7 @@ export function DetailPanel({
           <div className={`${styles.medFoot} ${compact ? styles.medFootCompact : ''}`}>
             <button
               type="button"
+              title="Añadir línea (Ctrl+Enter, o Tab/Enter al final de la última)"
               className={`tcol add-partida ${styles.medAddBtn}`}
               onClick={() => addMedLine(chapterId, p.id)}
             >

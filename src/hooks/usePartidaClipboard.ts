@@ -16,6 +16,7 @@ import { useClipboardStore } from '../store/clipboardStore';
 import { ALL, copyTargetOf, useObraStore } from '../store';
 import { partidaToRefCopyItem } from '../core/refdata';
 import type { Partida, PartidasMap } from '../core/types';
+import { hasBlockingOverlay, hasNativeSelection, isTextEditingTarget } from './hotkeyGuards';
 
 export interface PartidaClipboard {
   /** ¿Hay algo copiado? (reactivo: muestra/oculta los botones "Pegar aquí"). */
@@ -53,14 +54,6 @@ function findPartidaById(partidas: PartidasMap, id: string): Partida | undefined
   return undefined;
 }
 
-/** ¿El foco está en un control donde Ctrl+C/V es del navegador, no nuestro? */
-function inEditableField(): boolean {
-  const el = document.activeElement as HTMLElement | null;
-  if (!el) return false;
-  const tag = el.tagName;
-  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
-}
-
 /**
  * Atajos Ctrl/Cmd+C (copiar la partida seleccionada) y Ctrl/Cmd+V (pegar en el
  * capítulo/sub activo). Montar UNA vez (en App). Guardas robustas para no
@@ -75,15 +68,14 @@ export function useClipboardHotkeys(): void {
       if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return;
       const k = e.key.toLowerCase();
       if (k !== 'c' && k !== 'v') return;
-      if (inEditableField()) return;
-      if (document.querySelector('[role="dialog"]')) return; // modal abierto
+      if (isTextEditingTarget()) return;
+      if (hasBlockingOverlay()) return; // modal abierto
       const s = useObraStore.getState();
       if (s.view !== 'presupuesto') return;
 
       if (k === 'c') {
         // No pisar una selección de texto real del usuario.
-        const sel = window.getSelection?.();
-        if (sel && !sel.isCollapsed && sel.toString().trim().length > 0) return;
+        if (hasNativeSelection()) return;
         if (!s.openPartidaId) return;
         const p = findPartidaById(s.partidas, s.openPartidaId);
         if (!p) return;

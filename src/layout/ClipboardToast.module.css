@@ -25,6 +25,22 @@
   color: var(--accent);
   flex-shrink: 0;
 }
+/* Botón de acción (p.ej. «Deshacer»): el toast no captura clicks, este sí. */
+.toastAction {
+  pointer-events: auto;
+  margin-left: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 5px;
+}
+.toastAction:hover {
+  background: var(--accent-soft);
+}
 
 @media (prefers-reduced-motion: no-preference) {
   .toast {

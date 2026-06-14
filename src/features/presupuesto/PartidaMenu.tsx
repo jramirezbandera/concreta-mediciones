@@ -3,6 +3,7 @@ import { Icon } from '../../components';
 import { flattenContainers } from '../../core/tree';
 import type { Partida } from '../../core/types';
 import { usePartidaClipboard } from '../../hooks/usePartidaClipboard';
+import { deletePartidaWithUndo } from '../../hooks/usePartidaDelete';
 import { useObraStore } from '../../store';
 import styles from './Presupuesto.module.css';
 
@@ -10,7 +11,6 @@ import styles from './Presupuesto.module.css';
 export function PartidaMenu({ p, chapterId }: { p: Partida; chapterId: string }) {
   const chapters = useObraStore((s) => s.chapters);
   const movePartida = useObraStore((s) => s.movePartida);
-  const deletePartida = useObraStore((s) => s.deletePartida);
   const { copy } = usePartidaClipboard();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -92,9 +92,10 @@ export function PartidaMenu({ p, chapterId }: { p: Partida; chapterId: string })
           <div className={styles.menuDivider} />
           <button
             type="button"
+            title="Eliminar partida (Supr)"
             className={`tcol ${styles.menuDelete}`}
             onClick={() => {
-              deletePartida(chapterId, p.id);
+              deletePartidaWithUndo(chapterId, p.id);
               setOpen(false);
             }}
           >

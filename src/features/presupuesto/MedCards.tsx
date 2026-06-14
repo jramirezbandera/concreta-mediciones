@@ -3,17 +3,21 @@ import { Icon } from '../../components';
 import { lineParcial } from '../../core/medicion';
 import { fmtNum } from '../../core/money';
 import type { Partida } from '../../core/types';
+import { useMedGridTab } from '../../hooks/useMedGridTab';
 import { useObraStore } from '../../store';
 import { decOf } from './format';
 import { MedComment, MedNum } from './MedCells';
 import styles from './Presupuesto.module.css';
 
-/** Campo etiquetado (Uds/Longitud/…) para la medición en tarjeta. */
-function MedField({ label, children }: { label: string; children: ReactNode }) {
+/** Campo etiquetado (Uds/Longitud/…) para la medición en tarjeta. `col` marca la
+ *  columna para la navegación de teclado (Tab/Enter). */
+function MedField({ label, col, children }: { label: string; col: number; children: ReactNode }) {
   return (
     <div className={styles.medField}>
       <span className={`caps ${styles.medFieldLabel}`}>{label}</span>
-      <div className={styles.medFieldBox}>{children}</div>
+      <div className={styles.medFieldBox} data-editfield="" data-col={col}>
+        {children}
+      </div>
     </div>
   );
 }
@@ -22,7 +26,9 @@ function MedField({ label, children }: { label: string; children: ReactNode }) {
 export function MedCards({ p, chapterId }: { p: Partida; chapterId: string }) {
   const editMedLine = useObraStore((s) => s.editMedLine);
   const deleteMedLine = useObraStore((s) => s.deleteMedLine);
+  const addMedLine = useObraStore((s) => s.addMedLine);
   const med = p.med ?? [];
+  const medTab = useMedGridTab(() => addMedLine(chapterId, p.id), med.length);
 
   if (med.length === 0) {
     return (
@@ -33,11 +39,11 @@ export function MedCards({ p, chapterId }: { p: Partida; chapterId: string }) {
   }
 
   return (
-    <div className={styles.medCardList}>
+    <div ref={medTab.ref} data-editgrid="" className={styles.medCardList} onKeyDown={medTab.onKeyDown}>
       {med.map((l, i) => (
-        <div key={i} className={styles.medCard}>
+        <div key={l.id} className={styles.medCard} data-editrow="">
           <div className={styles.medCardTop}>
-            <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ flex: 1, minWidth: 0 }} data-editfield="" data-col="0">
               <MedComment
                 value={l.comment}
                 ariaLabel="Comentario de la línea"
@@ -54,7 +60,7 @@ export function MedCards({ p, chapterId }: { p: Partida; chapterId: string }) {
             </button>
           </div>
           <div className={styles.medGrid}>
-            <MedField label="Uds">
+            <MedField label="Uds" col={1}>
               <MedNum
                 value={l.uds}
                 dec={decOf(l.uds)}
@@ -63,7 +69,7 @@ export function MedCards({ p, chapterId }: { p: Partida; chapterId: string }) {
                 onCommit={(v) => editMedLine(chapterId, p.id, i, 'uds', v)}
               />
             </MedField>
-            <MedField label="Longitud">
+            <MedField label="Longitud" col={2}>
               <MedNum
                 value={l.largo}
                 align="center"
@@ -71,7 +77,7 @@ export function MedCards({ p, chapterId }: { p: Partida; chapterId: string }) {
                 onCommit={(v) => editMedLine(chapterId, p.id, i, 'largo', v)}
               />
             </MedField>
-            <MedField label="Anchura">
+            <MedField label="Anchura" col={3}>
               <MedNum
                 value={l.ancho}
                 align="center"
@@ -79,7 +85,7 @@ export function MedCards({ p, chapterId }: { p: Partida; chapterId: string }) {
                 onCommit={(v) => editMedLine(chapterId, p.id, i, 'ancho', v)}
               />
             </MedField>
-            <MedField label="Altura">
+            <MedField label="Altura" col={4}>
               <MedNum
                 value={l.alto}
                 align="center"

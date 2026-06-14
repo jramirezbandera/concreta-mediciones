@@ -36,6 +36,7 @@ export function BuscarPartidas({ onAfterSelect }: { onAfterSelect?: () => void }
   const chapters = useObraStore((s) => s.chapters);
   const partidas = useObraStore((s) => s.partidas);
   const revealPartida = useObraStore((s) => s.revealPartida);
+  const searchFocusNonce = useObraStore((s) => s.searchFocusNonce);
 
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
@@ -62,6 +63,15 @@ export function BuscarPartidas({ onAfterSelect }: { onAfterSelect?: () => void }
   useEffect(() => {
     setActiveIdx(0);
   }, [dq]);
+
+  // Foco al buscador desde el atajo Ctrl/⌘+K (ignora el valor inicial de montaje).
+  const lastFocusNonce = useRef(searchFocusNonce);
+  useEffect(() => {
+    if (searchFocusNonce === lastFocusNonce.current) return;
+    lastFocusNonce.current = searchFocusNonce;
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, [searchFocusNonce]);
 
   // Posicionar el portal bajo el input (y re-medir en resize/scroll).
   useLayoutEffect(() => {
@@ -208,7 +218,7 @@ export function BuscarPartidas({ onAfterSelect }: { onAfterSelect?: () => void }
             if (q.trim().length >= 2) setOpen(true);
           }}
           onKeyDown={onKeyDown}
-          placeholder="Buscar partida en la obra…"
+          placeholder="Buscar partida en la obra… (Ctrl K)"
           aria-label="Buscar partida en la obra"
           className={styles.input}
         />

@@ -327,6 +327,8 @@ export interface ObraState extends ObraData {
    * `openPartidaId`) evita hacer scroll en cada apertura manual.
    */
   revealNonce: number;
+  /** Contador que pide foco al buscador del presupuesto (atajo Ctrl/⌘+K). */
+  searchFocusNonce: number;
 
   /* ---- acciones (F1) ---- */
   setView: (v: View) => void;
@@ -521,6 +523,13 @@ export interface ObraState extends ObraData {
   addPartida: (chapterId: string, subId: string | null) => void;
   /** Elimina una partida y renumera su capítulo. */
   deletePartida: (chapterId: string, partidaId: string) => void;
+  /**
+   * Reinserta una partida (identidad intacta) en su posición para DESHACER un
+   * borrado (toast «deshacer»). Renumera el capítulo tras insertar.
+   */
+  restorePartida: (chapterId: string, partida: Partida, index: number) => void;
+  /** Pide foco al buscador (atajo Ctrl/⌘+K). Incrementa `searchFocusNonce`. */
+  focusSearch: () => void;
   /** Mueve una partida a otro capítulo/subcapítulo y renumera origen y destino. */
   movePartida: (fromChapterId: string, partidaId: string, toChapterId: string, toSubId: string | null) => void;
 
@@ -642,6 +651,7 @@ function seedUi(certs: Cert[]) {
     pendingCopy: null as PendingCopy | null,
     openPartidaId: null as string | null,
     revealNonce: 0,
+    searchFocusNonce: 0,
   };
 }
 
@@ -689,6 +699,11 @@ export const useObraStore = create<ObraState>()(
           s.view = 'presupuesto';
           s.openPartidaId = partidaId; // ÚLTIMO: ningún reset previo lo borra
           s.revealNonce += 1; // dispara scroll/pulso (también al re-revelar la abierta)
+        }),
+
+      focusSearch: () =>
+        set((s) => {
+          s.searchFocusNonce += 1;
         }),
 
       toggleExpanded: (chId, force) =>
@@ -1138,6 +1153,17 @@ export const useObraStore = create<ObraState>()(
           if (!list || idx < 0) return;
           list.splice(idx, 1);
           if (s.openPartidaId === partidaId) s.openPartidaId = null; // no dejar selección fantasma
+          renumberInPlace(
+            s.chapters.find((c) => c.id === chapterId),
+            list,
+          );
+        }),
+
+      restorePartida: (chapterId, partida, index) =>
+        set((s) => {
+          const list = (s.partidas[chapterId] ??= []);
+          const at = Math.max(0, Math.min(index, list.length));
+          list.splice(at, 0, partida);
           renumberInPlace(
             s.chapters.find((c) => c.id === chapterId),
             list,
