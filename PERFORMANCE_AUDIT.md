@@ -345,7 +345,17 @@ como **fuente externa** (Tier 2 de modelo de datos) elimina el techo, no lo parc
   (fallback `setTimeout`), `flushPending` cancela lo programado y persiste si hay `dirty`. El flush en
   `pagehide`/`visibilitychange` ya cubría el cierre. (`src/persist/sync.ts`)
 
+### Tier 2 ligero + Tier 3 — HECHO y verificado (577 tests, build OK)
+- **T2.2** — buscador del panel de referencia con `useDeferredValue` + haystack precomputado por
+  fuente + tope 100 con aviso. Ya no re-filtra la base en cada tecla. (`ReferenciaPanel.tsx`)
+- **T3** — code-splitting: `ImportarView`/`ReferenciaImportModal`/`Sandbox`/`PrintDoc` con `React.lazy`
+  + `Suspense`. El parser FIEBDC sale del bundle de entrada (verificado en build: el entry ya no
+  contiene `windows-1252`; el parser vive en un chunk lazy de 43 kB que carga solo al abrir Importar).
+  (`App.tsx`)
+
 ### Pendiente
 - **T0.2** — telemetría `performance.mark/measure` en las 4 acciones calientes + panel `#debug`.
-- **Tier 2/3/4** — buscador de referencia (T2.2), modelo de datos de base externa (CR-0), code-splitting
-  (T3), índice inverso de `editRecurso` (T4.1), virtualización condicional (T2.1).
+- **Tier 2 (modelo de datos)** — la base de referencia como **fuente externa** (CR-0): el mayor salto
+  estructural que queda; el spike ya lo justifica (banco de obra ~447 vs base ~26.504 recursos).
+- **Tier 4** — índice inverso de `editRecurso` (T4.1). **T2.1** — virtualización **condicional** (solo
+  si la telemetría la justifica tras lo anterior).
