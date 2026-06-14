@@ -54,16 +54,18 @@ function SourceSelect({
     document.addEventListener('mousedown', onDoc);
     return () => document.removeEventListener('mousedown', onDoc);
   }, []);
-  const cur = sources.find((s) => s.id === curId) ?? sources[0]!;
+  // Sin fuentes (arranque limpio: ni bases precargadas ni otras obras): la lista
+  // puede estar vacía, así que `cur` puede ser undefined → placeholder, sin crash.
+  const cur = sources.find((s) => s.id === curId) ?? sources[0];
   return (
     <div ref={ref} className={styles.srcWrap}>
       <button type="button" onClick={() => setOpen((o) => !o)} className={`tcol ${styles.srcBtn}`}>
         <span className={styles.srcIcon}>
-          <Icon name={cur.kind === 'base' ? 'layers' : 'doc'} size={15} />
+          <Icon name={cur?.kind === 'presupuesto' ? 'doc' : 'layers'} size={15} />
         </span>
         <span className={styles.srcText}>
-          <span className={styles.srcName}>{cur.name}</span>
-          <span className={styles.srcOrg}>{cur.org}</span>
+          <span className={styles.srcName}>{cur ? cur.name : 'Sin fuentes de referencia'}</span>
+          <span className={styles.srcOrg}>{cur ? cur.org : 'Importa una base o crea otra obra'}</span>
         </span>
         <Icon name="chevronDown" size={15} style={{ color: 'var(--text-disabled)', flexShrink: 0 }} />
       </button>
@@ -93,7 +95,7 @@ function SourceSelect({
               </button>
             );
           })}
-          <div className={styles.srcDivider} />
+          {sources.length > 0 && <div className={styles.srcDivider} />}
           <button
             type="button"
             onClick={() => {
@@ -408,6 +410,11 @@ export function ReferenciaPanel() {
         ) : error ? (
           <div className={styles.state}>
             <Icon name="alert" size={16} /> {error}
+          </div>
+        ) : !source ? (
+          <div className={styles.state}>
+            <Icon name="layers" size={16} /> No hay fuentes de referencia. Importa una base de
+            precios .bc3 o crea otra obra para copiar partidas.
           </div>
         ) : (
           chapterData.map(({ ch, ps }) => {

@@ -51,7 +51,12 @@ export interface RefDrag {
 
 const CI = (cantidad: number): Item => ({ code: '%CI', type: '%CI', desc: 'Costes indirectos 3%', ud: '%', cantidad, precio: 0 });
 
-export const REF_SOURCES: RefSource[] = [
+/**
+ * Bases de precios DEMO (BDT Andalucía, Reforma Goya, CYPE GP). Se conservan como
+ * fixtures de test y para poder re-habilitarlas trivialmente, pero NO se cargan en
+ * la app por defecto. Para volver a precargarlas: `export const REF_SOURCES = DEMO_REF_SOURCES`.
+ */
+export const DEMO_REF_SOURCES: RefSource[] = [
   {
     id: 'base-bdt',
     kind: 'base',
@@ -291,6 +296,14 @@ export const REF_SOURCES: RefSource[] = [
     },
   },
 ];
+
+/**
+ * Fuentes de referencia cargadas en la app (panel Referencia, F5). Arranca VACÍO:
+ * el usuario parte de cero y añade fuentes importando bases .bc3 o reutilizando sus
+ * obras guardadas (que se listan como fuentes "propias"). Las bases demo viven en
+ * `DEMO_REF_SOURCES` (solo tests / re-habilitación manual).
+ */
+export const REF_SOURCES: RefSource[] = [];
 
 /** Descripciones largas de partida, indexadas por código FIEBDC (lo que se
  *  despliega para decidir qué importar). Se copia a `Partida.desc` al importar. */

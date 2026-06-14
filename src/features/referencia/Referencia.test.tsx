@@ -1,5 +1,13 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+// La app ya no precarga bases (REF_SOURCES vacío); para ejercitar el panel,
+// reinyectamos las bases demo como fuentes estáticas en este spec.
+vi.mock('../../core/refdata', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../core/refdata')>();
+  return { ...actual, REF_SOURCES: actual.DEMO_REF_SOURCES };
+});
+
 import { useObraStore } from '../../store';
 import { ReferenciaPanel } from './ReferenciaPanel';
 

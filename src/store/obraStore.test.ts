@@ -9,7 +9,9 @@ import {
 import { partidaCantidad } from '../core/medicion';
 import { toEur } from '../core/money';
 import { descompUnit, precioCuadraDescompuesto, precioSegunModo } from '../core/banco';
-import { REF_SOURCES, type RefCopyItem } from '../core/refdata';
+// Bases demo: ya no se cargan en la app (REF_SOURCES vacío), pero siguen como
+// fixture para ejercitar la copia desde una fuente de referencia.
+import { DEMO_REF_SOURCES as REF_SOURCES, type RefCopyItem } from '../core/refdata';
 import { DEFAULT_RATES, PARTIDAS } from '../core/seed';
 import {
   ALL,

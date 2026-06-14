@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { REF_SOURCES, type RefCopyItem, type RefPartida } from '../core/refdata';
+// Bases demo: fixture para el drag&drop desde Referencia (REF_SOURCES vacío en app).
+import { DEMO_REF_SOURCES as REF_SOURCES, type RefCopyItem, type RefPartida } from '../core/refdata';
 import { useObraStore } from '../store';
 import { Sidebar } from './Sidebar';
 

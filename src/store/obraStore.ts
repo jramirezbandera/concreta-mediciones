@@ -608,7 +608,11 @@ function seedUi(certs: Cert[]) {
 export const useObraStore = create<ObraState>()(
   subscribeWithSelector(
   immer((set) => {
-    const data = seedObraData();
+    // Arranque limpio: la app parte de una obra nueva vacía (sin datos demo). En
+    // primera carga `hydrate` (sin obras en IDB) conserva este estado en memoria;
+    // la 1ª edición la fosiliza. `seedObraData()`/`reset()` siguen vivos como
+    // semilla de tests (los specs resiembran la obra demo en su beforeEach).
+    const data = blankObraData();
     return {
       ...data,
       ...seedUi(data.certs),
