@@ -1,11 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { Badge, Icon } from '../../components';
+import { MIN_QUERY } from '../../core/buscar';
 import { fmtNum, round2 } from '../../core/money';
 import { REF_DESC, REF_SOURCES, type RefCopyItem, type RefPartida, type RefSource } from '../../core/refdata';
 import { deleteObraById, useSessionStore } from '../../persist';
 import { selectCopyTarget, useObraStore } from '../../store';
 import { loadObraRefSource } from './obraSource';
 import styles from './Referencia.module.css';
+
+/** Tope de resultados de la búsqueda en una base (no montar miles de filas). */
+const REF_SEARCH_CAP = 100;
 
 /** Descriptor ligero de fuente para el selector (sin cargar la obra entera). */
 interface SourceDesc {
@@ -332,13 +336,49 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
   }, [activeObraId, obras]);
 
   const refKey = (p: RefPartida) => `${refSourceId}::${p.id}`;
-  const query = q.trim().toLowerCase();
-  const matchP = (p: RefPartida) => !query || `${p.title} ${p.code}`.toLowerCase().includes(query);
+
+  // Búsqueda diferida: teclear no bloquea por re-filtrar la base (CR-6). El índice
+  // `haystack` se precomputa UNA vez por fuente (no se reconstruyen strings por
+  // tecla) y los resultados se topan para no montar miles de filas.
+  const dq = useDeferredValue(q);
+  const query = dq.trim().toLowerCase();
+  const searching = query.length >= MIN_QUERY;
 
   const chapterData = useMemo(
     () => (source ? source.chapters.map((ch) => ({ ch, ps: source.partidas[ch.id] ?? [] })) : []),
     [source],
   );
+
+  // `${code} ${title}` por partida, en minúsculas, construido una sola vez por fuente.
+  const haystacks = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const { ps } of chapterData)
+      for (const p of ps) m.set(p.id, `${p.code} ${p.title}`.toLowerCase());
+    return m;
+  }, [chapterData]);
+
+  // Partidas que casan por capítulo (solo en búsqueda activa) con tope global.
+  const filtered = useMemo(() => {
+    const byCh: Record<string, RefPartida[]> = {};
+    if (!searching) return { byCh, truncated: false };
+    let count = 0;
+    let truncated = false;
+    for (const { ch, ps } of chapterData) {
+      const matched: RefPartida[] = [];
+      for (const p of ps) {
+        if (!(haystacks.get(p.id) ?? '').includes(query)) continue;
+        if (count >= REF_SEARCH_CAP) {
+          truncated = true;
+          break;
+        }
+        matched.push(p);
+        count += 1;
+      }
+      if (matched.length) byCh[ch.id] = matched;
+      if (truncated) break;
+    }
+    return { byCh, truncated };
+  }, [searching, query, chapterData, haystacks]);
 
   function toggleSel(p: RefPartida) {
     if (!source) return;
@@ -455,59 +495,68 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
             </button>
           </div>
         ) : (
-          chapterData.map(({ ch, ps }) => {
-            const filtered = ps.filter(matchP);
-            if (query && !filtered.length) return null;
-            const open = query ? true : !!expanded[ch.id];
-            return (
-              <div key={ch.id} className={styles.chap}>
-                <div
-                  draggable
-                  onDragStart={(e) => dragStartChapter(e, ps)}
-                  onDragEnd={endDrag}
-                  className={styles.chapRow}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setExpanded((e) => ({ ...e, [ch.id]: !e[ch.id] }))}
-                    className={`tcol ${styles.chapChev}`}
-                    aria-label={open ? `Colapsar ${ch.title}` : `Desplegar ${ch.title}`}
+          <>
+            {chapterData.map(({ ch, ps }) => {
+              const matched = filtered.byCh[ch.id];
+              if (searching && !matched) return null;
+              const rows = searching ? matched! : ps;
+              const open = searching ? true : !!expanded[ch.id];
+              return (
+                <div key={ch.id} className={styles.chap}>
+                  <div
+                    draggable
+                    onDragStart={(e) => dragStartChapter(e, ps)}
+                    onDragEnd={endDrag}
+                    className={styles.chapRow}
                   >
-                    <Icon name={open ? 'chevronDown' : 'chevron'} size={14} />
-                  </button>
-                  <span className={`mono ${styles.chapCode}`}>{ch.code}</span>
-                  <span className={`caps ${styles.chapTitle}`}>{ch.title}</span>
-                  <span className={styles.chapCount}>{ps.length}</span>
-                  <button
-                    type="button"
-                    onClick={() => source && requestCopyRefPartidas(ps.map((p) => copyItem(source, p)), null, contra)}
-                    title="Copiar capítulo entero"
-                    aria-label={`Copiar capítulo ${ch.code} entero`}
-                    className={`tcol ${styles.chapCopy}`}
-                  >
-                    <Icon name="arrowLeft" size={14} />
-                  </button>
-                </div>
-                {open && (
-                  <div className={styles.partList}>
-                    {(query ? filtered : ps).map((p) => (
-                      <RefPartidaRow
-                        key={p.id}
-                        p={p}
-                        selected={!!sel[refKey(p)]}
-                        onToggleSel={toggleSel}
-                        onCopyOne={(pp) =>
-                          source && requestCopyRefPartidas([copyItem(source, pp)], null, contra)
-                        }
-                        onDragStart={dragStart}
-                        onDragEnd={endDrag}
-                      />
-                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setExpanded((e) => ({ ...e, [ch.id]: !e[ch.id] }))}
+                      className={`tcol ${styles.chapChev}`}
+                      aria-label={open ? `Colapsar ${ch.title}` : `Desplegar ${ch.title}`}
+                    >
+                      <Icon name={open ? 'chevronDown' : 'chevron'} size={14} />
+                    </button>
+                    <span className={`mono ${styles.chapCode}`}>{ch.code}</span>
+                    <span className={`caps ${styles.chapTitle}`}>{ch.title}</span>
+                    <span className={styles.chapCount}>{searching ? rows.length : ps.length}</span>
+                    <button
+                      type="button"
+                      onClick={() => source && requestCopyRefPartidas(ps.map((p) => copyItem(source, p)), null, contra)}
+                      title="Copiar capítulo entero"
+                      aria-label={`Copiar capítulo ${ch.code} entero`}
+                      className={`tcol ${styles.chapCopy}`}
+                    >
+                      <Icon name="arrowLeft" size={14} />
+                    </button>
                   </div>
-                )}
-              </div>
-            );
-          })
+                  {open && (
+                    <div className={styles.partList}>
+                      {rows.map((p) => (
+                        <RefPartidaRow
+                          key={p.id}
+                          p={p}
+                          selected={!!sel[refKey(p)]}
+                          onToggleSel={toggleSel}
+                          onCopyOne={(pp) =>
+                            source && requestCopyRefPartidas([copyItem(source, pp)], null, contra)
+                          }
+                          onDragStart={dragStart}
+                          onDragEnd={endDrag}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {searching && Object.keys(filtered.byCh).length === 0 && (
+              <div className={styles.state}>Sin coincidencias</div>
+            )}
+            {filtered.truncated && (
+              <div className={styles.state}>Afina la búsqueda ({REF_SEARCH_CAP}+ resultados)</div>
+            )}
+          </>
         )}
       </div>
 
