@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
-import { Bar, EditableNum, Icon, InlineCreate, IvaSelect, Modal } from '../components';
+import { EditableNum, Icon, InlineCreate, IvaSelect, Modal } from '../components';
 import { fmtCents, fmtNum, parseEsNumber, toCents, toEur, type Cents } from '../core/money';
 import { coefKParaObjetivo, pem as pemCore } from '../core/totales';
 import {
@@ -485,7 +485,6 @@ function ChapterCard({
   active,
   expanded,
   importe,
-  pct,
   onSelect,
   onToggle,
   onAddSub,
@@ -496,7 +495,6 @@ function ChapterCard({
   active: string;
   expanded: boolean;
   importe: Cents;
-  pct: number;
   onSelect: (id: string) => void;
   onToggle: (id: string) => void;
   onAddSub: (id: string) => void;
@@ -561,14 +559,6 @@ function ChapterCard({
         </span>
         {importe > 0 && <span className={`mono ${styles.chapK}`}>{k(importe)}</span>}
       </div>
-      {importe > 0 && (
-        <div className={styles.chapBarRow}>
-          <span className={styles.chapBar}>
-            <Bar pct={pct} active={isActive} height={3} />
-          </span>
-          <span className={`mono ${styles.chapPct}`}>{fmtNum(pct, 1)}%</span>
-        </div>
-      )}
     </button>
   );
 }
@@ -707,7 +697,6 @@ export function Sidebar({ drawer = false, onAfterSelect }: SidebarProps) {
               active={active}
               expanded={!!expanded[ch.id]}
               importe={chapterTotals[ch.id] ?? 0}
-              pct={pem ? ((chapterTotals[ch.id] ?? 0) / pem) * 100 : 0}
               onSelect={select}
               onToggle={toggleExpanded}
               onAddSub={(id) => onAddSub(id)}
