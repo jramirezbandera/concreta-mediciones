@@ -21,7 +21,7 @@ export function Partidas({
   sticky?: boolean;
 }) {
   return compact ? (
-    <PartidasCards chapter={chapter} partidas={partidas} chapterTotal={chapterTotal} focus={focus} />
+    <PartidasCards chapter={chapter} partidas={partidas} focus={focus} />
   ) : (
     <PartidasTable
       chapter={chapter}

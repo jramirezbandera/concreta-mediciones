@@ -1,12 +1,13 @@
-import { type MouseEvent } from 'react';
+import { memo, type MouseEvent } from 'react';
 import { Badge, ContraChip, EditableNum, EditableText, Icon, UdSelect } from '../../components';
-import { fmtNum, toEur, type Cents } from '../../core/money';
+import { fmtNum, toEur } from '../../core/money';
 import type { Partida } from '../../core/types';
 import { useJustRevealed } from '../../hooks/useJustRevealed';
 import { usePartidaRow } from '../../hooks/usePartidaRow';
 import { useObraStore } from '../../store';
 import { DetailPanel } from './DetailPanel';
 import { PartidaMenu } from './PartidaMenu';
+import { WeightBar } from './WeightBar';
 import styles from './Presupuesto.module.css';
 
 /** Chip "BASE": partida copiada de una base de precios hasta que se edita. */
@@ -31,18 +32,20 @@ function stop(e: MouseEvent) {
  * de peso). Click en la ZONA VACÍA de la fila la selecciona y despliega su panel
  * de detalle (medición/descripción); los controles editables paran la
  * propagación. La fila abierta ES la seleccionada (single-open, en el store).
- * Derivados vía `usePartidaRow` (T6).
+ *
+ * MEMOIZADA por `p`/`chapterId` (T1.1): editar otra partida del capítulo no
+ * re-renderiza esta fila. El peso % vive en `WeightBar` (contexto) para que el
+ * cambio del total del capítulo tampoco re-renderice la fila entera, solo la
+ * barra. Derivados vía `usePartidaRow` (T6).
  */
-export function PartidaRow({
+export const PartidaRow = memo(function PartidaRow({
   p,
   chapterId,
-  chapterTotal,
 }: {
   p: Partida;
   chapterId: string;
-  chapterTotal: Cents;
 }) {
-  const { cantidad, importe, pct, isOverride, descompUnit } = usePartidaRow(p, chapterTotal);
+  const { cantidad, importe, isOverride, descompUnit } = usePartidaRow(p);
   const editPartidaField = useObraStore((s) => s.editPartidaField);
   const setPrecio = useObraStore((s) => s.setPrecio);
   const open = useObraStore((s) => s.openPartidaId === p.id);
@@ -118,9 +121,7 @@ export function PartidaRow({
         </td>
         <td className={styles.cImporte}>
           <div className={`mono ${styles.importeNum}`}>{fmtNum(toEur(importe))}</div>
-          <div className={styles.weightTrack}>
-            <div className={styles.weightFill} style={{ width: `${Math.max(3, pct)}%` }} />
-          </div>
+          <WeightBar importe={importe} />
         </td>
         <td className={styles.cMenu} onClick={stop}>
           <PartidaMenu p={p} chapterId={chapterId} />
@@ -135,4 +136,4 @@ export function PartidaRow({
       )}
     </>
   );
-}
+});

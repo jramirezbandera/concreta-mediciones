@@ -1,6 +1,6 @@
-import { type MouseEvent } from 'react';
+import { memo, type MouseEvent } from 'react';
 import { Badge, ContraChip, EditableNum, EditableText, Icon, UdSelect } from '../../components';
-import { fmtNum, toEur, type Cents } from '../../core/money';
+import { fmtNum, toEur } from '../../core/money';
 import type { Partida } from '../../core/types';
 import { useJustRevealed } from '../../hooks/useJustRevealed';
 import { usePartidaRow } from '../../hooks/usePartidaRow';
@@ -17,18 +17,17 @@ function stop(e: MouseEvent) {
 /**
  * Tarjeta de partida (modo compacto, <780). Presenta los MISMOS derivados que la
  * fila de tabla (vía `usePartidaRow`, T6) — sin duplicar cálculo. Click despliega
- * el detalle compacto; título y precio editables paran la propagación.
+ * el detalle compacto; título y precio editables paran la propagación. Memoizada
+ * por `p`/`chapterId` (T1.1): editar otra partida no la re-renderiza.
  */
-export function PartidaCard({
+export const PartidaCard = memo(function PartidaCard({
   p,
   chapterId,
-  chapterTotal,
 }: {
   p: Partida;
   chapterId: string;
-  chapterTotal: Cents;
 }) {
-  const { cantidad, importe } = usePartidaRow(p, chapterTotal);
+  const { cantidad, importe } = usePartidaRow(p);
   const editPartidaField = useObraStore((s) => s.editPartidaField);
   const setPrecio = useObraStore((s) => s.setPrecio);
   const open = useObraStore((s) => s.openPartidaId === p.id);
@@ -103,4 +102,4 @@ export function PartidaCard({
       {open && <DetailPanel p={p} chapterId={chapterId} compact />}
     </div>
   );
-}
+});

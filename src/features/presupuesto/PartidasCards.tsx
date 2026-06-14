@@ -1,7 +1,7 @@
 import { Fragment, useMemo } from 'react';
 import { Icon } from '../../components';
 import { partidaImporte } from '../../core/medicion';
-import { fmtNum, sumCents, toEur, type Cents } from '../../core/money';
+import { fmtNum, sumCents, toEur } from '../../core/money';
 import type { Chapter, Partida } from '../../core/types';
 import { groupsForFocus } from '../../core/grouping';
 import { rollupByDepth } from '../../core/tree';
@@ -10,16 +10,15 @@ import { useObraStore } from '../../store';
 import { PartidaCard } from './PartidaCard';
 import styles from './Presupuesto.module.css';
 
-/** Lista de partidas en tarjetas (modo compacto, <780). Mismos grupos que la tabla. */
+/** Lista de partidas en tarjetas (modo compacto, <780). Mismos grupos que la tabla.
+ *  Las tarjetas no muestran barra de peso, así que no necesitan el total del capítulo. */
 export function PartidasCards({
   chapter,
   partidas,
-  chapterTotal,
   focus,
 }: {
   chapter: Chapter;
   partidas: Partida[];
-  chapterTotal: Cents;
   /** Id de sub activo: aísla su subárbol (navegación de obras grandes). */
   focus?: string | null;
 }) {
@@ -51,7 +50,7 @@ export function PartidasCards({
             </div>
           )}
           {g.items.map((p) => (
-            <PartidaCard key={p.id} p={p} chapterId={chapter.id} chapterTotal={chapterTotal} />
+            <PartidaCard key={p.id} p={p} chapterId={chapter.id} />
           ))}
           <div className={styles.cardsBtns}>
             <button

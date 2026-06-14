@@ -9,6 +9,7 @@ import { useGridNav } from '../../hooks/useGridNav';
 import { usePartidaClipboard } from '../../hooks/usePartidaClipboard';
 import { useObraStore } from '../../store';
 import { PartidaRow } from './PartidaRow';
+import { WeightContext } from './WeightBar';
 import styles from './Presupuesto.module.css';
 
 /** Fila separadora de subcapítulo: sangrada por profundidad, con el subtotal
@@ -31,7 +32,9 @@ function SubHeaderRow({ sub, depth, importe }: { sub: SubChapter; depth: number;
 /**
  * Tabla de partidas de un capítulo (F2.1, lectura): cabecera + grupos por
  * contenedor en PRE-ORDEN del árbol (N niveles, sangrados por profundidad).
- * La cantidad/importe de cada fila los calcula `usePartidaRow`.
+ * La cantidad/importe de cada fila los calcula `usePartidaRow`. El total del
+ * capítulo (denominador del peso %) se provee por `WeightContext` (T1.1) en vez
+ * de pasarse por props a cada fila — así no rompe la memoización de `PartidaRow`.
  */
 export function PartidasTable({
   chapter,
@@ -65,53 +68,55 @@ export function PartidasTable({
   );
 
   return (
-    <div className={styles.tableWrap} onKeyDown={gridNav}>
-      <table className={`ctable ${styles.table}`}>
-        <thead className={sticky ? styles.sticky : undefined}>
-          <tr>
-            <th className={styles.thNum}>Nº · Código</th>
-            <th className={styles.thDesc}>Descripción</th>
-            <th className={styles.thUd}>Ud.</th>
-            <th className={styles.thQty}>Cantidad</th>
-            <th className={styles.thPrice}>Precio</th>
-            <th className={styles.thImporte}>Importe</th>
-            <th className={styles.thMenu} />
-          </tr>
-        </thead>
-        <tbody>
-          {groups.map((g, gi) => (
-            <Fragment key={g.sub?.id ?? `orphan-${gi}`}>
-              {g.sub && <SubHeaderRow sub={g.sub} depth={g.depth} importe={rollups[gi] ?? 0} />}
-              {g.items.map((p) => (
-                <PartidaRow key={p.id} p={p} chapterId={chapter.id} chapterTotal={chapterTotal} />
-              ))}
-              <tr className={styles.addRow}>
-                <td colSpan={7}>
-                  <div className={styles.addRowBtns}>
-                    <button
-                      type="button"
-                      className={`tcol add-partida ${styles.addBtn}`}
-                      onClick={() => addPartida(chapter.id, g.sub?.id ?? null)}
-                    >
-                      <Icon name="plus" size={13} /> Añadir partida{g.sub ? ` a ${g.sub.code}` : ''}
-                    </button>
-                    {hasClip && (
+    <WeightContext.Provider value={chapterTotal}>
+      <div className={styles.tableWrap} onKeyDown={gridNav}>
+        <table className={`ctable ${styles.table}`}>
+          <thead className={sticky ? styles.sticky : undefined}>
+            <tr>
+              <th className={styles.thNum}>Nº · Código</th>
+              <th className={styles.thDesc}>Descripción</th>
+              <th className={styles.thUd}>Ud.</th>
+              <th className={styles.thQty}>Cantidad</th>
+              <th className={styles.thPrice}>Precio</th>
+              <th className={styles.thImporte}>Importe</th>
+              <th className={styles.thMenu} />
+            </tr>
+          </thead>
+          <tbody>
+            {groups.map((g, gi) => (
+              <Fragment key={g.sub?.id ?? `orphan-${gi}`}>
+                {g.sub && <SubHeaderRow sub={g.sub} depth={g.depth} importe={rollups[gi] ?? 0} />}
+                {g.items.map((p) => (
+                  <PartidaRow key={p.id} p={p} chapterId={chapter.id} />
+                ))}
+                <tr className={styles.addRow}>
+                  <td colSpan={7}>
+                    <div className={styles.addRowBtns}>
                       <button
                         type="button"
-                        title="Pegar la partida copiada aquí (Ctrl+V)"
-                        className={`tcol ${styles.pasteBtn}`}
-                        onClick={() => paste({ chId: chapter.id, subId: g.sub?.id ?? null })}
+                        className={`tcol add-partida ${styles.addBtn}`}
+                        onClick={() => addPartida(chapter.id, g.sub?.id ?? null)}
                       >
-                        <Icon name="paste" size={13} /> Pegar aquí
+                        <Icon name="plus" size={13} /> Añadir partida{g.sub ? ` a ${g.sub.code}` : ''}
                       </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            </Fragment>
-          ))}
-        </tbody>
-      </table>
-    </div>
+                      {hasClip && (
+                        <button
+                          type="button"
+                          title="Pegar la partida copiada aquí (Ctrl+V)"
+                          className={`tcol ${styles.pasteBtn}`}
+                          onClick={() => paste({ chId: chapter.id, subId: g.sub?.id ?? null })}
+                        >
+                          <Icon name="paste" size={13} /> Pegar aquí
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </WeightContext.Provider>
   );
 }
