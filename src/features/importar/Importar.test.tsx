@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -19,8 +19,12 @@ function sampleFile(name: string): File {
   return new File([bytes], name, { type: 'application/octet-stream' });
 }
 
+// docs/spike/samples/ no viaja en git (datos de cliente): los casos que usan el
+// .bc3 real son LOCAL-ONLY (skip-if-missing); el caso de error usa un File inline.
+const OBRA = resolve(process.cwd(), 'docs', 'spike', 'samples', 'obra ejemplo.bc3');
+
 describe('ImportarView (F5.3)', () => {
-  it('parsea un .bc3 real, pide confirmación y al confirmar reemplaza la obra', async () => {
+  it.skipIf(!existsSync(OBRA))('parsea un .bc3 real, pide confirmación y al confirmar reemplaza la obra', async () => {
     const { container } = render(<ImportarView compact={false} />);
     const input = container.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(input, { target: { files: [sampleFile('obra ejemplo.bc3')] } });
@@ -46,7 +50,7 @@ describe('ImportarView (F5.3)', () => {
     expect(s.rates.coefK).toBe(1); // K en 1; el CI (13 %) va como línea %CI
   });
 
-  it('cancelar el modal no toca la obra actual', async () => {
+  it.skipIf(!existsSync(OBRA))('cancelar el modal no toca la obra actual', async () => {
     const { container } = render(<ImportarView compact={false} />);
     const seedChapters = useObraStore.getState().chapters.length;
     const input = container.querySelector('input[type="file"]') as HTMLInputElement;

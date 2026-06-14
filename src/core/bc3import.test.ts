@@ -1,6 +1,6 @@
-﻿import { readFileSync } from 'node:fs';
+﻿import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { bc3ToObra, Bc3ImportError, summarizeParserWarnings } from './bc3import';
 import { toEur } from './money';
 import { pem as pemOf } from './totales';
@@ -11,8 +11,15 @@ function sample(name: string): Uint8Array {
   return new Uint8Array(readFileSync(resolve(process.cwd(), 'docs', 'spike', 'samples', name)));
 }
 
-describe('bc3ToObra — import de obra real (Presto)', () => {
-  const { data, report } = bc3ToObra(sample('obra ejemplo.bc3'));
+// docs/spike/samples/ no viaja en git (datos de cliente): estos bloques son
+// LOCAL-ONLY → skip-if-missing, y la lectura va en beforeAll (no en la recogida).
+const OBRA_REAL = resolve(process.cwd(), 'docs', 'spike', 'samples', 'obra ejemplo.bc3');
+describe.skipIf(!existsSync(OBRA_REAL))('bc3ToObra — import de obra real (Presto)', () => {
+  let data: ReturnType<typeof bc3ToObra>['data'];
+  let report: ReturnType<typeof bc3ToObra>['report'];
+  beforeAll(() => {
+    ({ data, report } = bc3ToObra(sample('obra ejemplo.bc3')));
+  });
 
   it('mapea la estructura: 19 capítulos · 167 partidas', () => {
     expect(report.chapters).toBe(19);
@@ -75,8 +82,13 @@ describe('bc3ToObra — import de obra real (Presto)', () => {
   });
 });
 
-describe('bc3ToObra — banco de precios (BCCA 2023, sin mediciones ~M)', () => {
-  const { data, report } = bc3ToObra(sample('BCCA2023_V02.bc3'));
+const BCCA = resolve(process.cwd(), 'docs', 'spike', 'samples', 'BCCA2023_V02.bc3');
+describe.skipIf(!existsSync(BCCA))('bc3ToObra — banco de precios (BCCA 2023, sin mediciones ~M)', () => {
+  let data: ReturnType<typeof bc3ToObra>['data'];
+  let report: ReturnType<typeof bc3ToObra>['report'];
+  beforeAll(() => {
+    ({ data, report } = bc3ToObra(sample('BCCA2023_V02.bc3')));
+  });
 
   it('detecta los capítulos por el marcador FIEBDC «#»: 3 capítulos · 20 subcapítulos cada uno', () => {
     // El ~D de la raíz «##» referencia «-BAS»/«-AUX»/«-UNI»; el parser (fork)
