@@ -11,6 +11,9 @@ import styles from './Referencia.module.css';
 /** Tope de resultados de la búsqueda en una base (no montar miles de filas). */
 const REF_SEARCH_CAP = 100;
 
+/** Auto-abrir el primer capítulo solo si tiene ≤ este nº de partidas (bases enormes → colapsado, 2A). */
+const REF_AUTOOPEN_MAX = 200;
+
 /** Descriptor ligero de fuente para el selector (sin cargar la obra entera). */
 interface SourceDesc {
   id: string;
@@ -308,10 +311,13 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
     setQ('');
   }, [refSourceId]);
 
-  // Al resolverse la fuente (estática o cargada), abre su primer capítulo.
+  // Al resolverse la fuente, auto-abre el primer capítulo SOLO si es pequeño. En bases
+  // enormes, abrir colapsado evita montar miles de filas al seleccionar la fuente (2A/Codex);
+  // la búsqueda (capada) y desplegar a mano siguen funcionando.
   useEffect(() => {
     const first = source?.chapters[0];
-    setExpanded(first ? { [first.id]: true } : {});
+    const count = first ? (source?.partidas[first.id]?.length ?? 0) : 0;
+    setExpanded(first && count <= REF_AUTOOPEN_MAX ? { [first.id]: true } : {});
   }, [source]);
 
   // Invalida la caché de fuentes-obra que pueden haber cambiado: la obra ACTIVA
@@ -349,13 +355,15 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
     [source],
   );
 
-  // `${code} ${title}` por partida, en minúsculas, construido una sola vez por fuente.
+  // Índice `${code} ${title}` por partida. Se construye SOLO cuando hay búsqueda activa
+  // (no recorrer 70k partidas al abrir la fuente si el usuario aún no busca — 2A/Codex).
   const haystacks = useMemo(() => {
     const m = new Map<string, string>();
+    if (!searching) return m;
     for (const { ps } of chapterData)
       for (const p of ps) m.set(p.id, `${p.code} ${p.title}`.toLowerCase());
     return m;
-  }, [chapterData]);
+  }, [searching, chapterData]);
 
   // Partidas que casan por capítulo (solo en búsqueda activa) con tope global.
   const filtered = useMemo(() => {
