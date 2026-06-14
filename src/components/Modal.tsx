@@ -17,6 +17,12 @@ export interface ModalProps {
   footer?: ReactNode;
   /** En compacto el modal entra como hoja inferior (bottom-sheet). */
   compact?: boolean;
+  /**
+   * ¿Cerrar al hacer clic en el overlay? Por defecto sí. Ponlo a `false` en
+   * diálogos de ENTRADA (p.ej. nombrar una obra) para que un clic fuera no
+   * descarte lo escrito; ahí solo cierran Esc o el botón de cancelar.
+   */
+  closeOnOverlay?: boolean;
   children: ReactNode;
 }
 
@@ -28,10 +34,26 @@ export interface ModalProps {
  * RESTAURA al elemento previo al cerrar. El trap usa captura para no chocar con
  * otros handlers de teclado (p.ej. el Drawer).
  */
-export function Modal({ open, onClose, title, subtitle, icon, footer, compact, children }: ModalProps) {
+export function Modal({
+  open,
+  onClose,
+  title,
+  subtitle,
+  icon,
+  footer,
+  compact,
+  closeOnOverlay = true,
+  children,
+}: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const subId = useId();
+  // Leemos onClose desde un ref para que el efecto de foco NO dependa de su
+  // identidad: si el padre pasa una flecha inline (se recrea en cada render), el
+  // efecto se reejecutaría en cada tecleo y robaría el foco al primer control
+  // (bug: solo dejaba escribir un carácter en inputs controlados del modal).
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!open) return;
@@ -44,7 +66,7 @@ export function Modal({ open, onClose, title, subtitle, icon, footer, compact, c
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         e.stopPropagation();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (e.key !== 'Tab') return;
@@ -75,12 +97,16 @@ export function Modal({ open, onClose, title, subtitle, icon, footer, compact, c
       document.removeEventListener('keydown', onKey, true);
       prevFocus?.focus?.();
     };
-  }, [open, onClose]);
+    // Solo al abrir/cerrar: onClose se lee por ref (ver onCloseRef arriba).
+  }, [open]);
 
   if (!open) return null;
 
   return (
-    <div className={`no-print ${styles.overlay} ${compact ? styles.sheet : ''}`} onClick={onClose}>
+    <div
+      className={`no-print ${styles.overlay} ${compact ? styles.sheet : ''}`}
+      onClick={closeOnOverlay ? onClose : undefined}
+    >
       <div
         ref={panelRef}
         role="dialog"

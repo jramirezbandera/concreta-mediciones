@@ -165,3 +165,55 @@
   width: 14px;
   flex-shrink: 0;
 }
+
+/* Prompt de nombre de la nueva obra (reusa el Modal compartido). */
+.nameField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.nameLabel {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-disabled);
+}
+.nameInput {
+  height: 34px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 10px;
+  border-radius: 7px;
+  border: 1px solid var(--border-main);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+}
+.nameInput:focus {
+  border-color: var(--accent);
+  box-shadow: var(--ring-accent);
+}
+
+.nameCancel {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 7px;
+  border: 1px solid var(--border-sub);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+}
+.nameCreate {
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 7px;
+  border: 0;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
