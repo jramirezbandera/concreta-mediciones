@@ -100,7 +100,7 @@
 }
 .del:hover {
   background: var(--bg-primary);
-  color: var(--state-warn);
+  color: var(--state-danger); /* borrar es destructivo → rojo (DESIGN.md) */
 }
 
 .confirm {
@@ -114,8 +114,8 @@
   padding: 4px 9px;
   border: none;
   border-radius: 6px;
-  background: var(--state-warn);
-  color: var(--on-accent);
+  background: var(--state-danger); /* acción destructiva (DESIGN.md: danger = borrado) */
+  color: #fff;
   font-size: 12px;
   cursor: pointer;
 }

@@ -50,7 +50,7 @@ export function ObraSwitcher() {
         aria-haspopup="menu"
         aria-expanded={open}
         title="Cambiar de obra"
-        className={`tcol ${styles.trigger}`}
+        className={`tcol tap-target ${styles.trigger}`}
       >
         <Icon name="folder" size={14} style={{ flexShrink: 0, opacity: 0.7 }} />
         <span className={styles.triggerName}>{activeName}</span>
@@ -104,7 +104,7 @@ export function ObraSwitcher() {
                       onClick={() => setConfirmId(o.id)}
                       title={`Borrar ${o.name}`}
                       aria-label={`Borrar ${o.name}`}
-                      className={`tcol ${styles.del}`}
+                      className={`tcol tap-target ${styles.del}`}
                     >
                       <Icon name="trash" size={13} />
                     </button>

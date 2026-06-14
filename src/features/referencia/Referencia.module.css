@@ -580,8 +580,11 @@
   font-size: 13px;
   text-align: center;
 }
-.spin {
-  animation: ref-spin 0.8s linear infinite;
+/* Solo gira si el usuario no pidió reducir movimiento (DESIGN.md §interacción). */
+@media (prefers-reduced-motion: no-preference) {
+  .spin {
+    animation: ref-spin 0.8s linear infinite;
+  }
 }
 @keyframes ref-spin {
   to {
