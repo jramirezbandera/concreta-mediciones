@@ -36,10 +36,26 @@ import {
 import { usePersistStore } from './persistStore';
 import { useSessionStore } from './sessionStore';
 
-const DEBOUNCE_MS = 600;
+/** T1.3a: debounce más largo (la edición llega en ráfagas; no hace falta guardar a
+ *  media palabra) + el guardado pesado se difiere a `requestIdleCallback` para no
+ *  bloquear la interacción tras cada edición. El flush en `pagehide`/`visibilitychange`
+ *  (App.tsx) cubre el cierre de pestaña, así que alargar el debounce no pierde datos. */
+const DEBOUNCE_MS = 1500;
+
+/** Difiere el clone+write de IndexedDB a tiempo ocioso (con techo de 2 s para que
+ *  no se quede sin ejecutar). Fallback a `setTimeout` donde no haya rIC (jsdom,
+ *  Safari viejo). Detectado una vez para mantener consistentes request/cancel. */
+const hasIdle = typeof requestIdleCallback === 'function';
+const requestIdle = (cb: () => void): number =>
+  hasIdle ? requestIdleCallback(cb, { timeout: 2000 }) : (setTimeout(cb, 0) as unknown as number);
+const cancelIdle = (h: number): void => (hasIdle ? cancelIdleCallback(h) : clearTimeout(h));
 
 let armed = false;
 let timer: ReturnType<typeof setTimeout> | null = null;
+let idleHandle: number | null = null;
+/** Hay un guardado PROGRAMADO (debounce o idle) aún sin ejecutar. `flushPending`
+ *  lo usa para forzar `persistNow` tras cancelar lo pendiente. */
+let dirty = false;
 let unsub: (() => void) | null = null;
 /** Mientras es true, el autosave NO reacciona a las mutaciones de dominio. Lo
  *  activa la carga de obra (hidratar/conmutar/crear): `loadObra` muta el dominio
@@ -48,6 +64,32 @@ let suppress = false;
 /** Última persistencia COMPLETA en vuelo (blob + índice). `flush()` solo cubre el
  *  blob; el índice se escribe DESPUÉS en `saveActiveObra`. */
 let lastPersist: Promise<void> = Promise.resolve();
+
+/** Programa un guardado: debounce → idle → `persistNow`. Reinicia el anterior. */
+function scheduleSave(): void {
+  dirty = true;
+  if (timer) clearTimeout(timer);
+  timer = setTimeout(() => {
+    timer = null;
+    idleHandle = requestIdle(() => {
+      idleHandle = null;
+      dirty = false;
+      void persistNow();
+    });
+  }, DEBOUNCE_MS);
+}
+
+/** Cancela el guardado programado (debounce + idle) SIN ejecutarlo. */
+function clearScheduled(): void {
+  if (timer) {
+    clearTimeout(timer);
+    timer = null;
+  }
+  if (idleHandle !== null) {
+    cancelIdle(idleHandle);
+    idleHandle = null;
+  }
+}
 
 const activeId = (): string | null => useSessionStore.getState().activeId;
 
@@ -89,21 +131,18 @@ export function armAutosave(): void {
     domainSlice,
     () => {
       if (suppress) return; // carga de obra en curso: no autoguardar
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(() => {
-        timer = null;
-        void persistNow();
-      }, DEBOUNCE_MS);
+      scheduleSave();
     },
     { equalityFn: shallow },
   );
 }
 
-/** Fuerza el guardado pendiente y espera a la cola (blob + índice). */
+/** Fuerza el guardado pendiente y espera a la cola (blob + índice). Cancela el
+ *  debounce/idle programado y persiste YA si quedaban cambios sin guardar. */
 export function flushPending(): Promise<void> {
-  if (timer) {
-    clearTimeout(timer);
-    timer = null;
+  clearScheduled();
+  if (dirty) {
+    dirty = false;
     void persistNow();
   }
   return Promise.all([flush(), lastPersist]).then(() => undefined);
@@ -112,10 +151,8 @@ export function flushPending(): Promise<void> {
 /** Cancela un autosave pendiente SIN guardarlo (descartar ediciones de una obra
  *  que se va a borrar). No toca la cola ya en vuelo. */
 function cancelPending(): void {
-  if (timer) {
-    clearTimeout(timer);
-    timer = null;
-  }
+  clearScheduled();
+  dirty = false;
 }
 
 /* ---- carga de una obra en el store de dominio ----------------------------- */
@@ -353,8 +390,8 @@ export function __resetSyncForTests(): void {
   unsub = null;
   armed = false;
   suppress = false;
-  if (timer) clearTimeout(timer);
-  timer = null;
+  clearScheduled();
+  dirty = false;
   lastPersist = Promise.resolve();
   useSessionStore.setState({ obras: [], activeId: null, switching: false });
 }
