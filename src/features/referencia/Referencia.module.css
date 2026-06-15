@@ -532,6 +532,14 @@
   box-shadow: var(--shadow-float);
 }
 
+/* Pantalla completa: cubre todo el .body (sidebar + presupuesto), bajo el topbar. */
+.full {
+  position: absolute;
+  inset: 0;
+  z-index: 90;
+  background: var(--bg-surface);
+}
+
 /* Estado de carga/error de una obra propia como fuente (PR3, multi-obra). */
 .state {
   display: flex;

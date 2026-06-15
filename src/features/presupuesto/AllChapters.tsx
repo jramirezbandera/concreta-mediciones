@@ -1,4 +1,4 @@
-import { Icon } from '../../components';
+import { EditableText, Icon } from '../../components';
 import { fmtCents, fmtNum, type Cents } from '../../core/money';
 import { selectChapterTotals, selectPem, selectTotalConIva, useObraStore } from '../../store';
 import { Partidas } from './Partidas';
@@ -16,6 +16,7 @@ export function AllChapters({ compact }: { compact: boolean }) {
   const pem = useObraStore(selectPem);
   const total = useObraStore(selectTotalConIva);
   const addPartida = useObraStore((s) => s.addPartida);
+  const editChapterTitle = useObraStore((s) => s.editChapterTitle);
 
   return (
     <>
@@ -44,7 +45,14 @@ export function AllChapters({ compact }: { compact: boolean }) {
           <section key={ch.id}>
             <div className={styles.chapterBand}>
               <span className={`mono ${styles.bandCode}`}>{ch.code}</span>
-              <span className={styles.bandTitle}>{ch.title}</span>
+              <EditableText
+                value={ch.title}
+                ariaLabel={`Título del capítulo ${ch.code}`}
+                placeholder="Título del capítulo…"
+                className={styles.bandTitle}
+                style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}
+                onCommit={(t) => editChapterTitle(ch.id, t)}
+              />
               {!compact && (
                 <span className={styles.bandCount}>
                   {ps.length} {ps.length === 1 ? 'partida' : 'partidas'}

@@ -69,6 +69,7 @@ export function PresupuestoView({
   const chapterTotals = useObraStore(selectChapterTotals);
   const pem = useObraStore(selectPem);
   const addChapter = useObraStore((s) => s.addChapter);
+  const editChapterTitle = useObraStore((s) => s.editChapterTitle);
   const setActive = useObraStore((s) => s.setActive);
   const revealNonce = useObraStore((s) => s.revealNonce);
 
@@ -173,6 +174,8 @@ export function PresupuestoView({
           pem={pem}
           path={headerPath}
           onNavigate={setActive}
+          onRename={(t) => editChapterTitle(focused ? focused.sub.id : activeChapter.id, t)}
+          compact={compact}
         />
         {shown.length > 0 ? (
           <Partidas

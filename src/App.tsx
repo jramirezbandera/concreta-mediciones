@@ -58,6 +58,7 @@ export default function App() {
 
   const refOpen = useObraStore((s) => s.refOpen);
   const refWidth = useObraStore((s) => s.refWidth);
+  const refMaximized = useObraStore((s) => s.refMaximized);
   const refDrag = useObraStore((s) => s.refDrag);
   const setRefOpen = useObraStore((s) => s.setRefOpen);
   const setRefWidth = useObraStore((s) => s.setRefWidth);
@@ -79,8 +80,11 @@ export default function App() {
     [setRefWidth],
   );
 
-  const splitOpen = refOpen && bp.w >= SPLIT_WIDTH;
-  const overlayOpen = refOpen && bp.w < SPLIT_WIDTH;
+  // Pantalla completa: el panel tapa sidebar + presupuesto (bajo el topbar).
+  // Tiene prioridad sobre split/overlay, que solo aplican sin maximizar.
+  const refFull = refOpen && refMaximized;
+  const splitOpen = refOpen && !refMaximized && bp.w >= SPLIT_WIDTH;
+  const overlayOpen = refOpen && !refMaximized && bp.w < SPLIT_WIDTH;
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [obraOpen, setObraOpen] = useState(false);
@@ -244,6 +248,12 @@ export default function App() {
               <ReferenciaPanel onImport={() => setRefImportOpen(true)} />
             </aside>
           </>
+        )}
+
+        {refFull && (
+          <div className={`no-print ${refStyles.full}`}>
+            <ReferenciaPanel onImport={() => setRefImportOpen(true)} />
+          </div>
         )}
       </div>
 

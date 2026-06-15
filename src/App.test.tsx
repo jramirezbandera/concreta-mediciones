@@ -19,7 +19,10 @@ describe('App shell (F0)', () => {
   it('arranca en la vista Presupuesto con el primer capítulo cargado', () => {
     render(<App />);
     // Sin placeholder: la vista real muestra la cabecera del capítulo activo (01).
-    expect(screen.getByRole('heading', { name: 'Movimiento de tierras' })).toBeInTheDocument();
+    // El título del capítulo es editable inline (role textbox, no heading).
+    expect(screen.getByRole('textbox', { name: 'Título del capítulo' })).toHaveTextContent(
+      'Movimiento de tierras',
+    );
     expect(screen.getByRole('button', { name: /Toda la obra/ })).toBeInTheDocument();
   });
 

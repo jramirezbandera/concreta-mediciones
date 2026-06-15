@@ -68,6 +68,9 @@ export function EditableText({
           }
           if (e.key === 'Escape') setEditing(false);
         }}
+        // El `style` del display también se aplica al editor para que tamaño/
+        // color de fuente coincidan (p. ej. el título grande de un capítulo).
+        style={style}
         className={styles.input}
       />
     );

@@ -308,6 +308,8 @@ export interface ObraState extends ObraData {
   refSourceId: string;
   /** Ancho del panel en modo split (px, clamp 320–640). */
   refWidth: number;
+  /** Panel de Referencia maximizado a pantalla completa (tapa sidebar + presupuesto). */
+  refMaximized: boolean;
   /** Arrastre en curso desde el panel Referencia (F5.2); null = nada arrastrándose. */
   refDrag: RefDrag | null;
   /** Copia con colisiones pendiente de resolver (T-1, D2); null = sin conflicto. */
@@ -405,6 +407,8 @@ export interface ObraState extends ObraData {
   setRefSource: (id: string) => void;
   /** Fija el ancho del panel en split (se clampa a 320–640). */
   setRefWidth: (w: number) => void;
+  /** Maximiza/restaura el panel a pantalla completa; sin argumento alterna. */
+  setRefMax: (max?: boolean) => void;
   /** Fija/limpia el payload de arrastre (drag&drop, F5.2). */
   setRefDrag: (drag: RefDrag | null) => void;
   /**
@@ -501,6 +505,11 @@ export interface ObraState extends ObraData {
    * despliega el capítulo dueño. Un `parentId` inexistente es no-op.
    */
   addSubchapter: (parentId: string, title: string) => void;
+  /**
+   * Renombra un contenedor (capítulo o sub a cualquier profundidad). El título
+   * vacío se ignora: un contenedor siempre conserva nombre. Id inexistente = no-op.
+   */
+  editChapterTitle: (id: string, title: string) => void;
   /** Elimina un capítulo y sus partidas; si estaba activo, salta a "Toda la obra". */
   deleteChapter: (chapterId: string) => void;
   /**
@@ -647,6 +656,7 @@ function seedUi(certs: Cert[]) {
     refOpen: false,
     refSourceId: REF_SOURCES[0]?.id ?? '',
     refWidth: 400,
+    refMaximized: false,
     refDrag: null as RefDrag | null,
     pendingCopy: null as PendingCopy | null,
     openPartidaId: null as string | null,
@@ -866,6 +876,8 @@ export const useObraStore = create<ObraState>()(
       setRefOpen: (open) =>
         set((s) => {
           s.refOpen = open ?? !s.refOpen;
+          // Al cerrar, salir de pantalla completa: reabrir no debe sorprender maximizado.
+          if (!s.refOpen) s.refMaximized = false;
         }),
 
       setRefSource: (id) =>
@@ -876,6 +888,11 @@ export const useObraStore = create<ObraState>()(
       setRefWidth: (w) =>
         set((s) => {
           s.refWidth = Math.max(320, Math.min(640, Math.round(w)));
+        }),
+
+      setRefMax: (max) =>
+        set((s) => {
+          s.refMaximized = max ?? !s.refMaximized;
         }),
 
       setRefDrag: (drag) =>
@@ -1043,6 +1060,14 @@ export const useObraStore = create<ObraState>()(
             title,
           });
           s.expanded[hit.chapter.id] = true;
+        }),
+
+      editChapterTitle: (id, title) =>
+        set((s) => {
+          const t = title.trim();
+          if (!t) return; // un capítulo/sub siempre conserva nombre
+          const hit = findNode(s.chapters, id);
+          if (hit) hit.node.title = t;
         }),
 
       deleteChapter: (chapterId) =>

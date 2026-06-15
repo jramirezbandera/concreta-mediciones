@@ -245,6 +245,8 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
   const refSourceId = useObraStore((s) => s.refSourceId);
   const setRefSource = useObraStore((s) => s.setRefSource);
   const setRefOpen = useObraStore((s) => s.setRefOpen);
+  const refMaximized = useObraStore((s) => s.refMaximized);
+  const setRefMax = useObraStore((s) => s.setRefMax);
   const requestCopyRefPartidas = useObraStore((s) => s.requestCopyRefPartidas);
   const setRefDrag = useObraStore((s) => s.setRefDrag);
   const target = useObraStore(selectCopyTarget);
@@ -438,6 +440,16 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
       <div className={styles.head}>
         <div className={styles.headTop}>
           <span className={`sec-head ${styles.headTitle}`}>Referencia · copiar partidas</span>
+          <button
+            type="button"
+            onClick={() => setRefMax()}
+            title={refMaximized ? 'Restaurar tamaño' : 'Ver a pantalla completa'}
+            aria-label={refMaximized ? 'Restaurar tamaño' : 'Ver a pantalla completa'}
+            aria-pressed={refMaximized}
+            className={`tcol icon-btn ${styles.closeBtn}`}
+          >
+            <Icon name={refMaximized ? 'shrink' : 'expand'} size={15} />
+          </button>
           <button
             type="button"
             onClick={() => setRefOpen(false)}

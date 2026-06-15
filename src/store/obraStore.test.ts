@@ -456,6 +456,16 @@ describe('acciones F2.4 (CRUD estructural + renumeración)', () => {
     expect(selectChapterTotals(s)['02']).toBeGreaterThan(ct0['02']!);
   });
 
+  it('editChapterTitle renombra capítulo y subcapítulo; ignora el vacío', () => {
+    state().editChapterTitle('01', '  Movimiento de tierras renombrado ');
+    expect(state().chapters.find((c) => c.id === '01')!.title).toBe('Movimiento de tierras renombrado');
+    state().editChapterTitle('01.01', 'Sub renombrado');
+    expect(state().chapters.find((c) => c.id === '01')!.children![0]!.title).toBe('Sub renombrado');
+    // vacío/solo espacios → no-op (un contenedor siempre conserva nombre)
+    state().editChapterTitle('01', '   ');
+    expect(state().chapters.find((c) => c.id === '01')!.title).toBe('Movimiento de tierras renombrado');
+  });
+
   it('deleteChapter borra capítulo + partidas; si estaba activo, salta a "Toda la obra"', () => {
     state().setActive('01');
     state().deleteChapter('01');
@@ -878,6 +888,19 @@ describe('acciones F5 (panel Referencia · copiar)', () => {
     expect(state().refWidth).toBe(640);
     state().setRefWidth(10);
     expect(state().refWidth).toBe(320);
+  });
+
+  it('setRefMax alterna pantalla completa y cerrar el panel la resetea', () => {
+    expect(state().refMaximized).toBe(false);
+    state().setRefOpen(true);
+    state().setRefMax();
+    expect(state().refMaximized).toBe(true);
+    state().setRefMax(false);
+    expect(state().refMaximized).toBe(false);
+    // maximizado + cerrar → al reabrir no debe seguir maximizado
+    state().setRefMax(true);
+    state().setRefOpen(false);
+    expect(state().refMaximized).toBe(false);
   });
 });
 

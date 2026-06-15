@@ -13,7 +13,10 @@ afterEach(() => {
 describe('PresupuestoView (F2.1 lectura + F2.2 detalle)', () => {
   it('muestra el capítulo activo (01) con sus partidas', () => {
     render(<PresupuestoView compact={false} />);
-    expect(screen.getByRole('heading', { name: 'Movimiento de tierras' })).toBeInTheDocument();
+    // El título del capítulo es editable inline (role textbox, no heading).
+    expect(screen.getByRole('textbox', { name: 'Título del capítulo' })).toHaveTextContent(
+      'Movimiento de tierras',
+    );
     expect(screen.getByText('E02EM030')).toBeInTheDocument(); // código de p111
   });
 

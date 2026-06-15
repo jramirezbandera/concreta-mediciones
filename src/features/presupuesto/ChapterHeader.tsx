@@ -1,4 +1,5 @@
 import { Fragment } from 'react';
+import { EditableText } from '../../components';
 import { fmtCents, fmtNum, type Cents } from '../../core/money';
 import styles from './Presupuesto.module.css';
 
@@ -13,14 +14,20 @@ export function ChapterHeader({
   pem,
   path,
   onNavigate,
+  onRename,
+  compact = false,
 }: {
-  chapter: { code: string; title: string };
+  chapter: { id: string; code: string; title: string };
   importe: Cents;
   count: number;
   pem: Cents;
   /** Miga capítulo → … → sub (el último es el contenedor actual). Sólo al aislar. */
   path?: { id: string; code: string; title: string }[];
   onNavigate?: (id: string) => void;
+  /** Renombra el contenedor activo (título inline). */
+  onRename?: (title: string) => void;
+  /** Vista compacta (móvil): el título usa el tamaño reducido. */
+  compact?: boolean;
 }) {
   const pct = pem ? (importe / pem) * 100 : 0;
   const crumbs = path && path.length > 1 ? path : null;
@@ -61,7 +68,18 @@ export function ChapterHeader({
             <span className={styles.chDot}>·</span>
             <span className={`mono ${styles.chPct}`}>{fmtNum(pct, 1)}% del PEM</span>
           </div>
-          <h1 className={styles.chTitle}>{chapter.title}</h1>
+          {onRename ? (
+            <EditableText
+              value={chapter.title}
+              ariaLabel="Título del capítulo"
+              placeholder="Título del capítulo…"
+              className={styles.chTitle}
+              style={{ display: 'block', fontSize: compact ? 18 : 23, fontWeight: 600, letterSpacing: '-0.02em' }}
+              onCommit={onRename}
+            />
+          ) : (
+            <h1 className={styles.chTitle}>{chapter.title}</h1>
+          )}
         </div>
         <div className={styles.chRight}>
           <div className={`caps ${styles.chImpLabel}`}>Importe</div>

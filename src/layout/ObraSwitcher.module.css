@@ -8,7 +8,9 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  max-width: 240px;
+  /* Más sitio para el nombre de obra (se quitó el breadcrumb): crece en pantallas
+     anchas y se recorta con elegancia en las medianas sin apretar las pestañas. */
+  max-width: clamp(240px, 26vw, 420px);
   padding: 3px 7px;
   border: 1px solid transparent;
   border-radius: 7px;

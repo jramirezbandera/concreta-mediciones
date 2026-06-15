@@ -60,6 +60,11 @@ export function useAppHotkeys({ onHelp }: { onHelp: () => void }): void {
       if (e.key === 'Escape') {
         if (isTextEditingTarget() || hasTransientOverlay()) return;
         const s = useObraStore.getState();
+        if (s.refMaximized) {
+          s.setRefMax(false); // 1.º Esc restaura el tamaño; el 2.º cierra el panel
+          e.preventDefault();
+          return;
+        }
         if (s.refOpen) {
           s.setRefOpen(false);
           e.preventDefault();
