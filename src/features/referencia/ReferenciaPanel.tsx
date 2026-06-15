@@ -29,6 +29,17 @@ function copyItem(source: RefSource, p: RefPartida): RefCopyItem {
   return { sourceName: source.name, partida: p };
 }
 
+/** Contenedor del árbol de referencia (capítulo o subcapítulo, N niveles). */
+type RefContainer = { id: string; code: string; title: string; children?: RefContainer[] };
+
+/** Todas las partidas del subárbol de un contenedor (sus directas + las de sus
+ *  descendientes), para copiar/arrastrar un capítulo o subcapítulo entero. */
+function subtreePartidas(node: RefContainer, bySub: Map<string, RefPartida[]>): RefPartida[] {
+  const out = [...(bySub.get(node.id) ?? [])];
+  for (const c of node.children ?? []) out.push(...subtreePartidas(c, bySub));
+  return out;
+}
+
 /** Importe de descomposición de una línea (con %CI sobre el coste directo). */
 function itemImporte(items: RefPartida['items'], i: number): number {
   const it = items[i]!;
@@ -153,6 +164,7 @@ function RefPartidaRow({
   onCopyOne,
   onDragStart,
   onDragEnd,
+  pathLabel,
 }: {
   p: RefPartida;
   selected: boolean;
@@ -160,6 +172,8 @@ function RefPartidaRow({
   onCopyOne: (p: RefPartida) => void;
   onDragStart: (e: React.DragEvent, p: RefPartida) => void;
   onDragEnd: () => void;
+  /** Ruta del subcapítulo al que pertenece (solo en resultados de búsqueda). */
+  pathLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
   // Las bases traen la desc por código (REF_DESC); las obras propias en la partida.
@@ -193,6 +207,7 @@ function RefPartidaRow({
         <span className={`mono ${styles.partCode}`}>{p.code}</span>
         <div className={styles.partTitleWrap} onClick={() => setOpen((o) => !o)}>
           <div className={`${styles.partTitle} ${open ? styles.open : ''}`}>{p.title}</div>
+          {pathLabel && <div className={styles.partPath}>{pathLabel}</div>}
         </div>
         <span className={`mono ${styles.partUd}`}>{p.ud}</span>
         <span className={`mono ${styles.partPrecio}`}>{fmtNum(p.precio)}</span>
@@ -312,14 +327,54 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
     setQ('');
   }, [refSourceId]);
 
-  // Al resolverse la fuente, auto-abre el primer capítulo SOLO si es pequeño. En bases
-  // enormes, abrir colapsado evita montar miles de filas al seleccionar la fuente (2A/Codex);
-  // la búsqueda (capada) y desplegar a mano siguen funcionando.
+  // Partidas agrupadas por su contenedor INMEDIATO: clave = `sub` de la partida, o
+  // el id del capítulo para las que cuelgan directas de él. Es la base del árbol
+  // recursivo (el .bc3 ya trae la jerarquía en `chapters[].children` + `sub`).
+  const bySub = useMemo(() => {
+    const m = new Map<string, RefPartida[]>();
+    if (!source) return m;
+    for (const ch of source.chapters)
+      for (const p of source.partidas[ch.id] ?? []) {
+        const key = p.sub ?? ch.id;
+        const arr = m.get(key);
+        if (arr) arr.push(p);
+        else m.set(key, [p]);
+      }
+    return m;
+  }, [source]);
+
+  // Nº de partidas del subárbol de cada contenedor (recuento que se muestra y
+  // umbral de auto-apertura). Una pasada por fuente.
+  const subtreeCount = useMemo(() => {
+    const m = new Map<string, number>();
+    if (!source) return m;
+    const walk = (node: RefContainer): number => {
+      let n = (bySub.get(node.id) ?? []).length;
+      for (const c of node.children ?? []) n += walk(c);
+      m.set(node.id, n);
+      return n;
+    };
+    for (const ch of source.chapters) walk(ch);
+    return m;
+  }, [source, bySub]);
+
+  // Al resolverse la fuente, auto-abre el primer capítulo y TODO su subárbol solo si
+  // es pequeño (≤ REF_AUTOOPEN_MAX partidas). En bases enormes (BCCA, miles) queda
+  // colapsado: abrir un capítulo solo muestra sus subcapítulos, no miles de filas.
   useEffect(() => {
     const first = source?.chapters[0];
-    const count = first ? (source?.partidas[first.id]?.length ?? 0) : 0;
-    setExpanded(first && count <= REF_AUTOOPEN_MAX ? { [first.id]: true } : {});
-  }, [source]);
+    if (!first || (subtreeCount.get(first.id) ?? 0) > REF_AUTOOPEN_MAX) {
+      setExpanded({});
+      return;
+    }
+    const ids: Record<string, boolean> = {};
+    const walk = (node: RefContainer) => {
+      ids[node.id] = true;
+      (node.children ?? []).forEach(walk);
+    };
+    walk(first);
+    setExpanded(ids);
+  }, [source, subtreeCount]);
 
   // Invalida la caché de fuentes-obra que pueden haber cambiado: la obra ACTIVA
   // (se está editando ahora) y las que ya no existen (borradas). El resto se
@@ -366,28 +421,38 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
     return m;
   }, [searching, chapterData]);
 
-  // Partidas que casan por capítulo (solo en búsqueda activa) con tope global.
-  const filtered = useMemo(() => {
-    const byCh: Record<string, RefPartida[]> = {};
-    if (!searching) return { byCh, truncated: false };
-    let count = 0;
+  // Etiqueta de ruta por contenedor ("3 PRECIOS UNITARIOS ▸ 01 DEMOLICIONES"),
+  // solo en búsqueda: ubica cada resultado en la jerarquía del banco.
+  const pathLabels = useMemo(() => {
+    const m = new Map<string, string>();
+    if (!source || !searching) return m;
+    const walk = (node: RefContainer, prefix: string) => {
+      const label = prefix ? `${prefix} ▸ ${node.code} ${node.title}` : `${node.code} ${node.title}`;
+      m.set(node.id, label);
+      (node.children ?? []).forEach((c) => walk(c, label));
+    };
+    for (const ch of source.chapters) walk(ch, '');
+    return m;
+  }, [source, searching]);
+
+  // Resultados de búsqueda: lista PLANA de coincidencias (tope global), cada una
+  // con la ruta de su subcapítulo. Recorre todo el árbol vía `bySub` (clave por
+  // contenedor) para no perder las partidas de subcapítulos profundos.
+  const search = useMemo(() => {
+    const matches: { p: RefPartida; path: string }[] = [];
+    if (!searching || !source) return { matches, truncated: false };
     let truncated = false;
-    for (const { ch, ps } of chapterData) {
-      const matched: RefPartida[] = [];
-      for (const p of ps) {
+    outer: for (const ch of source.chapters)
+      for (const p of source.partidas[ch.id] ?? []) {
         if (!(haystacks.get(p.id) ?? '').includes(query)) continue;
-        if (count >= REF_SEARCH_CAP) {
+        if (matches.length >= REF_SEARCH_CAP) {
           truncated = true;
-          break;
+          break outer;
         }
-        matched.push(p);
-        count += 1;
+        matches.push({ p, path: pathLabels.get(p.sub ?? ch.id) ?? '' });
       }
-      if (matched.length) byCh[ch.id] = matched;
-      if (truncated) break;
-    }
-    return { byCh, truncated };
-  }, [searching, query, chapterData, haystacks]);
+    return { matches, truncated };
+  }, [searching, query, source, haystacks, pathLabels]);
 
   function toggleSel(p: RefPartida) {
     if (!source) return;
@@ -421,11 +486,11 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
     // Si la partida arrastrada está en la selección, arrastra TODA la selección.
     beginDrag(e, sel[k] ? Object.values(sel) : [copyItem(source, p)]);
   }
-  function dragStartChapter(e: React.DragEvent, ps: RefPartida[]) {
-    if (!source) return;
-    beginDrag(e, ps.map((p) => copyItem(source, p)));
-  }
   const endDrag = () => setRefDrag(null);
+
+  // Copia/arrastra el subárbol completo de un contenedor (capítulo o subcapítulo).
+  const nodeItems = (node: RefContainer): RefCopyItem[] =>
+    source ? subtreePartidas(node, bySub).map((p) => copyItem(source, p)) : [];
 
   // Quitar una obra de solo-referencia (importada) de la lista. Si era la fuente
   // seleccionada, deselecciona antes de borrar (el efecto de invalidación de caché
@@ -434,6 +499,63 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
     if (refSourceId === id) setRefSource('');
     void deleteObraById(id.slice('obra:'.length));
   }
+
+  // Render recursivo del árbol del banco: cada contenedor (capítulo o subcapítulo,
+  // N niveles) muestra sus partidas directas seguidas de sus hijos. La sangría la
+  // dan los `partList` anidados (no hay que calcularla). Solo en modo navegación
+  // (en búsqueda se pinta la lista plana de resultados).
+  const renderNode = (node: RefContainer, depth: number): React.ReactNode => {
+    const open = !!expanded[node.id];
+    const directPs = bySub.get(node.id) ?? [];
+    const kids = node.children ?? [];
+    return (
+      <div key={node.id} className={styles.chap}>
+        <div
+          draggable
+          onDragStart={(e) => beginDrag(e, nodeItems(node))}
+          onDragEnd={endDrag}
+          className={styles.chapRow}
+        >
+          <button
+            type="button"
+            onClick={() => setExpanded((e) => ({ ...e, [node.id]: !e[node.id] }))}
+            className={`tcol ${styles.chapChev}`}
+            aria-label={open ? `Colapsar ${node.title}` : `Desplegar ${node.title}`}
+          >
+            <Icon name={open ? 'chevronDown' : 'chevron'} size={14} />
+          </button>
+          <span className={`mono ${styles.chapCode}`}>{node.code}</span>
+          <span className={`caps ${styles.chapTitle}`}>{node.title}</span>
+          <span className={styles.chapCount}>{subtreeCount.get(node.id) ?? 0}</span>
+          <button
+            type="button"
+            onClick={() => requestCopyRefPartidas(nodeItems(node), null, false)}
+            title="Copiar el contenedor entero"
+            aria-label={`Copiar ${node.code} entero`}
+            className={`tcol ${styles.chapCopy}`}
+          >
+            <Icon name="arrowLeft" size={14} />
+          </button>
+        </div>
+        {open && (kids.length > 0 || directPs.length > 0) && (
+          <div className={styles.partList}>
+            {directPs.map((p) => (
+              <RefPartidaRow
+                key={p.id}
+                p={p}
+                selected={!!sel[refKey(p)]}
+                onToggleSel={toggleSel}
+                onCopyOne={(pp) => source && requestCopyRefPartidas([copyItem(source, pp)], null, false)}
+                onDragStart={dragStart}
+                onDragEnd={endDrag}
+              />
+            ))}
+            {kids.map((c) => renderNode(c, depth + 1))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className={styles.panel}>
@@ -504,69 +626,27 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
               <Icon name="upload" size={14} /> Añadir base de referencia
             </button>
           </div>
-        ) : (
-          <>
-            {chapterData.map(({ ch, ps }) => {
-              const matched = filtered.byCh[ch.id];
-              if (searching && !matched) return null;
-              const rows = searching ? matched! : ps;
-              const open = searching ? true : !!expanded[ch.id];
-              return (
-                <div key={ch.id} className={styles.chap}>
-                  <div
-                    draggable
-                    onDragStart={(e) => dragStartChapter(e, ps)}
-                    onDragEnd={endDrag}
-                    className={styles.chapRow}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setExpanded((e) => ({ ...e, [ch.id]: !e[ch.id] }))}
-                      className={`tcol ${styles.chapChev}`}
-                      aria-label={open ? `Colapsar ${ch.title}` : `Desplegar ${ch.title}`}
-                    >
-                      <Icon name={open ? 'chevronDown' : 'chevron'} size={14} />
-                    </button>
-                    <span className={`mono ${styles.chapCode}`}>{ch.code}</span>
-                    <span className={`caps ${styles.chapTitle}`}>{ch.title}</span>
-                    <span className={styles.chapCount}>{searching ? rows.length : ps.length}</span>
-                    <button
-                      type="button"
-                      onClick={() => source && requestCopyRefPartidas(ps.map((p) => copyItem(source, p)), null, false)}
-                      title="Copiar capítulo entero"
-                      aria-label={`Copiar capítulo ${ch.code} entero`}
-                      className={`tcol ${styles.chapCopy}`}
-                    >
-                      <Icon name="arrowLeft" size={14} />
-                    </button>
-                  </div>
-                  {open && (
-                    <div className={styles.partList}>
-                      {rows.map((p) => (
-                        <RefPartidaRow
-                          key={p.id}
-                          p={p}
-                          selected={!!sel[refKey(p)]}
-                          onToggleSel={toggleSel}
-                          onCopyOne={(pp) =>
-                            source && requestCopyRefPartidas([copyItem(source, pp)], null, false)
-                          }
-                          onDragStart={dragStart}
-                          onDragEnd={endDrag}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-            {searching && Object.keys(filtered.byCh).length === 0 && (
-              <div className={styles.state}>Sin coincidencias</div>
-            )}
-            {filtered.truncated && (
+        ) : searching ? (
+          <div className={styles.partList}>
+            {search.matches.map(({ p, path }) => (
+              <RefPartidaRow
+                key={p.id}
+                p={p}
+                pathLabel={path}
+                selected={!!sel[refKey(p)]}
+                onToggleSel={toggleSel}
+                onCopyOne={(pp) => source && requestCopyRefPartidas([copyItem(source, pp)], null, false)}
+                onDragStart={dragStart}
+                onDragEnd={endDrag}
+              />
+            ))}
+            {search.matches.length === 0 && <div className={styles.state}>Sin coincidencias</div>}
+            {search.truncated && (
               <div className={styles.state}>Afina la búsqueda ({REF_SEARCH_CAP}+ resultados)</div>
             )}
-          </>
+          </div>
+        ) : (
+          source.chapters.map((ch) => renderNode(ch, 0))
         )}
       </div>
 

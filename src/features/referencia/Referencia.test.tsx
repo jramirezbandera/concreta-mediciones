@@ -62,12 +62,23 @@ describe('ReferenciaPanel (F5.1)', () => {
     expect(screen.queryByText('ADE010')).toBeNull();
   });
 
-  it('copiar capítulo entero vuelca todas sus partidas', () => {
+  it('copiar capítulo entero (subárbol) vuelca todas sus partidas', () => {
     render(<ReferenciaPanel onImport={() => {}} />);
     const n0 = useObraStore.getState().partidas['01']!.length;
-    fireEvent.click(screen.getByLabelText('Copiar capítulo A entero'));
-    // capítulo A de la base BDT = 3 partidas (ADE010, ADR010, ASA010)
+    // El capítulo A se compone de subcapítulos (A.1, A.2): "copiar entero" copia
+    // todo el subárbol = 3 partidas (ADE010, ADR010 en A.1; ASA010 en A.2).
+    fireEvent.click(screen.getByLabelText('Copiar A entero'));
     expect(useObraStore.getState().partidas['01']!).toHaveLength(n0 + 3);
+  });
+
+  it('renderiza los subcapítulos anidados y copia solo el subárbol de un sub', () => {
+    render(<ReferenciaPanel onImport={() => {}} />);
+    const n0 = useObraStore.getState().partidas['01']!.length;
+    // A.2 (Red de saneamiento) contiene solo ASA010 → copiar el sub copia 1 partida.
+    fireEvent.click(screen.getByLabelText('Copiar A.2 entero'));
+    const list = useObraStore.getState().partidas['01']!;
+    expect(list).toHaveLength(n0 + 1);
+    expect(list.at(-1)!.code).toBe('ASA010');
   });
 
   it('arrastrar una partida publica el payload y soltar lo limpia (F5.2)', () => {

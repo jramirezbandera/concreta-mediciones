@@ -266,7 +266,9 @@
 }
 
 .partList {
-  padding-left: 8px;
+  /* La sangría se ACUMULA por nivel (los partList se anidan): cada subcapítulo
+     queda más adentro que su padre, dejando ver la jerarquía del banco. */
+  padding-left: 12px;
   display: flex;
   flex-direction: column;
   gap: 1px;
@@ -359,6 +361,15 @@
   overflow: visible;
   white-space: normal;
   line-height: 1.35;
+}
+/* Ruta del subcapítulo bajo el título, solo en resultados de búsqueda. */
+.partPath {
+  font-size: 10.5px;
+  color: var(--text-disabled);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 1px;
 }
 .partUd {
   font-size: 11px;
