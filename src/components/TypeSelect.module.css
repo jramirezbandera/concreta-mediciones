@@ -1,0 +1,60 @@
+.wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 3px 2px 2px;
+  border-radius: 5px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+}
+.trigger:hover {
+  background: var(--bg-elevated);
+}
+
+/* fixed: la tabla de justificación lleva overflow que recortaría un popover
+   absoluto; la posición se calcula desde el rect del trigger. */
+.popover {
+  position: fixed;
+  width: 168px;
+  z-index: 400;
+  padding: 5px;
+  border-radius: 9px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-main);
+  box-shadow: var(--shadow-float);
+}
+
+.option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 9px;
+  border-radius: 6px;
+  border: 0;
+  cursor: pointer;
+  background: transparent;
+  text-align: left;
+  font-family: inherit;
+}
+.option:not(.on):hover {
+  background: var(--bg-elevated);
+}
+.option.on {
+  background: var(--accent-soft);
+}
+.optLabel {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.on .optLabel {
+  color: var(--accent);
+}

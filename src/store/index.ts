@@ -9,7 +9,7 @@ export {
   fromSerializable,
   copyTargetOf,
 } from './obraStore';
-export type { CertMode, CopyTarget, ObraData, ObraState } from './obraStore';
+export type { CertMode, CopyTarget, CowChoice, ObraData, ObraState } from './obraStore';
 export {
   selectCertChapterRows,
   selectCertTotals,

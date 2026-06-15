@@ -10,3 +10,4 @@ export { ContraChip } from './ContraChip';
 export { GhostBtn } from './GhostBtn';
 export { EmptyState, EmptyAction } from './EmptyState';
 export { UdSelect } from './UdSelect';
+export { TypeSelect } from './TypeSelect';

@@ -96,6 +96,9 @@ describe('PresupuestoView (F2.1 lectura + F2.2 detalle)', () => {
     const otra = screen.getByRole('textbox', { name: 'Otra unidad' });
     fireEvent.change(otra, { target: { value: 'jornada' } });
     fireEvent.keyDown(otra, { key: 'Enter' });
+    // mo001 es compartido (≥4 partidas) → el copy-on-write pregunta; "Editar en
+    // todas" aplica al banco compartido (intención original del test).
+    fireEvent.click(screen.getByText('Editar en todas'));
     expect(useObraStore.getState().recursos['mo001']!.ud).toBe('jornada'); // afecta a TODAS las partidas que lo usan
   });
 

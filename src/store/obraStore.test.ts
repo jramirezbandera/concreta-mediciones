@@ -1058,3 +1058,86 @@ describe('reset', () => {
     expect(toEur(selectPem(r))).toBe(26291.91);
   });
 });
+
+describe('acciones copy-on-write (estilo Arquímedes/CYPE)', () => {
+  const p111 = () => state().partidas['01']!.find((p) => p.id === 'p111')!;
+  const p112 = () => state().partidas['01']!.find((p) => p.id === 'p112')!;
+  // p111.items[0] = mo001 (MO), compartido por ≥2 partidas; items[2] = %CI.
+
+  it('forkResource clona el recurso y re-apunta SOLO esta partida (no pisa a las demás)', () => {
+    expect(p111().items[0]!.code).toBe('mo001');
+    expect(p112().items.some((it) => it.code === 'mo001')).toBe(true); // lo comparten
+    const clone = { ...state().recursos['mo001']! };
+
+    const newCode = state().forkResource('01', 'p111', 0);
+
+    expect(newCode).not.toBe('mo001');
+    expect(p111().items[0]!.code).toBe(newCode); // esta línea apunta al privado
+    expect(state().recursos[newCode]).toEqual(clone); // copia idéntica
+    expect(p111().fromBase).toBe(false);
+    // REGRESIÓN: editar el privado NO toca el compartido ni la otra partida.
+    state().editRecurso(newCode, 'precio', 99);
+    expect(state().recursos['mo001']!.precio).not.toBe(99);
+    expect(p112().items.some((it) => it.code === 'mo001')).toBe(true);
+  });
+
+  it('editItemCode ADOPTA un concepto existente del banco (la línea sigue su tipo)', () => {
+    const otherCode = p111().items[1]!.code; // la maquinaria del descompuesto
+    const otherType = state().recursos[otherCode]!.type;
+    state().editItemCode('01', 'p111', 0, otherCode);
+    expect(p111().items[0]!.code).toBe(otherCode);
+    expect(p111().items[0]!.type).toBe(otherType); // el banco da el tipo
+    expect(p111().fromBase).toBe(false);
+  });
+
+  it('editItemCode CREA un concepto nuevo clonando los valores actuales', () => {
+    const clone = { ...state().recursos['mo001']! };
+    state().editItemCode('01', 'p111', 0, 'NUEVO01');
+    expect(p111().items[0]!.code).toBe('NUEVO01');
+    expect(state().recursos['NUEVO01']).toEqual(clone); // arrastra los valores
+    expect(state().recursos['mo001']).toBeDefined(); // el viejo sigue (lo usan otras)
+  });
+
+  it('editItemCode es no-op en %CI, código vacío o igual', () => {
+    const ciIdx = p111().items.findIndex((it) => it.type === '%CI');
+    const ciCode = p111().items[ciIdx]!.code;
+    state().editItemCode('01', 'p111', ciIdx, 'X'); // el %CI no es del banco
+    expect(p111().items[ciIdx]!.code).toBe(ciCode);
+    state().editItemCode('01', 'p111', 0, '   '); // vacío
+    state().editItemCode('01', 'p111', 0, 'mo001'); // igual
+    expect(p111().items[0]!.code).toBe('mo001');
+  });
+
+  it('editItemType escribe el tipo en el BANCO (fuente de verdad) y espeja la línea', () => {
+    state().editItemType('01', 'p111', 0, 'MAT');
+    expect(state().recursos['mo001']!.type).toBe('MAT'); // lo leen render y export
+    expect(p111().items[0]!.type).toBe('MAT');
+    expect(p111().fromBase).toBe(false);
+  });
+
+  it('editItemType ignora %CI y tipos no MO/MQ/MAT', () => {
+    const ciIdx = p111().items.findIndex((it) => it.type === '%CI');
+    state().editItemType('01', 'p111', ciIdx, 'MO'); // no convierte el %CI
+    expect(p111().items[ciIdx]!.type).toBe('%CI');
+    state().editItemType('01', 'p111', 0, '%CI' as never); // tipo inválido aquí
+    expect(p111().items[0]!.type).not.toBe('%CI');
+  });
+
+  it('setCowChoice recuerda la elección y se limpia al navegar de partida', () => {
+    state().setCowChoice('p111', 'all');
+    expect(state().cowChoice['p111']).toBe('all');
+    state().togglePartida('p999'); // abrir/cerrar otra reinicia la memoria COW
+    expect(state().cowChoice['p111']).toBeUndefined();
+  });
+
+  it('cowChoice es TRANSITORIO: no entra en el shape serializable', () => {
+    state().setCowChoice('p111', 'copy');
+    expect('cowChoice' in toSerializable(state())).toBe(false);
+  });
+
+  it('guardas: forkResource/editItemType/editItemCode no lanzan con índices fuera de rango', () => {
+    expect(() => state().forkResource('01', 'p111', 99)).not.toThrow();
+    expect(() => state().editItemType('01', 'p111', 99, 'MO')).not.toThrow();
+    expect(() => state().editItemCode('01', 'p111', 99, 'X')).not.toThrow();
+  });
+});

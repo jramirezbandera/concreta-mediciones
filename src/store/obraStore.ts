@@ -15,7 +15,7 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import type { Banco, Cert, Chapter, MedLine, Obra, Partida, PartidasMap, Rates, SubChapter } from '../core/types';
+import type { Banco, Cert, Chapter, MedLine, Obra, Partida, PartidasMap, Rates, ResourceType, SubChapter } from '../core/types';
 import { buildRecursos, precioCuadraDescompuesto, precioSegunModo } from '../core/banco';
 import { estaCertToOrigen, prevDataOf, sumLineQty } from '../core/certificacion';
 import { rawUuid } from '../core/id';
@@ -99,6 +99,9 @@ export const SCHEMA_VERSION = 2;
 
 /** Modo de edición de una certificación: importe a origen vs. de esta cert. */
 export type CertMode = 'origen' | 'esta';
+
+/** Salida del copy-on-write: forkar copia privada vs. editar el compartido en todas. */
+export type CowChoice = 'copy' | 'all';
 
 /**
  * Ids ÚNICOS por construcción (F6, eng-review run 5 / Tensión 1-B). Antes eran
@@ -331,6 +334,15 @@ export interface ObraState extends ObraData {
   revealNonce: number;
   /** Contador que pide foco al buscador del presupuesto (atajo Ctrl/⌘+K). */
   searchFocusNonce: number;
+  /**
+   * Copy-on-write (estilo Arquímedes/CYPE): elección recordada "no volver a
+   * preguntar en esta partida" del `CowDialog`, por id de partida. TRANSITORIO
+   * (no entra en `toSerializable`): se limpia al cambiar de partida/vista. Solo
+   * tiene sentido para la dimensión de RECURSO COMPARTIDO (la de partida base se
+   * resuelve en la primera edición, que ya quita `fromBase`). `'copy'` = forkar
+   * copia privada; `'all'` = editar el concepto compartido en todas.
+   */
+  cowChoice: Record<string, CowChoice>;
 
   /* ---- acciones (F1) ---- */
   setView: (v: View) => void;
@@ -495,6 +507,38 @@ export interface ObraState extends ObraData {
   addItem: (chapterId: string, partidaId: string) => void;
   /** Elimina un concepto de la justificación y resincroniza el precio. */
   deleteItem: (chapterId: string, partidaId: string, itemIndex: number) => void;
+
+  /* ---- acciones copy-on-write (estilo Arquímedes/CYPE) ---- */
+  /**
+   * Re-apunta el CÓDIGO de una línea del descompuesto (estilo Presto/Arquímedes):
+   * si `newCode` ya existe en el banco, la línea ADOPTA ese concepto (su tipo lo
+   * pasa a dar el banco); si no existe, se CREA clonando los valores actuales.
+   * Cambio LOCAL (no muta el concepto al que apuntaba) → no pisa otras partidas.
+   * Quita el chip BASE y resincroniza el precio. `%CI`, code vacío o igual = no-op.
+   */
+  editItemCode: (chapterId: string, partidaId: string, itemIndex: number, newCode: string) => void;
+  /**
+   * Edita el TIPO de una línea (MO/MQ/MAT; `%CI` excluido). Escribe en el BANCO
+   * (`recursos[code].type`, fuente de verdad que leen el render y el export) y
+   * espeja el vestigio `Item.type` de ESTA línea. Si el concepto es compartido y
+   * el usuario eligió "editar en todas", afecta a todas (banco). Quita BASE.
+   */
+  editItemType: (
+    chapterId: string,
+    partidaId: string,
+    itemIndex: number,
+    newType: ResourceType,
+  ) => void;
+  /**
+   * Forka una COPIA PRIVADA del recurso de una línea: clona `recursos[code]` bajo
+   * un código nuevo y re-apunta SOLO esta línea; las demás partidas que usaban el
+   * código quedan intactas. Es la rama "copiar" del copy-on-write de recurso
+   * compartido. Devuelve el código nuevo (para aplicar la edición sobre él). Quita
+   * BASE. `%CI` o línea inexistente = no-op (devuelve el código actual/vacío).
+   */
+  forkResource: (chapterId: string, partidaId: string, itemIndex: number) => string;
+  /** Recuerda la elección del `CowDialog` para una partida ("no volver a preguntar"). */
+  setCowChoice: (partidaId: string, choice: CowChoice) => void;
 
   /* ---- acciones F2.4 (CRUD estructural + renumeración) ---- */
   /** Añade un capítulo (código = max+1) y lo deja activo en la vista Presupuesto. */
@@ -662,6 +706,7 @@ function seedUi(certs: Cert[]) {
     openPartidaId: null as string | null,
     revealNonce: 0,
     searchFocusNonce: 0,
+    cowChoice: {} as Record<string, CowChoice>,
   };
 }
 
@@ -681,17 +726,20 @@ export const useObraStore = create<ObraState>()(
         set((s) => {
           s.view = v;
           s.openPartidaId = null; // la selección es contextual a lo que se mira
+          s.cowChoice = {}; // memoria COW: viva solo mientras editas la partida
         }),
 
       setActive: (id) =>
         set((s) => {
           s.active = id;
           s.openPartidaId = null; // cambiar de capítulo deselecciona la partida
+          s.cowChoice = {};
         }),
 
       togglePartida: (id) =>
         set((s) => {
           s.openPartidaId = s.openPartidaId === id ? null : id;
+          s.cowChoice = {}; // abrir/cerrar partida reinicia su memoria COW
         }),
 
       revealPartida: (partidaId, chapterId, subId) =>
@@ -708,6 +756,7 @@ export const useObraStore = create<ObraState>()(
           for (const id of ancestorIds(s.chapters, validSub ?? chapterId)) s.expanded[id] = true;
           s.view = 'presupuesto';
           s.openPartidaId = partidaId; // ÚLTIMO: ningún reset previo lo borra
+          s.cowChoice = {}; // saltar a otra partida reinicia la memoria COW
           s.revealNonce += 1; // dispara scroll/pulso (también al re-revelar la abierta)
         }),
 
@@ -1034,6 +1083,66 @@ export const useObraStore = create<ObraState>()(
           p.items.splice(itemIndex, 1);
           p.fromBase = false;
           p.precio = precioSegunModo(p, s.recursos);
+        }),
+
+      editItemCode: (chapterId, partidaId, itemIndex, rawCode) =>
+        set((s) => {
+          const p = s.partidas[chapterId]?.find((x) => x.id === partidaId);
+          const it = p?.items[itemIndex];
+          if (!p || !it) return;
+          if (it.type === '%CI') return; // el %CI no es un recurso del banco
+          const newCode = (rawCode ?? '').trim();
+          if (!newCode || newCode === it.code) return; // no-op
+          const existing = s.recursos[newCode];
+          if (existing) {
+            // ADOPTAR: la línea sigue al concepto existente; el banco da el tipo.
+            it.type = existing.type;
+          } else {
+            // CREAR: clona los valores actuales bajo el código nuevo.
+            const src = s.recursos[it.code];
+            s.recursos[newCode] = src
+              ? { ...src }
+              : { type: it.type, desc: it.desc ?? '', ud: it.ud ?? '', precio: it.precio ?? 0 };
+          }
+          it.code = newCode;
+          p.fromBase = false;
+          p.precio = precioSegunModo(p, s.recursos);
+        }),
+
+      editItemType: (chapterId, partidaId, itemIndex, newType) =>
+        set((s) => {
+          if (newType !== 'MO' && newType !== 'MQ' && newType !== 'MAT') return; // %CI excluido
+          const p = s.partidas[chapterId]?.find((x) => x.id === partidaId);
+          const it = p?.items[itemIndex];
+          if (!p || !it) return;
+          if (it.type === '%CI') return; // no se convierte %CI por aquí
+          const r = s.recursos[it.code];
+          if (r) r.type = newType; // banco = fuente de verdad (render + export lo leen)
+          it.type = newType; // espeja el vestigio de ESTA línea
+          p.fromBase = false;
+          // El tipo no altera el precio (sale del banco) → sin resync.
+        }),
+
+      forkResource: (chapterId, partidaId, itemIndex) => {
+        const newCode = nextRecursoCode(); // fuera de `set`: lo devolvemos al llamador
+        set((s) => {
+          const p = s.partidas[chapterId]?.find((x) => x.id === partidaId);
+          const it = p?.items[itemIndex];
+          if (!p || !it || it.type === '%CI') return;
+          const src = s.recursos[it.code];
+          s.recursos[newCode] = src
+            ? { ...src }
+            : { type: it.type, desc: it.desc ?? '', ud: it.ud ?? '', precio: it.precio ?? 0 };
+          it.code = newCode; // re-apunta SOLO esta línea → las demás quedan intactas
+          p.fromBase = false;
+          p.precio = precioSegunModo(p, s.recursos);
+        });
+        return newCode;
+      },
+
+      setCowChoice: (partidaId, choice) =>
+        set((s) => {
+          s.cowChoice[partidaId] = choice;
         }),
 
       addChapter: (title) =>
