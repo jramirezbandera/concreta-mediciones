@@ -1,15 +1,13 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { bc3ToRefCopyItems } from '../core/bc3ToPartidas';
+import { rec010Bytes } from '../core/__fixtures__/rec010Bc3';
 import type { Resolution } from '../core/refdata';
 import { useObraStore } from './obraStore';
 
 const state = () => useObraStore.getState();
 
 function sampleItems() {
-  const path = join(process.cwd(), 'docs/spike/samples/REC010_0_2_16_10_0_0_0_5_0_0_0_0.bc3');
-  return bc3ToRefCopyItems(new Uint8Array(readFileSync(path))).items;
+  return bc3ToRefCopyItems(rec010Bytes()).items;
 }
 
 /** Inserta los items adaptados en el capítulo '01', resolviendo colisiones por MERGE. */

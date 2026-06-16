@@ -1,19 +1,10 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { rec010Bytes } from './__fixtures__/rec010Bc3';
 import { bc3ToRefCopyItems } from './bc3ToPartidas';
-
-/** Lee el .bc3 de muestra (export FIE BDC real de CYPE) como bytes crudos. */
-function sampleBytes(name: string): Uint8Array {
-  const path = join(process.cwd(), 'docs/spike/samples', name);
-  return new Uint8Array(readFileSync(path));
-}
-
-const REC010 = 'REC010_0_2_16_10_0_0_0_5_0_0_0_0.bc3';
 
 describe('bc3ToRefCopyItems — export FIE BDC de CYPE', () => {
   it('extrae UNA partida del sample REC010 con su precio, unidad y descripción', () => {
-    const { items, error, report } = bc3ToRefCopyItems(sampleBytes(REC010));
+    const { items, error, report } = bc3ToRefCopyItems(rec010Bytes());
     expect(error).toBeUndefined();
     expect(items).toHaveLength(1);
 
@@ -32,7 +23,7 @@ describe('bc3ToRefCopyItems — export FIE BDC de CYPE', () => {
   });
 
   it('hidrata la descomposición (8 recursos básicos + líneas %CI con desc)', () => {
-    const { items } = bc3ToRefCopyItems(sampleBytes(REC010));
+    const { items } = bc3ToRefCopyItems(rec010Bytes());
     const its = items[0]!.partida.items;
     const basicos = its.filter((i) => i.type !== '%CI');
     const ci = its.filter((i) => i.type === '%CI');
@@ -47,7 +38,7 @@ describe('bc3ToRefCopyItems — export FIE BDC de CYPE', () => {
   });
 
   it('marca el CI del ~K por partida (ciPct) y la autoridad del precio (precioManual)', () => {
-    const { items, report } = bc3ToRefCopyItems(sampleBytes(REC010));
+    const { items, report } = bc3ToRefCopyItems(rec010Bytes());
     const p = items[0]!.partida;
     // El badge de CI usa el ~K global (REC010: 3%); debe coincidir con el report.
     expect(p.ciPct).toBe(report?.ciPct);

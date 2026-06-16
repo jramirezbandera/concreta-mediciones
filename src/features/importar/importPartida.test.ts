@@ -1,16 +1,12 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { rec010File } from '../../core/__fixtures__/rec010Bc3';
 import { useObraStore, useToastStore } from '../../store';
 import { importPartidaFromFile, isBc3File, processBudgetDrop } from './importPartida';
 
 const obra = () => useObraStore.getState();
 const lastToast = () => useToastStore.getState().msg;
 
-function sampleFile(): File {
-  const bytes = readFileSync(join(process.cwd(), 'docs/spike/samples/REC010_0_2_16_10_0_0_0_5_0_0_0_0.bc3'));
-  return new File([bytes], 'REC010.bc3');
-}
+const sampleFile = rec010File;
 
 beforeEach(() => {
   obra().reset();
