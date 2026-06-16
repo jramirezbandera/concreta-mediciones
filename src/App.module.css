@@ -33,6 +33,29 @@
   border-radius: 12px;
 }
 
+/* Pista centrada al arrastrar un .bc3 externo sobre el presupuesto (T4 pulido).
+   pointer-events: none → el dragover/drop sigue llegando al <main> de debajo. */
+.fileDropHint {
+  position: absolute;
+  inset: 6px;
+  z-index: 6;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-surface) 92%);
+  border-radius: 12px;
+}
+.fileDropHint .mono {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
 .toast {
   position: fixed;
   left: 50%;

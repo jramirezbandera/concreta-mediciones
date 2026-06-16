@@ -71,6 +71,10 @@ export interface Partida {
   fromBase?: boolean; // chip "BASE" hasta que se edita
   contradictorio?: boolean; // chip "P.C."
   baseSource?: string;
+  /** % de costes indirectos de la fuente (.bc3 CYPE), para mostrarlo como badge.
+   *  El CI NO se pliega en `precio` (CYPE lo muestra aparte); aquí queda VISIBLE.
+   *  undefined = la partida no procede de una base con CI declarado. */
+  ciPct?: number;
 }
 
 /**

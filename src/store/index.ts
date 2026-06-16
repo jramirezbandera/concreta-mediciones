@@ -14,6 +14,7 @@ export {
   selectCertChapterRows,
   selectCertTotals,
   selectChapterTotals,
+  selectCopyContra,
   selectCopyTarget,
   selectCounts,
   selectPec,

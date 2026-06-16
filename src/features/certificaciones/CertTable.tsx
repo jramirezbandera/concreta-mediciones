@@ -155,6 +155,12 @@ function CertRow({
         <td className={`${styles.cell} ${styles.cDesc}`}>
           <div className={styles.descInner}>
             {p.mainType && <Badge type={p.mainType} />}
+            {p.contradictorio && (
+              <span className={styles.pcBadge}>
+                <span className="dot" style={{ background: 'var(--state-warn)' }} />
+                P.C.
+              </span>
+            )}
             <span className={styles.title}>{p.title}</span>
           </div>
         </td>

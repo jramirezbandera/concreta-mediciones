@@ -65,6 +65,12 @@ export function CertCard({
 
         <div className={styles.cardTitleRow}>
           {p.mainType && <Badge type={p.mainType} />}
+          {p.contradictorio && (
+            <span className={styles.pcBadge}>
+              <span className="dot" style={{ background: 'var(--state-warn)' }} />
+              P.C.
+            </span>
+          )}
           <span className={styles.cardTitle}>{p.title}</span>
         </div>
 

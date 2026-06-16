@@ -39,6 +39,10 @@ export function usePartidaClipboard(): PartidaClipboard {
   const paste = (target: { chId: string; subId: string | null }) => {
     const clip = useClipboardStore.getState().items;
     if (!clip?.length) return;
+    // Pegar es una acción de Presupuesto (los botones "Pegar aquí" viven en el
+    // árbol del presupuesto; el atajo Ctrl+V está guardado a esa vista) → nunca
+    // contradictorio. Si en el futuro se permite pegar en Certificaciones, derivar
+    // `contra` de `selectCopyContra` como en Referencia.
     useObraStore.getState().requestCopyRefPartidas(clip, target, false, 'clip');
   };
 

@@ -1,5 +1,5 @@
 import { memo, type MouseEvent } from 'react';
-import { Badge, ContraChip, EditableNum, EditableText, Icon, UdSelect } from '../../components';
+import { Badge, CiChip, ContraChip, EditableNum, EditableText, Icon, UdSelect } from '../../components';
 import { fmtNum, toEur } from '../../core/money';
 import type { Partida } from '../../core/types';
 import { useJustRevealed } from '../../hooks/useJustRevealed';
@@ -77,6 +77,7 @@ export const PartidaRow = memo(function PartidaRow({
               />
             </span>
             {p.contradictorio && <ContraChip />}
+            {p.ciPct != null && p.ciPct > 0 && <CiChip pct={p.ciPct} />}
           </div>
         </td>
         <td className={`mono ${styles.cUd}`}>

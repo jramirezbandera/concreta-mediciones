@@ -20,6 +20,8 @@ export interface TopBarProps {
   onHelp?: () => void;
   /** Selector de obra (multi-obra, PR2). Si se pasa, sustituye al nombre de obra inline. */
   obraSwitcher?: React.ReactNode;
+  /** Acción contextual «Importar partida» (.bc3). Solo en la vista presupuesto. */
+  importAction?: React.ReactNode;
 }
 
 /** Barra superior: lockup de marca Concreta, breadcrumb, tabs y acciones. */
@@ -37,6 +39,7 @@ export function TopBar({
   onObra,
   onHelp,
   obraSwitcher,
+  importAction,
 }: TopBarProps) {
   const { isMobile, isTablet, isCompact } = bp;
 
@@ -115,6 +118,7 @@ export function TopBar({
 
       {/* Acciones */}
       <div className={styles.actions}>
+        {importAction}
         {/* La ayuda vive en la barra de estado inferior (desktop). En móvil no hay
             StatusBar, así que se mantiene aquí como único punto de entrada. */}
         {onHelp && isMobile && (

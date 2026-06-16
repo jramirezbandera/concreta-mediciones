@@ -181,3 +181,10 @@ Origen: revisión de ingeniería (`/plan-eng-review`) + voz externa Codex, 2026-
 - **Contexto / dónde empezar:** la cola de escritura de `persist.ts` y el armado del autosave en `sync.ts`. Adquirir un Web Lock por `concreta.obra.<id>` antes de autosalvar, o difundir "obra X tomada" por BroadcastChannel y degradar a solo-lectura la segunda pestaña. Decisión: bloquear la 2ª pestaña vs. fusionar.
 - **Depende de / bloqueado por:** T-10 (registro multi-obra). No bloquea el dogfooding solo; abordar antes de uso externo.
 - **Decisión (eng-review 2026-06-13):** aplazado a TODO (dogfooding en solitario no lo dispara).
+
+## T-20 · Puente de descarga para «arrastrar el enlace» FIE BDC (scope B del import de partida)
+- **Qué:** reproducir el comportamiento LITERAL de CYPE/Arquímedes (mantener pulsado el icono FIE BDC y arrastrar el ENLACE a la app, que descarga e inserta la partida). Hoy el MVP (2026-06-15) usa arrastrar el FICHERO .bc3 + botón «Importar partida».
+- **Por qué aplazado:** la app es una SPA web pura. Al soltar un enlace de otra pestaña el `DataTransfer` solo trae la URL, no los bytes; y `fetch()` a `my.generadordeprecios.info` está bloqueado por CORS + sesión de CYPE. Confirmado por dual-voice (Codex + subagente). Sin infra nueva no es posible.
+- **Opciones (cada una añade infra):** (a) proxy/backend que descargue el .bc3 del enlace en tu nombre (rompe el local-first, depende de la sesión CYPE); (b) shell Electron (el SO descarga al arrastrar, como Arquímedes; cambia el producto a escritorio); (c) extensión de navegador o bookmarklet en la página de CYPE.
+- **Contexto / dónde empezar:** el adaptador `core/bc3ToPartidas.ts` (`bc3ToRefCopyItems`) y `features/importar/importPartida.ts` (`processBudgetDrop`) ya aceptan bytes; el puente solo tendría que ENTREGAR los bytes desde la URL (resolver CORS/auth). Hoy `processBudgetDrop` ya detecta el drop de enlace y avisa.
+- **Limitación conocida del MVP:** un .bc3 con N>1 partidas hoja se importa plano (sin su estructura de capítulos), con aviso. El caso CYPE es siempre 1 partida.

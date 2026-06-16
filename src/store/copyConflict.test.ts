@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { RefCopyItem, RefPartida } from '../core/refdata';
 import { useObraStore } from './obraStore';
+import { selectCopyContra } from './selectors';
 
 const state = () => useObraStore.getState();
 
@@ -128,5 +129,35 @@ describe('procedencia (base vs portapapeles)', () => {
     // aterriza en '01' (target congelado), no en el capítulo activo actual ('03')
     expect(state().partidas['01']!.some((p) => p.code === 'NEW')).toBe(true);
     expect((state().partidas['03'] ?? []).some((p) => p.code === 'NEW')).toBe(false);
+  });
+});
+
+describe('naturaleza: contradictorio (P.C.) según la vista', () => {
+  it('selectCopyContra: true solo en Certificaciones', () => {
+    expect(selectCopyContra(state())).toBe(false); // reset → vista presupuesto
+    state().setView('certificaciones');
+    expect(selectCopyContra(state())).toBe(true);
+    state().setView('presupuesto');
+    expect(selectCopyContra(state())).toBe(false);
+  });
+
+  it('contra=true: la copia entra como contradictorio (sin chip BASE)', () => {
+    state().requestCopyRefPartidas([refItem('codigo-nuevo', 5)], null, true);
+    expect(copied()!.contradictorio).toBe(true);
+    expect(copied()!.fromBase).toBeFalsy();
+  });
+
+  it('contra=false: la copia entra como partida normal (chip BASE, no P.C.)', () => {
+    state().requestCopyRefPartidas([refItem('codigo-nuevo', 5)], null, false);
+    expect(copied()!.contradictorio).toBeUndefined();
+    expect(copied()!.fromBase).toBe(true);
+  });
+
+  it('contra sobrevive a la resolución de colisión', () => {
+    state().requestCopyRefPartidas([refItem('mo001', 20)], null, true);
+    expect(state().pendingCopy!.contra).toBe(true);
+    state().resolveCopyRefPartidas({ mo001: 'merge' });
+    expect(copied()!.contradictorio).toBe(true);
+    expect(copied()!.fromBase).toBeFalsy();
   });
 });

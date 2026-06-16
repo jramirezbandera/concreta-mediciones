@@ -4,7 +4,7 @@ import { MIN_QUERY } from '../../core/buscar';
 import { fmtNum, round2 } from '../../core/money';
 import { REF_DESC, REF_SOURCES, type RefCopyItem, type RefPartida, type RefSource } from '../../core/refdata';
 import { deleteObraById, useSessionStore } from '../../persist';
-import { selectCopyTarget, useObraStore } from '../../store';
+import { selectCopyContra, selectCopyTarget, useObraStore } from '../../store';
 import { loadObraRefSource } from './obraSource';
 import styles from './Referencia.module.css';
 
@@ -265,6 +265,9 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
   const requestCopyRefPartidas = useObraStore((s) => s.requestCopyRefPartidas);
   const setRefDrag = useObraStore((s) => s.setRefDrag);
   const target = useObraStore(selectCopyTarget);
+  // Naturaleza de la copia según la vista: contradictorio (P.C.) en Certificaciones,
+  // partida normal (BASE) en Presupuesto. La regla vive en `selectCopyContra`.
+  const contra = useObraStore(selectCopyContra);
   const obras = useSessionStore((s) => s.obras);
   const activeObraId = useSessionStore((s) => s.activeId);
 
@@ -476,9 +479,9 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
         /* algunos entornos (jsdom) no soportan setData */
       }
     }
-    // Un precio es "contradictorio" solo si se introduce desde Certificaciones;
-    // copiar desde la referencia nunca lo marca como tal.
-    setRefDrag({ items, contra: false });
+    // Un precio es "contradictorio" solo si se introduce desde Certificaciones; la
+    // naturaleza se CONGELA aquí (al iniciar el arrastre) con la vista de ese momento.
+    setRefDrag({ items, contra });
   }
   function dragStart(e: React.DragEvent, p: RefPartida) {
     if (!source) return;
@@ -529,7 +532,7 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
           <span className={styles.chapCount}>{subtreeCount.get(node.id) ?? 0}</span>
           <button
             type="button"
-            onClick={() => requestCopyRefPartidas(nodeItems(node), null, false)}
+            onClick={() => requestCopyRefPartidas(nodeItems(node), null, contra)}
             title="Copiar el contenedor entero"
             aria-label={`Copiar ${node.code} entero`}
             className={`tcol ${styles.chapCopy}`}
@@ -545,7 +548,7 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
                 p={p}
                 selected={!!sel[refKey(p)]}
                 onToggleSel={toggleSel}
-                onCopyOne={(pp) => source && requestCopyRefPartidas([copyItem(source, pp)], null, false)}
+                onCopyOne={(pp) => source && requestCopyRefPartidas([copyItem(source, pp)], null, contra)}
                 onDragStart={dragStart}
                 onDragEnd={endDrag}
               />
@@ -635,7 +638,7 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
                 pathLabel={path}
                 selected={!!sel[refKey(p)]}
                 onToggleSel={toggleSel}
-                onCopyOne={(pp) => source && requestCopyRefPartidas([copyItem(source, pp)], null, false)}
+                onCopyOne={(pp) => source && requestCopyRefPartidas([copyItem(source, pp)], null, contra)}
                 onDragStart={dragStart}
                 onDragEnd={endDrag}
               />
@@ -665,7 +668,7 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
             <button
               type="button"
               onClick={() => {
-                requestCopyRefPartidas(Object.values(sel), null, false);
+                requestCopyRefPartidas(Object.values(sel), null, contra);
                 setSel({});
               }}
               className={styles.copyToBtn}

@@ -256,7 +256,9 @@ function applyCopy(
     sameSub += 1;
     const newItems = p.items.map((r) =>
       r.type === '%CI'
-        ? { code: '%CI', type: '%CI' as const, cantidad: r.cantidad }
+        ? // Conserva código y descripción del %CI (el ~K «Costes indirectos» y los
+          // «%» del banco son líneas distintas; perder la desc las confunde).
+          { code: r.code, type: '%CI' as const, cantidad: r.cantidad, desc: r.desc }
         : { code: forkMap[r.code] ?? r.code, type: r.type, cantidad: r.cantidad },
     );
     list.push({
@@ -267,6 +269,11 @@ function applyCopy(
       title: p.title,
       ud: p.ud,
       precio: p.precio,
+      // Autoridad del precio de la fuente (.bc3 CYPE): sin esto, editar un recurso
+      // colisionante resincroniza la partida y el precio importado deriva.
+      precioManual: p.precioManual || undefined,
+      // CI de la fuente como badge visible (no se pliega en el precio).
+      ciPct: p.ciPct,
       mainType: p.mainType,
       // La desc propia de la partida (obras como fuente) manda sobre la canónica
       // por código (bases); coincide con lo que previsualiza el panel (RefPartidaRow).

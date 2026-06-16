@@ -189,3 +189,11 @@ const _copyTarget = memo1((chapters: Chapter[], active: string): CopyTarget =>
 
 /** Capítulo/sub destino de "Copiar a …" según la selección del sidebar. */
 export const selectCopyTarget = (s: ObraState): CopyTarget => _copyTarget(s.chapters, s.active);
+
+/**
+ * ¿Una copia desde Referencia debe entrar como precio CONTRADICTORIO (chip P.C.)?
+ * Sí cuando la vista activa es Certificaciones: el destino/vista determina la
+ * naturaleza (en Presupuesto = partida normal/BASE). Regla en UN solo sitio para
+ * que ningún call site de copia la vuelva a cablear a `false` por descuido.
+ */
+export const selectCopyContra = (s: ObraState): boolean => s.view === 'certificaciones';

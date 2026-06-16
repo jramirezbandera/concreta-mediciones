@@ -5,6 +5,8 @@ import { ObraModal } from './features/obra';
 import { PresupuestoView } from './features/presupuesto';
 import { type PrintTarget } from './features/print';
 import { ConflictModal, ReferenciaPanel, refStyles } from './features/referencia';
+import { ImportPartidaButton } from './features/importar/ImportPartidaButton';
+import { Icon } from './components';
 import { ClipboardToast } from './layout/ClipboardToast';
 import { Toast } from './layout/Toast';
 import { ResumenView } from './features/resumen';
@@ -88,6 +90,8 @@ export default function App() {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [obraOpen, setObraOpen] = useState(false);
+  // Realce de la zona de presupuesto al arrastrar un fichero .bc3 externo (T4).
+  const [fileOver, setFileOver] = useState(false);
   // Importar como obra de REFERENCIA (no reemplaza la activa): modal sobre el
   // panel, disparado desde la Referencia. Distinto de la vista Importar (reemplaza).
   const [refImportOpen, setRefImportOpen] = useState(false);
@@ -117,6 +121,22 @@ export default function App() {
       if (document.visibilityState === 'hidden') onHide();
     });
     return () => window.removeEventListener('pagehide', onHide);
+  }, []);
+
+  // Guarda global: soltar un .bc3 FUERA de la zona de presupuesto NO debe navegar
+  // (el navegador abriría el fichero y se perdería el estado). preventDefault solo
+  // para drags de FICHERO, sin tocar el drag interno de Referencia.
+  useEffect(() => {
+    const isFileDrag = (e: DragEvent) => Array.from(e.dataTransfer?.types ?? []).includes('Files');
+    const guard = (e: DragEvent) => {
+      if (isFileDrag(e)) e.preventDefault();
+    };
+    window.addEventListener('dragover', guard);
+    window.addEventListener('drop', guard);
+    return () => {
+      window.removeEventListener('dragover', guard);
+      window.removeEventListener('drop', guard);
+    };
   }, []);
 
   // Sandbox (galería de primitivas de dev): sin enlace visible; se entra escribiendo
@@ -178,6 +198,7 @@ export default function App() {
         onObra={() => setObraOpen(true)}
         onHelp={() => openHelp('inicio')}
         obraSwitcher={<ObraSwitcher />}
+        importAction={view === 'presupuesto' ? <ImportPartidaButton compact={bp.isMobile} /> : undefined}
       />
 
       <div className={styles.body}>
@@ -190,26 +211,49 @@ export default function App() {
         )}
 
         <main
-          className={`${styles.main}${refDrag ? ` ${styles.dropZone}` : ''}`}
-          onDragOver={
-            refDrag
-              ? (e) => {
-                  e.preventDefault();
-                  e.dataTransfer.dropEffect = 'copy';
-                }
-              : undefined
-          }
-          onDrop={
-            refDrag
-              ? (e) => {
-                  e.preventDefault();
-                  // Soltar en el área de presupuesto = capítulo/sub activo (con
-                  // preflight de colisión: puede abrir el diálogo de resolución).
-                  requestCopyRefPartidas(refDrag.items, null, refDrag.contra);
-                  setRefDrag(null);
-                }
-              : undefined
-          }
+          className={`${styles.main}${refDrag || fileOver ? ` ${styles.dropZone}` : ''}`}
+          onDragOver={(e) => {
+            if (refDrag) {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'copy';
+              return;
+            }
+            // Una zona de drop hija (p.ej. la vista Importar = reemplazar obra) ya lo
+            // gestiona: no iluminar ni competir por el mismo fichero.
+            if (e.defaultPrevented) return;
+            // Drag de fichero externo (.bc3): ilumina la zona y permite soltar.
+            if (Array.from(e.dataTransfer.types).includes('Files')) {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'copy';
+              if (!fileOver) setFileOver(true);
+            }
+          }}
+          onDragLeave={() => {
+            if (fileOver) setFileOver(false);
+          }}
+          onDrop={(e) => {
+            if (refDrag) {
+              e.preventDefault();
+              // Soltar en el área de presupuesto = capítulo/sub activo (con
+              // preflight de colisión: puede abrir el diálogo de resolución).
+              requestCopyRefPartidas(refDrag.items, null, refDrag.contra);
+              setRefDrag(null);
+              return;
+            }
+            if (e.defaultPrevented) return; // ya lo gestionó una zona hija
+            const dt = e.dataTransfer;
+            const types = Array.from(dt.types);
+            if (!types.some((t) => t === 'Files' || t === 'text/uri-list' || t === 'text/plain'))
+              return;
+            e.preventDefault();
+            setFileOver(false);
+            // Captura SÍNCRONA antes del import dinámico (el evento se recicla). El
+            // parser FIEBDC se carga aquí, no en el bundle inicial.
+            const file = dt.files?.[0];
+            void import('./features/importar/importPartida').then((m) =>
+              m.processBudgetDrop(file, types, null),
+            );
+          }}
         >
           {view === 'presupuesto' ? (
             <PresupuestoView
@@ -232,6 +276,12 @@ export default function App() {
           {overlayOpen && (
             <div className={`no-print ${refStyles.overlay}`}>
               <ReferenciaPanel onImport={() => setRefImportOpen(true)} />
+            </div>
+          )}
+          {fileOver && !refDrag && (
+            <div className={`no-print ${styles.fileDropHint}`} aria-hidden>
+              <Icon name="download" size={20} />
+              Suelta el <span className="mono">.bc3</span> para importar la partida
             </div>
           )}
         </main>

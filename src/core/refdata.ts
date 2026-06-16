@@ -24,6 +24,13 @@ export interface RefPartida {
   items: Item[];
   /** Descripción larga propia (obras como fuente; las bases la traen en REF_DESC). */
   desc?: string;
+  /** Precio autoridad de la fuente: si el .bc3 trae un precio que NO cuadra con el
+   *  descompuesto, viaja `true` para que el sync de recursos no lo colapse al pegar
+   *  (importación de partida CYPE; las bases estáticas no lo usan → undefined). */
+  precioManual?: boolean;
+  /** % de costes indirectos del ~K de la fuente (.bc3), para mostrarlo por partida
+   *  (no se mezcla en silencio con la convención de la obra destino). 0/undefined = sin CI. */
+  ciPct?: number;
 }
 
 /** Fuente de referencia: base de precios o presupuesto ajeno. */
