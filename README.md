@@ -78,12 +78,6 @@ npm run format   # Prettier
 
 La galería de primitivas de UI está en `/#sandbox`.
 
-## Deploy en GitHub Pages
-
-El workflow de GitHub Actions (`.github/workflows/deploy.yml`) construye la app y
-publica `dist/` en GitHub Pages al hacer push a `main`. En el repositorio, configura
-**Settings → Pages → Source: GitHub Actions**. El `base` de Vite se ajusta solo al
-nombre del repositorio durante el build de Pages.
 
 ## Licencia
 
