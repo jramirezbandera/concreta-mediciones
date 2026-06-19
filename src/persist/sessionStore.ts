@@ -16,6 +16,9 @@ interface SessionState {
   activeId: string | null;
   /** Cambio de obra en curso (deshabilita el selector mientras carga). */
   switching: boolean;
+  /** Esta pestaña es SOLO-LECTURA: la obra activa la tiene otra pestaña (T-19).
+   *  Mientras es `true`, el autosave NO escribe (evita pisar a la dueña). */
+  readonly: boolean;
   setObras: (obras: ObraMeta[]) => void;
   /** Inserta/actualiza UNA obra sin tocar las demás. Lo usa la importación como
    *  referencia: añade la obra nueva al selector sin pisar la meta de la activa
@@ -23,12 +26,14 @@ interface SessionState {
   upsertObra: (meta: ObraMeta) => void;
   setActiveId: (activeId: string | null) => void;
   setSwitching: (switching: boolean) => void;
+  setReadonly: (readonly: boolean) => void;
 }
 
 export const useSessionStore = create<SessionState>((set) => ({
   obras: [],
   activeId: null,
   switching: false,
+  readonly: false,
   setObras: (obras) => set({ obras }),
   upsertObra: (meta) =>
     set((s) => ({
@@ -38,4 +43,5 @@ export const useSessionStore = create<SessionState>((set) => ({
     })),
   setActiveId: (activeId) => set({ activeId }),
   setSwitching: (switching) => set({ switching }),
+  setReadonly: (readonly) => set({ readonly }),
 }));

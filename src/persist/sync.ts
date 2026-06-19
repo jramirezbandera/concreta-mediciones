@@ -35,6 +35,7 @@ import {
 } from './registry';
 import { usePersistStore } from './persistStore';
 import { useSessionStore } from './sessionStore';
+import { claimObra, releaseActiveLock } from './tabLock';
 
 /** T1.3a: debounce más largo (la edición llega en ráfagas; no hace falta guardar a
  *  media palabra) + el guardado pesado se difiere a `requestIdleCallback` para no
@@ -64,9 +65,15 @@ let suppress = false;
 /** Última persistencia COMPLETA en vuelo (blob + índice). `flush()` solo cubre el
  *  blob; el índice se escribe DESPUÉS en `saveActiveObra`. */
 let lastPersist: Promise<void> = Promise.resolve();
+/** ¿Esta pestaña es la DUEÑA de la obra activa? (T-19). Si `false`, la obra la
+ *  tiene otra pestaña → el autosave NO escribe (evita pisarla). Optimista: por
+ *  defecto `true` y solo baja a `false` si la sonda del lock encuentra contienda,
+ *  así la pestaña dueña no parpadea a solo-lectura en cada arranque. */
+let isOwner = true;
 
 /** Programa un guardado: debounce → idle → `persistNow`. Reinicia el anterior. */
 function scheduleSave(): void {
+  if (!isOwner) return; // solo-lectura (otra pestaña es dueña): no autosalvar (T-19)
   dirty = true;
   if (timer) clearTimeout(timer);
   timer = setTimeout(() => {
@@ -104,6 +111,7 @@ function domainSlice(s: ObraState) {
 }
 
 function persistNow(): Promise<void> {
+  if (!isOwner) return Promise.resolve(); // solo-lectura: nunca escribir (T-19)
   const data = toSerializable(useObraStore.getState());
   let id = activeId();
   if (!id) {
@@ -135,6 +143,36 @@ export function armAutosave(): void {
     },
     { equalityFn: shallow },
   );
+}
+
+/**
+ * Reclama la propiedad de la obra `id` entre PESTAÑAS (T-19) y refleja el
+ * resultado: DUEÑA → autosave activo; SOLO-LECTURA → autosave inhibido
+ * (`isOwner=false`). En el TRASPASO (la otra pestaña soltó el lock) recarga la
+ * obra de disco antes de retomar el autosave, por si la ex-dueña dejó datos más
+ * nuevos (no pisarla con el estado viejo en memoria). Optimista: `isOwner` queda
+ * en `true` hasta que la sonda del lock confirme contienda, así la dueña no
+ * parpadea a solo-lectura. Sin Web Locks → siempre dueña (pestaña única).
+ */
+function claimActive(id: string): void {
+  claimObra(id, {
+    onOwner: (reason) => {
+      isOwner = true;
+      useSessionStore.getState().setReadonly(false);
+      if (reason === 'handoff') {
+        void serializeOp(async () => {
+          if (activeId() === id) await loadObraIntoStore(id);
+          armAutosave();
+        });
+      } else {
+        armAutosave();
+      }
+    },
+    onReadonly: () => {
+      isOwner = false;
+      useSessionStore.getState().setReadonly(true);
+    },
+  });
 }
 
 /** Fuerza el guardado pendiente y espera a la cola (blob + índice). Cancela el
@@ -210,6 +248,7 @@ export async function hydrate(): Promise<void> {
           useSessionStore.getState().setActiveId(id);
           if (idx.activeId !== id) await persistActiveId(id); // el fallback cambió la activa
           armAutosave();
+          claimActive(id); // T-19: propiedad entre pestañas (puede bajar a solo-lectura)
           return;
         }
         if (!firstCorrupt) firstCorrupt = { raw: res.envelope, key }; // versión no soportada
@@ -262,6 +301,7 @@ async function switchObraImpl(id: string): Promise<void> {
     useSessionStore.getState().setActiveId(id); // solo tras carga OK
     const idx = await persistActiveId(id); // sella la activa y devuelve el índice
     useSessionStore.getState().setObras(idx.obras);
+    claimActive(id); // T-19: re-reclama el lock de la obra destino (libera la previa)
   } finally {
     useSessionStore.getState().setSwitching(false);
   }
@@ -301,6 +341,7 @@ async function newObraImpl(name?: string): Promise<string> {
   const idx = await persistActiveId(id);
   useSessionStore.getState().setObras(idx.obras);
   armAutosave(); // por si veníamos de un arranque vacío sin armar
+  claimActive(id); // T-19: obra nueva → lock libre → dueña
   return id;
 }
 
@@ -319,6 +360,7 @@ async function activateFirstLoadable(ids: string[]): Promise<void> {
       useSessionStore.getState().setActiveId(m);
       await persistActiveId(m);
       armAutosave();
+      claimActive(m); // T-19
       return;
     }
     if (!firstCorrupt) firstCorrupt = { raw: await loadRaw(obraKey(m)), key: obraKey(m) };
@@ -337,6 +379,7 @@ async function activateFirstLoadable(ids: string[]): Promise<void> {
   const idx = await persistActiveId(newId);
   useSessionStore.getState().setObras(idx.obras);
   armAutosave();
+  claimActive(newId); // T-19
 }
 
 /**
@@ -393,5 +436,7 @@ export function __resetSyncForTests(): void {
   clearScheduled();
   dirty = false;
   lastPersist = Promise.resolve();
-  useSessionStore.setState({ obras: [], activeId: null, switching: false });
+  releaseActiveLock(); // T-19: suelta el lock de obra entre pestañas
+  isOwner = true;
+  useSessionStore.setState({ obras: [], activeId: null, switching: false, readonly: false });
 }

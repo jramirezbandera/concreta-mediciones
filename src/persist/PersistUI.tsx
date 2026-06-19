@@ -7,6 +7,7 @@ import { Icon } from '../components';
 import { OBRA_KEY, loadRaw } from './persist';
 import { discardRecovery } from './sync';
 import { usePersistStore } from './persistStore';
+import { useSessionStore } from './sessionStore';
 import styles from './PersistUI.module.css';
 
 /** Descarga el blob crudo guardado como .json (copia de seguridad de recuperación). */
@@ -83,11 +84,29 @@ function RecoveryBanner() {
   );
 }
 
-/** Monta el feedback de persistencia (chip + banner). Se renderiza siempre. */
+/** Banner de SOLO-LECTURA (T-19): la obra activa está abierta en otra pestaña,
+ *  que es la dueña del autosave. Aquí no se guardan los cambios; desaparece solo
+ *  cuando esta pestaña toma el control (la otra se cierra o cambia de obra). */
+function ReadonlyBanner() {
+  const readonly = useSessionStore((s) => s.readonly);
+  if (!readonly) return null;
+  return (
+    <div className={`${styles.banner} no-print`} role="alert">
+      <Icon name="layers" size={16} />
+      <span className={styles.bannerText}>
+        Esta obra está abierta en otra pestaña. Aquí no se guardan los cambios; cierra la otra
+        pestaña para editar en esta.
+      </span>
+    </div>
+  );
+}
+
+/** Monta el feedback de persistencia (banners + chip). Se renderiza siempre. */
 export function PersistUI() {
   return (
     <>
       <RecoveryBanner />
+      <ReadonlyBanner />
       <SaveChip />
     </>
   );
