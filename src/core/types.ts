@@ -118,6 +118,26 @@ export interface CertExtra {
   precio: number; // euros, precio efectivo (sin K)
 }
 
+/**
+ * Ajuste económico configurable del resumen de una certificación: descuento por
+ * pago adelantado, retención extra, corrección puntual de una cert anterior,
+ * o cualquier concepto libre. Suma o resta a la base imponible, ANTES de IVA.
+ * Vive DENTRO de la cert (como los snapshots) para que el documento siga siendo
+ * reproducible: editar un ajuste no reescribe certs ya firmadas.
+ */
+export interface Ajuste {
+  id: string;
+  concepto: string; // texto libre, p.ej. "Descuento pago adelantado"
+  /** 'pct' → % sobre el importe de ESTA cert (pecEsta); 'fijo' → importe fijo en euros. */
+  tipo: 'pct' | 'fijo';
+  /** pct → fracción 0..1 (como `Cert.retencion`); fijo → euros (float 2 dec). */
+  valor: number;
+  /** -1 resta (descuento/retención), +1 suma (devolución/corrección). */
+  signo: -1 | 1;
+  /** true → `addCert()` lo hereda a la cert siguiente (como la retención). */
+  recurrente: boolean;
+}
+
 /** Certificación: `data[partidaId]` = cantidad ejecutada A ORIGEN. */
 export interface Cert {
   id: string;
@@ -136,6 +156,8 @@ export interface Cert {
   lineQty?: Record<string, Record<string, number>>;
   /** Precios contradictorios de ESTA cert (F4.4). Ver `CertExtra`. */
   extras?: CertExtra[];
+  /** Ajustes económicos extra del resumen de ESTA cert. Ver `Ajuste`. undefined = ninguno. */
+  ajustes?: Ajuste[];
   /**
    * Snapshot de precios (F7.0, cierra el residuo de precio de T-2): precio
    * unitario en EUROS (SIN K) por partida, CONGELADO al certificarla (espeja

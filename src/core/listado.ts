@@ -385,6 +385,7 @@ export function buildCertListado(
       extras,
       prevExtras,
       snap,
+      cert.ajustes ?? [],
     ),
   };
 }

@@ -51,6 +51,7 @@ export function CertSelector() {
               c.extras ?? [],
               certs[i - 1]?.extras ?? [],
               certSnapshotOf(c, rates.coefK),
+              c.ajustes ?? [],
             );
             const on = i === curCert;
             return (

@@ -729,6 +729,138 @@
 .retInputBox {
   width: 40px;
 }
+
+/* ---- Ajustes configurables del resumen (pago adelantado, correcciones…) ---- */
+.ajuste {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 7px 8px;
+  border-radius: 7px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-main);
+}
+.ajusteTop {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ajusteConcepto {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+.ajusteBot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ajusteControls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ajusteSigno {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 5px;
+  border: 1px solid var(--border-main);
+  background: var(--bg-elevated);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+.ajNeg {
+  color: var(--state-warn);
+}
+.ajPos {
+  color: var(--state-ok);
+}
+.ajusteValBox {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 4px;
+  border-radius: 5px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-main);
+}
+.ajusteValInput {
+  width: 50px;
+}
+.ajusteUnit {
+  min-width: 18px;
+  padding: 0 2px;
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ajusteRecur {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-disabled);
+  cursor: pointer;
+  user-select: none;
+}
+.ajusteRecur input {
+  accent-color: var(--accent);
+  cursor: pointer;
+  margin: 0;
+}
+.ajusteRecur.recOn {
+  color: var(--accent);
+}
+.ajusteImporte {
+  font-size: 12.5px;
+  font-weight: 600;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.ajusteDel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-disabled);
+  cursor: pointer;
+}
+.ajusteDel:hover {
+  color: var(--state-warn);
+  background: var(--bg-elevated);
+}
+.ajusteAdd {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 2px;
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.ajusteAdd:hover {
+  text-decoration: underline;
+}
+
 .liqFinal {
   margin-top: 13px;
   padding-top: 13px;

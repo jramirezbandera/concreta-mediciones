@@ -121,6 +121,7 @@ const nextRecursoCode = (): string => uid('r');
 const nextPartidaId = (): string => uid('p');
 const nextMedLineId = (): string => uid('m');
 const nextExtraId = (): string => uid('x');
+const nextAjusteId = (): string => uid('a');
 
 /**
  * Renumera `pos` de una lista de partidas EN SITIO (Immer-friendly), reusando la
@@ -418,6 +419,22 @@ export interface ObraState extends ObraData {
   ) => void;
   /** Elimina un contradictorio de la cert en curso. */
   deleteContradictorio: (extraId: string) => void;
+
+  /* ---- ajustes configurables del resumen (pago adelantado, correcciones…) ---- */
+  /** Añade un ajuste en blanco (descuento fijo, puntual) al resumen de la cert en curso. */
+  addAjuste: () => void;
+  /**
+   * Edita un campo de un ajuste de la cert en curso. Al cambiar `tipo` RESETEA
+   * `valor` a 0 (una fracción y unos euros no son intercambiables). `valor` se
+   * clampa según el tipo: `fijo` ≥0 a 2 dec (euros); `pct` ∈ [0,1] (fracción).
+   */
+  editAjuste: (
+    id: string,
+    field: 'concepto' | 'tipo' | 'valor' | 'signo' | 'recurrente',
+    value: string | number | boolean,
+  ) => void;
+  /** Elimina un ajuste de la cert en curso. */
+  deleteAjuste: (id: string) => void;
 
   /* ---- acciones F5 (panel Referencia) ---- */
   /** Abre/cierra el panel de Referencia; sin argumento alterna. */
@@ -857,6 +874,13 @@ export const useObraStore = create<ObraState>()(
           }
           // Los contradictorios se heredan a-origen (mismo id → "anterior" cuadra).
           const extras = last?.extras?.map((e) => ({ ...e }));
+          // Ajustes: solo los recurrentes (pago adelantado, retención extra…), con
+          // id nuevo por cert (no tienen enlace inter-cert, a diferencia de extras).
+          // Los puntuales (una corrección de una cert concreta) NO se arrastran.
+          const recurrentes = last?.ajustes
+            ?.filter((a) => a.recurrente)
+            .map((a) => ({ ...a, id: nextAjusteId() }));
+          const ajustes = recurrentes && recurrentes.length > 0 ? recurrentes : undefined;
           // F7.0: la cert nace con TODOS los precios congelados ("hereda/congela").
           // Hereda los de la última cert (así su "anterior" reproduce al céntimo lo
           // ya certificado) y congela al precio vivo los que falten (partidas nuevas
@@ -873,6 +897,7 @@ export const useObraStore = create<ObraState>()(
             data,
             lineQty,
             extras,
+            ajustes,
             priceSnapshot: precios,
             coefK: last?.coefK ?? s.rates.coefK,
             snapshotAt: new Date().toISOString(),
@@ -927,6 +952,52 @@ export const useObraStore = create<ObraState>()(
           if (!cert?.extras) return;
           cert.extras = cert.extras.filter((e) => e.id !== extraId);
           if (cert.extras.length === 0) cert.extras = undefined;
+        }),
+
+      addAjuste: () =>
+        set((s) => {
+          const cert = s.certs[s.curCert];
+          if (!cert) return;
+          const ajustes = (cert.ajustes ??= []);
+          // Por defecto: descuento fijo puntual (el caso más común: una corrección).
+          ajustes.push({
+            id: nextAjusteId(),
+            concepto: '',
+            tipo: 'fijo',
+            valor: 0,
+            signo: -1,
+            recurrente: false,
+          });
+        }),
+
+      editAjuste: (id, field, value) =>
+        set((s) => {
+          const a = s.certs[s.curCert]?.ajustes?.find((x) => x.id === id);
+          if (!a) return;
+          if (field === 'concepto') {
+            if (typeof value === 'string') a.concepto = value;
+          } else if (field === 'tipo') {
+            if ((value === 'pct' || value === 'fijo') && value !== a.tipo) {
+              a.tipo = value;
+              a.valor = 0; // fracción ⇄ euros no son intercambiables → resetear
+            }
+          } else if (field === 'signo') {
+            if (value === -1 || value === 1) a.signo = value;
+          } else if (field === 'recurrente') {
+            if (typeof value === 'boolean') a.recurrente = value;
+          } else if (field === 'valor') {
+            if (typeof value === 'number' && Number.isFinite(value)) {
+              a.valor = a.tipo === 'pct' ? Math.min(1, Math.max(0, value)) : round2(Math.max(0, value));
+            }
+          }
+        }),
+
+      deleteAjuste: (id) =>
+        set((s) => {
+          const cert = s.certs[s.curCert];
+          if (!cert?.ajustes) return;
+          cert.ajustes = cert.ajustes.filter((a) => a.id !== id);
+          if (cert.ajustes.length === 0) cert.ajustes = undefined;
         }),
 
       setRefOpen: (open) =>

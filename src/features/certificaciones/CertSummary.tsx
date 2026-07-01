@@ -1,4 +1,4 @@
-import { EditableNum, IvaSelect } from '../../components';
+import { EditableNum, EditableText, Icon, IvaSelect } from '../../components';
 import type { CertChapterRow, CertTotals } from '../../core/certificacion';
 import { fmtCents, fmtNum, round2, toEur, type Cents } from '../../core/money';
 import { useObraStore } from '../../store';
@@ -40,6 +40,12 @@ export function CertSummary({ totals, retencion }: { totals: CertTotals; retenci
   const bi = useObraStore((s) => s.rates.bi);
   const setCertField = useObraStore((s) => s.setCertField);
   const setRates = useObraStore((s) => s.setRates);
+  const ajustes = useObraStore((s) => s.certs[s.curCert]?.ajustes);
+  const addAjuste = useObraStore((s) => s.addAjuste);
+  const editAjuste = useObraStore((s) => s.editAjuste);
+  const deleteAjuste = useObraStore((s) => s.deleteAjuste);
+  // Importe valorado de cada ajuste (con su etiqueta y signo) por id, desde el motor.
+  const importeById = new Map(totals.ajustesRows.map((r) => [r.id, r.importe]));
 
   return (
     <div className={styles.summary}>
@@ -103,6 +109,86 @@ export function CertSummary({ totals, retencion }: { totals: CertTotals; retenci
           </span>
           <span className={`mono ${styles.sumVal} ${styles.warn}`}>− {fmtCents(totals.retencion)}</span>
         </div>
+
+        {(ajustes ?? []).map((a) => {
+          const neg = a.signo < 0;
+          const importe = importeById.get(a.id) ?? 0;
+          return (
+            <div key={a.id} className={styles.ajuste}>
+              <div className={styles.ajusteTop}>
+                <button
+                  type="button"
+                  className={`${styles.ajusteSigno} ${neg ? styles.ajNeg : styles.ajPos}`}
+                  title={neg ? 'Resta (descuento). Pulsa para sumar' : 'Suma (devolución). Pulsa para restar'}
+                  aria-label={neg ? 'Signo: resta' : 'Signo: suma'}
+                  onClick={() => editAjuste(a.id, 'signo', neg ? 1 : -1)}
+                >
+                  {neg ? '−' : '+'}
+                </button>
+                <span className={styles.ajusteConcepto}>
+                  <EditableText
+                    value={a.concepto}
+                    ariaLabel="Concepto del ajuste"
+                    placeholder="Concepto del ajuste…"
+                    style={{ fontSize: 12, width: '100%' }}
+                    onCommit={(v) => editAjuste(a.id, 'concepto', v)}
+                  />
+                </span>
+                <button
+                  type="button"
+                  className={styles.ajusteDel}
+                  title="Eliminar ajuste"
+                  aria-label="Eliminar ajuste"
+                  onClick={() => deleteAjuste(a.id)}
+                >
+                  <Icon name="trash" size={13} />
+                </button>
+              </div>
+              <div className={styles.ajusteBot}>
+                <div className={styles.ajusteControls}>
+                  <span className={styles.ajusteValBox}>
+                    <span className={styles.ajusteValInput}>
+                      <EditableNum
+                        value={a.tipo === 'pct' ? round2(a.valor * 100) : a.valor}
+                        dec={a.tipo === 'pct' ? 3 : 2}
+                        accent
+                        ariaLabel={a.tipo === 'pct' ? 'Porcentaje del ajuste' : 'Importe del ajuste'}
+                        onCommit={(v) => editAjuste(a.id, 'valor', a.tipo === 'pct' ? round2(v / 100) : v)}
+                      />
+                    </span>
+                    <button
+                      type="button"
+                      className={styles.ajusteUnit}
+                      title={a.tipo === 'pct' ? 'Porcentaje. Pulsa para importe fijo (€)' : 'Importe fijo. Pulsa para porcentaje (%)'}
+                      aria-label={a.tipo === 'pct' ? 'Tipo: porcentaje' : 'Tipo: importe fijo'}
+                      onClick={() => editAjuste(a.id, 'tipo', a.tipo === 'pct' ? 'fijo' : 'pct')}
+                    >
+                      {a.tipo === 'pct' ? '%' : '€'}
+                    </button>
+                  </span>
+                  <label
+                    className={`${styles.ajusteRecur} ${a.recurrente ? styles.recOn : ''}`}
+                    title="Recurrente: se hereda automáticamente en cada certificación nueva"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={a.recurrente}
+                      onChange={(e) => editAjuste(a.id, 'recurrente', e.target.checked)}
+                    />
+                    Recurrente
+                  </label>
+                </div>
+                <span className={`mono ${styles.ajusteImporte} ${neg ? styles.ajNeg : styles.ajPos}`}>
+                  {neg ? '−' : '+'} {fmtCents(importe)}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+        <button type="button" className={`tcol ${styles.ajusteAdd}`} onClick={() => addAjuste()}>
+          <Icon name="plus" size={13} /> Añadir ajuste
+        </button>
+
         <Row label="Base imponible" value={totals.base} strong />
         <div className={styles.sumRow}>
           <span className={styles.sumLabel}>

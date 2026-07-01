@@ -137,6 +137,15 @@ export function PrintCert({ data }: { data: CertListado }) {
           <span>Retención ({fmtNum(data.retencion * 100, 1)}%)</span>
           <span className="mono">−{fmtCents(t.retencion)}</span>
         </div>
+        {t.ajustesRows.map((a) => (
+          <div key={a.id} className="pd-summary-row">
+            <span>{a.label || 'Ajuste'}</span>
+            <span className="mono">
+              {a.signo < 0 ? '−' : '+'}
+              {fmtCents(a.importe)}
+            </span>
+          </div>
+        ))}
         <div className="pd-summary-row">
           <span>Base imponible</span>
           <span className="mono">{fmtCents(t.base)}</span>

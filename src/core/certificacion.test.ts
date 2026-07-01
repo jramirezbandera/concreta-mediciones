@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ajusteImporte,
+  ajusteLabel,
   cantidadToPct,
   certCalc,
   certChapterRows,
@@ -14,7 +16,17 @@ import {
   sumLineQty,
 } from './certificacion';
 import { toCents, toEur } from './money';
-import type { Cert, CertExtra, Chapter, Partida, PartidasMap, Rates } from './types';
+import type { Ajuste, Cert, CertExtra, Chapter, Partida, PartidasMap, Rates } from './types';
+
+const aj = (over: Partial<Ajuste>): Ajuste => ({
+  id: 'a1',
+  concepto: '',
+  tipo: 'fijo',
+  valor: 0,
+  signo: -1,
+  recurrente: false,
+  ...over,
+});
 
 const extra = (over: Partial<CertExtra>): CertExtra => ({
   id: 'x1',
@@ -125,6 +137,72 @@ describe('certTotals con contradictorios (F4.4)', () => {
     const prev = [extra({ id: 'x1', cantidad: 1, precio: 25 })];
     const t2 = certTotals(partidas, { p1: 50 }, { p1: 20 }, rates, 0, 1, extras, prev);
     expect(toEur(t2.prevPEM)).toBe(225); // 200 + 25 (1 × 25)
+  });
+});
+
+describe('ajusteImporte / ajusteLabel', () => {
+  it('pct → % sobre pecEsta (round2 por paso); reproduce el caso 10,197 % del Excel', () => {
+    const pecEsta = toCents(13843.88);
+    expect(toEur(ajusteImporte(aj({ tipo: 'pct', valor: 0.10197 }), pecEsta))).toBe(1411.66);
+    expect(toEur(ajusteImporte(aj({ tipo: 'pct', valor: 0.05 }), pecEsta))).toBe(692.19);
+  });
+  it('fijo → euros tal cual, sin depender de pecEsta', () => {
+    expect(toEur(ajusteImporte(aj({ tipo: 'fijo', valor: 1411.66 }), toCents(999)))).toBe(1411.66);
+  });
+  it('la etiqueta auto-compone el % (decimales variables); el fijo usa el concepto', () => {
+    expect(ajusteLabel(aj({ tipo: 'pct', valor: 0.10197, concepto: 'Pago adelantado' }))).toBe(
+      'Pago adelantado 10,197 %',
+    );
+    expect(ajusteLabel(aj({ tipo: 'pct', valor: 0.05, concepto: 'Retención extra' }))).toBe(
+      'Retención extra 5 %',
+    );
+    expect(ajusteLabel(aj({ tipo: 'fijo', concepto: 'Exceso cert. 2' }))).toBe('Exceso cert. 2');
+  });
+});
+
+describe('certTotals con ajustes configurables', () => {
+  const partidas = [partida({ id: 'p1', cantidad: 100, precio: 10 })];
+  // pecEsta del fixture = 357 € (ver arriba): 500 → +19% = 595, − prev 238 = 357.
+
+  it('ajuste en % se calcula sobre pecEsta (no en cascada) e independiente de la retención', () => {
+    const t = certTotals(partidas, { p1: 50 }, { p1: 20 }, rates, 0.05, 1, [], [], undefined, [
+      aj({ id: 'a1', tipo: 'pct', valor: 0.1, signo: -1, concepto: 'Pago adelantado' }),
+    ]);
+    expect(toEur(t.retencion)).toBe(17.85); // 357 × 5% (sobre pecEsta)
+    expect(t.ajustesRows).toHaveLength(1);
+    expect(toEur(t.ajustesRows[0]!.importe)).toBe(35.7); // 357 × 10% (sobre pecEsta, NO sobre 339,15)
+    expect(t.ajustesRows[0]!.signo).toBe(-1);
+    expect(toEur(t.ajustesTotal)).toBe(-35.7);
+    expect(toEur(t.base)).toBe(303.45); // 357 − 17,85 − 35,70
+  });
+
+  it('ajuste fijo con signo + suma a la base; el − resta', () => {
+    const suma = certTotals(partidas, { p1: 50 }, { p1: 20 }, rates, 0, 1, [], [], undefined, [
+      aj({ id: 'a1', tipo: 'fijo', valor: 100, signo: 1 }),
+    ]);
+    expect(toEur(suma.base)).toBe(457); // 357 + 100
+    const resta = certTotals(partidas, { p1: 50 }, { p1: 20 }, rates, 0, 1, [], [], undefined, [
+      aj({ id: 'a1', tipo: 'fijo', valor: 100, signo: -1 }),
+    ]);
+    expect(toEur(resta.base)).toBe(257); // 357 − 100
+  });
+
+  it('Σ de varios ajustes con signo; IVA sobre la base ya ajustada', () => {
+    const t = certTotals(partidas, { p1: 50 }, { p1: 20 }, rates, 0, 1, [], [], undefined, [
+      aj({ id: 'a1', tipo: 'pct', valor: 0.1, signo: -1 }), // −35,70
+      aj({ id: 'a2', tipo: 'fijo', valor: 100, signo: 1 }), // +100
+    ]);
+    expect(toEur(t.ajustesTotal)).toBe(64.3); // −35,70 + 100
+    expect(toEur(t.base)).toBe(421.3); // 357 + 64,30
+    expect(toEur(t.iva)).toBe(42.13); // round2(421,30 × 10%)
+    expect(toEur(t.liquido)).toBe(463.43); // 421,30 + 42,13
+  });
+
+  it('sin ajustes → ajustesTotal 0 y base intacta (compat)', () => {
+    const t = certTotals(partidas, { p1: 50 }, { p1: 20 }, rates, 0.05);
+    expect(t.ajustesRows).toHaveLength(0);
+    expect(t.ajustesTotal).toBe(0);
+    expect(toEur(t.base)).toBe(339.15); // 357 − 17,85, como antes
   });
 });
 

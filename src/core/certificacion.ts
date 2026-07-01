@@ -4,8 +4,8 @@
    Importes en CÉNTIMOS. El coeficiente K (§4) se aplica al precio, igual que
    en el presupuesto.
    =========================================================================== */
-import type { Cert, CertExtra, Chapter, Partida, PartidasMap, Rates } from './types';
-import { type Cents, importeCents, round2, scaleCents } from './money';
+import type { Ajuste, Cert, CertExtra, Chapter, Partida, PartidasMap, Rates } from './types';
+import { type Cents, importeCents, round2, scaleCents, sumCents, toCents } from './money';
 import { partidaCantidad, partidaImporte } from './medicion';
 
 export interface CertRow {
@@ -95,6 +95,35 @@ export function extraCalc(e: CertExtra, prevCantidad: number): CertExtraRow {
   return { aOrigen, anterior, estaCert: aOrigen - anterior };
 }
 
+/* ---- Ajustes configurables del resumen (pago adelantado, correcciones…) -----
+   Un `Ajuste` (ver types) suma o resta a la base imponible ANTES de IVA. Los `%`
+   se calculan SIEMPRE sobre el importe de esta cert (`pecEsta`), no en cascada, así
+   cada línea es independiente y auditable por separado. `AjusteRow` es la fila ya
+   valorada (con la etiqueta compuesta) que consumen el resumen y los exports. */
+
+export interface AjusteRow {
+  id: string;
+  label: string; // etiqueta legible (auto-compone el % si es porcentual)
+  signo: -1 | 1;
+  importe: Cents; // magnitud SIN signo (el signo va aparte, como la retención)
+}
+
+/** Importe (céntimos, sin signo) de un ajuste sobre el importe de esta cert. */
+export function ajusteImporte(a: Ajuste, pecEsta: Cents): Cents {
+  return a.tipo === 'pct' ? scaleCents(pecEsta, a.valor) : toCents(a.valor);
+}
+
+/** Etiqueta legible de un ajuste para el resumen y los documentos: para `pct`
+ *  auto-compone el porcentaje (10,197 %) tras el concepto; para `fijo`, el concepto. */
+export function ajusteLabel(a: Ajuste): string {
+  if (a.tipo !== 'pct') return a.concepto;
+  const pct = (a.valor * 100).toLocaleString('es-ES', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 3,
+  });
+  return `${a.concepto} ${pct} %`.trim();
+}
+
 export interface CertTotals {
   budgetPEM: Cents; // PEM del presupuesto (para el % global)
   certPEM: Cents; // PEM certificado a origen (Σ aOrigen)
@@ -105,7 +134,9 @@ export interface CertTotals {
   pecPrev: Cents;
   pecEsta: Cents; // importe de esta certificación (PEC)
   retencion: Cents; // retención aplicada
-  base: Cents; // base = pecEsta − retención
+  ajustesRows: AjusteRow[]; // ajustes valorados (para resumen y exports)
+  ajustesTotal: Cents; // Σ con signo de los ajustes (lo que mueven la base)
+  base: Cents; // base = pecEsta − retención + Σ ajustes
   iva: Cents;
   liquido: Cents; // líquido a abonar = base + IVA
 }
@@ -121,6 +152,7 @@ export function certTotals(
   extras: CertExtra[] = [],
   prevExtras: CertExtra[] = [],
   snap?: CertSnapshot,
+  ajustes: Ajuste[] = [],
 ): CertTotals {
   let budgetPEM = 0;
   let certPEM = 0;
@@ -148,7 +180,16 @@ export function certTotals(
   const pecPrev = scaleCents(prevPEM, 1 + ggbi);
   const pecEsta = pecOrigen - pecPrev;
   const ret = scaleCents(pecEsta, retencion);
-  const base = pecEsta - ret;
+  // Ajustes: cada `%` sobre `pecEsta` (no en cascada); los fijos, tal cual. Todos
+  // pre-IVA. `ajustesTotal` lleva el signo (−1 resta, +1 suma) → mueve la base.
+  const ajustesRows: AjusteRow[] = ajustes.map((a) => ({
+    id: a.id,
+    label: ajusteLabel(a),
+    signo: a.signo,
+    importe: ajusteImporte(a, pecEsta),
+  }));
+  const ajustesTotal = sumCents(ajustesRows.map((r) => r.signo * r.importe));
+  const base = pecEsta - ret + ajustesTotal;
   const iva = scaleCents(base, rates.iva);
   const liquido = base + iva;
   return {
@@ -161,6 +202,8 @@ export function certTotals(
     pecPrev,
     pecEsta,
     retencion: ret,
+    ajustesRows,
+    ajustesTotal,
     base,
     iva,
     liquido,

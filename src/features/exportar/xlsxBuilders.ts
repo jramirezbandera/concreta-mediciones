@@ -341,6 +341,7 @@ export function buildCertXlsx(data: CertListado, meta: ObraMeta): XlsxDoc {
   rows.push(fila('Certificado anterior', -t.pecPrev));
   rows.push(fila('Esta certificación', t.pecEsta, true));
   rows.push(fila(`Retención (${(data.retencion * 100).toLocaleString('es-ES')}%)`, -t.retencion));
+  for (const a of t.ajustesRows) rows.push(fila(a.label || 'Ajuste', a.signo * a.importe));
   rows.push(fila('Base imponible', t.base));
   rows.push(fila('IVA', t.iva));
   rows.push(fila('Líquido a abonar', t.liquido, true));

@@ -753,6 +753,67 @@ describe('acciones F4 (certificaciones)', () => {
     state().editContradictorio(id, 'cantidad', 9);
     expect(state().certs[prevIdx]!.extras![0]!.cantidad).toBe(4);
   });
+
+  it('addAjuste crea un ajuste en blanco (descuento fijo, puntual) en la cert en curso', () => {
+    state().setCurCert(0);
+    state().addAjuste();
+    const a = state().certs[0]!.ajustes![0]!;
+    expect(a).toMatchObject({ concepto: '', tipo: 'fijo', valor: 0, signo: -1, recurrente: false });
+  });
+
+  it('editAjuste: cambiar de tipo RESETEA valor; clampa pct a [0,1] y fijo a ≥0', () => {
+    state().setCurCert(0);
+    state().addAjuste();
+    const id = state().certs[0]!.ajustes![0]!.id;
+    state().editAjuste(id, 'valor', 1411.66); // euros
+    expect(state().certs[0]!.ajustes![0]!.valor).toBe(1411.66);
+    state().editAjuste(id, 'tipo', 'pct'); // fracción ⇄ euros → resetea
+    expect(state().certs[0]!.ajustes![0]!.valor).toBe(0);
+    state().editAjuste(id, 'valor', 2); // pct fuera de rango → clamp 1
+    expect(state().certs[0]!.ajustes![0]!.valor).toBe(1);
+    state().editAjuste(id, 'signo', 1);
+    state().editAjuste(id, 'recurrente', true);
+    state().editAjuste(id, 'concepto', 'Pago adelantado');
+    expect(state().certs[0]!.ajustes![0]!).toMatchObject({
+      signo: 1,
+      recurrente: true,
+      concepto: 'Pago adelantado',
+    });
+  });
+
+  it('deleteAjuste elimina la línea y limpia ajustes si queda vacío', () => {
+    state().setCurCert(0);
+    state().addAjuste();
+    const id = state().certs[0]!.ajustes![0]!.id;
+    state().deleteAjuste(id);
+    expect(state().certs[0]!.ajustes).toBeUndefined();
+  });
+
+  it('addCert hereda SOLO los ajustes recurrentes (id nuevo); los puntuales no se arrastran', () => {
+    state().setCurCert(state().certs.length - 1);
+    const prevIdx = state().certs.length - 1;
+    state().addAjuste(); // recurrente
+    state().addAjuste(); // puntual
+    const [rec, pun] = state().certs[prevIdx]!.ajustes!;
+    state().editAjuste(rec!.id, 'recurrente', true);
+    state().editAjuste(rec!.id, 'concepto', 'Pago adelantado');
+    state().editAjuste(pun!.id, 'concepto', 'Corrección puntual');
+    state().addCert();
+    const nueva = state().certs.at(-1)!;
+    expect(nueva.ajustes).toHaveLength(1); // solo el recurrente
+    expect(nueva.ajustes![0]!.concepto).toBe('Pago adelantado');
+    expect(nueva.ajustes![0]!.id).not.toBe(rec!.id); // id nuevo por cert
+    // editar la nueva no toca la previa (clon independiente)
+    state().editAjuste(nueva.ajustes![0]!.id, 'valor', 5);
+    expect(state().certs[prevIdx]!.ajustes!.find((x) => x.id === rec!.id)!.valor).toBe(0);
+  });
+
+  it('addCert sin ajustes recurrentes deja la nueva cert sin ajustes (undefined)', () => {
+    state().setCurCert(state().certs.length - 1);
+    state().addAjuste(); // puntual por defecto
+    state().addCert();
+    expect(state().certs.at(-1)!.ajustes).toBeUndefined();
+  });
 });
 
 describe('snapshot de precios al certificar (F7.0, residuo de precio de T-2)', () => {

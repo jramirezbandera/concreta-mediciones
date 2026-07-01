@@ -483,6 +483,7 @@ function certBloques(data: CertListado): (Paragraph | Table)[] {
         fila('Certificado anterior', -t.pecPrev),
         fila('Esta certificación', t.pecEsta, true),
         fila(`Retención (${fmtNum(data.retencion * 100, 1)}%)`, -t.retencion),
+        ...t.ajustesRows.map((a) => fila(a.label || 'Ajuste', a.signo * a.importe)),
         fila('Base imponible', t.base),
         fila('IVA', t.iva),
         fila('Líquido a abonar', t.liquido, true, 24),

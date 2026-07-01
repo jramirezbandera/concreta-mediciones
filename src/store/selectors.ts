@@ -19,7 +19,7 @@ import {
 } from '../core/certificacion';
 import { buildResumen, type ResumenListado } from '../core/listado';
 import type { Cents } from '../core/money';
-import type { CertExtra, Chapter, PartidasMap, Rates } from '../core/types';
+import type { Ajuste, CertExtra, Chapter, PartidasMap, Rates } from '../core/types';
 import { chapterTotals as chapterTotalsCore, pec as pecCore, pem as pemCore, totalConIva as totalConIvaCore } from '../core/totales';
 import { copyTargetOf, type CopyTarget, type ObraState } from './obraStore';
 
@@ -89,6 +89,7 @@ export const selectRecursoUsage = (s: ObraState): Record<string, number> => _usa
 /** Referencia estable para "sin datos previos" (no romper la memoización). */
 const EMPTY_DATA: Record<string, number> = {};
 const EMPTY_EXTRAS: CertExtra[] = [];
+const EMPTY_AJUSTES: Ajuste[] = [];
 
 const _certTotals = memo1(
   (
@@ -102,6 +103,8 @@ const _certTotals = memo1(
     // F7.0: snapshot de precios de la cert (campos sueltos → memo por identidad).
     priceSnapshot: Record<string, number> | undefined,
     certK: number | undefined,
+    // Ajustes del resumen: van en la CLAVE de memo (recomputar al editarlos).
+    ajustes: Ajuste[],
   ): CertTotals =>
     certTotalsCore(
       Object.values(partidas).flat(),
@@ -113,6 +116,7 @@ const _certTotals = memo1(
       extras,
       prevExtras,
       certSnapshotOf({ priceSnapshot, coefK: certK }, rates.coefK),
+      ajustes,
     ),
 );
 const _certChapterRows = memo1(
@@ -156,6 +160,7 @@ export const selectCertTotals = (s: ObraState): CertTotals =>
     prevCertExtras(s),
     s.certs[s.curCert]?.priceSnapshot,
     s.certs[s.curCert]?.coefK,
+    s.certs[s.curCert]?.ajustes ?? EMPTY_AJUSTES,
   );
 
 /** Avance certificado por capítulo de la cert en curso. */
