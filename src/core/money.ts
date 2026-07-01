@@ -51,6 +51,19 @@ export function parseEsNumber(input: string): number | null {
   return Number.isNaN(n) ? null : n;
 }
 
+/**
+ * Normaliza la entrada de un campo numérico mientras se teclea: el PUNTO (la
+ * tecla del teclado numérico) se trata como separador DECIMAL y se convierte en
+ * coma. Los campos editan SIN separadores de miles (EditableNum/MedNum los quitan
+ * al abrir), así que cualquier punto tecleado es intención de decimal.
+ * Excepción: si la cadena YA tiene una coma, no se tocan los puntos (así un valor
+ * PEGADO en formato español "1.234,56" conserva sus miles y `parseEsNumber` lo
+ * lee bien). Inverso conceptual del formateo; no valida (eso es `parseEsNumber`).
+ */
+export function toDecimalComma(raw: string): string {
+  return raw.includes(',') ? raw : raw.replace(/\./g, ',');
+}
+
 /* ===========================================================================
    Dinero en céntimos enteros (§0 decisión 2).
    ---------------------------------------------------------------------------

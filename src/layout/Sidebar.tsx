@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { EditableNum, Icon, InlineCreate, IvaSelect, Modal } from '../components';
-import { fmtCents, fmtNum, parseEsNumber, toCents, toEur, type Cents } from '../core/money';
+import { fmtCents, fmtNum, parseEsNumber, toCents, toDecimalComma, toEur, type Cents } from '../core/money';
 import { coefKParaObjetivo, pem as pemCore } from '../core/totales';
 import {
   ancestorIds,
@@ -42,7 +42,7 @@ function k(cents: Cents): string {
  * El preview muestra el K resultante y el PEM REAL que saldrá (con el redondeo
  * por partida, que puede dejar una desviación de céntimos respecto al objetivo).
  */
-function AjustaModal({
+export function AjustaModal({
   open,
   onClose,
   baseCents,
@@ -108,7 +108,7 @@ function AjustaModal({
               inputMode="decimal"
               aria-label="PEM objetivo en euros"
               autoFocus
-              onChange={(e) => setDraft(e.target.value)}
+              onChange={(e) => setDraft(toDecimalComma(e.target.value))} // punto del numpad → coma
               onKeyDown={(e) => {
                 if (e.key === 'Enter') apply();
               }}

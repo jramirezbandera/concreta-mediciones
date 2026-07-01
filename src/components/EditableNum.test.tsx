@@ -24,6 +24,17 @@ describe('EditableNum', () => {
     expect(onCommit).toHaveBeenCalledWith(14.2);
   });
 
+  it('acepta el punto del teclado numérico como coma decimal', () => {
+    const onCommit = vi.fn();
+    render(<EditableNum value={10} onCommit={onCommit} ariaLabel="Cantidad" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Cantidad' }));
+    const input = screen.getByRole('textbox', { name: 'Cantidad' });
+    fireEvent.change(input, { target: { value: '14.5' } }); // numpad: punto
+    expect(input).toHaveValue('14,5'); // se muestra ya como coma
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onCommit).toHaveBeenCalledWith(14.5);
+  });
+
   it('confirma al perder el foco (blur)', () => {
     const onCommit = vi.fn();
     render(<EditableNum value={10} onCommit={onCommit} ariaLabel="Cantidad" />);

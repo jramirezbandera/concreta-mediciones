@@ -10,6 +10,7 @@ import {
   scaleCents,
   sumCents,
   toCents,
+  toDecimalComma,
   toEur,
 } from './money';
 
@@ -87,6 +88,22 @@ describe('parseEsNumber', () => {
   it('T-6: permite negativos (corrección "esta certificación")', () => {
     expect(parseEsNumber('-12,5')).toBe(-12.5);
     expect(parseEsNumber('-1.234,56')).toBe(-1234.56);
+  });
+});
+
+describe('toDecimalComma', () => {
+  it('el punto del teclado numérico se vuelve coma decimal', () => {
+    expect(toDecimalComma('14.5')).toBe('14,5');
+    expect(toDecimalComma('14.')).toBe('14,'); // a mitad de tecleo
+    expect(toDecimalComma('0.85')).toBe('0,85');
+  });
+  it('no toca una cadena que ya usa coma (respeta el formato español pegado)', () => {
+    expect(toDecimalComma('14,5')).toBe('14,5');
+    expect(toDecimalComma('1.234,56')).toBe('1.234,56'); // miles + decimal pegado
+  });
+  it('el resultado lo lee parseEsNumber como decimal', () => {
+    expect(parseEsNumber(toDecimalComma('14.5'))).toBe(14.5);
+    expect(parseEsNumber(toDecimalComma('1.234,56'))).toBe(1234.56);
   });
 });
 

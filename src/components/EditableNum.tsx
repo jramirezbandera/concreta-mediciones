@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { fmtNum, parseEsNumber } from '../core/money';
+import { fmtNum, parseEsNumber, toDecimalComma } from '../core/money';
 import styles from './EditableNum.module.css';
 
 export interface EditableNumProps {
@@ -79,7 +79,7 @@ export function EditableNum({
         aria-invalid={invalid || undefined}
         size={1} // sin esto el ancho intrínseco (~20ch) deforma la columna al editar
         onChange={(e) => {
-          setDraft(e.target.value);
+          setDraft(toDecimalComma(e.target.value)); // punto del numpad → coma decimal
           if (invalid) setInvalid(false); // está corrigiendo: quita el aviso
         }}
         onBlur={leave}

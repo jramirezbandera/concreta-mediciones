@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { fmtNum, parseEsNumber } from '../../core/money';
+import { fmtNum, parseEsNumber, toDecimalComma } from '../../core/money';
 import { consumeArmNextEdit } from '../../hooks/editGridNav';
 import styles from './Presupuesto.module.css';
 
@@ -76,7 +76,7 @@ export function MedNum({
         size={1} // sin esto el ancho intrínseco (~20ch) revienta la columna al editar
         className={`mono ${styles.medCellInput}`}
         style={{ textAlign: align }}
-        onChange={(e) => setDraft(e.target.value)}
+        onChange={(e) => setDraft(toDecimalComma(e.target.value))} // punto del numpad → coma
         onBlur={commit}
         onKeyDown={(e) => {
           if (e.key === 'Enter') commit();
