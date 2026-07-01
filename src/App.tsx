@@ -273,8 +273,12 @@ export default function App() {
           ) : (
             <ResumenView compact={bp.isMobile} />
           )}
+          {/* Overlay (pantalla estrecha, <1100): vive DENTRO de <main> a propósito,
+              para cubrir SOLO el área de presupuesto (no la barra lateral). La
+              cobertura la da el anidamiento en el DOM, sin acoplar a la anchura de
+              la sidebar. Split/full comparten instancia a nivel de .body (abajo). */}
           {overlayOpen && (
-            <div className={`no-print ${refStyles.overlay}`}>
+            <div key="ref-overlay" className={`no-print ${refStyles.overlay}`}>
               <ReferenciaPanel onImport={() => setRefImportOpen(true)} />
             </div>
           )}
@@ -286,24 +290,31 @@ export default function App() {
           )}
         </main>
 
-        {splitOpen && (
+        {/* Split y full comparten UNA sola instancia: maximizar/restaurar SOLO alterna
+            su clase (`.aside` en flujo ↔ `.full` absoluto), no la desmonta. Antes eran
+            bloques distintos → React remontaba y se perdía el estado local del panel
+            (selección, búsqueda, desplegados, obra de referencia cargada). El `key`
+            estable ancla la identidad aunque aparezca/desaparezca el tirador. El overlay
+            (estrecho) va aparte, dentro de <main>, para no tapar la barra lateral. */}
+        {(splitOpen || refFull) && (
           <>
-            <div
-              className={`no-print ${refStyles.divider}`}
-              onPointerDown={startRefResize}
-              role="separator"
-              aria-orientation="vertical"
-            />
-            <aside className={refStyles.aside} style={{ width: refWidth }}>
+            {splitOpen && (
+              <div
+                key="ref-divider"
+                className={`no-print ${refStyles.divider}`}
+                onPointerDown={startRefResize}
+                role="separator"
+                aria-orientation="vertical"
+              />
+            )}
+            <aside
+              key="ref-panel"
+              className={`no-print ${refFull ? refStyles.full : refStyles.aside}`}
+              style={splitOpen ? { width: refWidth } : undefined}
+            >
               <ReferenciaPanel onImport={() => setRefImportOpen(true)} />
             </aside>
           </>
-        )}
-
-        {refFull && (
-          <div className={`no-print ${refStyles.full}`}>
-            <ReferenciaPanel onImport={() => setRefImportOpen(true)} />
-          </div>
         )}
       </div>
 
