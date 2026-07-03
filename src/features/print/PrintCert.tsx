@@ -133,10 +133,12 @@ export function PrintCert({ data }: { data: CertListado }) {
           </span>
           <b className="mono">{fmtCents(t.pecEsta)}</b>
         </div>
-        <div className="pd-summary-row">
-          <span>Retención ({fmtNum(data.retencion * 100, 1)}%)</span>
-          <span className="mono">−{fmtCents(t.retencion)}</span>
-        </div>
+        {data.retencion > 0 && (
+          <div className="pd-summary-row">
+            <span>Retención ({fmtNum(data.retencion * 100, 1)}%)</span>
+            <span className="mono">−{fmtCents(t.retencion)}</span>
+          </div>
+        )}
         {t.ajustesRows.map((a) => (
           <div key={a.id} className="pd-summary-row">
             <span>{a.label || 'Ajuste'}</span>

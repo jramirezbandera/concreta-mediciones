@@ -340,7 +340,9 @@ export function buildCertXlsx(data: CertListado, meta: ObraMeta): XlsxDoc {
   rows.push(fila('Ejecución por contrata a origen', t.pecOrigen));
   rows.push(fila('Certificado anterior', -t.pecPrev));
   rows.push(fila('Esta certificación', t.pecEsta, true));
-  rows.push(fila(`Retención (${(data.retencion * 100).toLocaleString('es-ES')}%)`, -t.retencion));
+  // Retención solo si la obra la tiene (>0): sin ella no se emite una línea de 0.
+  if (data.retencion > 0)
+    rows.push(fila(`Retención (${(data.retencion * 100).toLocaleString('es-ES')}%)`, -t.retencion));
   for (const a of t.ajustesRows) rows.push(fila(a.label || 'Ajuste', a.signo * a.importe));
   rows.push(fila('Base imponible', t.base));
   rows.push(fila('IVA', t.iva));

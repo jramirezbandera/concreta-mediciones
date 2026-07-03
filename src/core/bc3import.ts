@@ -554,7 +554,9 @@ export function bc3ToObra(bytes: Uint8Array): Bc3ImportResult {
     }
 
   const coefK = rates.coefK;
-  const certs: Cert[] = [{ id: 'c1', num: 1, period: 'Certificación nº 1', retencion: 0.05, data: {} }];
+  // Sin retención por defecto (design): la obra importada la fija a voluntad como
+  // línea de ajuste; una obra sin retenciones no arrastra una fila forzada.
+  const certs: Cert[] = [{ id: 'c1', num: 1, period: 'Certificación nº 1', retencion: 0, data: {} }];
   const data: ImportedObra = {
     chapters,
     partidas,

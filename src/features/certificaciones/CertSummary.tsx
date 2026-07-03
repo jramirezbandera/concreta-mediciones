@@ -89,28 +89,34 @@ export function CertSummary({ totals, retencion }: { totals: CertTotals; retenci
 
       <div className={styles.sumDivider} />
       <div className={styles.sumGroup}>
-        <div className={styles.sumRow}>
-          <span className={styles.sumLabel}>
-            <span className={styles.sumDot} style={{ background: 'var(--state-warn)' }} />
-            Retención garantía
-            <span className={styles.retInput}>
-              <span className={styles.retInputBox}>
-                <EditableNum
-                  value={round2(retencion * 100)}
-                  dec={1}
-                  accent
-                  ariaLabel="Retención %"
-                  // pctToRate, NO round2(v/100): eso cuantizaba a % enteros (B-01).
-                  onCommit={(v) => setCertField('retencion', pctToRate(v))}
-                />
-              </span>
-              <span className="mono" style={{ fontSize: 11, color: 'var(--text-disabled)' }}>
-                %
+        {/* La retención NO se fuerza por defecto (design): la fila solo aparece si
+            la obra tiene retención (>0). Una obra sin retenciones no la ve; se
+            añade a voluntad como línea de ajuste (%, recurrente). Las obras que ya
+            tenían retención conservan su fila editable (ponerla a 0 la oculta). */}
+        {retencion > 0 && (
+          <div className={styles.sumRow}>
+            <span className={styles.sumLabel}>
+              <span className={styles.sumDot} style={{ background: 'var(--state-warn)' }} />
+              Retención garantía
+              <span className={styles.retInput}>
+                <span className={styles.retInputBox}>
+                  <EditableNum
+                    value={round2(retencion * 100)}
+                    dec={1}
+                    accent
+                    ariaLabel="Retención %"
+                    // pctToRate, NO round2(v/100): eso cuantizaba a % enteros (B-01).
+                    onCommit={(v) => setCertField('retencion', pctToRate(v))}
+                  />
+                </span>
+                <span className="mono" style={{ fontSize: 11, color: 'var(--text-disabled)' }}>
+                  %
+                </span>
               </span>
             </span>
-          </span>
-          <span className={`mono ${styles.sumVal} ${styles.warn}`}>− {fmtCents(totals.retencion)}</span>
-        </div>
+            <span className={`mono ${styles.sumVal} ${styles.warn}`}>− {fmtCents(totals.retencion)}</span>
+          </div>
+        )}
 
         {(ajustes ?? []).map((a) => {
           const neg = a.signo < 0;

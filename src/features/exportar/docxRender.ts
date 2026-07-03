@@ -482,7 +482,11 @@ function certBloques(data: CertListado): (Paragraph | Table)[] {
         fila('Ejecución por contrata a origen', t.pecOrigen),
         fila('Certificado anterior', -t.pecPrev),
         fila('Esta certificación', t.pecEsta, true),
-        fila(`Retención (${fmtNum(data.retencion * 100, 1)}%)`, -t.retencion),
+        // Retención: solo si la obra la tiene (>0). Sin retención no ensucia el
+        // documento con una línea de 0 (paridad con el resumen en pantalla).
+        ...(data.retencion > 0
+          ? [fila(`Retención (${fmtNum(data.retencion * 100, 1)}%)`, -t.retencion)]
+          : []),
         ...t.ajustesRows.map((a) => fila(a.label || 'Ajuste', a.signo * a.importe)),
         fila('Base imponible', t.base),
         fila('IVA', t.iva),
