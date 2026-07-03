@@ -781,46 +781,50 @@
   width: 50px;
 }
 /* Toggle segmentado — base compartida por tipo (€/%) y signo (−/+):
-   mostrar ambas opciones a la vez es la pista de que es conmutable. */
+   mostrar ambas opciones a la vez es la pista de que es conmutable. El
+   estado activo es un tinte suave + texto de color (mismo lenguaje de
+   selección que IvaSelect/TypeSelect), no un relleno sólido: más fino. */
 .segToggle {
   display: inline-flex;
   align-items: stretch;
   flex-shrink: 0;
+  gap: 1px;
+  padding: 1px;
   border: 1px solid var(--border-main);
-  border-radius: 5px;
-  overflow: hidden;
+  border-radius: 6px;
   background: var(--bg-surface);
 }
 .segToggle button {
-  min-width: 22px;
-  padding: 2px 0;
-  border: none;
+  min-width: 19px;
+  padding: 1px 6px;
+  border: 0;
+  border-radius: 4px;
   background: transparent;
   color: var(--text-disabled);
-  font-size: 12.5px;
-  font-weight: 600;
-  line-height: 1;
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.3;
   cursor: pointer;
   transition: color 120ms ease, background 120ms ease;
 }
-.segToggle button + button {
-  border-left: 1px solid var(--border-main);
-}
 .segToggle button:not(.segOn):hover {
   color: var(--text-secondary);
-  background: var(--accent-soft);
+  background: var(--bg-elevated);
 }
 .segToggle .segOn {
-  background: var(--accent);
-  color: var(--on-accent);
+  background: var(--accent-soft);
+  color: var(--accent);
   cursor: default;
 }
-/* Signo: el segmento activo conserva su color semántico (resta / suma). */
+/* Signo: el segmento activo conserva su color semántico (resta / suma),
+   también en tinte suave para no recargar la fila. */
 .segToggle .segOn.segNeg {
-  background: var(--state-warn);
+  background: color-mix(in srgb, var(--state-warn) 13%, transparent);
+  color: var(--state-warn);
 }
 .segToggle .segOn.segPos {
-  background: var(--state-ok);
+  background: color-mix(in srgb, var(--state-ok) 13%, transparent);
+  color: var(--state-ok);
 }
 .ajusteRecur {
   display: inline-flex;
