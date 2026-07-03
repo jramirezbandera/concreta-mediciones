@@ -39,7 +39,7 @@ export { SCHEMA_VERSION, blankObraData, seedObraData };
 export { toSerializable, fromSerializable } from './schema';
 export { copyTargetOf } from './slices/copySlice';
 export type { ObraData };
-export type { CopyTarget } from './slices/copySlice';
+export type { CopyTarget, PendingCopy } from './slices/copySlice';
 
 /** Modo de edición de una certificación: importe a origen vs. de esta cert. */
 export type CertMode = 'origen' | 'esta';
