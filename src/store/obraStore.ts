@@ -7,301 +7,45 @@
    estado del store, NUNCA globals mutados (§8 del plan; era un hack del
    prototipo `window.IVA_RATE`).
 
-   Alcance F1: estado sembrado + acciones básicas (setView/setActive/setRates/
-   onCertEdit). El CRUD completo (mover/borrar/añadir partidas, editar medición
-   y recursos, sincronizar `precio` con el descompuesto) es de F2; el store queda
-   preparado pero esas acciones no se implementan aquí.
+   F-04 (auditoría): este fichero ya no es el «god store» monolítico. Ensambla
+   el estado + las acciones de UI/ciclo de vida, y COMPONE tres slices (patrón
+   slice de Zustand) sin cambiar la API pública:
+     · `./schema`               — SCHEMA_VERSION, migraciones, to/fromSerializable,
+                                   seed/blank (lo que consume `persist/`).
+     · `./slices/certSlice`     — certificación (cantidades, contradictorios, ajustes).
+     · `./slices/copySlice`     — copia de partidas de Referencia (+ tipos de copia).
+     · `./slices/estructuraSlice`— CRUD estructural + edición in-situ + copy-on-write.
+   Los símbolos públicos de esos módulos se RE-EXPORTAN aquí para que `./obraStore`
+   (y el barrel `./index`) mantengan la superficie de exports byte a byte.
    =========================================================================== */
-import { create } from 'zustand';
+import { create, type StateCreator } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import type { Banco, Cert, Chapter, MedLine, Obra, Partida, PartidasMap, Rates, ResourceType, SubChapter } from '../core/types';
-import { buildRecursos, precioCuadraDescompuesto, precioSegunModo } from '../core/banco';
-import { estaCertToOrigen, prevDataOf, sumLineQty } from '../core/certificacion';
-import { rawUuid } from '../core/id';
-import { round2 } from '../core/money';
-import { renumberChapter } from '../core/numbering';
-import { ancestorIds, findNode, flattenContainers, subtreeIds } from '../core/tree';
+import type { Cert, MedLine, Partida, Rates, ResourceType } from '../core/types';
+import { ancestorIds, findNode } from '../core/tree';
 import type { ImportedObra } from '../core/bc3import';
-import {
-  REF_DESC,
-  REF_SOURCES,
-  detectCollisions,
-  type Collision,
-  type RefCopyItem,
-  type RefDrag,
-  type Resolution,
-} from '../core/refdata';
-import { CHAPTERS, DEFAULT_OBRA, DEFAULT_RATES, PARTIDAS, makeCertsInit } from '../core/seed';
+import { REF_SOURCES, type RefCopyItem, type RefDrag, type Resolution } from '../core/refdata';
 import type { View } from '../layout/types';
+import { useToastStore } from './toastStore';
+import { ALL } from './base';
+import { SCHEMA_VERSION, blankObraData, seedObraData, type ObraData } from './schema';
+import { createCertSlice } from './slices/certSlice';
+import { createCopySlice, type PendingCopy } from './slices/copySlice';
+import { createEstructuraSlice } from './slices/estructuraSlice';
 
-/** Selección especial del sidebar: "Toda la obra". */
-export const ALL = '__ALL__';
-
-/** Sub del capítulo por id, a CUALQUIER profundidad (jerarquía N niveles). */
-function subIn(ch: Chapter, subId: string): SubChapter | undefined {
-  return flattenContainers(ch).find((f) => f.sub.id === subId)?.sub;
-}
-
-/**
- * Siguiente índice libre entre los hijos de un contenedor: max(último segmento
- * numérico de los códigos) + 1. Política de huecos (igual que `addChapter`):
- * borrar no recodifica a los hermanos, así que el hueco no se rellena.
- */
-function nextChildNum(parent: Chapter | SubChapter): number {
-  return (
-    (parent.children ?? []).reduce(
-      (m, sub) => Math.max(m, parseInt(String(sub.code).split('.').at(-1) ?? '', 10) || 0),
-      0,
-    ) + 1
-  );
-}
-
-/**
- * Recodifica un subárbol bajo un código nuevo: el nodo toma `code` y sus
- * descendientes pasan a índices secuenciales (`code.1`, `code.2`…). Lo usan
- * promover (deleteSubchapter) y mover (moveSubtree): el código de un contenedor
- * es su RUTA, así que cambiar de padre obliga a reescribir toda la rama. Los
- * ids NO cambian (son los que referencian `Partida.sub` y `active`).
- */
-function recodeSubtree(node: SubChapter, code: string): void {
-  const seen = new Set<SubChapter>();
-  const walk = (n: SubChapter, c: string): void => {
-    if (seen.has(n)) return; // ciclo (dato corrupto)
-    seen.add(n);
-    n.code = c;
-    (n.children ?? []).forEach((child, i) => walk(child, `${c}.${i + 1}`));
-  };
-  walk(node, code);
-}
-
-/**
- * Contenedor PADRE de un sub dentro de su capítulo (el propio capítulo para
- * los de primer nivel), o `null` si el sub no existe en él.
- */
-function parentOf(ch: Chapter, subId: string): Chapter | SubChapter | null {
-  const f = flattenContainers(ch).find((x) => x.sub.id === subId);
-  if (!f) return null;
-  return f.parentId === ch.id ? ch : (subIn(ch, f.parentId) ?? null);
-}
-
-/**
- * Versión del shape serializable de la obra (§0 decisión 4: schemaVersion +
- * ruta de migración desde el día uno). `fromSerializable` migra en CADENA las
- * versiones < SCHEMA_VERSION (hydrate de IndexedDB e import .json pasan ambos
- * por ahí); las > SCHEMA_VERSION se rechazan (archivo de una app más nueva).
- *
- *   v1 → v2 (2026-06-12, jerarquía N niveles): `SubChapter` pasa a ser
- *   recursivo (`children?`). Migración IDENTIDAD: un árbol de 2 niveles ya es
- *   un caso degenerado válido del recursivo; solo se sella la versión.
- */
-export const SCHEMA_VERSION = 2;
+// --- superficie pública de `./obraStore` (invariante F-04: no cambia nada) ---
+export { ALL };
+export { SCHEMA_VERSION, blankObraData, seedObraData };
+export { toSerializable, fromSerializable } from './schema';
+export { copyTargetOf } from './slices/copySlice';
+export type { ObraData };
+export type { CopyTarget } from './slices/copySlice';
 
 /** Modo de edición de una certificación: importe a origen vs. de esta cert. */
 export type CertMode = 'origen' | 'esta';
 
 /** Salida del copy-on-write: forkar copia privada vs. editar el compartido en todas. */
 export type CowChoice = 'copy' | 'all';
-
-/**
- * Ids ÚNICOS por construcción (F6, eng-review run 5 / Tensión 1-B). Antes eran
- * contadores de sesión (`p·N`…) que arrancaban en 0 cada carga → al recargar una
- * obra persistida colisionaban. Peor: el id de línea `m·N` vive CONGELADO en los
- * snapshots de certificación (`Cert.lineQty`), así que rehidratar contadores
- * podía reusar un id que una cert vieja aún referencia (corrupción del cobro).
- * `crypto.randomUUID` elimina la clase entera: sin contadores, sin rehidratación,
- * sin escaneo que olvidar. El prefijo (`p-`/`r-`/`m-`/`x-`) sólo da legibilidad;
- * la unicidad la garantiza el uuid. Seed (`p111`) y bc3 (`b3-*`) ids son literales
- * (no salen de aquí) y no cambian.
- */
-function uid(prefix: string): string {
-  return `${prefix}-${rawUuid()}`;
-}
-const nextRecursoCode = (): string => uid('r');
-const nextPartidaId = (): string => uid('p');
-const nextMedLineId = (): string => uid('m');
-const nextExtraId = (): string => uid('x');
-const nextAjusteId = (): string => uid('a');
-
-/**
- * Renumera `pos` de una lista de partidas EN SITIO (Immer-friendly), reusando la
- * regla pura de `core/numbering`. Sólo escribe `pos` sobre los drafts; descarta
- * los objetos intermedios → no contamina el árbol de Immer con copias.
- */
-function renumberInPlace(ch: Chapter | undefined, list: Partida[]): void {
-  const fresh = renumberChapter(ch, list);
-  for (let i = 0; i < list.length; i++) list[i]!.pos = fresh[i]!.pos;
-}
-
-/**
- * F7.0: congela en la cert el precio unitario VIGENTE de la partida al
- * certificarla (espeja `Cert.lineQty`, que congela la cantidad al marcar): el
- * precio que el usuario ve al certificar es el que queda en el documento;
- * editar después el presupuesto (recurso/precio/K) ya no lo reescribe. Sólo
- * congela la primera vez (el snapshot no se refresca); el K se congela con el
- * primer precio. `snapshotAt` estampa el último congelado (trazabilidad F7.1).
- */
-function freezePrecio(
-  partidas: PartidasMap,
-  rates: Rates,
-  cert: Cert,
-  partidaId: string,
-): void {
-  if (cert.priceSnapshot?.[partidaId] != null) return;
-  for (const chId in partidas) {
-    const p = partidas[chId]?.find((x) => x.id === partidaId);
-    if (!p) continue;
-    (cert.priceSnapshot ??= {})[partidaId] = p.precio;
-    cert.coefK ??= rates.coefK;
-    cert.snapshotAt = new Date().toISOString();
-    return;
-  }
-}
-
-/** Destino de copia (F5): capítulo/sub seleccionado, o el primer capítulo si la
- *  selección es "Toda la obra"/vacía. `label` para la barra "Copiar a …". */
-export interface CopyTarget {
-  chId: string;
-  subId: string | null;
-  label: string;
-}
-
-/** Copia en espera de resolver colisiones de recurso (T-1, decisión D2). */
-export interface PendingCopy {
-  items: RefCopyItem[];
-  target: { chId: string; subId: string | null } | null;
-  contra: boolean;
-  collisions: Collision[];
-  /** Procedencia para que la copia, tras resolver colisiones, respete BASE vs limpia. */
-  provenance: 'base' | 'clip';
-}
-export function copyTargetOf(chapters: Chapter[], active: string): CopyTarget {
-  if (active !== ALL) {
-    // Resolución a CUALQUIER profundidad (jerarquía N niveles): un sub-sub
-    // activo también es un destino válido de copia.
-    const hit = findNode(chapters, active);
-    if (hit) {
-      const { chapter, node } = hit;
-      return node === chapter
-        ? { chId: chapter.id, subId: null, label: `${chapter.code} · ${chapter.title}` }
-        : { chId: chapter.id, subId: node.id, label: `${node.code} · ${node.title}` };
-    }
-  }
-  const c = chapters[0];
-  return c ? { chId: c.id, subId: null, label: `${c.code} · ${c.title}` } : { chId: '', subId: null, label: '' };
-}
-
-/** Siguiente código derivado libre para BIFURCAR un recurso en colisión (`code~2`,
- *  `code~3`…). Despoja un sufijo `~N` previo para no encadenar `code~2~2` al
- *  re-copiar entre tres o más obras un recurso ya bifurcado. */
-function forkCode(recursos: Banco, code: string): string {
-  const base = code.replace(/~\d+$/, '');
-  let i = 2;
-  let c = `${base}~${i}`;
-  while (recursos[c]) c = `${base}~${++i}`;
-  return c;
-}
-
-/**
- * Ejecuta la copia de partidas de referencia sobre el draft `s` (lo comparten la
- * copia directa y la resuelta tras colisión). `resolution[code] === 'fork'` crea
- * el recurso entrante bajo un código derivado y reescribe los items que lo usan;
- * el resto integra SIN pisar homónimos (fusionar = comportamiento histórico).
- */
-function applyCopy(
-  s: ObraState,
-  items: RefCopyItem[],
-  target: { chId: string; subId: string | null } | null,
-  contra: boolean,
-  resolution?: Resolution,
-  provenance: 'base' | 'clip' = 'base',
-): void {
-  if (!items.length) return;
-  const t = target ?? copyTargetOf(s.chapters, s.active);
-  const ch = s.chapters.find((c) => c.id === t.chId);
-  if (!ch) return;
-  const subId = t.subId;
-  // Destino a cualquier profundidad; un subId inexistente se RECHAZA (no-op).
-  const sub = subId ? subIn(ch, subId) : undefined;
-  if (subId && !sub) return;
-  const base = sub ? sub.code : ch.code;
-  const list = (s.partidas[t.chId] ??= []);
-
-  // 0) Bifurcaciones: por cada código resuelto a 'fork' que choca, crea el recurso
-  //    ENTRANTE bajo un código derivado (una vez por código de origen).
-  const forkMap: Record<string, string> = {};
-  for (const it of items)
-    for (const r of it.partida.items) {
-      if (r.type === '%CI') continue;
-      if (resolution?.[r.code] === 'fork' && s.recursos[r.code] && !forkMap[r.code]) {
-        const fc = forkCode(s.recursos, r.code);
-        forkMap[r.code] = fc;
-        s.recursos[fc] = { type: r.type, desc: r.desc ?? '', ud: r.ud ?? '', precio: r.precio ?? 0 };
-      }
-    }
-
-  // 1) Recursos no bifurcados al banco SIN pisar homónimos (coherencia §0 / fusionar).
-  for (const it of items)
-    for (const r of it.partida.items) {
-      if (r.type === '%CI') continue;
-      const code = forkMap[r.code] ?? r.code;
-      if (!s.recursos[code])
-        s.recursos[code] = { type: r.type, desc: r.desc ?? '', ud: r.ud ?? '', precio: r.precio ?? 0 };
-    }
-
-  // 2) Partidas nuevas (pos correlativa dentro del sub destino; precio de la base
-  //    es autoridad, sin recomputar). Los items 'fork' apuntan al código derivado.
-  let sameSub = list.filter((p) => (subId ? p.sub === subId : !p.sub)).length;
-  for (const it of items) {
-    const p = it.partida;
-    sameSub += 1;
-    const newItems = p.items.map((r) =>
-      r.type === '%CI'
-        ? // Conserva código y descripción del %CI (el ~K «Costes indirectos» y los
-          // «%» del banco son líneas distintas; perder la desc las confunde).
-          { code: r.code, type: '%CI' as const, cantidad: r.cantidad, desc: r.desc }
-        : { code: forkMap[r.code] ?? r.code, type: r.type, cantidad: r.cantidad },
-    );
-    list.push({
-      id: nextPartidaId(),
-      sub: subId || undefined,
-      pos: `${base}.${sameSub}`,
-      code: p.code,
-      title: p.title,
-      ud: p.ud,
-      precio: p.precio,
-      // Autoridad del precio de la fuente (.bc3 CYPE): sin esto, editar un recurso
-      // colisionante resincroniza la partida y el precio importado deriva.
-      precioManual: p.precioManual || undefined,
-      // CI de la fuente como badge visible (no se pliega en el precio).
-      ciPct: p.ciPct,
-      mainType: p.mainType,
-      // La desc propia de la partida (obras como fuente) manda sobre la canónica
-      // por código (bases); coincide con lo que previsualiza el panel (RefPartidaRow).
-      desc: p.desc ?? REF_DESC[p.code] ?? '',
-      med: [],
-      items: newItems,
-      // Procedencia 'clip' (portapapeles) = trabajo tuyo → partida limpia, sin
-      // chip BASE ni baseSource. 'base' (panel Referencia) mantiene el chip.
-      fromBase: provenance === 'clip' ? undefined : !contra,
-      contradictorio: contra || undefined,
-      baseSource: provenance === 'clip' ? undefined : it.sourceName,
-    });
-  }
-  s.expanded[t.chId] = true;
-}
-
-/** Estado de dominio de la obra (lo que persistiría en F6). Serializable. */
-export interface ObraData {
-  /** Versión del shape (para migración al cargar; ver SCHEMA_VERSION). */
-  schemaVersion: number;
-  chapters: Chapter[];
-  partidas: PartidasMap;
-  recursos: Banco;
-  certs: Cert[];
-  rates: Rates;
-  obra: Obra;
-}
 
 export interface ObraState extends ObraData {
   /* ---- estado de UI ---- */
@@ -623,94 +367,14 @@ export interface ObraState extends ObraData {
   reset: () => void;
 }
 
-/**
- * Construye el estado de dominio desde `core/seed`. Clona partidas/capítulos
- * (en F2 se mutan), deriva el banco con `buildRecursos` y siembra el histórico
- * de certificaciones. Las tasas y la obra se copian (no se comparte referencia
- * con el seed para no contaminarlo entre stores/tests).
- */
-export function seedObraData(): ObraData {
-  const partidas = structuredClone(PARTIDAS);
-  const recursos = buildRecursos(partidas);
-  // §0 decisión 6: el precio de una partida semilla/importada es AUTORIDAD de la
-  // fuente. La descomposición demo es ilustrativa y no siempre suma al precio
-  // (p111: descompUnit 9,27 € vs precio 18,42 €). Sin marcar override, el sync de
-  // recursos de F2 (precioSegunModo) colapsaría el precio al descompuesto y el PEM
-  // dejaría de cuadrar. Marcamos override donde no cuadra → precio fijo y seguro;
-  // la señal de override (data-driven, precio≠descompUnit) sigue saltando igual.
-  for (const ps of Object.values(partidas))
-    for (const p of ps) if (!precioCuadraDescompuesto(p, recursos)) p.precioManual = true;
-  return {
-    schemaVersion: SCHEMA_VERSION,
-    chapters: structuredClone(CHAPTERS),
-    partidas,
-    recursos,
-    certs: makeCertsInit(partidas),
-    rates: { ...DEFAULT_RATES },
-    obra: { ...DEFAULT_OBRA },
-  };
-}
-
-/**
- * Obra EN BLANCO para "nueva obra" (multi-obra, T-10): sin capítulos/partidas/
- * recursos, una certificación vacía lista para editar, tasas por defecto. No
- * arrastra el contenido demo del seed (eso confundiría: cada obra nueva con
- * "Movimiento de tierras" de ejemplo). El usuario añade capítulos con el "+".
- */
-export function blankObraData(name = 'Obra nueva'): ObraData {
-  return {
-    schemaVersion: SCHEMA_VERSION,
-    chapters: [],
-    partidas: {},
-    recursos: {},
-    certs: [{ id: 'c1', num: 1, period: '', retencion: 0, data: {} }],
-    rates: { ...DEFAULT_RATES },
-    obra: { denominacion: name, direccion: '', localidad: '' },
-  };
-}
-
-/** Extrae el estado de dominio serializable (sin estado de UI). Lo usa F6. */
-export function toSerializable(s: ObraData): ObraData {
-  return {
-    schemaVersion: SCHEMA_VERSION,
-    chapters: s.chapters,
-    partidas: s.partidas,
-    recursos: s.recursos,
-    certs: s.certs,
-    rates: s.rates,
-    obra: s.obra,
-  };
-}
-
-/**
- * Migraciones de esquema: `MIGRATIONS[v]` transforma un `ObraData` de la
- * versión `v` a la `v+1`. Se aplican en cadena hasta `SCHEMA_VERSION`.
- */
-const MIGRATIONS: Record<number, (d: ObraData) => ObraData> = {
-  // v1 → v2 (jerarquía N niveles): identidad estructural — el shape de 2
-  // niveles ya es un árbol recursivo degenerado; solo sube la versión.
-  1: (d) => ({ ...d, schemaVersion: 2 }),
-};
-
-/**
- * Valida/migra un `ObraData` cargado (hydrate de IndexedDB e import .json).
- * Migra en cadena las versiones antiguas; rechaza las desconocidas (más nuevas
- * que la app, o tan viejas que no hay ruta).
- */
-export function fromSerializable(data: ObraData): ObraData {
-  let d = data;
-  while (d.schemaVersion < SCHEMA_VERSION) {
-    const mig = MIGRATIONS[d.schemaVersion];
-    if (!mig) break; // sin ruta → cae al rechazo de abajo
-    d = mig(d);
-  }
-  if (d.schemaVersion !== SCHEMA_VERSION) {
-    throw new Error(
-      `schemaVersion ${data.schemaVersion} no soportada (esperada ≤ ${SCHEMA_VERSION}); sin ruta de migración.`,
-    );
-  }
-  return d;
-}
+/** Tipo helper de los slices del store: fija `ObraState` y la pila de middleware
+ *  (subscribeWithSelector + immer) para que `set` sea el de Immer (recipe). */
+export type ObraSlice<T> = StateCreator<
+  ObraState,
+  [['zustand/subscribeWithSelector', never], ['zustand/immer', never]],
+  [],
+  T
+>;
 
 /** Estado de UI inicial (sincronizado con el nº de certs sembradas). */
 function seedUi(certs: Cert[]) {
@@ -736,7 +400,7 @@ function seedUi(certs: Cert[]) {
 
 export const useObraStore = create<ObraState>()(
   subscribeWithSelector(
-  immer((set) => {
+  immer((set, get, store) => {
     // Arranque limpio: la app parte de una obra nueva vacía (sin datos demo). En
     // primera carga `hydrate` (sin obras en IDB) conserva este estado en memoria;
     // la 1ª edición la fosiliza. `seedObraData()`/`reset()` siguen vivos como
@@ -813,193 +477,6 @@ export const useObraStore = create<ObraState>()(
           s.curCert = Math.max(0, Math.min(index, s.certs.length - 1));
         }),
 
-      onCertEdit: (partidaId, value, mode) =>
-        set((s) => {
-          const cert = s.certs[s.curCert];
-          if (!cert) return;
-          if (mode === 'esta') {
-            const prev = prevDataOf(s.certs, s.curCert)[partidaId] ?? 0;
-            cert.data[partidaId] = estaCertToOrigen(prev, value);
-          } else {
-            // A origen: desviación CONSCIENTE del prototipo (que guardaba v crudo).
-            // La cantidad ejecutada no puede ser negativa; round2 = 2 decimales,
-            // consistente con `estaCertToOrigen` y con el seed (`makeCertsInit`),
-            // que también redondean la cantidad a origen.
-            cert.data[partidaId] = round2(Math.max(0, value));
-          }
-          // Teclear una cantidad/% es un override del total: deja de certificarse
-          // por líneas (regresión §8a). Si no quedan líneas marcadas en la cert,
-          // limpia el contenedor para no dejar `{}` huérfanos.
-          if (cert.lineQty?.[partidaId]) {
-            delete cert.lineQty[partidaId];
-            if (Object.keys(cert.lineQty).length === 0) cert.lineQty = undefined;
-          }
-          freezePrecio(s.partidas, s.rates, cert, partidaId); // F7.0
-        }),
-
-      setCertLine: (partidaId, lineId, qty) =>
-        set((s) => {
-          const cert = s.certs[s.curCert];
-          if (!cert) return;
-          const lineQty = (cert.lineQty ??= {});
-          const lines = (lineQty[partidaId] ??= {});
-          if (qty == null || qty <= 0) {
-            delete lines[lineId];
-          } else {
-            lines[lineId] = round2(qty);
-          }
-          if (Object.keys(lines).length === 0) {
-            // Sin líneas marcadas: la partida deja de certificarse por líneas.
-            delete lineQty[partidaId];
-            delete cert.data[partidaId];
-            if (Object.keys(lineQty).length === 0) cert.lineQty = undefined;
-          } else {
-            cert.data[partidaId] = sumLineQty(lines);
-            freezePrecio(s.partidas, s.rates, cert, partidaId); // F7.0
-          }
-        }),
-
-      addCert: () =>
-        set((s) => {
-          const last = s.certs.at(-1);
-          const num = (last?.num ?? 0) + 1;
-          // Clonado superficial por nivel (no `structuredClone`: los valores son
-          // drafts de Immer y el proxy no es clonable). data es plano; lineQty
-          // tiene un nivel de anidación.
-          const data: Record<string, number> = { ...(last?.data ?? {}) };
-          let lineQty: Record<string, Record<string, number>> | undefined;
-          if (last?.lineQty) {
-            lineQty = {};
-            for (const pid in last.lineQty) lineQty[pid] = { ...last.lineQty[pid] };
-          }
-          // Los contradictorios se heredan a-origen (mismo id → "anterior" cuadra).
-          const extras = last?.extras?.map((e) => ({ ...e }));
-          // Ajustes: solo los recurrentes (pago adelantado, retención extra…), con
-          // id nuevo por cert (no tienen enlace inter-cert, a diferencia de extras).
-          // Los puntuales (una corrección de una cert concreta) NO se arrastran.
-          const recurrentes = last?.ajustes
-            ?.filter((a) => a.recurrente)
-            .map((a) => ({ ...a, id: nextAjusteId() }));
-          const ajustes = recurrentes && recurrentes.length > 0 ? recurrentes : undefined;
-          // F7.0: la cert nace con TODOS los precios congelados ("hereda/congela").
-          // Hereda los de la última cert (así su "anterior" reproduce al céntimo lo
-          // ya certificado) y congela al precio vivo los que falten (partidas nuevas
-          // o última cert legada sin snapshot). El K congelado se hereda igual.
-          const precios: Record<string, number> = {};
-          for (const chId in s.partidas)
-            for (const p of s.partidas[chId] ?? [])
-              precios[p.id] = last?.priceSnapshot?.[p.id] ?? p.precio;
-          s.certs.push({
-            id: `c${num}`,
-            num,
-            period: '',
-            retencion: last?.retencion ?? 0,
-            data,
-            lineQty,
-            extras,
-            ajustes,
-            priceSnapshot: precios,
-            coefK: last?.coefK ?? s.rates.coefK,
-            snapshotAt: new Date().toISOString(),
-          });
-          s.curCert = s.certs.length - 1;
-        }),
-
-      setCertField: (field, value) =>
-        set((s) => {
-          const cert = s.certs[s.curCert];
-          if (!cert) return;
-          if (field === 'period') {
-            if (typeof value === 'string') cert.period = value;
-          } else if (typeof value === 'number' && Number.isFinite(value)) {
-            cert.retencion = Math.min(1, Math.max(0, value)); // retención ∈ [0,1]
-          }
-        }),
-
-      addContradictorio: (chapterId) =>
-        set((s) => {
-          const cert = s.certs[s.curCert];
-          if (!cert) return;
-          const extras = (cert.extras ??= []);
-          const n = extras.filter((e) => e.chapterId === chapterId).length + 1;
-          extras.push({
-            id: nextExtraId(),
-            chapterId,
-            pos: `C${n}`,
-            title: '',
-            ud: '',
-            cantidad: 0,
-            precio: 0,
-          });
-        }),
-
-      editContradictorio: (extraId, field, value) =>
-        set((s) => {
-          const e = s.certs[s.curCert]?.extras?.find((x) => x.id === extraId);
-          if (!e) return;
-          if (field === 'title' || field === 'ud') {
-            if (typeof value === 'string') e[field] = value;
-          } else if (typeof value === 'number' && Number.isFinite(value)) {
-            // cantidad/precio no pueden ser negativos; cantidad a 2 dec, precio
-            // (dinero) a 2 dec también (coherente con el banco de precios).
-            e[field] = round2(Math.max(0, value));
-          }
-        }),
-
-      deleteContradictorio: (extraId) =>
-        set((s) => {
-          const cert = s.certs[s.curCert];
-          if (!cert?.extras) return;
-          cert.extras = cert.extras.filter((e) => e.id !== extraId);
-          if (cert.extras.length === 0) cert.extras = undefined;
-        }),
-
-      addAjuste: () =>
-        set((s) => {
-          const cert = s.certs[s.curCert];
-          if (!cert) return;
-          const ajustes = (cert.ajustes ??= []);
-          // Por defecto: descuento fijo puntual (el caso más común: una corrección).
-          ajustes.push({
-            id: nextAjusteId(),
-            concepto: '',
-            tipo: 'fijo',
-            valor: 0,
-            signo: -1,
-            recurrente: false,
-          });
-        }),
-
-      editAjuste: (id, field, value) =>
-        set((s) => {
-          const a = s.certs[s.curCert]?.ajustes?.find((x) => x.id === id);
-          if (!a) return;
-          if (field === 'concepto') {
-            if (typeof value === 'string') a.concepto = value;
-          } else if (field === 'tipo') {
-            if ((value === 'pct' || value === 'fijo') && value !== a.tipo) {
-              a.tipo = value;
-              a.valor = 0; // fracción ⇄ euros no son intercambiables → resetear
-            }
-          } else if (field === 'signo') {
-            if (value === -1 || value === 1) a.signo = value;
-          } else if (field === 'recurrente') {
-            if (typeof value === 'boolean') a.recurrente = value;
-          } else if (field === 'valor') {
-            if (typeof value === 'number' && Number.isFinite(value)) {
-              a.valor = a.tipo === 'pct' ? Math.min(1, Math.max(0, value)) : round2(Math.max(0, value));
-            }
-          }
-        }),
-
-      deleteAjuste: (id) =>
-        set((s) => {
-          const cert = s.certs[s.curCert];
-          if (!cert?.ajustes) return;
-          cert.ajustes = cert.ajustes.filter((a) => a.id !== id);
-          if (cert.ajustes.length === 0) cert.ajustes = undefined;
-        }),
-
       setRefOpen: (open) =>
         set((s) => {
           s.refOpen = open ?? !s.refOpen;
@@ -1027,388 +504,22 @@ export const useObraStore = create<ObraState>()(
           s.refDrag = drag;
         }),
 
-      loadObra: (data) =>
+      loadObra: (data) => {
+        // D-08: un toast «Deshacer» pendiente capturó (capítulo, partida) de la
+        // obra SALIENTE; ejecutarlo tras cargar otra inyectaría datos ajenos.
+        useToastStore.getState().clear();
         set((s) => {
-          Object.assign(s, { schemaVersion: SCHEMA_VERSION, ...data });
+          // `bajas: {}` por delante: un `ImportedObra` (.bc3) no trae tombstones
+          // y sin el default arrastraría los de la obra ANTERIOR (v3).
+          Object.assign(s, { schemaVersion: SCHEMA_VERSION, bajas: {}, ...data });
           Object.assign(s, seedUi(data.certs));
           const first = data.chapters[0]?.id;
           s.view = 'presupuesto';
           s.active = first ?? ALL;
           s.expanded = {}; // árbol colapsado: una obra recién importada se explora
           s.refOpen = false;
-        }),
-
-      copyRefPartidas: (items, target, contra, resolution, provenance = 'base') =>
-        set((s) => {
-          applyCopy(s, items, target, contra, resolution, provenance);
-        }),
-
-      requestCopyRefPartidas: (items, target, contra, provenance = 'base') =>
-        set((s) => {
-          if (!items.length) return;
-          const collisions = detectCollisions(items, s.recursos);
-          if (collisions.length === 0) {
-            applyCopy(s, items, target, contra, undefined, provenance); // sin colisión: copia directa
-          } else {
-            // Guarda la procedencia: tras resolver la colisión, la copia debe
-            // seguir respetando BASE (Referencia) vs limpia (portapapeles).
-            s.pendingCopy = { items, target, contra, collisions, provenance };
-          }
-        }),
-
-      resolveCopyRefPartidas: (resolution) =>
-        set((s) => {
-          const pc = s.pendingCopy;
-          if (!pc) return;
-          applyCopy(s, pc.items, pc.target, pc.contra, resolution, pc.provenance);
-          s.pendingCopy = null;
-        }),
-
-      cancelCopyRefPartidas: () =>
-        set((s) => {
-          s.pendingCopy = null;
-        }),
-
-      editPartidaField: (chapterId, partidaId, field, value) =>
-        set((s) => {
-          const p = s.partidas[chapterId]?.find((x) => x.id === partidaId);
-          if (!p) return;
-          p[field] = value;
-          p.fromBase = false; // editar confirma la partida: se va el chip BASE
-        }),
-
-      setPrecio: (chapterId, partidaId, value) =>
-        set((s) => {
-          // El precio envenena el importe/PEM: ignora NaN/±∞ y negativos.
-          if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return;
-          const p = s.partidas[chapterId]?.find((x) => x.id === partidaId);
-          if (!p) return;
-          p.precio = value;
-          p.precioManual = true; // override: el precio deja de seguir al descompuesto
-          p.fromBase = false;
-        }),
-
-      addMedLine: (chapterId, partidaId) =>
-        set((s) => {
-          const p = s.partidas[chapterId]?.find((x) => x.id === partidaId);
-          if (!p) return;
-          p.med.push({ id: nextMedLineId(), comment: '', uds: '', largo: '', ancho: '', alto: '' });
-          p.fromBase = false;
-        }),
-
-      editMedLine: (chapterId, partidaId, index, field, value) =>
-        set((s) => {
-          const p = s.partidas[chapterId]?.find((x) => x.id === partidaId);
-          const line = p?.med[index];
-          if (!p || !line) return;
-          line[field] = value;
-          p.fromBase = false;
-        }),
-
-      deleteMedLine: (chapterId, partidaId, index) =>
-        set((s) => {
-          const p = s.partidas[chapterId]?.find((x) => x.id === partidaId);
-          if (!p || index < 0 || index >= p.med.length) return;
-          p.med.splice(index, 1);
-          p.fromBase = false;
-        }),
-
-      editRecurso: (code, field, value) =>
-        set((s) => {
-          const r = s.recursos[code];
-          if (!r) return;
-          if (field === 'precio') {
-            if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return;
-            r.precio = value;
-            // T9: el cambio de precio del banco se propaga a TODAS las partidas
-            // sin override (precioManual). precioSegunModo deja fijas las override
-            // y las sin items; el resto pasan a su descompuesto recalculado.
-            for (const ch in s.partidas)
-              for (const p of s.partidas[ch] ?? []) p.precio = precioSegunModo(p, s.recursos);
-          } else {
-            // desc/ud: no alteran el descompuesto → no hay resync.
-            if (typeof value !== 'string') return;
-            r[field] = value;
-          }
-        }),
-
-      editItemCantidad: (chapterId, partidaId, itemIndex, value) =>
-        set((s) => {
-          if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return;
-          const p = s.partidas[chapterId]?.find((x) => x.id === partidaId);
-          const it = p?.items[itemIndex];
-          if (!p || !it) return;
-          it.cantidad = value;
-          p.fromBase = false;
-          p.precio = precioSegunModo(p, s.recursos);
-        }),
-
-      addItem: (chapterId, partidaId) =>
-        set((s) => {
-          const p = s.partidas[chapterId]?.find((x) => x.id === partidaId);
-          if (!p) return;
-          const code = nextRecursoCode();
-          s.recursos[code] = { type: 'MAT', desc: '', ud: 'ud', precio: 0 };
-          p.items.push({ code, type: 'MAT', cantidad: 1 });
-          p.fromBase = false;
-          p.precio = precioSegunModo(p, s.recursos); // precio 0 → descompuesto sin cambio
-        }),
-
-      deleteItem: (chapterId, partidaId, itemIndex) =>
-        set((s) => {
-          const p = s.partidas[chapterId]?.find((x) => x.id === partidaId);
-          if (!p || itemIndex < 0 || itemIndex >= p.items.length) return;
-          p.items.splice(itemIndex, 1);
-          p.fromBase = false;
-          p.precio = precioSegunModo(p, s.recursos);
-        }),
-
-      editItemCode: (chapterId, partidaId, itemIndex, rawCode) =>
-        set((s) => {
-          const p = s.partidas[chapterId]?.find((x) => x.id === partidaId);
-          const it = p?.items[itemIndex];
-          if (!p || !it) return;
-          if (it.type === '%CI') return; // el %CI no es un recurso del banco
-          const newCode = (rawCode ?? '').trim();
-          if (!newCode || newCode === it.code) return; // no-op
-          const existing = s.recursos[newCode];
-          if (existing) {
-            // ADOPTAR: la línea sigue al concepto existente; el banco da el tipo.
-            it.type = existing.type;
-          } else {
-            // CREAR: clona los valores actuales bajo el código nuevo.
-            const src = s.recursos[it.code];
-            s.recursos[newCode] = src
-              ? { ...src }
-              : { type: it.type, desc: it.desc ?? '', ud: it.ud ?? '', precio: it.precio ?? 0 };
-          }
-          it.code = newCode;
-          p.fromBase = false;
-          p.precio = precioSegunModo(p, s.recursos);
-        }),
-
-      editItemType: (chapterId, partidaId, itemIndex, newType) =>
-        set((s) => {
-          if (newType !== 'MO' && newType !== 'MQ' && newType !== 'MAT') return; // %CI excluido
-          const p = s.partidas[chapterId]?.find((x) => x.id === partidaId);
-          const it = p?.items[itemIndex];
-          if (!p || !it) return;
-          if (it.type === '%CI') return; // no se convierte %CI por aquí
-          const r = s.recursos[it.code];
-          if (r) r.type = newType; // banco = fuente de verdad (render + export lo leen)
-          it.type = newType; // espeja el vestigio de ESTA línea
-          p.fromBase = false;
-          // El tipo no altera el precio (sale del banco) → sin resync.
-        }),
-
-      forkResource: (chapterId, partidaId, itemIndex) => {
-        const newCode = nextRecursoCode(); // fuera de `set`: lo devolvemos al llamador
-        set((s) => {
-          const p = s.partidas[chapterId]?.find((x) => x.id === partidaId);
-          const it = p?.items[itemIndex];
-          if (!p || !it || it.type === '%CI') return;
-          const src = s.recursos[it.code];
-          s.recursos[newCode] = src
-            ? { ...src }
-            : { type: it.type, desc: it.desc ?? '', ud: it.ud ?? '', precio: it.precio ?? 0 };
-          it.code = newCode; // re-apunta SOLO esta línea → las demás quedan intactas
-          p.fromBase = false;
-          p.precio = precioSegunModo(p, s.recursos);
         });
-        return newCode;
       },
-
-      setCowChoice: (partidaId, choice) =>
-        set((s) => {
-          s.cowChoice[partidaId] = choice;
-        }),
-
-      addChapter: (title) =>
-        set((s) => {
-          const num = s.chapters.reduce((m, c) => Math.max(m, parseInt(c.code, 10) || 0), 0) + 1;
-          const code = String(num);
-          const id = code.padStart(2, '0');
-          s.chapters.push({ id, code, title, children: [] });
-          s.partidas[id] = [];
-          s.view = 'presupuesto';
-          s.active = id;
-        }),
-
-      addSubchapter: (parentId, title) =>
-        set((s) => {
-          // El padre puede ser un capítulo o un sub a cualquier profundidad.
-          const hit = findNode(s.chapters, parentId);
-          if (!hit) return;
-          const parent = hit.node;
-          const n = nextChildNum(parent);
-          (parent.children ??= []).push({
-            id: `${parent.id}.${String(n).padStart(2, '0')}`,
-            code: `${parent.code}.${n}`,
-            title,
-          });
-          s.expanded[hit.chapter.id] = true;
-        }),
-
-      editChapterTitle: (id, title) =>
-        set((s) => {
-          const t = title.trim();
-          if (!t) return; // un capítulo/sub siempre conserva nombre
-          const hit = findNode(s.chapters, id);
-          if (hit) hit.node.title = t;
-        }),
-
-      deleteChapter: (chapterId) =>
-        set((s) => {
-          const i = s.chapters.findIndex((c) => c.id === chapterId);
-          if (i < 0) return;
-          const ch = s.chapters[i]!;
-          const affectsActive = s.active === chapterId || !!subIn(ch, s.active);
-          s.chapters.splice(i, 1);
-          delete s.partidas[chapterId];
-          if (affectsActive) s.active = ALL;
-        }),
-
-      deleteSubchapter: (chapterId, subId) =>
-        set((s) => {
-          const ch = s.chapters.find((c) => c.id === chapterId);
-          if (!ch) return;
-          const parent = parentOf(ch, subId);
-          const siblings = parent?.children;
-          const si = siblings?.findIndex((sc) => sc.id === subId) ?? -1;
-          if (!parent || !siblings || si < 0) return;
-          const node = siblings.splice(si, 1)[0]!;
-          // PROMOVER, no cascada (T-17): los hijos del borrado pasan al final
-          // de los hermanos, recodificados con los índices libres siguientes
-          // (política de huecos: los hermanos no se recodifican). Borrar un
-          // contenedor nunca destruye sus ramas ni sus partidas.
-          for (const child of node.children ?? []) {
-            recodeSubtree(child, `${parent.code}.${nextChildNum(parent)}`);
-            siblings.push(child);
-          }
-          // Las partidas directas del borrado suben al contenedor padre
-          // (`sub = undefined` si el padre es el capítulo).
-          const parentSubId = parent === ch ? undefined : parent.id;
-          const list = s.partidas[chapterId] ?? [];
-          for (const p of list) if (p.sub === subId) p.sub = parentSubId;
-          renumberInPlace(ch, list);
-          if (s.active === subId) s.active = parentSubId ?? chapterId;
-        }),
-
-      moveSubtree: (nodeId, toParentId) =>
-        set((s) => {
-          if (nodeId === toParentId) return;
-          const src = findNode(s.chapters, nodeId);
-          const dst = findNode(s.chapters, toParentId);
-          // Los capítulos no se mueven (depth 0); destino inexistente = no-op.
-          if (!src || !dst || src.depth === 0) return;
-          const node = src.node as SubChapter;
-          // El destino no puede caer DENTRO del subárbol movido (sería un ciclo
-          // estructural: un contenedor colgando de su propio descendiente).
-          const branch = subtreeIds(node);
-          if (branch.has(toParentId)) return;
-          const fromCh = src.chapter;
-          const fromParent = parentOf(fromCh, nodeId);
-          const fi = fromParent?.children?.findIndex((sc) => sc.id === nodeId) ?? -1;
-          if (!fromParent || fi < 0) return;
-          if (fromParent === dst.node) return; // ya cuelga de ahí
-          fromParent.children!.splice(fi, 1);
-          // Engancha al final del destino y recodifica la rama bajo su código.
-          const toParent = dst.node;
-          recodeSubtree(node, `${toParent.code}.${nextChildNum(toParent)}`);
-          (toParent.children ??= []).push(node);
-          // Las partidas del subárbol cambian de bucket si cambia el capítulo
-          // (los ids no cambian: el dato de cert, por id de partida, no se toca).
-          const toChId = dst.chapter.id;
-          if (toChId !== fromCh.id) {
-            const fromList = s.partidas[fromCh.id] ?? [];
-            const moving = fromList.filter((p) => p.sub != null && branch.has(p.sub));
-            if (moving.length) {
-              s.partidas[fromCh.id] = fromList.filter((p) => !(p.sub != null && branch.has(p.sub)));
-              (s.partidas[toChId] ??= []).push(...moving);
-            }
-            renumberInPlace(fromCh, s.partidas[fromCh.id] ?? []);
-          }
-          renumberInPlace(dst.chapter, s.partidas[toChId] ?? []);
-          s.expanded[toChId] = true;
-        }),
-
-      addPartida: (chapterId, subId) =>
-        set((s) => {
-          const ch = s.chapters.find((c) => c.id === chapterId);
-          if (!ch) return;
-          // El sub destino se resuelve a CUALQUIER profundidad; un subId que no
-          // exista en el capítulo se RECHAZA (crearía una partida huérfana cuyo
-          // grupo ninguna vista pinta — eng-review 2026-06-12, Tensión 2).
-          const sub = subId ? subIn(ch, subId) : undefined;
-          if (subId && !sub) return;
-          const list = (s.partidas[chapterId] ??= []);
-          const base = sub ? sub.code : ch.code;
-          const sameSub = list.filter((p) => (subId ? p.sub === subId : !p.sub)).length;
-          list.push({
-            id: nextPartidaId(),
-            sub: subId || undefined,
-            pos: `${base}.${sameSub + 1}`,
-            code: '——',
-            title: '',
-            ud: 'ud',
-            precio: 0,
-            desc: '',
-            med: [],
-            items: [],
-          });
-        }),
-
-      deletePartida: (chapterId, partidaId) =>
-        set((s) => {
-          const list = s.partidas[chapterId];
-          const idx = list?.findIndex((p) => p.id === partidaId) ?? -1;
-          if (!list || idx < 0) return;
-          list.splice(idx, 1);
-          if (s.openPartidaId === partidaId) s.openPartidaId = null; // no dejar selección fantasma
-          renumberInPlace(
-            s.chapters.find((c) => c.id === chapterId),
-            list,
-          );
-        }),
-
-      restorePartida: (chapterId, partida, index) =>
-        set((s) => {
-          const list = (s.partidas[chapterId] ??= []);
-          const at = Math.max(0, Math.min(index, list.length));
-          list.splice(at, 0, partida);
-          renumberInPlace(
-            s.chapters.find((c) => c.id === chapterId),
-            list,
-          );
-        }),
-
-      movePartida: (fromChapterId, partidaId, toChapterId, toSubId) =>
-        set((s) => {
-          const fromList = s.partidas[fromChapterId];
-          const idx = fromList?.findIndex((p) => p.id === partidaId) ?? -1;
-          if (!fromList || idx < 0) return;
-          // Destino validado ANTES de mover: un toSubId inexistente en el
-          // capítulo destino se RECHAZA (no-op), nunca deja `sub` huérfano.
-          const toCh = s.chapters.find((c) => c.id === toChapterId);
-          if (!toCh) return;
-          if (toSubId && !subIn(toCh, toSubId)) return;
-          const [moving] = fromList.splice(idx, 1);
-          if (!moving) return;
-          moving.sub = toSubId || undefined;
-          moving.fromBase = false;
-          const toList = (s.partidas[toChapterId] ??= []);
-          toList.push(moving);
-          renumberInPlace(
-            s.chapters.find((c) => c.id === fromChapterId),
-            fromList,
-          );
-          renumberInPlace(
-            s.chapters.find((c) => c.id === toChapterId),
-            toList,
-          );
-          s.expanded[toChapterId] = true;
-          if (s.openPartidaId === partidaId) s.openPartidaId = null; // se movió: deselecciona
-        }),
 
       setObraPath: (path, value) =>
         set((s) => {
@@ -1423,14 +534,21 @@ export const useObraStore = create<ObraState>()(
           obj[keys[keys.length - 1]!] = value;
         }),
 
-      reset: () =>
+      reset: () => {
+        useToastStore.getState().clear(); // como loadObra: mata el «Deshacer» capturado (D-08)
         set((s) => {
           // Object.assign desde seedObraData(): añadir un campo a ObraData lo
           // resetea automáticamente (sin drift silencioso campo-a-campo).
           const fresh = seedObraData();
           Object.assign(s, fresh);
           Object.assign(s, seedUi(fresh.certs));
-        }),
+        });
+      },
+
+      // --- slices (F-04): certificación, copia de Referencia, CRUD/edición ---
+      ...createCertSlice(set, get, store),
+      ...createCopySlice(set, get, store),
+      ...createEstructuraSlice(set, get, store),
     };
   }),
   ),
