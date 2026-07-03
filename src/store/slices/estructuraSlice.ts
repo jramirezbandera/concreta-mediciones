@@ -7,6 +7,7 @@
    monolítico; solo cambia de fichero.
    =========================================================================== */
 import type { Cert, Chapter, Partida, PartidaBaja, SubChapter } from '../../core/types';
+import { round2 } from '../../core/money';
 import { mainTypeOf, precioSegunModo } from '../../core/banco';
 import { findNode, flattenContainers, subtreeIds } from '../../core/tree';
 import { nextPos, renumberChapter } from '../../core/numbering';
@@ -81,6 +82,7 @@ type EstructuraSlice = Pick<
   ObraState,
   | 'editPartidaField'
   | 'setPrecio'
+  | 'setCantidad'
   | 'addMedLine'
   | 'editMedLine'
   | 'deleteMedLine'
@@ -121,6 +123,17 @@ export const createEstructuraSlice: ObraSlice<EstructuraSlice> = (set) => ({
       if (!p) return;
       p.precio = value;
       p.precioManual = true; // override: el precio deja de seguir al descompuesto
+      p.fromBase = false;
+    }),
+
+  setCantidad: (chapterId, partidaId, value) =>
+    set((s) => {
+      // La cantidad envenena el importe/PEM igual que el precio: ignora NaN/±∞
+      // y negativos. round2 = precisión de cantidad (como la medición).
+      if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return;
+      const p = s.partidas[chapterId]?.find((x) => x.id === partidaId);
+      if (!p) return;
+      p.cantidad = round2(value);
       p.fromBase = false;
     }),
 

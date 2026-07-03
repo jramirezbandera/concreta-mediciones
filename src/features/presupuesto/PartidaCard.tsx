@@ -29,6 +29,8 @@ export const PartidaCard = memo(function PartidaCard({
   const { cantidad, importe } = usePartidaRow(p);
   const editPartidaField = useObraStore((s) => s.editPartidaField);
   const setPrecio = useObraStore((s) => s.setPrecio);
+  const setCantidad = useObraStore((s) => s.setCantidad);
+  const sinMedicion = p.med.length === 0;
   const open = useObraStore((s) => s.openPartidaId === p.id);
   const togglePartida = useObraStore((s) => s.togglePartida);
   const justRevealed = useJustRevealed(p.id);
@@ -80,9 +82,20 @@ export const PartidaCard = memo(function PartidaCard({
               />
             </div>
           </div>
-          <div className={styles.pStat}>
+          <div className={styles.pStat} onClick={sinMedicion ? stop : undefined}>
             <div className={`caps ${styles.pStatLabel}`}>Cantidad</div>
-            <div className={`mono ${styles.pStatVal}`}>{fmtNum(cantidad)}</div>
+            <div className={`mono ${styles.pStatVal}`}>
+              {sinMedicion ? (
+                <EditableNum
+                  value={cantidad}
+                  dec={2}
+                  ariaLabel="Cantidad de la partida (sin medición)"
+                  onCommit={(v) => setCantidad(chapterId, p.id, v)}
+                />
+              ) : (
+                fmtNum(cantidad)
+              )}
+            </div>
           </div>
           <div className={`${styles.pStat} ${styles.last}`} onClick={stop}>
             <div className={`caps ${styles.pStatLabel}`}>Precio €</div>

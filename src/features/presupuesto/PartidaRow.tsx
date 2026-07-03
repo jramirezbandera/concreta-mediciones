@@ -39,6 +39,10 @@ export const PartidaRow = memo(function PartidaRow({
   const { cantidad, importe, isOverride, descompUnit } = usePartidaRow(p);
   const editPartidaField = useObraStore((s) => s.editPartidaField);
   const setPrecio = useObraStore((s) => s.setPrecio);
+  const setCantidad = useObraStore((s) => s.setCantidad);
+  // Sin medición → la cantidad es un dato editable (cantidad fija); con líneas,
+  // es la Σ derivada y se muestra en solo-lectura.
+  const sinMedicion = p.med.length === 0;
   const open = useObraStore((s) => s.openPartidaId === p.id);
   const togglePartida = useObraStore((s) => s.togglePartida);
   const justRevealed = useJustRevealed(p.id);
@@ -89,8 +93,22 @@ export const PartidaRow = memo(function PartidaRow({
             />
           </span>
         </td>
-        <td className={`mono ${styles.cQty}`}>
-          <span className={styles.qtyNum}>{fmtNum(cantidad)}</span>
+        <td
+          className={`mono ${styles.cQty}`}
+          title={sinMedicion ? 'Cantidad fija (sin líneas de medición)' : undefined}
+        >
+          {sinMedicion ? (
+            <span onClick={stop}>
+              <EditableNum
+                value={cantidad}
+                dec={2}
+                ariaLabel="Cantidad de la partida (sin medición)"
+                onCommit={(v) => setCantidad(chapterId, p.id, v)}
+              />
+            </span>
+          ) : (
+            <span className={styles.qtyNum}>{fmtNum(cantidad)}</span>
+          )}
         </td>
         <td
           className={styles.priceCellEdit}

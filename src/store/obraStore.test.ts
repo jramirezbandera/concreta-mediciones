@@ -300,6 +300,23 @@ describe('acciones F2 (edición in-situ)', () => {
     expect(p111().precio).toBe(100);
   });
 
+  it('setCantidad fija la cantidad (solo manda sin medición) y clampa negativos/NaN', () => {
+    // p111 tiene medición → la cantidad fija se guarda pero NO manda mientras
+    // haya líneas (partidaCantidad usa la Σ de la medición).
+    state().setCantidad('01', 'p111', 50);
+    expect(p111().cantidad).toBe(50);
+    expect(p111().fromBase).toBe(false);
+    expect(partidaCantidad(p111())).toBe(124.65); // sigue mandando la medición
+    state().setCantidad('01', 'p111', NaN);
+    expect(p111().cantidad).toBe(50);
+    state().setCantidad('01', 'p111', -3);
+    expect(p111().cantidad).toBe(50);
+    // Sin líneas de medición → la cantidad fija pasa a mandar.
+    for (let i = p111().med.length - 1; i >= 0; i--) state().deleteMedLine('01', 'p111', i);
+    expect(p111().med).toHaveLength(0);
+    expect(partidaCantidad(p111())).toBe(50);
+  });
+
   it('add/edit/deleteMedLine recalculan la cantidad y limpian BASE', () => {
     // p111 arranca con 2 líneas → cantidad 124,65.
     expect(partidaCantidad(p111())).toBe(124.65);

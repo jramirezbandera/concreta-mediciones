@@ -243,6 +243,12 @@ export interface ObraState extends ObraData {
    * BASE. Ignora valores no finitos o negativos (frontera de invariantes).
    */
   setPrecio: (chapterId: string, partidaId: string, value: number) => void;
+  /**
+   * Fija la cantidad A MANO (cantidad fija sin medición). Solo tiene efecto
+   * mientras la partida NO tenga líneas de medición: `partidaCantidad` usa la
+   * Σ de la medición si la hay y esta cantidad si no. Ignora no finitos/negativos.
+   */
+  setCantidad: (chapterId: string, partidaId: string, value: number) => void;
   /** Añade una línea de medición vacía (dimensiones en blanco = factor 1). */
   addMedLine: (chapterId: string, partidaId: string) => void;
   /** Edita un campo de una línea de medición (comentario o dimensión). */
