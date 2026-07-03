@@ -149,8 +149,11 @@ export interface Cert {
    * Certificación por líneas (F4.3): cantidad ejecutada por línea de medición,
    * CONGELADA al marcar (snapshot). `lineQty[partidaId][lineId]` = cantidad de
    * esa línea hecha en ESTA cert (= su parcial si entera, o menos si parcial).
-   * `data[partidaId]` = Σ lineQty cuando la partida se certifica por líneas;
-   * teclear la cantidad a mano borra `lineQty[partidaId]` (override). Estable
+   * `data[partidaId]` = max(Σ lineQty, a-origen de la cert ANTERIOR) cuando la
+   * partida se certifica por líneas — el SUELO (auditoría D-06) impide que
+   * marcar/desmarcar líneas deshaga en silencio lo certificado a mano en una
+   * cert previa (cert negativa sin querer); bajar del anterior exige TECLEAR
+   * la cantidad. Teclear a mano borra `lineQty[partidaId]` (override). Estable
    * frente a editar la medición después (la cert no cambia sola).
    */
   lineQty?: Record<string, Record<string, number>>;
@@ -195,6 +198,19 @@ export interface Obra {
   /** Observaciones y notas de la hoja Resumen (F7.1, design review D1). */
   notes?: string;
   [k: string]: unknown; // promotor/constructor/redactor… se completan en F6
+}
+
+/**
+ * Rastro de una partida BORRADA con importe certificado (tombstone, schema v3):
+ * lo mínimo para que las certs la muestren CON NOMBRE en «Eliminado del
+ * presupuesto» — la valoración sale del `priceSnapshot` de cada cert, no de
+ * aquí. Se apunta al borrar (deletePartida/deleteChapter, solo si alguna cert
+ * la tiene certificada) y se retira si el undo la restaura.
+ */
+export interface PartidaBaja {
+  code: string;
+  title: string;
+  ud: string;
 }
 
 /** Banco de recursos indexado por código. */

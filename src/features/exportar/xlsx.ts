@@ -32,7 +32,7 @@ export function xlsxDocFor(target: PrintTarget): XlsxDoc | null {
   if (target.kind === 'resumen') {
     return buildResumenXlsx(buildResumen(s.chapters, s.partidas, s.rates), meta);
   }
-  const cl = buildCertListado(s.chapters, s.partidas, s.certs, target.index, s.rates);
+  const cl = buildCertListado(s.chapters, s.partidas, s.certs, target.index, s.rates, s.bajas);
   return cl && buildCertXlsx(cl, meta);
 }
 

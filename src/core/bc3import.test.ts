@@ -50,10 +50,11 @@ describe.skipIf(!existsSync(OBRA_REAL))('bc3ToObra — import de obra real (Pres
 
   it('importa el banco de recursos y las líneas de medición de algunas partidas', () => {
     expect(report.recursos).toBeGreaterThan(100);
-    // 120/167 con la alineación por POSICIÓN (por índice eran 111: el ~M que
-    // falta en C03 desplazaba el resto). Las 47 restantes no traen ~M o su
-    // detalle no reproduce la cantidad (fórmulas, etc.).
-    expect(report.medVisible).toBe(120);
+    // 121/167 con la alineación por POSICIÓN (por índice eran 111: el ~M que
+    // falta en C03 desplazaba el resto). Era 120 hasta el fix de coma decimal
+    // (C-02): una línea con coma se truncaba y su detalle no reproducía la
+    // cantidad. Las 46 restantes no traen ~M o usan fórmulas.
+    expect(report.medVisible).toBe(121);
     // ningún recurso del banco es de tipo %CI (los % no entran al banco)
     expect(Object.values(data.recursos).every((r) => r.type !== '%CI')).toBe(true);
   });
@@ -169,6 +170,44 @@ const OBRA_MIN = [
   '~D|R##|C1\\1\\1|',
 ];
 const allPartidas = (r: ReturnType<typeof bc3ToObra>) => Object.values(r.data.partidas).flat();
+
+describe('bc3ToObra — coma decimal y truncado (auditoría C-02/C-03)', () => {
+  it('C-02: precio/rendimiento/dims con COMA decimal se leen enteros (antes: truncados)', () => {
+    const r = bc3ToObra(
+      bc3(
+        ...OBRA_MIN,
+        '~C|P1|m2|Part|12,34|010101|0|',
+        '~D|C1#|P1\\1\\2,5|', // cantidad 2,5 → antes 2
+        '~M|C1#\\P1|1\\1\\|2,5|\\linea\\1\\2,5\\\\\\|', // total y largo con coma
+      ),
+    );
+    const p = allPartidas(r)[0]!;
+    expect(p.precio).toBe(12.34); // antes: 12 (parseFloat('12,34'))
+    expect(p.med[0]!.largo).toBe(2.5); // antes: 2
+  });
+
+  it('C-02: el ~K con coma («17,5») no se trunca a 17', () => {
+    const r = bc3ToObra(
+      bc3('~K|\\2\\2\\3\\2\\2\\2\\2\\EUR\\|0\\17,5\\6\\\\21\\|', ...OBRA_MIN),
+    );
+    expect(r.data.rates.gg).toBe(0.175);
+    expect(r.data.rates.iva).toBe(0.21);
+  });
+
+  it('C-03: archivo cortado a mitad de registro → aviso de truncado', () => {
+    const whole = new TextDecoder().decode(
+      bc3(...OBRA_MIN, '~C|P1|m2|Part|5|010101|0|', '~D|C1#|P1\\1\\10|'),
+    );
+    const cut = whole.slice(0, whole.length - 6); // corta dentro del último registro
+    const r = bc3ToObra(new TextEncoder().encode(cut));
+    expect(r.report.warnings.some((w) => w.includes('incompleto'))).toBe(true);
+  });
+
+  it('C-03: un archivo bien terminado NO dispara el aviso de truncado', () => {
+    const r = bc3ToObra(bc3(...OBRA_MIN));
+    expect(r.report.warnings.some((w) => w.includes('incompleto'))).toBe(false);
+  });
+});
 
 describe('bc3ToObra — semántica FIEBDC (fixtures sintéticos)', () => {
   it('cantidad = FACTOR × RENDIMIENTO, en partidas y en la justificación', () => {

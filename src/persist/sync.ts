@@ -17,6 +17,7 @@ import {
   blankObraData,
   toSerializable,
   useObraStore,
+  useToastStore,
   type ObraData,
   type ObraState,
 } from '../store';
@@ -63,8 +64,10 @@ let unsub: (() => void) | null = null;
  *  y NO debe disparar un guardado de la obra recién cargada (Codex). */
 let suppress = false;
 /** Última persistencia COMPLETA en vuelo (blob + índice). `flush()` solo cubre el
- *  blob; el índice se escribe DESPUÉS en `saveActiveObra`. */
-let lastPersist: Promise<void> = Promise.resolve();
+ *  blob; el índice se escribe DESPUÉS en `saveActiveObra`. Resuelve a si el
+ *  guardado ATERRIZÓ (A-04): nunca rechaza (no envenena cadenas), pero el
+ *  `false` permite a `switchObra` no soltar una obra con cambios sin guardar. */
+let lastPersist: Promise<boolean> = Promise.resolve(true);
 /** ¿Esta pestaña es la DUEÑA de la obra activa? (T-19). Si `false`, la obra la
  *  tiene otra pestaña → el autosave NO escribe (evita pisarla). Optimista: por
  *  defecto `true` y solo baja a `false` si la sonda del lock encuentra contienda,
@@ -110,8 +113,8 @@ function domainSlice(s: ObraState) {
   return [s.chapters, s.partidas, s.recursos, s.certs, s.rates, s.obra] as const;
 }
 
-function persistNow(): Promise<void> {
-  if (!isOwner) return Promise.resolve(); // solo-lectura: nunca escribir (T-19)
+function persistNow(): Promise<boolean> {
+  if (!isOwner) return Promise.resolve(true); // solo-lectura: nada que escribir (T-19)
   const data = toSerializable(useObraStore.getState());
   let id = activeId();
   if (!id) {
@@ -125,8 +128,12 @@ function persistNow(): Promise<void> {
       // saveActiveObra ya devuelve el índice escrito → refresca el selector sin re-leer.
       useSessionStore.getState().setObras(idx.obras);
       usePersistStore.getState().setStatus('saved');
+      return true;
     },
-    () => usePersistStore.getState().setStatus('error'),
+    () => {
+      usePersistStore.getState().setStatus('error');
+      return false;
+    },
   );
   return lastPersist;
 }
@@ -176,19 +183,28 @@ function claimActive(id: string): void {
 }
 
 /** Fuerza el guardado pendiente y espera a la cola (blob + índice). Cancela el
- *  debounce/idle programado y persiste YA si quedaban cambios sin guardar. */
-export function flushPending(): Promise<void> {
+ *  debounce/idle programado y persiste YA si quedaban cambios sin guardar.
+ *  Devuelve si TODO aterrizó (A-04): `false` = hay trabajo en memoria que no
+ *  llegó a disco. Si el último guardado había FALLADO y no había nada nuevo
+ *  programado, reintenta una vez (la cuota puede haberse liberado). */
+export function flushPending(): Promise<boolean> {
   clearScheduled();
+  const hadDirty = dirty;
   if (dirty) {
     dirty = false;
     void persistNow();
   }
-  return Promise.all([flush(), lastPersist]).then(() => undefined);
+  return Promise.all([flush(), lastPersist]).then(([, ok]) => {
+    if (ok || hadDirty) return ok;
+    return persistNow(); // reintento único del guardado fallido
+  });
 }
 
 /** Cancela un autosave pendiente SIN guardarlo (descartar ediciones de una obra
- *  que se va a borrar). No toca la cola ya en vuelo. */
-function cancelPending(): void {
+ *  que se va a borrar). No toca la cola ya en vuelo. Exportada para el
+ *  ErrorBoundary raíz (E-03): tras un crash de render NO se fosiliza el estado
+ *  que (quizá) lo provocó. */
+export function cancelPending(): void {
   clearScheduled();
   dirty = false;
 }
@@ -249,6 +265,11 @@ export async function hydrate(): Promise<void> {
           if (idx.activeId !== id) await persistActiveId(id); // el fallback cambió la activa
           armAutosave();
           claimActive(id); // T-19: propiedad entre pestañas (puede bajar a solo-lectura)
+          // A-10: si la ACTIVA original estaba corrupta y caímos a otra obra, el
+          // cambio silencioso desconcierta («¿dónde está mi obra?»). El banner de
+          // recuperación convive con la obra cargada: exportar copia o descartar.
+          if (firstCorrupt)
+            usePersistStore.getState().setRecovery(firstCorrupt.raw, firstCorrupt.key);
           return;
         }
         if (!firstCorrupt) firstCorrupt = { raw: res.envelope, key }; // versión no soportada
@@ -257,8 +278,15 @@ export async function hydrate(): Promise<void> {
       }
     }
 
-    // Ninguna obra cargó → recuperación (no pisar la demo, no armar autosave).
-    if (firstCorrupt) usePersistStore.getState().setRecovery(firstCorrupt.raw, firstCorrupt.key);
+    // Ninguna obra cargó → recuperación. El autosave SÍ se arma (auditoría A-01):
+    // sin obra activa `persistNow` genera un id NUEVO —nunca escribe sobre la
+    // clave corrupta—, así editar la demo o restaurar un backup .json desde el
+    // banner persiste de verdad (antes: éxito aparente sin guardar nada, ni
+    // siquiera el chip «Sin guardar»).
+    if (firstCorrupt) {
+      usePersistStore.getState().setRecovery(firstCorrupt.raw, firstCorrupt.key);
+      armAutosave();
+    }
   } catch {
     // IndexedDB no disponible (incógnito/bloqueado/cuota): seguimos en memoria.
     usePersistStore.getState().setStatus('error');
@@ -292,7 +320,16 @@ async function switchObraImpl(id: string): Promise<void> {
   if (id === activeId()) return;
   useSessionStore.getState().setSwitching(true);
   try {
-    await flushPending(); // guarda la obra actual antes de soltarla
+    // A-04 (decisión: BLOQUEAR): si el guardado de la obra actual no aterriza
+    // (cuota llena, IDB caído), NO se conmuta — la edición en riesgo se queda a
+    // la vista en vez de esfumarse tras el cambio. Antes `flushPending` tragaba
+    // el fallo y se conmutaba igual, con el chip «Sin guardar» como única señal.
+    if (!(await flushPending())) {
+      useToastStore
+        .getState()
+        .show('No se pudo guardar esta obra; se queda abierta para no perder cambios. Libera espacio y reintenta.');
+      return;
+    }
     if (!(await loadObraIntoStore(id))) {
       // destino corrupto/ausente: NO cambiar la activa; ofrecer recuperación
       usePersistStore.getState().setRecovery(await loadRaw(obraKey(id)), obraKey(id));
@@ -322,7 +359,7 @@ export function importObraAsReference(data: ImportedObra): Promise<string> {
   return serializeOp(() => importObraAsReferenceImpl(data));
 }
 async function importObraAsReferenceImpl(data: ImportedObra): Promise<string> {
-  const obraData: ObraData = { schemaVersion: SCHEMA_VERSION, ...data };
+  const obraData: ObraData = { schemaVersion: SCHEMA_VERSION, bajas: {}, ...data };
   const id = await createObra(obraData, 'reference');
   useSessionStore.getState().upsertObra(metaOf(id, obraData, 'reference'));
   return id;
@@ -418,9 +455,15 @@ async function discardRecoveryImpl(key: string): Promise<void> {
   usePersistStore.getState().setRecovery(null);
   // OBRA_KEY también empieza por OBRA_KEY_PREFIX → excluirla explícitamente.
   if (key.startsWith(OBRA_KEY_PREFIX) && key !== OBRA_KEY) {
-    const idx = await registryDeleteObra(key.slice(OBRA_KEY_PREFIX.length));
+    const discardedId = key.slice(OBRA_KEY_PREFIX.length);
+    const wasActive = discardedId === activeId();
+    const idx = await registryDeleteObra(discardedId);
     useSessionStore.getState().setObras(idx.obras);
-    await activateFirstLoadable(idx.obras.map((m) => m.id));
+    // A-10: si la corrupta NO era la obra en pantalla (banner conviviendo con
+    // una obra sana ya cargada), no hay nada que reactivar — tocar la activa
+    // recargaría de disco y descartaría la última edición en memoria.
+    if (wasActive || activeId() == null)
+      await activateFirstLoadable(idx.obras.map((m) => m.id));
   } else {
     await clearObra(key); // legacy: solo blob (no hay entrada de registro)
     armAutosave();
@@ -435,7 +478,7 @@ export function __resetSyncForTests(): void {
   suppress = false;
   clearScheduled();
   dirty = false;
-  lastPersist = Promise.resolve();
+  lastPersist = Promise.resolve(true);
   releaseActiveLock(); // T-19: suelta el lock de obra entre pestañas
   isOwner = true;
   useSessionStore.setState({ obras: [], activeId: null, switching: false, readonly: false });

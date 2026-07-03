@@ -10,10 +10,9 @@
      confirmación + el backup previo viven en la UI (ProjectBackup).
    =========================================================================== */
 import { fromSerializable, toSerializable, useObraStore, type ObraData } from '../store';
-import { isObraData } from './persist';
+import { APP_VERSION, isObraData } from './persist';
 
 const EXPORT_KIND = 'concreta-obra';
-const APP_VERSION = '0.6';
 
 /** Sobre de exportación: el dominio + metadatos de diagnóstico, autodescriptivo. */
 export interface ObraExport {

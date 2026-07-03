@@ -61,7 +61,7 @@ describe('hydrate (multi-obra)', () => {
     await set(OBRA_KEY, { schemaVersion: 1, savedAt: 'x', appVersion: '0.5', data: v1 });
     await hydrate();
     expect(state().obra.denominacion).toBe('Obra v1 antigua');
-    expect(state().schemaVersion).toBe(2); // migrada en cadena
+    expect(state().schemaVersion).toBe(3); // migrada en cadena (v1→v2→v3)
     expect(usePersistStore.getState().recovery).toBeNull();
     expect(await get(OBRA_KEY)).toBeUndefined(); // legacy borrada
     expect((await listObras()).length).toBe(1);
@@ -76,7 +76,7 @@ describe('hydrate (multi-obra)', () => {
     expect((await listObras()).length).toBe(1); // no duplica
   });
 
-  it('obra activa corrupta → recuperación (no pisa la demo, no arma)', async () => {
+  it('obra activa corrupta → recuperación (no pisa la demo) con autosave ARMADO (A-01)', async () => {
     const id = await createObra(withName('Rota'));
     await setActiveId(id);
     await set(obraKey(id), { schemaVersion: 1, data: { roto: true } });
@@ -84,9 +84,23 @@ describe('hydrate (multi-obra)', () => {
     expect(usePersistStore.getState().recovery).not.toBeNull();
     expect(usePersistStore.getState().recoveryKey).toBe(obraKey(id));
     expect(state().obra.denominacion).toContain('C/ Mayor 14'); // demo, no pisada
+
+    // A-01: editar (o restaurar un backup .json) tras el banner SÍ persiste — bajo
+    // un id NUEVO, sin tocar el blob corrupto, que sigue ahí para recuperación.
+    // Antes el autosave quedaba desarmado: éxito aparente y pérdida al recargar.
+    state().editPartidaField('01', 'p111', 'title', 'Rescatada');
+    await flushPending();
+    const newId = (await getActiveId())!;
+    expect(newId).toBeTruthy();
+    expect(newId).not.toBe(id);
+    const res = await loadObraEnvelope(obraKey(newId));
+    expect(
+      res.kind === 'ok' && res.envelope.data.partidas['01']!.find((p) => p.id === 'p111')!.title,
+    ).toBe('Rescatada');
+    expect(await get(obraKey(id))).toEqual({ schemaVersion: 1, data: { roto: true } }); // intacto
   });
 
-  it('activa corrupta pero OTRA sana → fallback a la sana y actualiza el índice', async () => {
+  it('activa corrupta pero OTRA sana → fallback a la sana, índice actualizado Y banner (A-10)', async () => {
     const good = await createObra(withName('Buena'));
     const bad = await createObra(withName('Mala'));
     await setActiveId(bad);
@@ -95,6 +109,9 @@ describe('hydrate (multi-obra)', () => {
     expect(state().obra.denominacion).toBe('Buena');
     expect(getActiveObraId()).toBe(good);
     expect(await getActiveId()).toBe(good);
+    // A-10: el cambio de obra no es silencioso — la corrupta queda anunciada
+    // (el banner convive con la obra cargada: exportar copia o descartar).
+    expect(usePersistStore.getState().recoveryKey).toBe(obraKey(bad));
   });
 });
 

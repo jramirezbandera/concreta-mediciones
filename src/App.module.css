@@ -1,4 +1,8 @@
 .app {
+  /* Ancho de la barra lateral en escritorio (fuente única de verdad): lo usan la
+     propia Sidebar y el overlay del panel Referencia, que se desplaza este ancho
+     para cubrir solo el presupuesto sin tapar la barra. */
+  --sidebar-w: 286px;
   height: 100dvh;
   display: flex;
   flex-direction: column;

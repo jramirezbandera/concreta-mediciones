@@ -363,7 +363,17 @@ export const REF_DESC: Record<string, string> = {
  */
 export function hydrateItem(it: Item, recursos: Banco): Item {
   if (it.type === '%CI') {
-    return { code: '%CI', type: '%CI', cantidad: it.cantidad, desc: it.desc ?? 'Costes indirectos', ud: '%', precio: 0 };
+    // El CÓDIGO original se conserva (auditoría C-07): renombrarlo a '%CI'
+    // colapsaba dos conceptos `%` distintos de la misma partida (p.ej. medios
+    // auxiliares + costes indirectos) al mismo código al re-exportar.
+    return {
+      code: it.code || '%CI',
+      type: '%CI',
+      cantidad: it.cantidad,
+      desc: it.desc ?? 'Costes indirectos',
+      ud: '%',
+      precio: 0,
+    };
   }
   const r = recursos[it.code];
   return {
@@ -382,7 +392,11 @@ export function hydrateItem(it: Item, recursos: Banco): Item {
  * el banco (desc/ud/precio) igual que `obraToRefSource`, y crea objetos nuevos
  * (no comparte referencias con la partida origen): editar el origen tras copiar
  * NO muta el portapapeles. No viajan `med` (se pega sin mediciones) ni
- * `precioManual`/`fromBase`/`baseSource` (el pegado nace como partida limpia).
+ * `fromBase`/`baseSource` (el pegado nace como partida limpia). `precioManual`
+ * SÍ viaja (auditoría D-05): sin el flag, la copia nacía con el precio del
+ * override pero la primera edición de CUALQUIER recurso del banco la
+ * resincronizaba a su descompuesto y el precio pegado se esfumaba en silencio
+ * (el import de partida CYPE ya lo propagaba; esta ruta quedó fuera).
  */
 export function partidaToRefCopyItem(p: Partida, recursos: Banco, sourceName: string): RefCopyItem {
   return {
@@ -395,6 +409,7 @@ export function partidaToRefCopyItem(p: Partida, recursos: Banco, sourceName: st
       title: p.title,
       ud: p.ud,
       precio: p.precio,
+      precioManual: p.precioManual || undefined,
       mainType: p.mainType,
       desc: p.desc,
       items: p.items.map((it) => hydrateItem(it, recursos)),
@@ -405,9 +420,10 @@ export function partidaToRefCopyItem(p: Partida, recursos: Banco, sourceName: st
 /**
  * Adapta una obra propia (capítulos + partidas + banco) a `RefSource` para el
  * panel. Hidrata los items desde el banco y trae la descripción larga de la
- * propia partida (`Partida.desc`, no `REF_DESC`). `med`/`precioManual`/`fromBase`
- * no viajan (la fuente no los necesita). El id se prefija `obra:` para distinguir
- * las obras propias de las bases estáticas.
+ * propia partida (`Partida.desc`, no `REF_DESC`). `med`/`fromBase` no viajan
+ * (la fuente no los necesita); `precioManual` SÍ (D-05, ver
+ * `partidaToRefCopyItem`). El id se prefija `obra:` para distinguir las obras
+ * propias de las bases estáticas.
  */
 export function obraToRefSource(
   id: string,
@@ -426,6 +442,7 @@ export function obraToRefSource(
       title: p.title,
       ud: p.ud,
       precio: p.precio,
+      precioManual: p.precioManual || undefined, // D-05
       mainType: p.mainType,
       desc: p.desc,
       items: p.items.map((it) => hydrateItem(it, recursos)),

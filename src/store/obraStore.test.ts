@@ -1,24 +1,28 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
+  DELETED_ROW_ID,
   certCalc,
   certSnapshotOf,
   certTotals,
   estaCertToOrigen,
   prevDataOf,
 } from '../core/certificacion';
+import { buildCertListado } from '../core/listado';
 import { partidaCantidad } from '../core/medicion';
 import { toEur } from '../core/money';
 import { descompUnit, precioCuadraDescompuesto, precioSegunModo } from '../core/banco';
 // Bases demo: ya no se cargan en la app (REF_SOURCES vacío), pero siguen como
 // fixture para ejercitar la copia desde una fuente de referencia.
-import { DEMO_REF_SOURCES as REF_SOURCES, type RefCopyItem } from '../core/refdata';
+import { DEMO_REF_SOURCES as REF_SOURCES, partidaToRefCopyItem, type RefCopyItem } from '../core/refdata';
 import { DEFAULT_RATES, PARTIDAS } from '../core/seed';
 import {
   ALL,
   SCHEMA_VERSION,
+  blankObraData,
   copyTargetOf,
   fromSerializable,
   seedObraData,
+  selectCertChapterRows,
   selectCertTotals,
   selectChapterTotals,
   selectCounts,
@@ -27,6 +31,7 @@ import {
   selectTotalConIva,
   toSerializable,
   useObraStore,
+  useToastStore,
 } from './index';
 
 // El store es un singleton de módulo; resembrar antes de cada test para aislar.
@@ -399,16 +404,18 @@ describe('acciones F2.4 (CRUD estructural + renumeración)', () => {
   const ch01 = () => state().partidas['01']!;
   const findP = (id: string) => allPartidas().find((p) => p.id === id);
 
-  it('addChapter: código max+1, id con padding, queda activo en Presupuesto', () => {
+  it('addChapter: código max+1, id ÚNICO (D-03, no derivado del código), activo en Presupuesto', () => {
     state().setView('resumen');
     state().addChapter('Acabados');
     const s = state();
     expect(s.chapters).toHaveLength(9);
     const nuevo = s.chapters.at(-1)!;
     expect(nuevo.code).toBe('9');
-    expect(nuevo.id).toBe('09');
-    expect(s.partidas['09']).toEqual([]);
-    expect(s.active).toBe('09');
+    // El id NO se deriva del código: el esquema viejo (`'09'`) se reciclaba tras
+    // borrar y los contradictorios huérfanos de las certs resucitaban (D-03).
+    expect(nuevo.id).toMatch(/^ch-/);
+    expect(s.partidas[nuevo.id]).toEqual([]);
+    expect(s.active).toBe(nuevo.id);
     expect(s.view).toBe('presupuesto');
   });
 
@@ -1200,5 +1207,157 @@ describe('acciones copy-on-write (estilo Arquímedes/CYPE)', () => {
     expect(() => state().forkResource('01', 'p111', 99)).not.toThrow();
     expect(() => state().editItemType('01', 'p111', 99, 'MO')).not.toThrow();
     expect(() => state().editItemCode('01', 'p111', 99, 'X')).not.toThrow();
+  });
+});
+
+describe('borrados vs certificaciones (auditoría D-01/D-02/D-03/D-08 — preservar documento)', () => {
+  it('D-01: borrar una partida certificada NO reescribe la cert (vale su snapshot)', () => {
+    state().setCurCert(0);
+    state().setCertLine('p111', 'p111-m1', 61.2); // certifica y congela su precio
+    const before = selectCertTotals(state());
+    expect(before.certPEM).toBeGreaterThan(0);
+    state().deletePartida('01', 'p111');
+    const after = selectCertTotals(state());
+    expect(after.certPEM).toBe(before.certPEM); // el histórico no baja
+    expect(after.liquido).toBe(before.liquido);
+    // …y la fila sintética del resumen por capítulos lo enseña y cuadra:
+    const rows = selectCertChapterRows(state());
+    expect(rows.find((r) => r.id === DELETED_ROW_ID)).toBeTruthy();
+    expect(rows.reduce((a, r) => a + r.cert, 0)).toBe(after.certPEM);
+  });
+
+  it('D-02: el contradictorio de un capítulo borrado sigue sumando Y tiene fila visible', () => {
+    state().setCurCert(0);
+    state().addContradictorio('01');
+    const ex = state().certs[0]!.extras![0]!;
+    state().editContradictorio(ex.id, 'cantidad', 2);
+    state().editContradictorio(ex.id, 'precio', 100);
+    state().deleteChapter('01');
+    const totals = selectCertTotals(state());
+    const rows = selectCertChapterRows(state());
+    const delRow = rows.find((r) => r.id === DELETED_ROW_ID)!;
+    expect(delRow.cert).toBeGreaterThanOrEqual(20000); // los 200 € del P.C., visibles
+    expect(rows.reduce((a, r) => a + r.cert, 0)).toBe(totals.certPEM); // Σ == total
+  });
+
+  it('D-03: un capítulo nuevo no reutiliza el id de uno borrado', () => {
+    state().addChapter('Uno');
+    const id1 = state().chapters.at(-1)!.id;
+    state().deleteChapter(id1);
+    state().addChapter('Dos');
+    expect(state().chapters.at(-1)!.id).not.toBe(id1); // antes: max+1 → id reciclado
+  });
+
+  it('D-08: restorePartida contra un capítulo inexistente es no-op (sin bucket fantasma)', () => {
+    const p = state().partidas['01']![0]!;
+    state().deletePartida('01', p.id);
+    state().deleteChapter('01');
+    const pemBefore = selectPem(state());
+    state().restorePartida('01', p, 0); // el «Deshacer» llega tarde
+    expect(state().partidas['01']).toBeUndefined(); // no crea el bucket
+    expect(selectPem(state())).toBe(pemBefore); // el PEM no se infla en invisible
+  });
+
+  it('D-08: loadObra limpia el toast pendiente (el «Deshacer» no cruza obras)', () => {
+    useToastStore.getState().show('Eliminada', { label: 'Deshacer', run: () => {} });
+    state().loadObra(blankObraData('Obra B'));
+    expect(useToastStore.getState().msg).toBeNull();
+    expect(useToastStore.getState().action).toBeNull();
+  });
+});
+
+describe('lote 5 de la auditoría (D-04/D-05/D-06/D-07)', () => {
+  const p111 = () => state().partidas['01']!.find((p) => p.id === 'p111')!;
+
+  it('D-05: copiar/pegar conserva precioManual — el precio pegado no colapsa al editar el banco', () => {
+    state().setPrecio('01', 'p111', 99.99); // override manual
+    const clip = partidaToRefCopyItem(p111(), state().recursos, 'Obra');
+    expect(clip.partida.precioManual).toBe(true); // antes se descartaba a propósito
+    state().copyRefPartidas([clip], { chId: '02', subId: null }, false, undefined, 'clip');
+    const pastedId = state().partidas['02']!.at(-1)!.id;
+    expect(state().partidas['02']!.at(-1)!.precio).toBe(99.99);
+    state().editRecurso('mo001', 'precio', 20); // cualquier edición del banco → resync global
+    const after = state().partidas['02']!.find((p) => p.id === pastedId)!;
+    expect(after.precio).toBe(99.99); // antes colapsaba a su descompuesto en silencio
+  });
+
+  it('D-06: marcar líneas tras una cert manual NO hunde el a-origen (suelo = anterior)', () => {
+    state().setCurCert(99); // clampa a la ÚLTIMA (addCert hereda de la última)
+    state().onCertEdit('p111', 10, 'origen'); // certificada A MANO (sin líneas)
+    state().addCert(); // la nueva hereda data.p111 = 10 y pasa a ser la actual
+    state().setCertLine('p111', 'p111-m1', 2); // marca la primera línea (2 uds)
+    const cert = () => state().certs.at(-1)!;
+    expect(cert().lineQty!.p111!['p111-m1']).toBe(2);
+    expect(cert().data.p111).toBe(10); // suelo: antes caía a 2 → cert negativa
+    state().setCertLine('p111', 'p111-m1', null); // desmarcar tampoco lo deshace
+    expect(cert().data.p111).toBe(10);
+    state().setCertLine('p111', 'p111-m1', 61.2); // por encima del suelo manda la Σ
+    expect(cert().data.p111).toBe(61.2);
+  });
+
+  it('D-07: mainType se recalcula al mutar la descomposición (antes era un fósil)', () => {
+    for (let i = 0; i < p111().items.length; i += 1) {
+      if (p111().items[i]!.type !== '%CI') state().editItemType('01', 'p111', i, 'MQ');
+    }
+    expect(p111().mainType).toBe('MQ'); // antes conservaba el badge de siembra
+  });
+
+  it('D-04: toSerializable purga los recursos huérfanos VACÍOS (basura de addItem cancelado)', () => {
+    state().addItem('01', 'p111');
+    const code = p111().items.at(-1)!.code;
+    state().deleteItem('01', 'p111', p111().items.length - 1);
+    expect(state().recursos[code]).toBeDefined(); // vivo en memoria (sin GC agresivo)
+    expect(code in toSerializable(state()).recursos).toBe(false); // fuera del blob
+    expect('mo001' in toSerializable(state()).recursos).toBe(true); // los usados, intactos
+  });
+});
+
+describe('tombstones de partidas borradas (schema v3)', () => {
+  it('borrar una partida CERTIFICADA deja tombstone; las certs la muestran CON NOMBRE', () => {
+    state().setCurCert(0);
+    state().setCertLine('p111', 'p111-m1', 61.2); // certifica y congela
+    const { code, title, ud } = state().partidas['01']!.find((p) => p.id === 'p111')!;
+    state().deletePartida('01', 'p111');
+    expect(state().bajas.p111).toEqual({ code, title, ud });
+    // y el documento la lista con su nombre real, cuadrando con los totales
+    const l = buildCertListado(state().chapters, state().partidas, state().certs, 0, state().rates, state().bajas)!;
+    const sintetico = l.capitulos.at(-1)!;
+    expect(sintetico.id).toBe(DELETED_ROW_ID);
+    const fila = sintetico.grupos[0]!.rows.find((r) => r.id === 'p111')!;
+    expect(fila.title).toBe(title);
+    expect(fila.code).toBe(code);
+    expect(l.capitulos.reduce((a, c) => a + c.aOrigen, 0)).toBe(l.totals.certPEM);
+  });
+
+  it('borrar una partida SIN certificar no deja tombstone; el undo lo retira', () => {
+    state().addPartida('01', null); // nueva: ninguna cert la conoce
+    const nueva = state().partidas['01']!.at(-1)!;
+    state().deletePartida('01', nueva.id);
+    expect(state().bajas[nueva.id]).toBeUndefined(); // nada que preservar
+
+    state().setCurCert(0);
+    state().setCertLine('p111', 'p111-m1', 61.2);
+    const p111Data = { ...state().partidas['01']!.find((x) => x.id === 'p111')! };
+    state().deletePartida('01', 'p111');
+    expect(state().bajas.p111).toBeDefined();
+    state().restorePartida('01', p111Data, 0); // «Deshacer»
+    expect(state().bajas.p111).toBeUndefined(); // vuelve viva: fuera el tombstone
+  });
+
+  it('deleteChapter deja tombstone de cada partida certificada del capítulo', () => {
+    state().setCurCert(0);
+    state().setCertLine('p111', 'p111-m1', 61.2);
+    state().deleteChapter('01');
+    expect(state().bajas.p111).toBeDefined();
+    expect(state().bajas.p111!.code).toBe('E02EM030');
+  });
+
+  it('loadObra no arrastra tombstones de la obra anterior', () => {
+    state().setCurCert(0);
+    state().setCertLine('p111', 'p111-m1', 61.2);
+    state().deletePartida('01', 'p111');
+    expect(Object.keys(state().bajas)).toHaveLength(1);
+    state().loadObra(blankObraData('Otra'));
+    expect(state().bajas).toEqual({});
   });
 });

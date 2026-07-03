@@ -78,6 +78,10 @@ npm run format   # Prettier
 
 La galería de primitivas de UI está en `/#sandbox`.
 
+> Nota: muy de vez en cuando el **primer** `npm test` en frío falla entero con un
+> error espurio de Vitest («"vitest" is imported inside "globalSetup"»). Es un
+> fallo de arranque (transform frío), no de los tests: re-ejecuta y pasa.
+
 
 ## Licencia
 

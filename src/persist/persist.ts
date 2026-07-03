@@ -27,7 +27,9 @@ export const OBRA_KEY = 'concreta.obra.v1';
 export const OBRA_KEY_PREFIX = 'concreta.obra.';
 /** Clave del blob de una obra por id. */
 export const obraKey = (id: string): string => `${OBRA_KEY_PREFIX}${id}`;
-const APP_VERSION = '0.6';
+/** Versión de la app estampada en los sobres (diagnóstico). FUENTE ÚNICA:
+ *  `transfer` la importa de aquí (antes había dos literales que podían divergir). */
+export const APP_VERSION = '0.6';
 
 /** Sobre persistido: el dominio + metadatos para diagnóstico/migración. */
 export interface ObraEnvelope {
@@ -63,6 +65,26 @@ export function isObraData(x: unknown): x is ObraData {
   if (!isRecord(o.obra) || typeof o.obra.denominacion !== 'string') return false;
   // partidas: cada valor es un array (las partidas por capítulo)
   for (const v of Object.values(o.partidas)) if (!Array.isArray(v)) return false;
+  // `bajas` (tombstones, v3) es opcional AQUÍ: un blob v2 no lo trae y la
+  // migración lo estrena; si viene, que al menos sea un mapa.
+  if (o.bajas != null && !isRecord(o.bajas)) return false;
+  // Un nivel MÁS de forma (auditoría A-02): `certs: [null]`, `chapters: [null]`
+  // o un recurso nulo pasaban el gate, hidrataban SIN banner de recuperación y
+  // el primer selector reventaba en render — con el blob recargándose «sano» en
+  // cada arranque (bucle de brick). Elementos, no cada campo: sigue siendo un
+  // gate estructural barato, no un validador de esquema.
+  for (const c of o.chapters as unknown[]) {
+    if (!isRecord(c) || typeof c.id !== 'string' || typeof c.title !== 'string') return false;
+  }
+  for (const c of o.certs as unknown[]) {
+    if (!isRecord(c) || !isRecord(c.data)) return false;
+  }
+  for (const r of Object.values(o.recursos as Record<string, unknown>)) {
+    if (!isRecord(r)) return false;
+  }
+  for (const v of Object.values(o.partidas as Record<string, unknown[]>)) {
+    for (const p of v) if (!isRecord(p) || typeof p.id !== 'string') return false;
+  }
   return true;
 }
 

@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { Icon } from '../components';
 import { OBRA_KEY, loadRaw } from './persist';
 import { discardRecovery } from './sync';
+import { lockSupported } from './tabLock';
 import { usePersistStore } from './persistStore';
 import { useSessionStore } from './sessionStore';
 import styles from './PersistUI.module.css';
@@ -75,7 +76,8 @@ function RecoveryBanner() {
         onClick={() => {
           // discardRecovery es dueño del banner: borra la obra dañada del registro,
           // activa otra (o una en blanco) y reabre el banner si quedan más corruptas.
-          void discardRecovery(key);
+          // Si la propia persistencia rechaza (E-04), al menos que se vea el estado.
+          discardRecovery(key).catch(() => usePersistStore.getState().setStatus('error'));
         }}
       >
         Descartar y empezar
@@ -101,12 +103,32 @@ function ReadonlyBanner() {
   );
 }
 
+/** Aviso de candado multi-pestaña APAGADO (auditoría A-07): sin Web Locks
+ *  (Safari viejo, o contexto NO seguro — la API solo existe bajo HTTPS, así que
+ *  servir la app por http:// en una LAN desactiva T-19 incluso en Chrome), dos
+ *  pestañas con la misma obra se pisan por last-writer-wins SIN banner. No se
+ *  puede proteger, pero sí avisar. Solo si ya hay obras guardadas. */
+function NoLockWarning() {
+  const obras = useSessionStore((s) => s.obras);
+  if (lockSupported() || obras.length === 0) return null;
+  return (
+    <div className={`${styles.banner} no-print`} role="alert">
+      <Icon name="alert" size={16} />
+      <span className={styles.bannerText}>
+        Este navegador o conexión (no HTTPS) no protege la obra frente a ediciones desde otra
+        pestaña: evita abrir la misma obra en dos pestañas a la vez.
+      </span>
+    </div>
+  );
+}
+
 /** Monta el feedback de persistencia (banners + chip). Se renderiza siempre. */
 export function PersistUI() {
   return (
     <>
       <RecoveryBanner />
       <ReadonlyBanner />
+      <NoLockWarning />
       <SaveChip />
     </>
   );

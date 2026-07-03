@@ -3,6 +3,7 @@ import { clear, get, set } from 'idb-keyval';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { seedObraData, toSerializable, type ObraData } from '../store';
 import { OBRA_KEY, loadObraEnvelope, obraKey, saveObra } from './persist';
+import { usePersistStore } from './persistStore';
 import {
   INDEX_KEY,
   createObra,
@@ -21,6 +22,7 @@ const data = (name: string): ObraData => ({
 
 beforeEach(async () => {
   await clear();
+  usePersistStore.setState({ status: 'idle', recovery: null, recoveryKey: null });
 });
 
 describe('registry · CRUD', () => {
@@ -112,11 +114,15 @@ describe('registry · migrateLegacy (idempotente)', () => {
     expect((await listObras()).length).toBe(1);
   });
 
-  it('legacy corrupta → índice vacío y CONSERVA el blob legacy (recuperación)', async () => {
+  it('legacy corrupta → índice vacío, CONSERVA el blob legacy Y marca recuperación (A-03)', async () => {
     await set(OBRA_KEY, { schemaVersion: 1, data: { roto: true } });
     await migrateLegacy();
     expect(await get(OBRA_KEY)).toBeDefined();
     expect((await listObras()).length).toBe(0);
+    // A-03: antes el banner era inalcanzable en esta ruta — el usuario que
+    // actualizaba desde mono-obra con datos dañados percibía pérdida total.
+    expect(usePersistStore.getState().recovery).not.toBeNull();
+    expect(usePersistStore.getState().recoveryKey).toBe(OBRA_KEY);
   });
 
   it('instalación nueva (sin legacy) → no crea índice (la demo no se fosiliza)', async () => {

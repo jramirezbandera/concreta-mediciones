@@ -13,6 +13,10 @@
 
 /* ── DARK (default) ── */
 :root, [data-theme="dark"] {
+  /* Alinea los controles nativos (checkbox, scrollbar…) con el tema; sin esto
+     el navegador los pinta según el modo del SO y en modo oscuro salían negros
+     sobre el tema claro. */
+  color-scheme: dark;
   --bg-primary:   #0b1220;
   --bg-surface:   #111a2d;
   --bg-elevated:  #1a2540;
@@ -43,6 +47,7 @@
 
 /* ── LIGHT (toggle) ── */
 [data-theme="light"] {
+  color-scheme: light;
   --bg-primary:   #f8fafc;
   --bg-surface:   #ffffff;
   --bg-elevated:  #f1f5f9;

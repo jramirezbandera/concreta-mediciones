@@ -100,7 +100,8 @@ describe('trazadora — el archivo mínimo para el gate manual en Presto', () =>
 
   it('ejercita ~V/~K/~C/~D/~M/~T con ANSI, K=13 % y la raíz al PEM', () => {
     expect(text.startsWith('~V|Concreta|FIEBDC-3/2016|Concreta Mediciones||ANSI|\r\n')).toBe(true);
-    expect(text).toContain(String.raw`~K|\2\2\3\2\2\2\2\EUR\|13|`);
+    // C-04: el campo 2 del ~K lleva CI\GG\BI\BAJA\IVA (CI = pct del K).
+    expect(text).toContain(String.raw`~K|\2\2\3\2\2\2\2\EUR\|13\13\6\\10\|`);
     expect(text).toContain('|4074.13||0|'); // raíz Y capítulo único: PEM con K
     expect(text).toContain(String.raw`~D|OBRA##|C1\1\1\|`);
     expect(text).toContain(String.raw`~D|C1#|DEM010\1\30.04\TRA020\1\18.5\|`);

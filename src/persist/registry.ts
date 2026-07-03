@@ -23,6 +23,7 @@ import {
   obraKeys,
   saveObra,
 } from './persist';
+import { usePersistStore } from './persistStore';
 
 /** Clave del índice de obras (metadatos + obra activa). */
 export const INDEX_KEY = 'concreta.obras.index.v1';
@@ -115,13 +116,27 @@ async function saveIndex(idx: ObraIndex): Promise<void> {
  * referencia (el mutador devuelve el mismo objeto = sin cambios → sin escritura).
  */
 let indexChain: Promise<unknown> = Promise.resolve();
+/** RMW del índice bajo Web Lock (auditoría A-09): `indexChain` serializa DENTRO
+ *  de la pestaña, pero dos pestañas (obras distintas, ambas dueñas legítimas)
+ *  podían entrelazar load→mutate→save y la última escritura pisaba a la primera
+ *  (entrada desaparecida del selector hasta el `reconcile` del siguiente
+ *  arranque). Sin Web Locks (jsdom, contexto no seguro) degrada al
+ *  comportamiento anterior — que `reconcile` ya auto-cura. */
+function withIndexLock<T>(fn: () => Promise<T>): Promise<T> {
+  const locks = globalThis.navigator?.locks;
+  if (locks?.request) return locks.request('concreta.obras.index', fn) as Promise<T>;
+  return fn();
+}
+
 function updateIndex(mutate: (idx: ObraIndex) => ObraIndex | Promise<ObraIndex>): Promise<ObraIndex> {
-  const run = indexChain.then(async () => {
-    const idx = await loadIndex();
-    const next = await mutate(idx);
-    if (next !== idx) await saveIndex(next);
-    return next;
-  });
+  const run = indexChain.then(() =>
+    withIndexLock(async () => {
+      const idx = await loadIndex();
+      const next = await mutate(idx);
+      if (next !== idx) await saveIndex(next);
+      return next;
+    }),
+  );
   indexChain = run.then(
     () => undefined,
     () => undefined, // un fallo no envenena la cadena (la siguiente op reintenta)
@@ -201,6 +216,11 @@ export async function migrateLegacy(): Promise<void> {
     await del(OBRA_KEY); // ya copiada; el índice presente impide re-migrar
   } else if (legacy.kind === 'corrupt') {
     await saveIndex({ ...EMPTY_INDEX }); // no reintentar; conservar el blob legacy
+    // A-03: conservar el blob no basta — hay que ANUNCIARLO. Sin esto la app
+    // arrancaba con la demo como si nada y el usuario percibía pérdida total
+    // (el banner ya soportaba la clave legacy vía `recoveryKey ?? OBRA_KEY`,
+    // pero nadie lo disparaba: era código muerto).
+    usePersistStore.getState().setRecovery(legacy.raw, OBRA_KEY);
   }
   // 'empty' (instalación nueva): NO escribir índice → la demo en memoria no se
   // fosiliza hasta la 1ª edición (que crea el registro vía `saveActiveObra`).

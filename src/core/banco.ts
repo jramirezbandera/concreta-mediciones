@@ -8,14 +8,8 @@
    §0 decisión 6: NO pisa `partida.precio`). La acumulación del PEM va en
    céntimos en `core/totales`, sobre `partida.precio`.
    =========================================================================== */
-import type { Banco, Item, Partida, PartidasMap } from './types';
+import type { Banco, Item, Partida, PartidasMap, ResourceType } from './types';
 import { round2, toCents } from './money';
-
-/** Importe de una línea de justificación con su propio `precio` (datos semilla). */
-export function itemImporte(it: Item): number {
-  if (it.type === '%CI') return round2(((it.precio ?? 0) * it.cantidad) / 100);
-  return round2(it.cantidad * (it.precio ?? 0));
-}
 
 /** Construye el banco por código (primer concepto gana). Excluye `%CI`. */
 export function buildRecursos(partidas: PartidasMap): Banco {
@@ -62,6 +56,24 @@ export function recursoBase(items: Item[], banco: Banco): number {
     b += round2(it.cantidad * recPrecio(it, banco));
   }
   return round2(b);
+}
+
+/** Tipo DOMINANTE de la descomposición (badge `mainType` de la partida): el
+ *  `ResourceType` con mayor importe acumulado; `%CI` no compite. `undefined`
+ *  sin items valorables. Antes el badge se fijaba al sembrar/copiar y NINGUNA
+ *  mutación de items lo recalculaba (auditoría D-07): convertir toda la
+ *  descomposición a MQ dejaba el badge anterior para siempre. */
+export function mainTypeOf(items: Item[], banco: Banco): ResourceType | undefined {
+  const tot: Partial<Record<ResourceType, number>> = {};
+  for (const it of items ?? []) {
+    if (it.type === '%CI') continue;
+    tot[it.type] = (tot[it.type] ?? 0) + round2(it.cantidad * recPrecio(it, banco));
+  }
+  let best: ResourceType | undefined;
+  for (const t of ['MO', 'MQ', 'MAT'] as const) {
+    if ((tot[t] ?? 0) > (best != null ? (tot[best] ?? 0) : 0)) best = t;
+  }
+  return best;
 }
 
 /** Importe (€) de una línea con su BASE dada. Una línea `%` porcentúa la base

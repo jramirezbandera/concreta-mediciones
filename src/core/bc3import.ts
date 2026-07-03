@@ -23,7 +23,9 @@
    =========================================================================== */
 import { BC3, type BC3Document, type ConceptNode } from '../vendor/bc3';
 import { descompUnit } from './banco';
+import { lineParcial } from './medicion';
 import { round2, toCents, type Cents } from './money';
+import { nextPos } from './numbering';
 import { pem as pemOf } from './totales';
 import { DEFAULT_OBRA, DEFAULT_RATES } from './seed';
 import type { Banco, Cert, Chapter, Item, MedLine, Obra, PartidasMap, Rates, ResourceType, SubChapter } from './types';
@@ -103,13 +105,14 @@ function decodeWith(bytes: Uint8Array, label: string): string | null {
   }
 }
 
-/* ---- réplica de la medición del prototipo (dim vacía/0 = factor 1) --------- */
+/* ---- conversión de dims del .bc3 al modelo (F-03) ---------------------------
+   POLÍTICA DE IMPORT: la dim 0 del archivo se mapea a '' (= factor 1), porque
+   los programas emiten 0 para «sin dimensión». Es una CONVERSIÓN, no una regla
+   de cálculo: una vez convertidas, el parcial lo calcula `core/medicion`
+   (`lineParcial`), no una réplica local — así el check de aceptación de
+   mediciones y el motor no pueden divergir en silencio. */
 const dim = (x: number | undefined): number | '' =>
   x == null || Number.isNaN(x) || x === 0 ? '' : x;
-const factor = (x: number | '' | undefined): number =>
-  x === '' || x == null || Number.isNaN(Number(x)) ? 1 : Number(x);
-const lineParcial = (l: { uds: number | ''; largo: number | ''; ancho: number | ''; alto: number | '' }): number =>
-  round2(factor(l.uds) * factor(l.largo) * factor(l.ancho) * factor(l.alto));
 
 /** Tipo de recurso del concepto: '%' → %CI; 1→MO, 2→MQ; resto → MAT. */
 function badgeOf(code: string, type: number | undefined): ResourceType {
@@ -223,6 +226,16 @@ function parseDocument(bytes: Uint8Array, warnings: string[]): { doc: BC3Documen
     const errs = parsed.diagnostics.filter((d) => d.level === 'error').slice(0, 20).map((d) => d.message);
     throw new Bc3ImportError('No se pudo parsear el archivo .bc3.', errs);
   }
+  // Heurística de TRUNCADO (auditoría C-03): todo registro FIEBDC termina en
+  // `|`; un archivo cortado a mitad de descarga/copia acaba en mitad de un
+  // registro y antes importaba como éxito parcial SIN NINGÚN aviso (al 50 %
+  // entraban todas las partidas con PEM exacto… y cero mediciones).
+  if (!/\|\s*$/.test(text)) {
+    warnings.push(
+      'El archivo parece incompleto: el último registro no está cerrado. ' +
+        'Puede ser una descarga o copia truncada — revisa el resumen (sobre todo las mediciones).',
+    );
+  }
   // Diagnostics del parser RESUMIDOS por categoría (un banco grande genera
   // miles del mismo tipo; ver summarizeParserWarnings). Una referencia ~D sin
   // ~C puede ser una partida perdida o una variante paramétrica no expandida:
@@ -245,7 +258,10 @@ function ratesFromK(doc: BC3Document, warnings: string[]): { rates: Rates; ciPct
   const parts = raw.replace(/\r?\n/g, '').split('|');
   const sub = (parts[2] ?? '').split('\\');
   const num = (s: string | undefined): number | null => {
-    const v = parseFloat(s ?? '');
+    // Coma decimal normalizada (auditoría C-02): según el programa de origen el
+    // ~K puede venir «13,5» y parseFloat lo truncaba a 13 en silencio.
+    const t = (s ?? '').trim();
+    const v = parseFloat(/^-?\d+,\d+$/.test(t) ? t.replace(',', '.') : t);
     return Number.isFinite(v) ? v : null;
   };
   const ci = num(sub[0]);
@@ -403,7 +419,9 @@ export function bc3ToObra(bytes: Uint8Array): Bc3ImportResult {
         const next: SubChapter = {
           id: `${parent.id}.${String(k).padStart(2, '0')}`,
           code: `${parent.code}.${k}`,
-          title: (child.concept.summary || d.childCode).slice(0, 120),
+          // Título ÍNTEGRO (C-06): el .slice(0,120) cortaba 19 resúmenes de
+          // centro2017 y el corte viajaba al re-exportar; truncar es cosa de la UI.
+          title: child.concept.summary || d.childCode,
         };
         parent.children.push(next);
         path.add(norm);
@@ -458,9 +476,10 @@ export function bc3ToObra(bytes: Uint8Array): Bc3ImportResult {
       list.push({
         id: pid,
         sub: sub?.id,
-        pos: `${sub ? sub.code : ch.code}.${n}`,
+        pos: nextPos(sub ? sub.code : ch.code, n),
         code: d.childCode,
-        title: (child.concept.summary || d.childCode).slice(0, 120),
+        title: child.concept.summary || d.childCode, // íntegro (C-06); trunca la UI
+
         ud: child.concept.unit ?? '',
         precio,
         cantidad: qty,

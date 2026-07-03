@@ -16,8 +16,10 @@ function dim(v: number | '' | null | undefined): number {
   return v == null || v === '' || Number.isNaN(Number(v)) ? 1 : Number(v);
 }
 
-/** Parcial de una línea: round2(uds · largo · ancho · alto). */
-export function lineParcial(l: MedLine): number {
+/** Parcial de una línea: round2(uds · largo · ancho · alto). Acepta las 4 dims
+ *  sueltas (sin exigir `id`): el importador .bc3 lo usa sobre líneas aún sin
+ *  identificar (F-03: UNA regla de parcial, sin réplicas que puedan divergir). */
+export function lineParcial(l: Pick<MedLine, 'uds' | 'largo' | 'ancho' | 'alto'>): number {
   return round2(dim(l.uds) * dim(l.largo) * dim(l.ancho) * dim(l.alto));
 }
 

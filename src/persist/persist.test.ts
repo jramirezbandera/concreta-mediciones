@@ -32,6 +32,18 @@ describe('isObraData (validación estructural)', () => {
     expect(isObraData({ ...sample(), rates: { iva: NaN, gg: 0, bi: 0, coefK: 1 } })).toBe(false);
     expect(isObraData({ ...sample(), obra: {} })).toBe(false);
   });
+
+  it('A-02: rechaza blobs ENVENENADOS (elementos nulos que antes pasaban el gate)', () => {
+    // Antes hidrataban sin banner y el primer selector reventaba en render, con
+    // el blob recargándose «sano» en cada arranque (bucle de brick).
+    expect(isObraData({ ...sample(), certs: [null] })).toBe(false);
+    expect(isObraData({ ...sample(), certs: [{ id: 'c1', num: 1 }] })).toBe(false); // sin data
+    expect(isObraData({ ...sample(), chapters: [null] })).toBe(false);
+    expect(isObraData({ ...sample(), chapters: [{ id: '01' }] })).toBe(false); // sin title
+    expect(isObraData({ ...sample(), recursos: { r1: null } })).toBe(false);
+    expect(isObraData({ ...sample(), partidas: { '01': [null] } })).toBe(false);
+    expect(isObraData({ ...sample(), partidas: { '01': [{ code: 'X' }] } })).toBe(false); // sin id
+  });
 });
 
 describe('saveObra / loadObraEnvelope (round-trip por clave)', () => {

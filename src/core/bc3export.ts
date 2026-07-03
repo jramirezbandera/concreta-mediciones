@@ -7,16 +7,20 @@
 
      · Bytes windows-1252 declarando `ANSI` en `~V` (encoder propio:
        `TextEncoder` solo emite UTF-8; carácter no mapeable → '?').
-     · Punto decimal, sin separador de miles; precios/cantidades 2 dec,
-       rendimientos 3 dec, dims de medición hasta 3 dec; CRLF.
+     · Punto decimal, sin separador de miles; precios y rendimientos hasta
+       6 dec (auditoría C-05: los bancos traen elementales de 3+ dec y truncar
+       los alteraba; `num` recorta ceros → los valores de 2 dec emiten igual),
+       cantidades 2 dec, dims de medición hasta 3 dec; CRLF.
      · Orden `~V → ~K → conceptos raíz→hojas` (~C/~D/~M/~T por nivel).
      · Marcadores de tipo en el código: raíz `##`, capítulos `#`; los HIJOS de
        una `~D` van SIN marcador (así lo escribe Presto en el fixture).
      · Sanitización (BC3 no tiene mecanismo de escape): `|`→`¦`, `\`→`/` en
-       campos con subcampos, saltos de línea solo dentro de `~T` con el `~`
-       inicial de línea neutralizado.
-     · `~K` de 7 grupos `\2\2\3\2\2\2\2\EUR\` con pct = round((K−1)·100, 4),
-       registro OMITIDO si K=1 (espejo de `coefKOf` del import).
+       campos con subcampos, `~`→`-` SIEMPRE (C-01: parte el registro en los
+       lectores tolerantes), saltos de línea solo dentro de `~T`.
+     · `~K` SIEMPRE (C-04), de 7 grupos `\2\2\3\2\2\2\2\EUR\` y campo 2
+       `CI\GG\BI\BAJA\IVA` — espejo de `ratesFromK` del import: CI = pct del K
+       (round((K−1)·100, 4)) y GG/BI/IVA en % para que el destinatario
+       reconstruya el mismo PEC.
      · Precios de partida/recurso en BASE (sin K); capítulo = Σ hijos CON K y
        raíz = PEM CON K. Verificado en el fixture de Presto: Σ capítulos =
        precio raíz al céntimo, con los precios de partida en base.
@@ -119,21 +123,25 @@ function num(n: number, dec: number): string {
 }
 
 /* ---- sanitización (BC3 no tiene escape) ------------------------------------ */
-/** Campo de registro: UNA línea, sin `|` (separador) ni `\` (subcampos). */
+/** Campo de registro: UNA línea, sin `|` (separador), `\` (subcampos) ni `~`
+ *  (arranca registro — auditoría C-01: los lectores tolerantes, incluido
+ *  nuestro tokenizer en modo lenient, parten el registro en CUALQUIER `~`; un
+ *  título con «~30 cm» perdía el resto del ~C — incluido el PRECIO — al releer). */
 function field(s: string): string {
-  return s.replace(/\r\n|\r|\n/g, ' ').replace(/\|/g, '¦').replace(/\\/g, '/');
+  return s.replace(/\r\n|\r|\n/g, ' ').replace(/\|/g, '¦').replace(/\\/g, '/').replace(/~/g, '-');
 }
 
-/** Texto de `~T`: conserva saltos (CRLF) neutralizando el `~` a inicio de
- *  línea (arrancaría un registro nuevo). Sin subcampos → `\` se conserva. */
+/** Texto de `~T`: conserva saltos (CRLF). Sin subcampos → `\` se conserva; el
+ *  `~` se neutraliza SIEMPRE (no solo a inicio de línea), por lo mismo que en
+ *  `field` (C-01): un `~` en mitad de la descripción trunca el ~T al releer. */
 function ttext(s: string): string {
   return s
     .replace(/\|/g, '¦')
     .replace(/\r\n|\r|\n/g, '\r\n')
-    .replace(/(^|\r\n)~/g, '$1 ~');
+    .replace(/~/g, '-');
 }
 
-/** pct del `~K`: round((coefK − 1)·100, 4). 0 ⇒ el registro se omite. */
+/** pct del `~K`: round((coefK − 1)·100, 4). */
 export function coefKPct(coefK: number): number {
   return Math.round((coefK - 1) * 100 * 1e4) / 1e4;
 }
@@ -234,8 +242,14 @@ export function obraToBc3(input: Bc3ExportObra): Uint8Array {
 
   const recs: string[] = [];
   recs.push('~V|Concreta|FIEBDC-3/2016|Concreta Mediciones||ANSI|');
+  // ~K SIEMPRE (auditoría C-04), espejo exacto de `ratesFromK` del import: el
+  // campo 2 es CI\GG\BI\BAJA\IVA. En CI viaja el pct del K (como antes); GG/BI/
+  // IVA en % para que el destinatario reconstruya el mismo PEC (antes solo se
+  // emitía con K≠1 y sin tasas → el otro extremo recuperaba los defaults).
   const pct = coefKPct(k);
-  if (pct !== 0) recs.push(`~K|\\2\\2\\3\\2\\2\\2\\2\\EUR\\|${num(pct, 4)}|`);
+  recs.push(
+    `~K|\\2\\2\\3\\2\\2\\2\\2\\EUR\\|${num(pct, 4)}\\${num(rates.gg * 100, 2)}\\${num(rates.bi * 100, 2)}\\\\${num(rates.iva * 100, 2)}\\|`,
+  );
 
   // Raíz: precio = PEM CON K (como Presto). Sus hijos en la ~D van sin `#`.
   const rootCode = assign(sanCode(ROOT_CODE), 'ROOT');
@@ -250,7 +264,10 @@ export function obraToBc3(input: Bc3ExportObra): Uint8Array {
   function partidaBlock(p: Partida, code: string): void {
     if (emitted.has(code)) return;
     emitted.add(code);
-    recs.push(`~C|${code}|${field(p.ud)}|${field(p.title)}|${num(p.precio, 2)}||0|`);
+    // Precio con hasta 6 dec (auditoría C-05): los bancos traen precios
+    // elementales de 3+ dec y truncar a 2 los alteraba al re-exportar; `num`
+    // recorta ceros finales, así que un precio de 2 dec emite idéntico que antes.
+    recs.push(`~C|${code}|${field(p.ud)}|${field(p.title)}|${num(p.precio, 6)}||0|`);
     if (p.desc) recs.push(`~T|${code}|${ttext(p.desc)}|`);
     // La ~D solo si el precio ES su descompuesto: Presto recalcula el padre
     // desde los hijos, así que una justificación que no cuadra movería el PEM.
@@ -325,17 +342,21 @@ export function obraToBc3(input: Bc3ExportObra): Uint8Array {
       recs.push(`~C|${code}|%|${field(u.desc || 'Costes indirectos')}|${num(u.pct ?? 0, 4)}||0|`);
     } else {
       const r = recursos[u.orig];
-      recs.push(`~C|${code}|${field(r?.ud ?? '')}|${field(r?.desc ?? '')}|${num(r?.precio ?? 0, 2)}||${TYPE_NUM[u.type]}|`);
+      // Hasta 6 dec (C-05), como el precio de partida: sin esto, 206 precios
+      // elementales de centro2017 cambiaban al re-exportar el banco.
+      recs.push(`~C|${code}|${field(r?.ud ?? '')}|${field(r?.desc ?? '')}|${num(r?.precio ?? 0, 6)}||${TYPE_NUM[u.type]}|`);
     }
   }
 
   return encodeCp1252(recs.join('\r\n') + '\r\n');
 }
 
-/** Línea de descomposición `código\factor\rendimiento\` (rendimiento 3 dec).
- *  Para `%CI` el rendimiento viaja como FRACCIÓN (3 % → 0.03): Presto calcula
- *  importe = base × rendimiento (verificado con la trazadora). */
+/** Línea de descomposición `código\factor\rendimiento\` (rendimiento hasta
+ *  6 dec — C-05: truncar a 3 desalineaba la ~D del precio y el reimport
+ *  degradaba la partida a precio cerrado). Para `%CI` el rendimiento viaja como
+ *  FRACCIÓN (3 % → 0.03): Presto calcula importe = base × rendimiento
+ *  (verificado con la trazadora). */
 function itemLine(it: Item, code: string): string {
   if (it.type === '%CI') return `${code}\\1\\${num(it.cantidad / 100, 6)}\\`;
-  return `${code}\\1\\${num(it.cantidad, 3)}\\`;
+  return `${code}\\1\\${num(it.cantidad, 6)}\\`;
 }

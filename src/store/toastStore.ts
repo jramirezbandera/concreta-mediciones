@@ -20,6 +20,9 @@ interface ToastState {
   /** Incrementa en cada `show` → reactiva el toast aunque el texto no cambie. */
   tick: number;
   show: (msg: string, action?: ToastAction) => void;
+  /** Descarta el toast Y su acción. Lo llama `loadObra` (D-08): un «Deshacer»
+   *  capturado sobre la obra anterior no debe poder ejecutarse contra la nueva. */
+  clear: () => void;
 }
 
 export const useToastStore = create<ToastState>((set) => ({
@@ -27,4 +30,5 @@ export const useToastStore = create<ToastState>((set) => ({
   action: null,
   tick: 0,
   show: (msg, action) => set((s) => ({ msg, action: action ?? null, tick: s.tick + 1 })),
+  clear: () => set({ msg: null, action: null }),
 }));

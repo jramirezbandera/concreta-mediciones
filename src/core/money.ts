@@ -9,9 +9,14 @@
    de fidelidad; el cálculo de F1 NO usará float.
    =========================================================================== */
 
-/** Redondeo a 2 decimales con epsilon, idéntico al prototipo. */
+/** Redondeo a 2 decimales con epsilon, SIMÉTRICO (half away from zero).
+ *  El prototipo hacía `Math.round(n + ε)`, que redondea −0,005 → −0,00 pero
+ *  +0,005 → 0,01 (auditoría B-05): en una cert correctiva el líquido + su
+ *  corrección dejaba un residuo de −0,01 €, y las líneas «a deducir» de la
+ *  medición sesgaban +0,01 en los medios céntimos. round2(−x) === −round2(x). */
 export function round2(n: number): number {
-  return Math.round((n + Number.EPSILON) * 100) / 100;
+  const r = Math.round((Math.abs(n) + Number.EPSILON) * 100) / 100;
+  return n < 0 && r !== 0 ? -r : r;
 }
 
 /**
@@ -64,6 +69,18 @@ export function toDecimalComma(raw: string): string {
   return raw.includes(',') ? raw : raw.replace(/\./g, ',');
 }
 
+/**
+ * % editable → fracción, conservando `dec` decimales del porcentaje
+ * (13,5 → 0,135; con dec=3, 10,197 → 0,10197). Corrección consciente del
+ * prototipo, que hacía `round2(v/100)`: eso cuantiza la FRACCIÓN a 2 decimales
+ * (= saltos de 1 punto porcentual), así que 2,5 % se guardaba como 3 %
+ * (auditoría B-01/B-02). Clampa a ≥0: el signo vive aparte (`Ajuste.signo`).
+ */
+export function pctToRate(v: number, dec = 1): number {
+  const f = 10 ** dec;
+  return Math.round(Math.max(0, v) * f) / (100 * f);
+}
+
 /* ===========================================================================
    Dinero en céntimos enteros (§0 decisión 2).
    ---------------------------------------------------------------------------
@@ -79,9 +96,11 @@ export function toDecimalComma(raw: string): string {
 /** Importe en céntimos enteros. */
 export type Cents = number;
 
-/** Euros (float) → céntimos enteros, con la regla `round2` del prototipo. */
+/** Euros (float) → céntimos enteros, con la MISMA regla simétrica que `round2`
+ *  (half away from zero — B-05). */
 export function toCents(eur: number): Cents {
-  return Math.round((eur + Number.EPSILON) * 100);
+  const c = Math.round((Math.abs(eur) + Number.EPSILON) * 100);
+  return eur < 0 && c !== 0 ? -c : c;
 }
 
 /** Céntimos → euros. */

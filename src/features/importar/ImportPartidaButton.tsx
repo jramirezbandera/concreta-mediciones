@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { Icon } from '../../components';
+import { useToastStore } from '../../store';
 import styles from './ImportPartidaButton.module.css';
 
 /**
@@ -30,8 +31,15 @@ export function ImportPartidaButton({ compact = false }: { compact?: boolean }) 
         onChange={(e) => {
           const f = e.target.files?.[0];
           // Import dinámico: el parser FIEBDC (~117 KB) NO entra en el bundle
-          // inicial; se carga solo al importar (igual que ImportarView).
-          if (f) void import('./importPartida').then((m) => m.importPartidaFromFile(f));
+          // inicial; se carga solo al importar (igual que ImportarView). El
+          // .catch (E-05): si el chunk no carga (offline, deploy que purgó los
+          // assets de la sesión), el clic dejaba de hacer nada sin rastro.
+          if (f)
+            void import('./importPartida')
+              .then((m) => m.importPartidaFromFile(f))
+              .catch(() =>
+                useToastStore.getState().show('No se pudo cargar el importador. Recarga la página.'),
+              );
           e.target.value = ''; // permite reimportar el mismo fichero
         }}
       />

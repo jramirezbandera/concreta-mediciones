@@ -6,9 +6,11 @@
    grafo semántico directamente del modelo de dominio). Puro y sin React: los
    IMPORTES van en CÉNTIMOS y cada exportador los formatea a su manera.
    =========================================================================== */
-import type { Cert, Chapter, Obra, PartidasMap, Rates, SubChapter } from './types';
+import type { Cert, CertExtra, Chapter, Obra, PartidaBaja, PartidasMap, Rates, SubChapter } from './types';
 import {
+  DELETED_ROW_ID,
   certCalc,
+  certDeletedRows,
   certPrecioK,
   certSnapshotOf,
   certTotals,
@@ -300,6 +302,9 @@ export function buildCertListado(
   certs: Cert[],
   index: number,
   rates: Rates,
+  /** Tombstones (v3): partidas borradas con nombre para «Eliminado del
+   *  presupuesto». Opcional: sin él, las borradas salen como fila genérica. */
+  bajas: Record<string, PartidaBaja> = {},
 ): CertListado | null {
   const cert = certs[index];
   if (!cert) return null;
@@ -308,6 +313,20 @@ export function buildCertListado(
   const extras = cert.extras ?? [];
   const snap = certSnapshotOf(cert, rates.coefK);
   const prevExtraCant = extrasCantidad(prevExtras);
+  const toExtraRow = (e: CertExtra): CertExtraListadoRow => {
+    const k = extraCalc(e, prevExtraCant[e.id] ?? 0);
+    return {
+      id: e.id,
+      pos: e.pos,
+      title: e.title,
+      ud: e.ud,
+      cantidad: e.cantidad,
+      precio: e.precio,
+      aOrigen: k.aOrigen,
+      anterior: k.anterior,
+      estaCert: k.estaCert,
+    };
+  };
 
   const capitulos = chapters
     .map((ch) => {
@@ -339,22 +358,7 @@ export function buildCertListado(
             };
           }),
         }));
-      const chapExtras = extras
-        .filter((e) => e.chapterId === ch.id)
-        .map((e): CertExtraListadoRow => {
-          const k = extraCalc(e, prevExtraCant[e.id] ?? 0);
-          return {
-            id: e.id,
-            pos: e.pos,
-            title: e.title,
-            ud: e.ud,
-            cantidad: e.cantidad,
-            precio: e.precio,
-            aOrigen: k.aOrigen,
-            anterior: k.anterior,
-            estaCert: k.estaCert,
-          };
-        });
+      const chapExtras = extras.filter((e) => e.chapterId === ch.id).map(toExtraRow);
       const all = [...grupos.flatMap((g) => g.rows), ...chapExtras];
       return {
         id: ch.id,
@@ -368,6 +372,52 @@ export function buildCertListado(
       };
     })
     .filter((c) => c.grupos.length > 0 || c.extras.length > 0);
+
+  // «Eliminado del presupuesto» (D-01/D-02): rastro certificado de partidas y
+  // contradictorios cuyo presupuesto/capítulo ya no existe. El documento lo
+  // conserva en un capítulo sintético — sin él, Σ capítulos ≠ totales. Con
+  // tombstone (`bajas`, v3) cada partida borrada sale como fila propia CON
+  // NOMBRE; sin él (borrado pre-v3), fila genérica.
+  const chapterIds = new Set(chapters.map((c) => c.id));
+  const alive = new Set(
+    Object.values(partidas)
+      .flat()
+      .map((p) => p.id),
+  );
+  const deletedRows: CertListadoRow[] = certDeletedRows(
+    alive,
+    cert.data,
+    prevData,
+    snap,
+    bajas,
+  ).map((r) => ({
+    id: r.id,
+    pos: '',
+    code: r.code,
+    title: r.title,
+    ud: r.ud,
+    ofertada: 0,
+    ejecutada: r.ejecutada,
+    pct: 0,
+    precio: r.precio,
+    aOrigen: r.aOrigen,
+    anterior: r.anterior,
+    estaCert: r.estaCert,
+  }));
+  const deletedExtras = extras.filter((e) => !chapterIds.has(e.chapterId)).map(toExtraRow);
+  if (deletedRows.length > 0 || deletedExtras.length > 0) {
+    const all = [...deletedRows, ...deletedExtras];
+    capitulos.push({
+      id: DELETED_ROW_ID,
+      code: '—',
+      title: 'Eliminado del presupuesto',
+      grupos: deletedRows.length > 0 ? [{ sub: null, depth: 0, rows: deletedRows }] : [],
+      extras: deletedExtras,
+      aOrigen: sumCents(all.map((r) => r.aOrigen)),
+      anterior: sumCents(all.map((r) => r.anterior)),
+      estaCert: sumCents(all.map((r) => r.estaCert)),
+    });
+  }
 
   return {
     num: cert.num,

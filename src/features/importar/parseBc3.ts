@@ -19,16 +19,38 @@ export function parseBc3(bytes: Uint8Array): Promise<Bc3ImportResult> {
   }
   return new Promise((resolve, reject) => {
     const worker = new Worker(new URL('./bc3worker.ts', import.meta.url), { type: 'module' });
-    worker.onmessage = (e: MessageEvent<Bc3WorkerResponse>) => {
+    // E-02: sin timeout ni `messageerror` una muerte DURA del worker (OOM con un
+    // banco enorme; el navegador no siempre dispara `error`) dejaba la promesa
+    // colgada para siempre → dropzone en «Procesando…» y el latch de
+    // importPartida bloqueando todo reimporte hasta recargar. El timeout es
+    // holgadísimo: un banco de 29 MB parsea en ~1,2 s.
+    const settle = (fn: () => void) => {
+      clearTimeout(timer);
       worker.terminate();
+      fn();
+    };
+    const timer = setTimeout(
+      () =>
+        settle(() =>
+          reject(
+            new Error('La importación no respondió. Reintenta; si el archivo es enorme, pruébalo troceado.'),
+          ),
+        ),
+      120_000,
+    );
+    worker.onmessage = (e: MessageEvent<Bc3WorkerResponse>) => {
       const msg = e.data;
-      if (msg.ok) resolve(msg.result);
-      else if (msg.isBc3Error) reject(new Bc3ImportError(msg.message, msg.diagnostics));
-      else reject(new Error(msg.message));
+      settle(() => {
+        if (msg.ok) resolve(msg.result);
+        else if (msg.isBc3Error) reject(new Bc3ImportError(msg.message, msg.diagnostics));
+        else reject(new Error(msg.message));
+      });
     };
     worker.onerror = (e) => {
-      worker.terminate();
-      reject(new Error(e.message || 'Falló el proceso de importación.'));
+      settle(() => reject(new Error(e.message || 'Falló el proceso de importación.')));
+    };
+    worker.onmessageerror = () => {
+      settle(() => reject(new Error('No se pudo leer la respuesta del importador.')));
     };
     // El buffer se TRANSFIERE (sin copiar 29 MB); `bytes` queda inutilizable
     // para el llamante, que no lo reusa.

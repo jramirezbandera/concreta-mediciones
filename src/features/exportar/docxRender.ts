@@ -36,7 +36,7 @@ import {
   type ResumenListado,
 } from '../../core/listado';
 import { fmtCents, fmtNum, type Cents } from '../../core/money';
-import type { Banco, Cert, Chapter, Obra, PartidasMap, Rates } from '../../core/types';
+import type { Banco, Cert, Chapter, Obra, PartidaBaja, PartidasMap, Rates } from '../../core/types';
 import type { PrintTarget } from '../print';
 import { docFileName } from './fileName';
 
@@ -510,6 +510,8 @@ export interface DocxState {
   certs: Cert[];
   rates: Rates;
   obra: Obra;
+  /** Tombstones (v3) para «Eliminado del presupuesto» con nombre. */
+  bajas?: Record<string, PartidaBaja>;
 }
 
 export interface DocxResult {
@@ -530,7 +532,7 @@ export async function docxFor(target: PrintTarget, s: DocxState): Promise<DocxRe
     titulo = 'Resumen de presupuesto';
     bloques = resumenBloques(buildResumen(s.chapters, s.partidas, s.rates));
   } else {
-    const cl = buildCertListado(s.chapters, s.partidas, s.certs, target.index, s.rates);
+    const cl = buildCertListado(s.chapters, s.partidas, s.certs, target.index, s.rates, s.bajas);
     if (!cl) return null;
     titulo = `Certificación de obra nº ${cl.num}`;
     extra = (

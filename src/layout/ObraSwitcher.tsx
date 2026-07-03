@@ -11,8 +11,16 @@ import { Icon } from '../components/Icon';
 import { Modal } from '../components/Modal';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import { deleteObraById, newObra, switchObra, useSessionStore } from '../persist';
-import { useObraStore } from '../store';
+import { useObraStore, useToastStore } from '../store';
 import styles from './ObraSwitcher.module.css';
+
+/** Un fallo de persistencia (cuota llena, IndexedDB caído) al crear/conmutar/
+ *  borrar rechazaba ANTES de tocar el chip de guardado: el clic simplemente no
+ *  hacía nada, sin rastro (auditoría E-04/A-05). Ahora al menos avisa. */
+const opFailed = (err: unknown): void => {
+  console.error('Operación de obra falló:', err);
+  useToastStore.getState().show('No se pudo completar la operación. Comprueba el espacio del navegador y reintenta.');
+};
 
 export function ObraSwitcher() {
   const obras = useSessionStore((s) => s.obras);
@@ -65,7 +73,7 @@ export function ObraSwitcher() {
   };
 
   const confirmNaming = () => {
-    void newObra(newName.trim() || undefined); // vacío → nombre por defecto
+    newObra(newName.trim() || undefined).catch(opFailed); // vacío → nombre por defecto
     setNaming(false);
   };
 
@@ -98,7 +106,7 @@ export function ObraSwitcher() {
                     role="menuitemradio"
                     aria-checked={on}
                     onClick={() => {
-                      if (!on) void switchObra(o.id);
+                      if (!on) switchObra(o.id).catch(opFailed);
                       close();
                     }}
                     className={`tcol ${styles.rowMain}`}
@@ -111,7 +119,7 @@ export function ObraSwitcher() {
                       <button
                         type="button"
                         onClick={() => {
-                          void deleteObraById(o.id);
+                          deleteObraById(o.id).catch(opFailed);
                           close();
                         }}
                         className={`tcol ${styles.confirmYes}`}

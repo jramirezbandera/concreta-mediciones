@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { DELETED_ROW_ID } from './certificacion';
 import { buildCertListado, buildPresupuestoListado, buildResumen, obraMeta } from './listado';
 import { toCents } from './money';
 import { CHAPTERS, DEFAULT_RATES, PARTIDAS } from './seed';
@@ -221,6 +222,33 @@ describe('buildCertListado (con snapshot F7.0 + contradictorios)', () => {
     expect(l.retencion).toBe(0.05);
     expect(l.snapshotAt).toBe('2026-06-11T08:00:00.000Z');
     expect(buildCertListado(chapters, partidas, certs, 9, rates)).toBeNull();
+  });
+
+  it('D-01/D-02: el rastro borrado va al capítulo sintético y Σ capítulos == certPEM', () => {
+    const certsDel: Cert[] = [
+      {
+        id: 'c1',
+        num: 1,
+        period: '',
+        retencion: 0,
+        data: { pa: 2, borrada: 3 }, // `borrada` ya no existe en el presupuesto
+        priceSnapshot: { pa: 10, borrada: 5 },
+        coefK: 1,
+        extras: [
+          // contradictorio cuyo capítulo se borró después de certificarlo
+          { id: 'x9', chapterId: 'YA-NO-EXISTE', pos: 'C1', title: 'PC huérfano', ud: 'ud', cantidad: 1, precio: 100 },
+        ],
+      },
+    ];
+    const l = buildCertListado(chapters, partidas, certsDel, 0, rates)!;
+    const sintetico = l.capitulos.at(-1)!;
+    expect(sintetico.id).toBe(DELETED_ROW_ID);
+    expect(sintetico.title).toBe('Eliminado del presupuesto');
+    expect(sintetico.grupos[0]!.rows[0]!.aOrigen).toBe(toCents(15)); // 3 × 5 (agregado)
+    expect(sintetico.extras[0]!.aOrigen).toBe(toCents(100));
+    expect(sintetico.aOrigen).toBe(toCents(115));
+    // El documento cuadra: la Σ de capítulos (incluido el sintético) == total.
+    expect(l.capitulos.reduce((a, c) => a + c.aOrigen, 0)).toBe(l.totals.certPEM);
   });
 });
 

@@ -8,6 +8,14 @@
 import type { Chapter, Partida } from './types';
 import { flattenContainers } from './tree';
 
+/** Posición de una partida: `<código base>.<n>`. LA regla de numeración, en un
+ *  solo sitio (F-03): antes estaba escrita a mano en applyCopy/addPartida/
+ *  bc3import además de aquí — cambiar la política obligaba a tocar los cuatro
+ *  (y a que ninguno se quedara atrás en silencio). */
+export function nextPos(baseCode: string, n: number): string {
+  return `${baseCode}.${n}`;
+}
+
 /** Reasigna `pos` a todas las partidas de un capítulo según su orden y `sub`. */
 export function renumberChapter(ch: Chapter | undefined, list: Partida[]): Partida[] {
   const codeById = new Map<string, string>();
@@ -17,6 +25,6 @@ export function renumberChapter(ch: Chapter | undefined, list: Partida[]): Parti
     const key = p.sub || '_';
     counts[key] = (counts[key] ?? 0) + 1;
     const base = (p.sub ? codeById.get(p.sub) : undefined) ?? (ch ? ch.code : '');
-    return { ...p, pos: `${base}.${counts[key]}` };
+    return { ...p, pos: nextPos(base, counts[key]!) };
   });
 }

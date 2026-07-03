@@ -4,7 +4,7 @@
    los valores dinámicos (ancho de barra de composición) van inline/por clase.
    =========================================================================== */
 .sidebar {
-  width: 286px;
+  width: var(--sidebar-w, 286px); /* fuente única en App.module.css (.app); la usa el overlay de Referencia */
   flex-shrink: 0;
   height: 100%;
   display: flex;

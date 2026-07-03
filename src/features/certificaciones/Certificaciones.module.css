@@ -762,21 +762,6 @@
   align-items: center;
   gap: 6px;
 }
-.ajusteSigno {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  flex-shrink: 0;
-  border-radius: 5px;
-  border: 1px solid var(--border-main);
-  background: var(--bg-elevated);
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1;
-  cursor: pointer;
-}
 .ajNeg {
   color: var(--state-warn);
 }
@@ -795,15 +780,47 @@
 .ajusteValInput {
   width: 50px;
 }
-.ajusteUnit {
-  min-width: 18px;
-  padding: 0 2px;
+/* Toggle segmentado — base compartida por tipo (€/%) y signo (−/+):
+   mostrar ambas opciones a la vez es la pista de que es conmutable. */
+.segToggle {
+  display: inline-flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  border: 1px solid var(--border-main);
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--bg-surface);
+}
+.segToggle button {
+  min-width: 22px;
+  padding: 2px 0;
   border: none;
   background: transparent;
-  color: var(--accent);
+  color: var(--text-disabled);
   font-size: 12.5px;
   font-weight: 600;
+  line-height: 1;
   cursor: pointer;
+  transition: color 120ms ease, background 120ms ease;
+}
+.segToggle button + button {
+  border-left: 1px solid var(--border-main);
+}
+.segToggle button:not(.segOn):hover {
+  color: var(--text-secondary);
+  background: var(--accent-soft);
+}
+.segToggle .segOn {
+  background: var(--accent);
+  color: var(--on-accent);
+  cursor: default;
+}
+/* Signo: el segmento activo conserva su color semántico (resta / suma). */
+.segToggle .segOn.segNeg {
+  background: var(--state-warn);
+}
+.segToggle .segOn.segPos {
+  background: var(--state-ok);
 }
 .ajusteRecur {
   display: inline-flex;

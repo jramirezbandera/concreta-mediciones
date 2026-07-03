@@ -218,17 +218,26 @@ describe('obraToBc3 — cabecera y ~K', () => {
     expect(text.replace(/\r\n/g, '')).not.toContain('\n'); // ningún LF suelto
   });
 
-  it('K=1 → sin registro ~K (espejo de coefKOf, que devuelve 1 sin ~K)', () => {
-    expect(rec(mini(), '~K|')).toBeUndefined();
+  it('~K SIEMPRE, con CI\\GG\\BI\\BAJA\\IVA (C-04); con K=1 el CI va a 0', () => {
+    // DEFAULT_RATES: gg 13 %, bi 6 %, iva 10 % — espejo exacto de ratesFromK.
+    expect(rec(mini(), '~K|')).toBe(String.raw`~K|\2\2\3\2\2\2\2\EUR\|0\13\6\\10\|`);
   });
 
-  it('K=1,13 → ~K de 7 grupos + EUR con pct 13; K<1 → pct negativo', () => {
+  it('K=1,13 → pct 13 en el campo CI; K<1 → pct negativo', () => {
     expect(rec(mini({}, { rates: { ...DEFAULT_RATES, coefK: 1.13 } }), '~K|')).toBe(
-      String.raw`~K|\2\2\3\2\2\2\2\EUR\|13|`,
+      String.raw`~K|\2\2\3\2\2\2\2\EUR\|13\13\6\\10\|`,
     );
     expect(rec(mini({}, { rates: { ...DEFAULT_RATES, coefK: 0.87 } }), '~K|')).toBe(
-      String.raw`~K|\2\2\3\2\2\2\2\EUR\|-13|`,
+      String.raw`~K|\2\2\3\2\2\2\2\EUR\|-13\13\6\\10\|`,
     );
+  });
+
+  it('C-04: GG/BI/IVA sobreviven el round-trip exportar → reimportar', () => {
+    const o = mini({}, { rates: { iva: 0.21, gg: 0.17, bi: 0.06, coefK: 1 } });
+    const back = bc3ToObra(obraToBc3(o));
+    expect(back.data.rates.gg).toBe(0.17);
+    expect(back.data.rates.bi).toBe(0.06);
+    expect(back.data.rates.iva).toBe(0.21);
   });
 
   it('coefKPct redondea a 4 decimales (ruido float fuera)', () => {
@@ -349,10 +358,39 @@ describe('obraToBc3 — sanitización (BC3 no tiene escape)', () => {
     expect(rec(o, '~C|OBRA##')).toContain('|Obra con salto|');
   });
 
-  it('~T conserva saltos como CRLF y neutraliza `~` a inicio de línea', () => {
-    const o = mini({ desc: 'Línea 1\n~K falso\nLínea 3 con barra \\' });
+  it('~T conserva saltos como CRLF y neutraliza TODO `~` (C-01)', () => {
+    const o = mini({ desc: 'Línea 1\n~K falso\nEspesor ~5 cm con barra \\' });
     const text = decode(obraToBc3(o));
-    expect(text).toContain('~T|D01|Línea 1\r\n ~K falso\r\nLínea 3 con barra \\|');
+    expect(text).toContain('~T|D01|Línea 1\r\n-K falso\r\nEspesor -5 cm con barra \\|');
+  });
+
+  it('C-01: un `~` en el título ya no corrompe el archivo (el precio sobrevive)', () => {
+    // Antes: los lectores tolerantes (incluido nuestro tokenizer lenient) parten
+    // el registro en CUALQUIER `~` → el ~C perdía el campo precio al releer.
+    const o = mini({ title: 'Muro de espesor ~30 cm', precio: 114.54 });
+    const back = bc3ToObra(obraToBc3(o));
+    const p = Object.values(back.data.partidas).flat()[0]!;
+    expect(p.title).toBe('Muro de espesor -30 cm');
+    expect(p.precio).toBe(114.54);
+  });
+
+  it('C-05: precios y rendimientos con más de 2/3 dec sobreviven el round-trip', () => {
+    const o = mini(
+      {
+        precio: 0.313,
+        precioManual: true, // precio cerrado: viaja tal cual en el ~C
+        items: [],
+        med: [],
+        cantidad: 1,
+      },
+      {},
+    );
+    const back = bc3ToObra(obraToBc3(o));
+    expect(Object.values(back.data.partidas).flat()[0]!.precio).toBe(0.313);
+    // rendimiento de 4 dec en la ~D (antes se truncaba a 3)
+    expect(rec(mini({ items: [{ code: 'mo001', type: 'MO', cantidad: 0.0125 }], precio: 0.22 }), '~D|D01')).toBe(
+      String.raw`~D|D01|mo001\1\0.0125\|`,
+    );
   });
 });
 

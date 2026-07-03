@@ -18,7 +18,7 @@ import { useTheme } from './hooks/useTheme';
 import { AyudaCenter } from './layout/AyudaCenter';
 import type { HelpTab } from './layout/ayudaContent';
 import { BottomTabBar, Drawer, MobileSummaryBar, ObraSwitcher, Sidebar, StatusBar, TopBar, type View } from './layout';
-import { selectCounts, selectPec, selectPem, selectTotalConIva, useObraStore } from './store';
+import { selectCounts, selectPec, selectPem, selectTotalConIva, useObraStore, useToastStore } from './store';
 import styles from './App.module.css';
 
 // Code-splitting (T3): vistas/modales pesados o poco usados salen del bundle
@@ -39,6 +39,14 @@ const SPLIT_WIDTH = 1100;
 function isSandboxHash(): boolean {
   return typeof window !== 'undefined' && window.location.hash.replace('#', '') === 'sandbox';
 }
+
+/** Un export que falla NO se traga (auditoría E-01): el modal ya se cerró, así que
+ *  sin toast el usuario creería que exportó su documento (el chunk dinámico puede
+ *  fallar offline o tras un deploy que purgó los assets de la sesión abierta). */
+const exportFailed = (kind: string) => (err: unknown) => {
+  console.error(`Export ${kind} falló:`, err);
+  useToastStore.getState().show(`No se pudo generar el ${kind}. Reintenta o recarga la página.`);
+};
 
 export default function App() {
   const { theme, toggleTheme } = useTheme();
@@ -116,11 +124,17 @@ export default function App() {
   // edición por el debounce). `pagehide` es el evento más fiable para esto.
   useEffect(() => {
     const onHide = () => void flushPending();
-    window.addEventListener('pagehide', onHide);
-    document.addEventListener('visibilitychange', () => {
+    // A-08 (menor): el listener de visibilitychange también se LIMPIA — antes
+    // era una lambda inline sin cleanup y StrictMode lo registraba dos veces.
+    const onVisibility = () => {
       if (document.visibilityState === 'hidden') onHide();
-    });
-    return () => window.removeEventListener('pagehide', onHide);
+    };
+    window.addEventListener('pagehide', onHide);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('pagehide', onHide);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, []);
 
   // Guarda global: soltar un .bc3 FUERA de la zona de presupuesto NO debe navegar
@@ -151,17 +165,17 @@ export default function App() {
   const exportPdf = useCallback((target: PrintTarget) => setPrintTarget(target), []);
   // XLSX/DOCX (F7.2/F7.3): generan y descargan; las librerías van por import dinámico.
   const exportExcel = useCallback((target: PrintTarget) => {
-    exportXlsx(target).catch((err: unknown) => console.error('Export XLSX falló:', err));
+    exportXlsx(target).catch(exportFailed('Excel'));
   }, []);
   const exportWord = useCallback((target: PrintTarget) => {
-    exportDocx(target).catch((err: unknown) => console.error('Export DOCX falló:', err));
+    exportDocx(target).catch(exportFailed('Word'));
   }, []);
   // BC3 (F7.4): writer propio síncrono, sin librería (FIEBDC-3 para Presto y cía).
   const exportObraBc3 = useCallback(() => {
     try {
       exportBc3();
     } catch (err: unknown) {
-      console.error('Export BC3 falló:', err);
+      exportFailed('.bc3')(err);
     }
   }, []);
 
@@ -250,9 +264,12 @@ export default function App() {
             // Captura SÍNCRONA antes del import dinámico (el evento se recicla). El
             // parser FIEBDC se carga aquí, no en el bundle inicial.
             const file = dt.files?.[0];
-            void import('./features/importar/importPartida').then((m) =>
-              m.processBudgetDrop(file, types, null),
-            );
+            // .catch (E-05): un chunk que no carga convertía el drop en no-op mudo.
+            void import('./features/importar/importPartida')
+              .then((m) => m.processBudgetDrop(file, types, null))
+              .catch(() =>
+                useToastStore.getState().show('No se pudo cargar el importador. Recarga la página.'),
+              );
           }}
         >
           {view === 'presupuesto' ? (
@@ -273,15 +290,6 @@ export default function App() {
           ) : (
             <ResumenView compact={bp.isMobile} />
           )}
-          {/* Overlay (pantalla estrecha, <1100): vive DENTRO de <main> a propósito,
-              para cubrir SOLO el área de presupuesto (no la barra lateral). La
-              cobertura la da el anidamiento en el DOM, sin acoplar a la anchura de
-              la sidebar. Split/full comparten instancia a nivel de .body (abajo). */}
-          {overlayOpen && (
-            <div key="ref-overlay" className={`no-print ${refStyles.overlay}`}>
-              <ReferenciaPanel onImport={() => setRefImportOpen(true)} />
-            </div>
-          )}
           {fileOver && !refDrag && (
             <div className={`no-print ${styles.fileDropHint}`} aria-hidden>
               <Icon name="download" size={20} />
@@ -290,13 +298,13 @@ export default function App() {
           )}
         </main>
 
-        {/* Split y full comparten UNA sola instancia: maximizar/restaurar SOLO alterna
-            su clase (`.aside` en flujo ↔ `.full` absoluto), no la desmonta. Antes eran
-            bloques distintos → React remontaba y se perdía el estado local del panel
-            (selección, búsqueda, desplegados, obra de referencia cargada). El `key`
-            estable ancla la identidad aunque aparezca/desaparezca el tirador. El overlay
-            (estrecho) va aparte, dentro de <main>, para no tapar la barra lateral. */}
-        {(splitOpen || refFull) && (
+        {/* UNA sola instancia del panel para las tres vistas (split/overlay/full):
+            cambiar de tamaño SOLO alterna su clase, nunca la desmonta → no se pierde
+            el estado local (selección, búsqueda, desplegados, obra de referencia
+            cargada). El `key` estable ancla la identidad aunque aparezca/desaparezca
+            el tirador. El overlay (estrecho) se desplaza el ancho de la sidebar por
+            CSS (`--sidebar-w`) para cubrir SOLO el presupuesto, no la barra lateral. */}
+        {refOpen && (
           <>
             {splitOpen && (
               <div
@@ -309,7 +317,9 @@ export default function App() {
             )}
             <aside
               key="ref-panel"
-              className={`no-print ${refFull ? refStyles.full : refStyles.aside}`}
+              className={`no-print ${
+                refFull ? refStyles.full : overlayOpen ? refStyles.overlay : refStyles.aside
+              }`}
               style={splitOpen ? { width: refWidth } : undefined}
             >
               <ReferenciaPanel onImport={() => setRefImportOpen(true)} />

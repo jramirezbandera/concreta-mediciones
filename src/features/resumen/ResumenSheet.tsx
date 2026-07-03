@@ -1,14 +1,8 @@
 import { EditableNum, IvaSelect } from '../../components';
 import type { ResumenListado } from '../../core/listado';
-import { fmtCents, fmtNum } from '../../core/money';
+import { fmtCents, fmtNum, pctToRate } from '../../core/money';
 import type { Rates } from '../../core/types';
 import styles from './Resumen.module.css';
-
-/** % con 1 decimal → fracción a 3 decimales (13,5% → 0,135). Corrección
- *  consciente del prototipo, que hacía round2 y perdía el medio punto. */
-function pctToRate(v: number): number {
-  return Math.round(Math.max(0, v) * 10) / 1000;
-}
 
 /** Fila de porcentaje (GG/BI): % editable (o estático en solo-lectura) + importe. */
 function PctRow({

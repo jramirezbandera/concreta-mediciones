@@ -31,6 +31,17 @@ export function parsePerformance(value: string | undefined): number | undefined 
 }
 
 /**
+ * Parses a BC3 numeric field. FIEBDC-3 files may use a decimal COMMA instead of
+ * a dot depending on the emitting program's locale; `parseFloat('12,34')`
+ * silently truncates to 12 (prices, performances, dims and totals all wrong,
+ * with zero warnings). Comma-decimal fields are normalized before parsing.
+ */
+export function parseBc3Float(value: string): number {
+  const t = value.trim();
+  return parseFloat(/^-?\d+,\d+$/.test(t) ? t.replace(',', '.') : t);
+}
+
+/**
  * DomainAssembler converts a BC3ParseStore (parsing layer) into a BC3Document (domain layer).
  *
  * This is the boundary between parsing and domain:
@@ -60,7 +71,7 @@ export class DomainAssembler {
         unit: parseNode.concept.unit || undefined,
         summary: parseNode.concept.summary || undefined,
         prices: parseNode.concept.prices.map((p) => {
-          const num = parseFloat(p);
+          const num = parseBc3Float(p);
           return isNaN(num) ? 0 : num;
         }),
         dates: parseNode.concept.dates || [],
@@ -107,9 +118,9 @@ export class DomainAssembler {
         const decomposition = new Decomposition({
           parentCode: normalizedParent,
           childCode: normalizedChild,
-          factor: line.factor ? parseFloat(line.factor) : undefined,
+          factor: line.factor ? parseBc3Float(line.factor) : undefined,
           performance: line.performance
-            ? parseFloat(line.performance)
+            ? parseBc3Float(line.performance)
             : undefined,
           percentageCodes: line.percentagesCodes,
           percentageRaw: line.percentagesRaw,
@@ -141,12 +152,12 @@ export class DomainAssembler {
       // Convert MeasurementDetailInput to MeasurementDetail
       const details: MeasurementDetail[] = measurementInput.details.map(
         (detail) => {
-          const length = detail.length ? parseFloat(detail.length) : undefined;
+          const length = detail.length ? parseBc3Float(detail.length) : undefined;
           const latitude = detail.latitude
-            ? parseFloat(detail.latitude)
+            ? parseBc3Float(detail.latitude)
             : undefined;
-          const height = detail.height ? parseFloat(detail.height) : undefined;
-          const units = detail.units ? parseFloat(detail.units) : undefined;
+          const height = detail.height ? parseBc3Float(detail.height) : undefined;
+          const units = detail.units ? parseBc3Float(detail.units) : undefined;
 
           return new MeasurementDetail({
             type: detail.type,
@@ -166,7 +177,7 @@ export class DomainAssembler {
         parentCode,
         positions: measurementInput.positions,
         total: measurementInput.total
-          ? parseFloat(measurementInput.total)
+          ? parseBc3Float(measurementInput.total)
           : undefined,
         details,
         label: measurementInput.label,

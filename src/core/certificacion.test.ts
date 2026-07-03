@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  DELETED_ROW_ID,
   ajusteImporte,
   ajusteLabel,
   cantidadToPct,
   certCalc,
   certChapterRows,
+  certDeletedTotals,
   certPrecioK,
   certSnapshotOf,
   certTotals,
@@ -79,6 +81,53 @@ describe('certCalc por partida', () => {
   it('aplica el coeficiente K al precio', () => {
     const r = certCalc(p, { p1: 50 }, {}, 1.13);
     expect(toEur(r.aOrigen)).toBe(565); // 50 × (10 × 1,13)
+  });
+});
+
+describe('partidas eliminadas del presupuesto (auditoría D-01/D-02, preservar documento)', () => {
+  it('certDeletedTotals: doble semántica valorada con precio congelado × K congelado', () => {
+    const snap = { precios: { borrada: 10 }, coefK: 1.5 };
+    const del = certDeletedTotals(new Set(['viva']), { borrada: 5 }, { borrada: 2 }, snap);
+    expect(del.aOrigen).toBe(toCents(75)); // 5 × 10 × 1,5
+    expect(del.anterior).toBe(toCents(30)); // 2 × 10 × 1,5
+    expect(del.estaCert).toBe(toCents(45));
+  });
+
+  it('sin snapshot (cert legada) no hay precio con el que valorar → 0, como antes', () => {
+    expect(certDeletedTotals(new Set(), { borrada: 5 }, {})).toEqual({
+      aOrigen: 0,
+      anterior: 0,
+      estaCert: 0,
+    });
+  });
+
+  it('certTotals conserva lo certificado de una partida borrada (D-01: el histórico no se reescribe)', () => {
+    const p1 = partida({ id: 'p1', cantidad: 10, precio: 10 });
+    const snap = { precios: { p1: 10, borrada: 15 }, coefK: 1 };
+    const t = certTotals([p1], { p1: 4, borrada: 2 }, {}, rates, 0, 1, [], [], snap);
+    expect(t.certPEM).toBe(toCents(4 * 10 + 2 * 15)); // 40 vivos + 30 borrados
+    expect(t.budgetPEM).toBe(toCents(100)); // el contrato vivo no incluye la borrada
+  });
+
+  it('certChapterRows agrupa el rastro en la fila sintética y CUADRA con certTotals (D-02)', () => {
+    const chapters: Chapter[] = [{ id: '01', code: '1', title: 'Uno' }];
+    const p1 = partida({ id: 'p1', cantidad: 10, precio: 10 });
+    const partidasMap: PartidasMap = { '01': [p1] };
+    const data = { p1: 4, borrada: 2 };
+    const snap = { precios: { p1: 10, borrada: 15 }, coefK: 1 };
+    const pcHuerfano = extra({ id: 'x1', chapterId: 'CAP-BORRADO', cantidad: 2, precio: 100 });
+    const rows = certChapterRows(chapters, partidasMap, data, {}, 1, [pcHuerfano], snap);
+    const delRow = rows.find((r) => r.id === DELETED_ROW_ID)!;
+    expect(delRow.cert).toBe(toCents(2 * 15 + 200)); // partida borrada + P.C. huérfano
+    const t = certTotals([p1], data, {}, rates, 0, 1, [pcHuerfano], [], snap);
+    expect(rows.reduce((a, r) => a + r.cert, 0)).toBe(t.certPEM); // Σ filas == total
+  });
+
+  it('sin rastro borrado no aparece la fila sintética', () => {
+    const chapters: Chapter[] = [{ id: '01', code: '1', title: 'Uno' }];
+    const p1 = partida({ id: 'p1', cantidad: 10, precio: 10 });
+    const rows = certChapterRows(chapters, { '01': [p1] }, { p1: 4 }, {}, 1, []);
+    expect(rows.find((r) => r.id === DELETED_ROW_ID)).toBeUndefined();
   });
 });
 

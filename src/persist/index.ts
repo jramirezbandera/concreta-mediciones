@@ -1,6 +1,7 @@
 export {
   hydrate,
   armAutosave,
+  cancelPending,
   flushPending,
   getActiveObraId,
   switchObra,

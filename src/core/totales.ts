@@ -25,9 +25,13 @@ export function pem(map: PartidasMap, coefK = 1): Cents {
   return sumCents(Object.values(map).map((ps) => chapterTotal(ps, coefK)));
 }
 
-/** PEC s/IVA = round2(PEM · (1 + gg + bi)). */
+/** PEC s/IVA = PEM + GG + BI, cada tasa redondeada POR LÍNEA — la MISMA
+ *  convención que la hoja Resumen y el documento (`buildResumen`), que es lo
+ *  que se firma. Antes `scaleCents(PEM, 1+gg+bi)` (redondeo junto) difería del
+ *  documento en 1 céntimo en ~25 % de los PEM posibles (auditoría B-07): la
+ *  barra de estado y el Resumen enseñaban dos PEC distintos del mismo dato. */
 export function pec(pemCents: Cents, rates: Rates): Cents {
-  return scaleCents(pemCents, 1 + rates.gg + rates.bi);
+  return sumCents([pemCents, scaleCents(pemCents, rates.gg), scaleCents(pemCents, rates.bi)]);
 }
 
 /**
@@ -46,12 +50,10 @@ export function coefKParaObjetivo(baseCents: Cents, targetCents: Cents): number 
 }
 
 /**
- * Total con IVA = round2((PEM + round2(PEM·(gg+bi))) · (1 + iva)).
- * Réplica exacta del prototipo: el GG+BI se redondea aparte antes del IVA
- * (puede diferir en un céntimo de `pec`).
+ * Total con IVA = PEC + round2(PEC·iva) — misma convención por-línea que el
+ * documento (`buildResumen`: total = pec + iva), ver `pec` (auditoría B-07).
  */
 export function totalConIva(pemCents: Cents, rates: Rates): Cents {
-  const ggbi = scaleCents(pemCents, rates.gg + rates.bi);
-  const base = sumCents([pemCents, ggbi]);
-  return scaleCents(base, 1 + rates.iva);
+  const p = pec(pemCents, rates);
+  return sumCents([p, scaleCents(p, rates.iva)]);
 }

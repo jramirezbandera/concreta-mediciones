@@ -40,6 +40,7 @@ export function PrintDoc({ target, onDone }: { target: PrintTarget; onDone: () =
   const partidas = useObraStore((s) => s.partidas);
   const certs = useObraStore((s) => s.certs);
   const rates = useObraStore((s) => s.rates);
+  const bajas = useObraStore((s) => s.bajas);
   const obra = useObraStore((s) => s.obra);
   const resumen = useObraStore(selectResumen);
   const meta = obraMeta(obra);
@@ -85,7 +86,7 @@ export function PrintDoc({ target, onDone }: { target: PrintTarget; onDone: () =
     titulo = 'Resumen de presupuesto';
     body = <ResumenSheet data={resumen} readOnly />;
   } else {
-    const cl = buildCertListado(chapters, partidas, certs, target.index, rates);
+    const cl = buildCertListado(chapters, partidas, certs, target.index, rates, bajas);
     titulo = cl ? `Certificación de obra nº ${cl.num}` : 'Certificación de obra';
     if (cl) {
       const congelados = fmtFecha(cl.snapshotAt);

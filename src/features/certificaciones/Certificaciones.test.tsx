@@ -10,6 +10,33 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
+describe('CertSummary — % con decimales (auditoría B-01/B-02)', () => {
+  it('B-01: teclear una retención con décimas la guarda exacta (2,5 % → 0,025)', () => {
+    render(<CertificacionesView compact={false} />);
+    useObraStore.getState().setCurCert(0);
+    fireEvent.click(screen.getByLabelText('Retención %')); // abre el editor
+    const input = screen.getByLabelText('Retención %');
+    fireEvent.change(input, { target: { value: '2,5' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    // round2(v/100) cuantizaba la fracción a 2 dec → guardaba 0.03 (¡3 %!)
+    expect(useObraStore.getState().certs[0]!.retencion).toBe(0.025);
+  });
+
+  it('B-02: un ajuste porcentual admite milésimas de % (10,197 % → 0,10197)', () => {
+    render(<CertificacionesView compact={false} />);
+    useObraStore.getState().setCurCert(0);
+    fireEvent.click(screen.getByText('Añadir ajuste'));
+    fireEvent.click(screen.getByTitle('Porcentaje sobre la base')); // conmuta a %
+    fireEvent.click(screen.getByLabelText('Porcentaje del ajuste')); // abre el editor
+    const input = screen.getByLabelText('Porcentaje del ajuste');
+    fireEvent.change(input, { target: { value: '10,197' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    const a = useObraStore.getState().certs[0]!.ajustes![0]!;
+    expect(a.tipo).toBe('pct');
+    expect(a.valor).toBe(0.10197); // round2(v/100) lo dejaba en 0.1 (10 %)
+  });
+});
+
 describe('CertificacionesView (F4.1)', () => {
   it('muestra la cert en curso, partidas y el % global', () => {
     render(<CertificacionesView compact={false} />);
@@ -48,6 +75,19 @@ describe('CertificacionesView (F4.1)', () => {
     fireEvent.click(screen.getByText('E02EM030')); // celda Nº de p111 → despliega
     expect(screen.getByText(/Mediciones/)).toBeInTheDocument();
     expect(screen.getByText('Zanjas de saneamiento')).toBeInTheDocument(); // línea de p111
+  });
+
+  it('D-09: una línea certificada y luego BORRADA de la medición sigue visible y desmarcable', () => {
+    useObraStore.getState().setCurCert(0);
+    useObraStore.getState().setCertLine('p111', 'p111-m1', 61.2); // certifica la línea
+    useObraStore.getState().deleteMedLine('01', 'p111', 0); // …y se borra de la medición
+    render(<CertificacionesView compact={false} />);
+    fireEvent.click(screen.getByText('E02EM030')); // despliega p111
+    // Antes no había fila: el importe quedaba sostenido por una línea invisible
+    // y la única salida era el override manual (que arrasa todo el lineQty).
+    expect(screen.getByText(/Línea eliminada de la medición/)).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('Desmarcar línea eliminada de la medición'));
+    expect(useObraStore.getState().certs[0]!.lineQty?.p111).toBeUndefined();
   });
 
   it('marcar una línea suma su parcial a la cantidad ejecutada (F4.3 #3)', () => {

@@ -1,6 +1,6 @@
 import { EditableNum, EditableText, Icon, IvaSelect } from '../../components';
 import type { CertChapterRow, CertTotals } from '../../core/certificacion';
-import { fmtCents, fmtNum, round2, toEur, type Cents } from '../../core/money';
+import { fmtCents, fmtNum, pctToRate, round2, toEur, type Cents } from '../../core/money';
 import { useObraStore } from '../../store';
 import { certPctState } from './certPctState';
 import styles from './Certificaciones.module.css';
@@ -80,7 +80,8 @@ export function CertSummary({ totals, retencion }: { totals: CertTotals; retenci
 
       <div className={styles.sumDivider} />
       <div className={styles.sumGroup}>
-        <Row label={`GG + BI (${Math.round((gg + bi) * 100)}%)`} value={totals.ggbiOrigen} color={GGBI_COLOR} />
+        {/* fmtNum a 1 dec (B-09): Math.round decía «20%» aplicando 19,5 %. */}
+        <Row label={`GG + BI (${fmtNum((gg + bi) * 100, 1)}%)`} value={totals.ggbiOrigen} color={GGBI_COLOR} />
         <Row label="PEC a origen" value={totals.pecOrigen} strong />
         <Row label="Certificación anterior" value={totals.pecPrev} color="var(--text-disabled)" />
         <Row label="Importe esta certificación" value={totals.pecEsta} strong />
@@ -99,7 +100,8 @@ export function CertSummary({ totals, retencion }: { totals: CertTotals; retenci
                   dec={1}
                   accent
                   ariaLabel="Retención %"
-                  onCommit={(v) => setCertField('retencion', round2(v / 100))}
+                  // pctToRate, NO round2(v/100): eso cuantizaba a % enteros (B-01).
+                  onCommit={(v) => setCertField('retencion', pctToRate(v))}
                 />
               </span>
               <span className="mono" style={{ fontSize: 11, color: 'var(--text-disabled)' }}>
@@ -116,15 +118,26 @@ export function CertSummary({ totals, retencion }: { totals: CertTotals; retenci
           return (
             <div key={a.id} className={styles.ajuste}>
               <div className={styles.ajusteTop}>
-                <button
-                  type="button"
-                  className={`${styles.ajusteSigno} ${neg ? styles.ajNeg : styles.ajPos}`}
-                  title={neg ? 'Resta (descuento). Pulsa para sumar' : 'Suma (devolución). Pulsa para restar'}
-                  aria-label={neg ? 'Signo: resta' : 'Signo: suma'}
-                  onClick={() => editAjuste(a.id, 'signo', neg ? 1 : -1)}
-                >
-                  {neg ? '−' : '+'}
-                </button>
+                <span className={styles.segToggle} role="group" aria-label="Signo del ajuste">
+                  <button
+                    type="button"
+                    className={neg ? `${styles.segOn} ${styles.segNeg}` : ''}
+                    title="Resta: descuento sobre la certificación"
+                    aria-pressed={neg}
+                    onClick={() => editAjuste(a.id, 'signo', -1)}
+                  >
+                    −
+                  </button>
+                  <button
+                    type="button"
+                    className={neg ? '' : `${styles.segOn} ${styles.segPos}`}
+                    title="Suma: devolución o cargo a favor"
+                    aria-pressed={!neg}
+                    onClick={() => editAjuste(a.id, 'signo', 1)}
+                  >
+                    +
+                  </button>
+                </span>
                 <span className={styles.ajusteConcepto}>
                   <EditableText
                     value={a.concepto}
@@ -149,21 +162,37 @@ export function CertSummary({ totals, retencion }: { totals: CertTotals; retenci
                   <span className={styles.ajusteValBox}>
                     <span className={styles.ajusteValInput}>
                       <EditableNum
-                        value={a.tipo === 'pct' ? round2(a.valor * 100) : a.valor}
+                        // pct: valor pleno ×100, SIN round2 (perdía el 3er decimal del %);
+                        // el commit usa pctToRate(v,3), no round2(v/100), que cuantizaba
+                        // a % enteros y hacía imposible el «10,197 %» canónico (B-02).
+                        value={a.tipo === 'pct' ? a.valor * 100 : a.valor}
                         dec={a.tipo === 'pct' ? 3 : 2}
                         accent
                         ariaLabel={a.tipo === 'pct' ? 'Porcentaje del ajuste' : 'Importe del ajuste'}
-                        onCommit={(v) => editAjuste(a.id, 'valor', a.tipo === 'pct' ? round2(v / 100) : v)}
+                        onCommit={(v) => editAjuste(a.id, 'valor', a.tipo === 'pct' ? pctToRate(v, 3) : v)}
                       />
                     </span>
+                  </span>
+                  {/* Toggle segmentado: mostrar ambas opciones es la pista visual de
+                      que el tipo es conmutable (antes era texto plano, sin cue). */}
+                  <span className={styles.segToggle} role="group" aria-label="Tipo de ajuste">
                     <button
                       type="button"
-                      className={styles.ajusteUnit}
-                      title={a.tipo === 'pct' ? 'Porcentaje. Pulsa para importe fijo (€)' : 'Importe fijo. Pulsa para porcentaje (%)'}
-                      aria-label={a.tipo === 'pct' ? 'Tipo: porcentaje' : 'Tipo: importe fijo'}
-                      onClick={() => editAjuste(a.id, 'tipo', a.tipo === 'pct' ? 'fijo' : 'pct')}
+                      className={a.tipo === 'fijo' ? styles.segOn : ''}
+                      title="Importe fijo en euros"
+                      aria-pressed={a.tipo === 'fijo'}
+                      onClick={() => editAjuste(a.id, 'tipo', 'fijo')}
                     >
-                      {a.tipo === 'pct' ? '%' : '€'}
+                      €
+                    </button>
+                    <button
+                      type="button"
+                      className={a.tipo === 'pct' ? styles.segOn : ''}
+                      title="Porcentaje sobre la base"
+                      aria-pressed={a.tipo === 'pct'}
+                      onClick={() => editAjuste(a.id, 'tipo', 'pct')}
+                    >
+                      %
                     </button>
                   </span>
                   <label

@@ -8,6 +8,7 @@ import {
   extraCalc,
   extrasCantidad,
   pctToCantidad,
+  type CertDeletedRow,
   type CertSnapshot,
 } from '../../core/certificacion';
 import { groupBySub } from '../../core/grouping';
@@ -39,12 +40,19 @@ export function CertDetail({ p }: { p: Partida }) {
   const med = p.med ?? [];
   const lineQty = useObraStore((s) => s.certs[s.curCert]?.lineQty?.[p.id]);
   const setCertLine = useObraStore((s) => s.setCertLine);
+  // D-09: una línea MARCADA cuyo id ya no existe en la medición (se borró la
+  // línea después de certificarla). El importe es correcto como histórico
+  // (snapshot), pero sin fila no había checkbox con el que desmarcarla — el
+  // único escape era el override manual, que arrasa TODO el lineQty.
+  const deletedMarked = Object.entries(lineQty ?? {}).filter(
+    ([id, qty]) => qty > 0 && !med.some((l) => l.id === id),
+  );
   return (
     <div className={styles.detail}>
       <div className={styles.detailLabel}>Descripción</div>
       <p className={styles.detailDesc}>{p.desc || '—'}</p>
       <div className={styles.detailLabel}>Mediciones · marca las líneas ejecutadas</div>
-      {med.length > 0 ? (
+      {med.length > 0 || deletedMarked.length > 0 ? (
         <div className={styles.detailMed}>
           {med.map((l) => {
             const parcial = lineParcial(l);
@@ -69,6 +77,25 @@ export function CertDetail({ p }: { p: Partida }) {
               </div>
             );
           })}
+          {deletedMarked.map(([id, qty]) => (
+            <div key={id} className={`${styles.detailMedRow} ${styles.lineOn}`}>
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked
+                aria-label="Desmarcar línea eliminada de la medición"
+                className={`tap-target ${styles.lineCheck} ${styles.on}`}
+                onClick={() => setCertLine(p.id, id, null)}
+              >
+                <Icon name="check" size={12} />
+              </button>
+              <span className={`${styles.detailMedComment} ${styles.empty}`}>
+                Línea eliminada de la medición (certificada en su día)
+              </span>
+              <span className={`mono ${styles.detailMedDims}`}>—</span>
+              <span className={`mono ${styles.detailMedParcial}`}>{fmtNum(qty)}</span>
+            </div>
+          ))}
         </div>
       ) : (
         <p className={styles.detailEmpty}>Sin líneas de medición.</p>
@@ -282,6 +309,60 @@ function CertExtraRow({
         </span>
       </td>
     </tr>
+  );
+}
+
+/** Sección «Eliminado del presupuesto» (auditoría D-01/D-02): rastro certificado
+ *  de partidas borradas (filas de SOLO LECTURA — con nombre si dejaron tombstone
+ *  v3; la valoración sale del precio congelado del snapshot) y contradictorios
+ *  de capítulos borrados (siguen editables/borrables, para poder corregirlos o
+ *  retirarlos). El documento se preserva: lo certificado no desaparece al borrar. */
+export function CertDeletedTable({
+  rows,
+  extras,
+  prevExtras,
+  mode,
+}: {
+  rows: CertDeletedRow[];
+  extras: CertExtra[];
+  prevExtras: CertExtra[];
+  mode: CertMode;
+}) {
+  const prevCant = extrasCantidad(prevExtras);
+  return (
+    <table className={`ctable ${styles.table}`}>
+      <tbody>
+        {rows.map((r) => (
+          <tr key={r.id} className={`tcol ${styles.row}`}>
+            <td className={`${styles.cell} ${styles.cNum}`}>
+              <div className={styles.numFlex}>
+                <div>
+                  <div className={`mono ${styles.code}`}>{r.code}</div>
+                </div>
+              </div>
+            </td>
+            <td className={`${styles.cell} ${styles.cDesc}`}>
+              <div className={styles.descInner}>{r.title}</div>
+            </td>
+            <td className={`mono ${styles.cell} ${styles.cUd}`}>{r.ud || '—'}</td>
+            <td className={`mono ${styles.cell} ${styles.cNum2}`}>—</td>
+            <td className={`mono ${styles.cell} ${styles.cExec}`}>
+              {fmtNum(mode === 'origen' ? r.ejecutada : round2(r.ejecutada - r.prev))}
+            </td>
+            <td className={`${styles.cell} ${styles.cPct}`}>
+              <span className={styles.pctDash}>—</span>
+            </td>
+            <td className={`mono ${styles.cell} ${styles.cPrice}`}>{fmtNum(r.precio)}</td>
+            <td className={`mono ${styles.cell} ${styles.cAbono}`}>
+              {fmtNum(toEur(mode === 'origen' ? r.aOrigen : r.estaCert))}
+            </td>
+          </tr>
+        ))}
+        {extras.map((e) => (
+          <CertExtraRow key={e.id} e={e} prevCantidad={prevCant[e.id] ?? 0} mode={mode} />
+        ))}
+      </tbody>
+    </table>
   );
 }
 

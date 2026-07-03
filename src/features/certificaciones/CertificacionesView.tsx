@@ -1,6 +1,12 @@
 import { useRef, useState } from 'react';
 import { EditableText, EmptyAction, EmptyState, Icon } from '../../components';
-import { certCalc, certSnapshotOf, extraCalc, extrasCantidad } from '../../core/certificacion';
+import {
+  certCalc,
+  certDeletedRows,
+  certSnapshotOf,
+  extraCalc,
+  extrasCantidad,
+} from '../../core/certificacion';
 import { fmtCents, fmtNum, sumCents, toEur, type Cents } from '../../core/money';
 import { useElementWidth } from '../../hooks/useElementWidth';
 import {
@@ -10,7 +16,7 @@ import {
   type CertMode,
 } from '../../store';
 import { CertChapterCards } from './CertChapterCards';
-import { CertChapterTable, CertHead } from './CertTable';
+import { CertChapterTable, CertDeletedTable, CertHead } from './CertTable';
 import { CertChapterSummary, CertSummary } from './CertSummary';
 import { CertSelector } from './CertSelector';
 import { certPctState } from './certPctState';
@@ -48,6 +54,7 @@ export function CertificacionesView({
   const curCert = useObraStore((s) => s.curCert);
   const chapters = useObraStore((s) => s.chapters);
   const partidas = useObraStore((s) => s.partidas);
+  const bajas = useObraStore((s) => s.bajas);
   const coefK = useObraStore((s) => s.rates.coefK);
   const setCertField = useObraStore((s) => s.setCertField);
   const totals = useObraStore(selectCertTotals);
@@ -188,6 +195,47 @@ export function CertificacionesView({
           </section>
         );
       })}
+
+      {(() => {
+        // «Eliminado del presupuesto» (D-01/D-02): partidas borradas con importe
+        // certificado (valen su snapshot; CON NOMBRE si dejaron tombstone v3) +
+        // contradictorios de capítulos borrados. Sin esta sección ese dinero
+        // sumaría al total sin fila que lo enseñe.
+        const chapterIdSet = new Set(chapters.map((c) => c.id));
+        const aliveIds = new Set(
+          chapters.flatMap((ch) => (partidas[ch.id] ?? []).map((p) => p.id)),
+        );
+        const deletedRows = certDeletedRows(aliveIds, curData, prevData, snap, bajas);
+        const deletedExtras = extras.filter((e) => !chapterIdSet.has(e.chapterId));
+        if (deletedRows.length === 0 && deletedExtras.length === 0) return null;
+        const totalByMode: Cents = sumCents([
+          ...deletedRows.map((r) => (mode === 'origen' ? r.aOrigen : r.estaCert)),
+          ...deletedExtras.map((e) => {
+            const k = extraCalc(e, prevExtraCant[e.id] ?? 0);
+            return mode === 'origen' ? k.aOrigen : k.estaCert;
+          }),
+        ]);
+        const table = (
+          <CertDeletedTable
+            rows={deletedRows}
+            extras={deletedExtras}
+            prevExtras={prevExtras}
+            mode={mode}
+          />
+        );
+        return (
+          <section>
+            <div className={styles.chapBand}>
+              <span className={`mono ${styles.chapCode}`}>—</span>
+              <span className={styles.chapTitle}>Eliminado del presupuesto</span>
+              <div className={styles.chapRight}>
+                <span className={`mono ${styles.chapImporte}`}>{fmtNum(toEur(totalByMode))}</span>
+              </div>
+            </div>
+            {compact ? table : <div className={styles.tableWrap}>{table}</div>}
+          </section>
+        );
+      })()}
 
       <div className={styles.summaryGrid}>
         <CertChapterSummary rows={chapterRows} />

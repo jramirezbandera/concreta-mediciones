@@ -535,12 +535,22 @@
   min-width: 0;
   border-left: 1px solid var(--border-main);
 }
+/* Overlay (pantalla estrecha, <1100): el panel vive a nivel de .body (una sola
+   instancia con split/full → maximizar no lo remonta), pero cubre SOLO el área de
+   presupuesto. En móvil (<1024) la barra lateral es un drawer fuera de flujo →
+   left:0. En escritorio (≥1024) la barra está en flujo → se desplaza su ancho
+   (`--sidebar-w`, fuente única en App.module.css) para no taparla. */
 .overlay {
   position: absolute;
   inset: 0;
   z-index: 80;
   background: var(--bg-surface);
   box-shadow: var(--shadow-float);
+}
+@media (min-width: 1024px) {
+  .overlay {
+    left: var(--sidebar-w, 286px);
+  }
 }
 
 /* Pantalla completa: cubre todo el .body (sidebar + presupuesto), bajo el topbar. */

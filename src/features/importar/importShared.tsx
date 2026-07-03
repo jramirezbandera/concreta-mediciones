@@ -114,6 +114,9 @@ export function Bc3ResultSummary({
       <div className={styles.stats}>
         <Stat label="Capítulos" value={String(r.chapters)} />
         <Stat label="Partidas" value={String(r.partidas)} />
+        {/* Con medición: sin este contador, un archivo truncado que conserva las
+            partidas pero pierde los ~M pasaba por bueno (auditoría C-03). */}
+        <Stat label="Con medición" value={String(r.medVisible)} />
         <Stat label="Recursos" value={String(r.recursos)} />
         {/* El CI del ~K entra como línea «Costes indirectos» en cada partida
             (K queda en 1). Se muestra el % si lo hay. */}

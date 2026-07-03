@@ -6,6 +6,7 @@ import {
   importeCents,
   parseEsNumber,
   pctCents,
+  pctToRate,
   round2,
   scaleCents,
   sumCents,
@@ -23,6 +24,19 @@ describe('round2', () => {
 
   it('evita el error de representación de float clásico', () => {
     expect(round2(0.1 + 0.2)).toBe(0.3);
+  });
+
+  it('B-05: SIMÉTRICO en negativos (half away from zero), sin −0', () => {
+    expect(round2(-0.005)).toBe(-0.01); // antes: −0 (asimétrico con +0.005 → 0.01)
+    expect(round2(-1.005)).toBe(-1.01);
+    expect(round2(-0.004)).toBe(0); // 0 limpio, nunca −0
+    expect(Object.is(round2(-0.004), -0)).toBe(false);
+    // barrido: round2(−x) === −round2(x) en el rango de milésimas (=== trata
+    // −0 y 0 como iguales; el caso −0 ya está cubierto arriba)
+    for (let i = 1; i < 2000; i += 1) {
+      const x = i / 1000;
+      expect(round2(-x) === -round2(x)).toBe(true);
+    }
   });
 });
 
@@ -104,6 +118,28 @@ describe('toDecimalComma', () => {
   it('el resultado lo lee parseEsNumber como decimal', () => {
     expect(parseEsNumber(toDecimalComma('14.5'))).toBe(14.5);
     expect(parseEsNumber(toDecimalComma('1.234,56'))).toBe(1234.56);
+  });
+});
+
+describe('pctToRate', () => {
+  it('conserva el decimal del % (13,5 % → 0,135), a diferencia de round2(v/100)', () => {
+    expect(pctToRate(13.5)).toBe(0.135);
+    expect(pctToRate(20)).toBe(0.2);
+  });
+
+  it('B-01: la retención con décimas NO se cuantiza a % enteros', () => {
+    expect(pctToRate(2.5)).toBe(0.025); // round2(2.5/100) daba 0.03 (¡3 %!)
+    expect(pctToRate(1.4)).toBe(0.014); // round2 daba 0.01
+    expect(pctToRate(0.4)).toBe(0.004); // round2 daba 0 (la retención desaparecía)
+  });
+
+  it('B-02: con dec=3 admite la milésima de % de los ajustes', () => {
+    expect(pctToRate(10.197, 3)).toBe(0.10197); // round2(10.197/100) daba 0.1 (10 %)
+    expect(pctToRate(5, 3)).toBe(0.05);
+  });
+
+  it('clampa a ≥0 (el signo del ajuste vive en `signo`)', () => {
+    expect(pctToRate(-5)).toBe(0);
   });
 });
 
