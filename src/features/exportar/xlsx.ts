@@ -8,6 +8,7 @@ import {
   buildCertListado,
   buildPresupuestoListado,
   buildResumen,
+  firmaFor,
   obraMeta,
 } from '../../core/listado';
 import { useObraStore } from '../../store';
@@ -27,13 +28,18 @@ export function xlsxDocFor(target: PrintTarget): XlsxDoc | null {
     return buildPresupuestoXlsx(
       buildPresupuestoListado(s.chapters, s.partidas, s.rates.coefK),
       meta,
+      firmaFor('presupuesto', s.obra, undefined, new Date().toISOString()),
     );
   }
   if (target.kind === 'resumen') {
-    return buildResumenXlsx(buildResumen(s.chapters, s.partidas, s.rates), meta);
+    return buildResumenXlsx(
+      buildResumen(s.chapters, s.partidas, s.rates),
+      meta,
+      firmaFor('resumen', s.obra, undefined, new Date().toISOString()),
+    );
   }
   const cl = buildCertListado(s.chapters, s.partidas, s.certs, target.index, s.rates, s.bajas);
-  return cl && buildCertXlsx(cl, meta);
+  return cl && buildCertXlsx(cl, meta, firmaFor('cert', s.obra, s.certs[target.index]));
 }
 
 /** Genera y DESCARGA el .xlsx del listado pedido (celdas numéricas, F7.2). */

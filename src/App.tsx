@@ -48,6 +48,12 @@ const exportFailed = (kind: string) => (err: unknown) => {
   useToastStore.getState().show(`No se pudo generar el ${kind}. Reintenta o recarga la página.`);
 };
 
+/** Congela los firmantes de una cert al exportarla (pie de firma reproducible,
+ *  OV1): la primera exportación sella quién firmó y la fecha. Idempotente. */
+function freezeCertFirmantesFor(target: PrintTarget): void {
+  if (target.kind === 'cert') useObraStore.getState().freezeCertFirmantes(target.index);
+}
+
 export default function App() {
   const { theme, toggleTheme } = useTheme();
   const bp = useBreakpoint();
@@ -162,12 +168,17 @@ export default function App() {
 
   // El doc de impresión se desmonta al terminar (afterprint / fallback).
   const closePrint = useCallback(() => setPrintTarget(null), []);
-  const exportPdf = useCallback((target: PrintTarget) => setPrintTarget(target), []);
+  const exportPdf = useCallback((target: PrintTarget) => {
+    freezeCertFirmantesFor(target);
+    setPrintTarget(target);
+  }, []);
   // XLSX/DOCX (F7.2/F7.3): generan y descargan; las librerías van por import dinámico.
   const exportExcel = useCallback((target: PrintTarget) => {
+    freezeCertFirmantesFor(target);
     exportXlsx(target).catch(exportFailed('Excel'));
   }, []);
   const exportWord = useCallback((target: PrintTarget) => {
+    freezeCertFirmantesFor(target);
     exportDocx(target).catch(exportFailed('Word'));
   }, []);
   // BC3 (F7.4): writer propio síncrono, sin librería (FIEBDC-3 para Presto y cía).

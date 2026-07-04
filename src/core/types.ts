@@ -176,6 +176,40 @@ export interface Cert {
   coefK?: number;
   /** Fecha ISO del último precio congelado (trazabilidad del doc, design review F7.1). */
   snapshotAt?: string;
+  /**
+   * Pies de firma por rol (eng-review OV1): firmantes CONGELADOS al exportar la
+   * cert por primera vez. Reexportar una cert vieja reproduce QUIÉN la firmó,
+   * aunque después cambie la dirección facultativa o la constructora. Espeja
+   * `priceSnapshot`/`lineQty`; si falta (certs legadas) se compone en vivo.
+   */
+  firmantesSnapshot?: Firmante[];
+  /** Fecha ISO de firma, congelada junto a `firmantesSnapshot` (línea «En X, a Y»). */
+  firmadoAt?: string;
+}
+
+/**
+ * Agente de la dirección facultativa: un técnico que firma los documentos
+ * (director de obra ×1-2, de ejecución ×0-1, coordinador de S+S…). Lista
+ * flexible en `Obra.direccionFacultativa`; el orden es el orden de firma.
+ */
+export interface Agente {
+  id: string;
+  /** Rol libre: «Director de obra», «Director de ejecución de obra», «Coordinador de S+S»… */
+  rol: string;
+  nombre: string;
+  /** Nº de colegiado (solo técnicos). '' o ausente → no se pinta. */
+  colegiado?: string;
+}
+
+/**
+ * Firmante RESUELTO de un pie de firma (rol + nombre + línea secundaria).
+ * Lo componen `firmaFor`/los agentes; lo congela `Cert.firmantesSnapshot`.
+ */
+export interface Firmante {
+  rol: string;
+  nombre: string;
+  /** Línea bajo el nombre: «Col. 1234» (técnico) o «Por la constructora: X». */
+  sub?: string;
 }
 
 /** Tasas económicas. Estado del store, NUNCA globals mutados (§8 riesgos). */
@@ -197,7 +231,13 @@ export interface Obra {
   localidad: string;
   /** Observaciones y notas de la hoja Resumen (F7.1, design review D1). */
   notes?: string;
-  [k: string]: unknown; // promotor/constructor/redactor… se completan en F6
+  /**
+   * Dirección facultativa (pies de firma por rol): técnicos que firman las
+   * certificaciones. Lista editable en «Datos de la obra»; el orden es el orden
+   * de firma. Sustituye al antiguo `redactor`/`lugar`/`fecha` (migración v3→v4).
+   */
+  direccionFacultativa?: Agente[];
+  [k: string]: unknown; // promotor/constructor… se completan en F6
 }
 
 /**

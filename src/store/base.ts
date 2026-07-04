@@ -32,6 +32,7 @@ export const nextPartidaId = (): string => uid('p');
 export const nextMedLineId = (): string => uid('m');
 export const nextExtraId = (): string => uid('x');
 export const nextAjusteId = (): string => uid('a');
+export const nextAgenteId = (): string => uid('ag');
 
 /** Sub del capítulo por id, a CUALQUIER profundidad (jerarquía N niveles). */
 export function subIn(ch: Chapter, subId: string): SubChapter | undefined {

@@ -1,6 +1,7 @@
 import { Icon, type IconName } from '../../components/Icon';
 import { Modal } from '../../components/Modal';
 import { useObraStore } from '../../store';
+import { DireccionFacultativaEditor } from './DireccionFacultativaEditor';
 import { ProjectBackup } from './ProjectBackup';
 import styles from './ObraModal.module.css';
 
@@ -42,16 +43,6 @@ const SECTIONS: Section[] = [
       ['constructor.jefe', 'Jefe de obra'],
       ['constructor.telefono', 'Teléfono'],
       ['constructor.direccion', 'Dirección', true],
-    ],
-  ],
-  [
-    'Dirección facultativa',
-    'compass',
-    [
-      ['redactor.nombre', 'Técnico redactor'],
-      ['redactor.colegiado', 'Nº colegiado'],
-      ['lugar', 'Lugar de firma'],
-      ['fecha', 'Fecha del documento'],
     ],
   ],
 ];
@@ -120,6 +111,13 @@ export function ObraModal({ open, onClose, compact }: ObraModalProps) {
           </div>
         </section>
       ))}
+      <section className={styles.section}>
+        <div className={styles.secHead}>
+          <Icon name="compass" size={15} />
+          <span className="sec-head">Dirección facultativa</span>
+        </div>
+        <DireccionFacultativaEditor compact={compact} />
+      </section>
       <ProjectBackup onImported={onClose} />
     </Modal>
   );

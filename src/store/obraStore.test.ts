@@ -200,6 +200,85 @@ describe('setObraPath (datos de obra, F6.2)', () => {
   });
 });
 
+describe('dirección facultativa (pies de firma por rol)', () => {
+  it('addAgenteDF empuja un agente en blanco con rol por defecto e id único', () => {
+    state().addAgenteDF();
+    const df = state().obra.direccionFacultativa!;
+    expect(df).toHaveLength(1);
+    expect(df[0]).toMatchObject({ rol: 'Director de obra', nombre: '', colegiado: '' });
+    expect(df[0]!.id).toBeTruthy();
+  });
+
+  it('editAgenteDF edita un campo por id e ignora no-strings', () => {
+    state().addAgenteDF();
+    const id = state().obra.direccionFacultativa![0]!.id;
+    state().editAgenteDF(id, 'nombre', 'J. Ramírez');
+    state().editAgenteDF(id, 'colegiado', 42 as unknown as string); // ignorado
+    const a = state().obra.direccionFacultativa![0]!;
+    expect(a.nombre).toBe('J. Ramírez');
+    expect(a.colegiado).toBe('');
+  });
+
+  it('deleteAgenteDF elimina por id', () => {
+    state().addAgenteDF();
+    state().addAgenteDF();
+    const first = state().obra.direccionFacultativa![0]!;
+    state().deleteAgenteDF(first.id);
+    const df = state().obra.direccionFacultativa!;
+    expect(df).toHaveLength(1);
+    expect(df.find((x) => x.id === first.id)).toBeUndefined();
+  });
+
+  it('freezeCertFirmantes congela DF+Constructora y la fecha; es idempotente (OV1)', () => {
+    state().addAgenteDF();
+    const id = state().obra.direccionFacultativa![0]!.id;
+    state().editAgenteDF(id, 'nombre', 'J. Ramírez');
+    state().setObraPath('constructor.nombre', 'BuildCo');
+    state().freezeCertFirmantes(0, '2026-07-04T10:00:00.000Z');
+    expect(state().certs[0]!.firmantesSnapshot!.map((f) => f.nombre)).toEqual(['J. Ramírez', 'BuildCo']);
+    expect(state().certs[0]!.firmadoAt).toBe('2026-07-04T10:00:00.000Z');
+    // Segundo freeze con otra DF NO reescribe (documento ya firmado).
+    state().editAgenteDF(id, 'nombre', 'Otro');
+    state().freezeCertFirmantes(0, '2026-09-09T00:00:00.000Z');
+    expect(state().certs[0]!.firmantesSnapshot!.map((f) => f.nombre)).toEqual(['J. Ramírez', 'BuildCo']);
+    expect(state().certs[0]!.firmadoAt).toBe('2026-07-04T10:00:00.000Z');
+  });
+});
+
+describe('migración de esquema v3→v4 (pies de firma por rol)', () => {
+  it('siembra un Director de obra desde el redactor viejo y BORRA redactor/lugar/fecha', () => {
+    const v3 = {
+      ...seedObraData(),
+      schemaVersion: 3,
+      obra: {
+        denominacion: 'X',
+        direccion: '',
+        localidad: 'Málaga',
+        redactor: { nombre: 'J. Ramírez', colegiado: '4821' },
+        lugar: 'Málaga',
+        fecha: 'junio 2026',
+      },
+    };
+    const migrated = fromSerializable(v3);
+    expect(migrated.schemaVersion).toBe(SCHEMA_VERSION);
+    const df = migrated.obra.direccionFacultativa as { rol: string; nombre: string; colegiado: string }[];
+    expect(df).toHaveLength(1);
+    expect(df[0]).toMatchObject({ rol: 'Director de obra', nombre: 'J. Ramírez', colegiado: '4821' });
+    expect('redactor' in migrated.obra).toBe(false);
+    expect('lugar' in migrated.obra).toBe(false);
+    expect('fecha' in migrated.obra).toBe(false);
+  });
+
+  it('sin redactor con nombre, no siembra un agente basura', () => {
+    const v3 = {
+      ...seedObraData(),
+      schemaVersion: 3,
+      obra: { denominacion: 'X', direccion: '', localidad: '' },
+    };
+    expect(fromSerializable(v3).obra.direccionFacultativa).toBeUndefined();
+  });
+});
+
 describe('setRates (tasas como estado, no globals)', () => {
   it('coefK escala el PEM hacia arriba', () => {
     const base = selectPem(state());

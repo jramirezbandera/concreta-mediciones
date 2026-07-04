@@ -6,7 +6,7 @@
    grafo semántico directamente del modelo de dominio). Puro y sin React: los
    IMPORTES van en CÉNTIMOS y cada exportador los formatea a su manera.
    =========================================================================== */
-import type { Cert, CertExtra, Chapter, Obra, PartidaBaja, PartidasMap, Rates, SubChapter } from './types';
+import type { Agente, Cert, CertExtra, Chapter, Firmante, Obra, PartidaBaja, PartidasMap, Rates, SubChapter } from './types';
 import {
   DELETED_ROW_ID,
   certCalc,
@@ -35,10 +35,6 @@ export interface ObraMeta {
   expediente: string;
   promotor: string;
   constructora: string;
-  /** Técnico redactor, con nº de colegiado si lo hay ("Nombre · col. 1234"). */
-  redactor: string;
-  /** "Lugar, fecha" para el pie de firma ('' si ambos vacíos). */
-  lugarFecha: string;
 }
 
 /** Lee una ruta anidada de la obra; '' si falta o no es string (como ObraModal). */
@@ -54,8 +50,6 @@ function str(obj: unknown, path: string): string {
 
 /** Metadatos de cabecera del documento (rutas del modal Datos de la obra). */
 export function obraMeta(obra: Obra): ObraMeta {
-  const redactor = str(obra, 'redactor.nombre');
-  const colegiado = str(obra, 'redactor.colegiado');
   return {
     denominacion: str(obra, 'denominacion'),
     direccion: str(obra, 'direccion'),
@@ -64,9 +58,109 @@ export function obraMeta(obra: Obra): ObraMeta {
     expediente: str(obra, 'expediente'),
     promotor: str(obra, 'promotor.nombre'),
     constructora: str(obra, 'constructor.nombre'),
-    redactor: redactor && colegiado ? `${redactor} · col. ${colegiado}` : redactor,
-    lugarFecha: [str(obra, 'lugar'), str(obra, 'fecha')].filter(Boolean).join(', '),
   };
+}
+
+/* ---- Pies de firma por rol (eng-review OV1/OV2/OV3) ----------------------- */
+
+/**
+ * Firma RESUELTA de un documento: los bloques de firmantes (rol/nombre/sub) más
+ * la línea «En [lugar], a [fecha]». Es datos de INSTANCIA de documento, no de la
+ * cabecera de obra (por eso vive aparte de `ObraMeta`); cada exportador la pasa
+ * a su render de firma.
+ */
+export interface Firma {
+  /** Bloques ya resueltos y filtrados (agente sin nombre → fuera). */
+  firmantes: Firmante[];
+  /** Localidad de la línea de firma ('' si la obra no la tiene). */
+  lugar: string;
+  /** Fecha ISO de esa línea ('' si no hay). */
+  fecha: string;
+}
+
+/** Lee `direccionFacultativa` de forma SEGURA (dict abierto / JSON importado). */
+function agentesOf(obra: Obra): Agente[] {
+  const raw = (obra as { direccionFacultativa?: unknown }).direccionFacultativa;
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((a): a is Record<string, unknown> => !!a && typeof a === 'object')
+    .map((a) => ({
+      id: typeof a.id === 'string' ? a.id : '',
+      rol: typeof a.rol === 'string' ? a.rol : '',
+      nombre: typeof a.nombre === 'string' ? a.nombre : '',
+      colegiado: typeof a.colegiado === 'string' ? a.colegiado : undefined,
+    }));
+}
+
+/** Técnicos de la DF como firmantes (rol/nombre + «Col. X» si hay colegiado). */
+function firmantesDF(obra: Obra): Firmante[] {
+  return agentesOf(obra).map((a) => ({
+    rol: a.rol,
+    nombre: a.nombre,
+    sub: a.colegiado ? `Col. ${a.colegiado}` : undefined,
+  }));
+}
+
+/** Bloque de la Constructora: razón social + «Por la constructora: [jefe]» (OV4). */
+function firmanteConstructora(obra: Obra): Firmante {
+  const jefe = str(obra, 'constructor.jefe');
+  return {
+    rol: 'La Constructora',
+    nombre: str(obra, 'constructor.nombre'),
+    sub: jefe ? `Por la constructora: ${jefe}` : undefined,
+  };
+}
+
+/**
+ * Firmantes de una CERTIFICACIÓN compuestos EN VIVO: dirección facultativa
+ * (0..n) + Constructora, ya filtrados. Es lo que congela `firmantesSnapshot` al
+ * exportar la cert (misma fuente para el snapshot y el fallback en vivo).
+ */
+export function composeCertFirmantes(obra: Obra): Firmante[] {
+  return [...firmantesDF(obra), firmanteConstructora(obra)].filter((f) => f.nombre.trim());
+}
+
+/**
+ * Firma de un documento por tipo:
+ *   presupuesto/resumen → Constructora + Propiedad
+ *   cert                → DF (0..n) + Constructora, con el snapshot congelado si
+ *                         existe (OV1) o compuesto en vivo si no (certs legadas)
+ * `nowIso` es la fecha de presupuesto/resumen (la de la cert va en `cert.firmadoAt`).
+ */
+export function firmaFor(
+  kind: 'presupuesto' | 'resumen' | 'cert',
+  obra: Obra,
+  cert?: Pick<Cert, 'firmantesSnapshot' | 'firmadoAt'>,
+  nowIso = '',
+): Firma {
+  const firmantes =
+    kind === 'cert'
+      ? cert?.firmantesSnapshot ?? composeCertFirmantes(obra)
+      : [
+          firmanteConstructora(obra),
+          { rol: 'La Propiedad', nombre: str(obra, 'promotor.nombre') },
+        ];
+  return {
+    firmantes: firmantes.filter((f) => f.nombre.trim()),
+    lugar: str(obra, 'localidad'),
+    fecha: kind === 'cert' ? cert?.firmadoAt ?? '' : nowIso,
+  };
+}
+
+/** Fecha larga en español para el pie («4 de julio de 2026»); '' si inválida. */
+function fmtFechaLarga(iso: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+/** Texto «En [lugar], a [fecha]» del pie ('' si no hay ni lugar ni fecha). */
+export function firmaLugarFecha(firma: Pick<Firma, 'lugar' | 'fecha'>): string {
+  const fecha = fmtFechaLarga(firma.fecha);
+  if (firma.lugar && fecha) return `En ${firma.lugar}, a ${fecha}`;
+  if (firma.lugar) return `En ${firma.lugar}`;
+  return fecha;
 }
 
 /* ---- Presupuesto y mediciones (doc COMBINADO, eng-review F7 §7) ----------- */

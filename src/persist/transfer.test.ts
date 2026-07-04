@@ -60,11 +60,11 @@ describe('parseObraJson (F6.3)', () => {
     }
   });
 
-  it('una obra v1 (2 niveles) MIGRA en cadena (v1→v2→v3) en el import .json', () => {
+  it('una obra v1 (2 niveles) MIGRA en cadena (v1→v2→v3→v4) en el import .json', () => {
     // Backup real anterior a la jerarquía N niveles: schemaVersion 1, subs planos.
     const v1 = { ...toSerializable(state()), schemaVersion: 1 };
     const data = parseObraJson(JSON.stringify(v1));
-    expect(data.schemaVersion).toBe(3);
+    expect(data.schemaVersion).toBe(4);
     expect(data.bajas).toEqual({}); // v2→v3 estrena los tombstones vacíos
     expect(data.chapters.length).toBeGreaterThan(0);
     // El árbol degenerado (2 niveles) sobrevive intacto.

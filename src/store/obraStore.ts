@@ -21,13 +21,14 @@
 import { create, type StateCreator } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import type { Cert, MedLine, Partida, Rates, ResourceType } from '../core/types';
+import type { Agente, Cert, MedLine, Partida, Rates, ResourceType } from '../core/types';
+import { composeCertFirmantes } from '../core/listado';
 import { ancestorIds, findNode } from '../core/tree';
 import type { ImportedObra } from '../core/bc3import';
 import { REF_SOURCES, type RefCopyItem, type RefDrag, type Resolution } from '../core/refdata';
 import type { View } from '../layout/types';
 import { useToastStore } from './toastStore';
-import { ALL } from './base';
+import { ALL, nextAgenteId } from './base';
 import { SCHEMA_VERSION, blankObraData, seedObraData, type ObraData } from './schema';
 import { createCertSlice } from './slices/certSlice';
 import { createCopySlice, type PendingCopy } from './slices/copySlice';
@@ -385,6 +386,20 @@ export interface ObraState extends ObraData {
    */
   setObraPath: (path: string, value: string) => void;
 
+  /* ---- dirección facultativa (pies de firma por rol) ---- */
+  /** Añade un agente en blanco (rol «Director de obra») a la dirección facultativa. */
+  addAgenteDF: () => void;
+  /** Edita un campo (string) de un agente de la dirección facultativa por id. */
+  editAgenteDF: (id: string, field: 'rol' | 'nombre' | 'colegiado', value: string) => void;
+  /** Elimina un agente de la dirección facultativa por id. */
+  deleteAgenteDF: (id: string) => void;
+  /**
+   * Congela los firmantes de la cert `index` (pie de firma reproducible, OV1):
+   * si aún no tiene `firmantesSnapshot`, sella la DF+Constructora vivas y la
+   * fecha `firmadoAt`. Idempotente. Se llama al exportar la certificación.
+   */
+  freezeCertFirmantes: (index: number, nowIso?: string) => void;
+
   /** Restaura el estado sembrado (datos + UI). Útil en tests y para "nueva obra". */
   reset: () => void;
 }
@@ -558,6 +573,34 @@ export const useObraStore = create<ObraState>()(
             obj = obj[k] as Record<string, unknown>;
           }
           obj[keys[keys.length - 1]!] = value;
+        }),
+
+      addAgenteDF: () =>
+        set((s) => {
+          const df = (s.obra.direccionFacultativa as Agente[] | undefined) ?? [];
+          df.push({ id: nextAgenteId(), rol: 'Director de obra', nombre: '', colegiado: '' });
+          s.obra.direccionFacultativa = df;
+        }),
+
+      editAgenteDF: (id, field, value) =>
+        set((s) => {
+          if (typeof value !== 'string') return;
+          const a = (s.obra.direccionFacultativa as Agente[] | undefined)?.find((x) => x.id === id);
+          if (a) a[field] = value;
+        }),
+
+      deleteAgenteDF: (id) =>
+        set((s) => {
+          const df = s.obra.direccionFacultativa as Agente[] | undefined;
+          if (df) s.obra.direccionFacultativa = df.filter((x) => x.id !== id);
+        }),
+
+      freezeCertFirmantes: (index, nowIso) =>
+        set((s) => {
+          const cert = s.certs[index];
+          if (!cert || cert.firmantesSnapshot) return;
+          cert.firmantesSnapshot = composeCertFirmantes(s.obra);
+          cert.firmadoAt = nowIso ?? new Date().toISOString();
         }),
 
       reset: () => {

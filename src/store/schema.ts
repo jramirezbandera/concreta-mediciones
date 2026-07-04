@@ -10,6 +10,7 @@
 import type { Banco, Cert, Chapter, Obra, PartidaBaja, PartidasMap, Rates } from '../core/types';
 import { buildRecursos, precioCuadraDescompuesto, recursoUsage } from '../core/banco';
 import { CHAPTERS, DEFAULT_OBRA, DEFAULT_RATES, PARTIDAS, makeCertsInit } from '../core/seed';
+import { nextAgenteId } from './base';
 
 /**
  * Versión del shape serializable de la obra (§0 decisión 4: schemaVersion +
@@ -26,8 +27,14 @@ import { CHAPTERS, DEFAULT_OBRA, DEFAULT_RATES, PARTIDAS, makeCertsInit } from '
  *   certificadas — así «Eliminado del presupuesto» las muestra CON NOMBRE.
  *   Migración: `bajas: {}` (los borrados anteriores a v3 no dejaron rastro y
  *   salen como fila genérica).
+ *
+ *   v3 → v4 (2026-07-04, pies de firma por rol): la firma única
+ *   (`obra.redactor` + `obra.lugar` + `obra.fecha`) se sustituye por
+ *   `obra.direccionFacultativa: Agente[]`. Migración: siembra un «Director de
+ *   obra» desde el `redactor` si tenía nombre y BORRA los campos viejos (limpia,
+ *   no datos muertos).
  */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 /** Estado de dominio de la obra (lo que persistiría en F6). Serializable. */
 export interface ObraData {
@@ -130,6 +137,27 @@ const MIGRATIONS: Record<number, (d: ObraData) => ObraData> = {
   1: (d) => ({ ...d, schemaVersion: 2 }),
   // v2 → v3 (tombstones): estrena `bajas` vacío (v2 no registraba borrados).
   2: (d) => ({ ...d, bajas: {}, schemaVersion: 3 }),
+  // v3 → v4 (pies de firma por rol): siembra `direccionFacultativa` desde el
+  // `redactor` viejo (si tenía nombre) y borra `redactor`/`lugar`/`fecha`.
+  3: (d) => {
+    const obra = { ...d.obra } as Record<string, unknown>;
+    const redactor = obra.redactor as { nombre?: unknown; colegiado?: unknown } | undefined;
+    const nombre = typeof redactor?.nombre === 'string' ? redactor.nombre : '';
+    delete obra.redactor;
+    delete obra.lugar;
+    delete obra.fecha;
+    if (nombre.trim()) {
+      obra.direccionFacultativa = [
+        {
+          id: nextAgenteId(),
+          rol: 'Director de obra',
+          nombre,
+          colegiado: typeof redactor?.colegiado === 'string' ? redactor.colegiado : '',
+        },
+      ];
+    }
+    return { ...d, obra: obra as unknown as Obra, schemaVersion: 4 };
+  },
 };
 
 /**

@@ -61,7 +61,7 @@ describe('hydrate (multi-obra)', () => {
     await set(OBRA_KEY, { schemaVersion: 1, savedAt: 'x', appVersion: '0.5', data: v1 });
     await hydrate();
     expect(state().obra.denominacion).toBe('Obra v1 antigua');
-    expect(state().schemaVersion).toBe(3); // migrada en cadena (v1→v2→v3)
+    expect(state().schemaVersion).toBe(4); // migrada en cadena (v1→v2→v3→v4)
     expect(usePersistStore.getState().recovery).toBeNull();
     expect(await get(OBRA_KEY)).toBeUndefined(); // legacy borrada
     expect((await listObras()).length).toBe(1);

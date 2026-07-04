@@ -12,11 +12,13 @@
 import type { CellObject, Row } from 'write-excel-file/browser';
 import type {
   CertListado,
+  Firma,
   ObraMeta,
   PresupuestoListado,
   ResumenListado,
 } from '../../core/listado';
 import type { MedLineListado } from '../../core/listado';
+import { firmaLugarFecha } from '../../core/listado';
 import { toEur, type Cents } from '../../core/money';
 import { docFileName } from './fileName';
 
@@ -74,7 +76,6 @@ function metaRows(titulo: string, meta: ObraMeta, extra: [string, string][] = []
     ['Expediente', meta.expediente],
     ['Promotor', meta.promotor],
     ['Constructora', meta.constructora],
-    ['Técnico', meta.redactor],
     ...extra,
   ].filter((p): p is [string, string] => Boolean(p[1]));
   const dir = [meta.direccion, [meta.localidad, meta.provincia].filter(Boolean).join(' · ')]
@@ -87,6 +88,25 @@ function metaRows(titulo: string, meta: ObraMeta, extra: [string, string][] = []
     ...pares.map((p): Row => [txt(p[0], { fontWeight: 'bold', fontSize: 9 }), txt(p[1], { columnSpan: 3 }), null, null]),
     [],
   ];
+}
+
+/**
+ * Pie de firma por rol al final de la hoja (spacer + línea «En [lugar], a
+ * [fecha]» + un bloque apilado por firmante). Vacío si no hay firmantes. En una
+ * hoja de cálculo las firmas van apiladas (no en columnas como en el PDF/DOCX).
+ */
+function firmaRows(firma: Firma): Row[] {
+  if (firma.firmantes.length === 0) return [];
+  const rows: Row[] = [[], []];
+  const lf = firmaLugarFecha(firma);
+  if (lf) rows.push([txt(lf, { textColor: GRIS })], []);
+  for (const f of firma.firmantes) {
+    rows.push([txt(f.rol.toUpperCase(), { textColor: GRIS, fontSize: 9, fontWeight: 'bold' })]);
+    rows.push([txt(f.nombre, { fontWeight: 'bold' })]);
+    if (f.sub) rows.push([txt(f.sub, { textColor: GRIS, fontSize: 9 })]);
+    rows.push([]);
+  }
+  return rows;
 }
 
 /* ---- Presupuesto y mediciones ---------------------------------------------- */
@@ -105,7 +125,7 @@ function sangria(depth: number): string {
   return '   '.repeat(Math.max(0, depth - 1));
 }
 
-export function buildPresupuestoXlsx(data: PresupuestoListado, meta: ObraMeta): XlsxDoc {
+export function buildPresupuestoXlsx(data: PresupuestoListado, meta: ObraMeta, firma: Firma): XlsxDoc {
   const rows: Row[] = metaRows('Presupuesto y mediciones', meta);
   const header: Row = [
     txt('Nº', { fontWeight: 'bold', backgroundColor: BANDA }),
@@ -185,6 +205,7 @@ export function buildPresupuestoXlsx(data: PresupuestoListado, meta: ObraMeta): 
     null,
     bold(eur(data.pem, { topBorderStyle: 'medium' })),
   ]);
+  rows.push(...firmaRows(firma));
   return {
     fileName: xlsxFileName('Presupuesto y mediciones', meta.denominacion),
     sheet: 'Presupuesto',
@@ -195,7 +216,7 @@ export function buildPresupuestoXlsx(data: PresupuestoListado, meta: ObraMeta): 
 
 /* ---- Resumen de presupuesto ------------------------------------------------ */
 
-export function buildResumenXlsx(data: ResumenListado, meta: ObraMeta): XlsxDoc {
+export function buildResumenXlsx(data: ResumenListado, meta: ObraMeta, firma: Firma): XlsxDoc {
   const rows: Row[] = metaRows('Resumen de presupuesto', meta);
   rows.push([
     txt('Capítulo', { fontWeight: 'bold', backgroundColor: BANDA, columnSpan: 2 }),
@@ -230,6 +251,7 @@ export function buildResumenXlsx(data: ResumenListado, meta: ObraMeta): XlsxDoc 
   rows.push(linea('Presupuesto de Ejecución por Contrata (s/ IVA)', data.pec, { strong: true }));
   rows.push(linea('IVA', data.iva, { rate: data.rates.iva }));
   rows.push(linea('Presupuesto base de licitación', data.total, { strong: true }));
+  rows.push(...firmaRows(firma));
   return {
     fileName: xlsxFileName('Resumen de presupuesto', meta.denominacion),
     sheet: 'Resumen',
@@ -240,7 +262,7 @@ export function buildResumenXlsx(data: ResumenListado, meta: ObraMeta): XlsxDoc 
 
 /* ---- Certificación ----------------------------------------------------------- */
 
-export function buildCertXlsx(data: CertListado, meta: ObraMeta): XlsxDoc {
+export function buildCertXlsx(data: CertListado, meta: ObraMeta, firma: Firma): XlsxDoc {
   const congelados = fechaCorta(data.snapshotAt);
   const extra: [string, string][] = [
     ['Periodo', data.period],
@@ -347,6 +369,7 @@ export function buildCertXlsx(data: CertListado, meta: ObraMeta): XlsxDoc {
   rows.push(fila('Base imponible', t.base));
   rows.push(fila('IVA', t.iva));
   rows.push(fila('Líquido a abonar', t.liquido, true));
+  rows.push(...firmaRows(firma));
   return {
     fileName: xlsxFileName(`Certificación nº ${data.num}`, meta.denominacion),
     sheet: `Certificación ${data.num}`,

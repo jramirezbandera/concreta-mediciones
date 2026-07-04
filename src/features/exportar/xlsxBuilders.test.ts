@@ -52,7 +52,7 @@ function cells(rows: Row[]): CellObject[] {
 }
 
 describe('política numérica XLSX (eng-review F7.2)', () => {
-  const doc = buildPresupuestoXlsx(buildPresupuestoListado(chapters, partidas), meta);
+  const doc = buildPresupuestoXlsx(buildPresupuestoListado(chapters, partidas), meta, { firmantes: [], lugar: '', fecha: '' });
 
   it('cantidades/precios/importes son celdas NUMÉRICAS con formato, no strings', () => {
     const numericas = cells(doc.rows).filter((c) => c.format === FMT_NUM);
@@ -80,7 +80,7 @@ describe('política numérica XLSX (eng-review F7.2)', () => {
 });
 
 describe('buildPresupuestoXlsx', () => {
-  const doc = buildPresupuestoXlsx(buildPresupuestoListado(chapters, partidas), meta);
+  const doc = buildPresupuestoXlsx(buildPresupuestoListado(chapters, partidas), meta, { firmantes: [], lugar: '', fecha: '' });
 
   it('estructura: 7 columnas, nombre de archivo y hoja', () => {
     expect(doc.columns).toHaveLength(7);
@@ -108,7 +108,11 @@ describe('buildPresupuestoXlsx', () => {
 });
 
 describe('buildResumenXlsx', () => {
-  const doc = buildResumenXlsx(buildResumen(chapters, partidas, rates), meta);
+  const doc = buildResumenXlsx(buildResumen(chapters, partidas, rates), meta, {
+    firmantes: [],
+    lugar: '',
+    fecha: '',
+  });
 
   it('porcentajes como número 0–100 con formato % (no string)', () => {
     const pcts = cells(doc.rows).filter((c) => c.format === FMT_PCT);
@@ -147,7 +151,11 @@ describe('buildCertXlsx', () => {
   // El precio vivo de pa cambió a 99: el XLSX debe valorar con el snapshot (10).
   const vivas: PartidasMap = structuredClone(partidas);
   vivas['01']![0]!.precio = 99;
-  const doc = buildCertXlsx(buildCertListado(chapters, vivas, certs, 0, rates)!, meta);
+  const doc = buildCertXlsx(buildCertListado(chapters, vivas, certs, 0, rates)!, meta, {
+    firmantes: [],
+    lugar: '',
+    fecha: '',
+  });
 
   it('11 columnas, precios congelados en la cabecera y P.C. en filas', () => {
     expect(doc.columns).toHaveLength(11);

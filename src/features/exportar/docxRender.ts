@@ -28,15 +28,18 @@ import {
   buildCertListado,
   buildPresupuestoListado,
   buildResumen,
+  firmaFor,
+  firmaLugarFecha,
   obraMeta,
   type CertListado,
+  type Firma,
   type MedLineListado,
   type ObraMeta,
   type PresupuestoListado,
   type ResumenListado,
 } from '../../core/listado';
 import { fmtCents, fmtNum, type Cents } from '../../core/money';
-import type { Banco, Cert, Chapter, Obra, PartidaBaja, PartidasMap, Rates } from '../../core/types';
+import type { Banco, Cert, Chapter, Firmante, Obra, PartidaBaja, PartidasMap, Rates } from '../../core/types';
 import type { PrintTarget } from '../print';
 import { docFileName } from './fileName';
 
@@ -133,7 +136,6 @@ function cabecera(titulo: string, meta: ObraMeta, extra: [string, string][] = []
     ['Expediente', meta.expediente],
     ['Promotor', meta.promotor],
     ['Constructora', meta.constructora],
-    ['Técnico', meta.redactor],
     ...extra,
   ].filter((p): p is [string, string] => Boolean(p[1]));
   const dir = [meta.direccion, [meta.localidad, meta.provincia].filter(Boolean).join(' · ')]
@@ -166,28 +168,62 @@ function cabecera(titulo: string, meta: ObraMeta, extra: [string, string][] = []
   return out;
 }
 
-function firma(meta: ObraMeta): Paragraph[] {
-  if (!meta.lugarFecha && !meta.redactor) return [];
-  const out: Paragraph[] = [];
-  if (meta.lugarFecha) {
-    out.push(
-      new Paragraph({
+/** Celda de un firmante: ROL (caps gris) · hueco de firma · regla + nombre · sub. */
+function firmaCelda(f: Firmante, width: number): TableCell {
+  const pars: Paragraph[] = [
+    new Paragraph({ children: [run(f.rol.toUpperCase(), { color: GRIS, size: T_TINY })] }),
+    new Paragraph({
+      spacing: { before: 700 }, // hueco reservado para la firma manuscrita
+      border: { top: { style: BorderStyle.SINGLE, size: 4, color: BORDE } },
+      children: [run(f.nombre, { bold: true })],
+    }),
+  ];
+  if (f.sub) pars.push(new Paragraph({ children: [run(f.sub, { color: GRIS, size: T_SMALL })] }));
+  return cellPars(pars, { width });
+}
+
+/**
+ * Pie de firma por rol: línea «En [lugar], a [fecha]» a todo el ancho y una fila
+ * de bloques de firmante (tabla sin bordes; 1 firmante → a la derecha). Vacío si
+ * no hay firmantes.
+ */
+function firma(f: Firma): (Paragraph | Table)[] {
+  if (f.firmantes.length === 0) return [];
+  const W = 10546; // ancho de contenido (espeja W_PRES)
+  const lf = firmaLugarFecha(f);
+  const cab = lf
+    ? new Paragraph({
         alignment: AlignmentType.RIGHT,
-        spacing: { before: 700 },
-        children: [run(meta.lugarFecha, { color: GRIS })],
-      }),
-    );
+        spacing: { before: 700, after: 240 },
+        children: [run(lf, { color: GRIS, size: T_SMALL })],
+      })
+    : new Paragraph({ spacing: { before: 700 }, children: [] });
+  if (f.firmantes.length === 1) {
+    const block = 3600;
+    return [
+      cab,
+      tabla(
+        [W - block, block],
+        [
+          new TableRow({
+            children: [
+              cellPars([new Paragraph({ children: [] })], { width: W - block }),
+              firmaCelda(f.firmantes[0]!, block),
+            ],
+          }),
+        ],
+      ),
+    ];
   }
-  if (meta.redactor) {
-    out.push(
-      new Paragraph({
-        alignment: AlignmentType.RIGHT,
-        spacing: { before: meta.lugarFecha ? 800 : 700 },
-        children: [run(meta.redactor, { bold: true })],
-      }),
-    );
-  }
-  return out;
+  const n = f.firmantes.length;
+  const col = Math.floor(W / n);
+  const widths = f.firmantes.map((_, i) => (i === n - 1 ? W - col * (n - 1) : col));
+  return [
+    cab,
+    tabla([...widths], [
+      new TableRow({ children: f.firmantes.map((fm, i) => firmaCelda(fm, widths[i]!)) }),
+    ]),
+  ];
 }
 
 /* ---- Presupuesto y mediciones ---------------------------------------------- */
@@ -529,12 +565,15 @@ export async function docxFor(target: PrintTarget, s: DocxState): Promise<DocxRe
   let titulo: string;
   let bloques: (Paragraph | Table)[];
   let extra: [string, string][] = [];
+  let firmaDoc: Firma;
   if (target.kind === 'presupuesto') {
     titulo = 'Presupuesto y mediciones';
     bloques = presupuestoBloques(buildPresupuestoListado(s.chapters, s.partidas, s.rates.coefK));
+    firmaDoc = firmaFor('presupuesto', s.obra, undefined, new Date().toISOString());
   } else if (target.kind === 'resumen') {
     titulo = 'Resumen de presupuesto';
     bloques = resumenBloques(buildResumen(s.chapters, s.partidas, s.rates));
+    firmaDoc = firmaFor('resumen', s.obra, undefined, new Date().toISOString());
   } else {
     const cl = buildCertListado(s.chapters, s.partidas, s.certs, target.index, s.rates, s.bajas);
     if (!cl) return null;
@@ -547,8 +586,10 @@ export async function docxFor(target: PrintTarget, s: DocxState): Promise<DocxRe
       ] as [string, string][]
     ).filter((p) => Boolean(p[1]));
     bloques = certBloques(cl);
+    // Firmantes congelados al exportar (si App no los congeló ya); fecha de firma.
+    firmaDoc = firmaFor('cert', s.obra, s.certs[target.index]);
   }
-  const doc = makeDoc([...cabecera(titulo, meta, extra), ...bloques, ...firma(meta)]);
+  const doc = makeDoc([...cabecera(titulo, meta, extra), ...bloques, ...firma(firmaDoc)]);
   return {
     blob: await Packer.toBlob(doc),
     fileName: docFileName(titulo.replace('Certificación de obra', 'Certificación'), meta.denominacion, 'docx'),

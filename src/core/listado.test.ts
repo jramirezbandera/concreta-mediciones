@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { DELETED_ROW_ID } from './certificacion';
-import { buildCertListado, buildPresupuestoListado, buildResumen, obraMeta } from './listado';
+import {
+  buildCertListado,
+  buildPresupuestoListado,
+  buildResumen,
+  composeCertFirmantes,
+  firmaFor,
+  firmaLugarFecha,
+  obraMeta,
+} from './listado';
 import { toCents } from './money';
 import { CHAPTERS, DEFAULT_RATES, PARTIDAS } from './seed';
 import { pem } from './totales';
@@ -253,7 +261,7 @@ describe('buildCertListado (con snapshot F7.0 + contradictorios)', () => {
 });
 
 describe('obraMeta (contrato compartido PDF/XLSX/DOCX)', () => {
-  it('aplana las rutas del modal de obra y compone redactor y lugar/fecha', () => {
+  it('aplana las rutas del modal de obra (cabecera, sin la firma)', () => {
     const m = obraMeta({
       denominacion: 'Reforma X',
       direccion: 'C/ Mayor 14',
@@ -262,20 +270,86 @@ describe('obraMeta (contrato compartido PDF/XLSX/DOCX)', () => {
       expediente: 'E-2026-1',
       promotor: { nombre: 'ACME SL' },
       constructor: { nombre: 'BuildCo' },
-      redactor: { nombre: 'J. Ramírez', colegiado: '1234' },
-      lugar: 'Málaga',
-      fecha: 'junio 2026',
     } as Obra);
     expect(m.promotor).toBe('ACME SL');
     expect(m.constructora).toBe('BuildCo');
-    expect(m.redactor).toBe('J. Ramírez · col. 1234');
-    expect(m.lugarFecha).toBe('Málaga, junio 2026');
+    expect(m.expediente).toBe('E-2026-1');
+    // La firma ya NO vive en ObraMeta (eng-review OV2): es datos de documento.
+    expect('redactor' in m).toBe(false);
+    expect('lugarFecha' in m).toBe(false);
   });
 
   it('los campos ausentes quedan en cadena vacía (nunca undefined)', () => {
     const m = obraMeta({ denominacion: 'X', direccion: '', localidad: '' });
     expect(m.promotor).toBe('');
-    expect(m.redactor).toBe('');
-    expect(m.lugarFecha).toBe('');
+    expect(m.constructora).toBe('');
+  });
+});
+
+describe('firmaFor (pies de firma por rol, eng-review OV1/OV2/OV3/OV4)', () => {
+  const obra = {
+    denominacion: 'Reforma X',
+    localidad: 'Málaga',
+    promotor: { nombre: 'Comunidad Demóstenes 35' },
+    constructor: { nombre: 'BuildCo SL', jefe: 'Pedro Gil' },
+    direccionFacultativa: [
+      { id: 'ag-1', rol: 'Director de obra', nombre: 'J. Ramírez', colegiado: '4821' },
+      { id: 'ag-2', rol: 'Director de obra', nombre: 'M. Ruiz', colegiado: '5507' }, // codirección
+      { id: 'ag-3', rol: 'Director de ejecución de obra', nombre: '', colegiado: '9' }, // sin nombre
+    ],
+  } as unknown as Obra;
+
+  it('presupuesto/resumen = Constructora + Propiedad, con jefe como representante (OV4)', () => {
+    const f = firmaFor('presupuesto', obra, undefined, '2026-07-04T10:00:00.000Z');
+    expect(f.firmantes.map((x) => x.rol)).toEqual(['La Constructora', 'La Propiedad']);
+    expect(f.firmantes[0]!.sub).toBe('Por la constructora: Pedro Gil');
+    expect(f.firmantes[1]!.nombre).toBe('Comunidad Demóstenes 35');
+    expect(firmaFor('resumen', obra, undefined, '').firmantes.map((x) => x.rol)).toEqual([
+      'La Constructora',
+      'La Propiedad',
+    ]);
+  });
+
+  it('cert en vivo = dirección facultativa (con nombre) + Constructora; el agente vacío se filtra', () => {
+    const f = firmaFor('cert', obra);
+    expect(f.firmantes.map((x) => x.nombre)).toEqual(['J. Ramírez', 'M. Ruiz', 'BuildCo SL']);
+    expect(f.firmantes[0]!.sub).toBe('Col. 4821');
+    expect(f.firmantes[1]!.rol).toBe('Director de obra'); // dos DO = codirección permitida
+  });
+
+  it('cert usa el snapshot congelado si existe, ignorando la DF viva (OV1)', () => {
+    const snap = [{ rol: 'Director de obra', nombre: 'Firmó antes', sub: 'Col. 1' }];
+    const f = firmaFor('cert', obra, { firmantesSnapshot: snap, firmadoAt: '2026-01-01T00:00:00.000Z' });
+    expect(f.firmantes).toEqual(snap);
+    expect(f.fecha).toBe('2026-01-01T00:00:00.000Z');
+  });
+
+  it('composeCertFirmantes es la fuente única del snapshot (DF + Constructora, filtrada)', () => {
+    expect(composeCertFirmantes(obra).map((x) => x.nombre)).toEqual([
+      'J. Ramírez',
+      'M. Ruiz',
+      'BuildCo SL',
+    ]);
+  });
+
+  it('no rompe con direccionFacultativa malformada (no-array o entradas basura)', () => {
+    const raro = {
+      localidad: 'X',
+      constructor: { nombre: 'C' },
+      direccionFacultativa: [null, 42, { nombre: 5, rol: {} }, { rol: 'DO', nombre: 'Ok' }],
+    } as unknown as Obra;
+    const f = firmaFor('cert', raro);
+    // Solo el firmante con nombre string válido sobrevive, más la Constructora.
+    expect(f.firmantes.map((x) => x.nombre)).toEqual(['Ok', 'C']);
+    const noArray = { constructor: { nombre: 'C' }, direccionFacultativa: 'basura' } as unknown as Obra;
+    expect(() => firmaFor('cert', noArray)).not.toThrow();
+  });
+
+  it('firmaLugarFecha compone «En [lugar], a [fecha larga]» y degrada bien', () => {
+    expect(firmaLugarFecha({ lugar: 'Málaga', fecha: '2026-07-04T00:00:00.000Z' })).toBe(
+      'En Málaga, a 4 de julio de 2026',
+    );
+    expect(firmaLugarFecha({ lugar: 'Málaga', fecha: '' })).toBe('En Málaga');
+    expect(firmaLugarFecha({ lugar: '', fecha: '' })).toBe('');
   });
 });

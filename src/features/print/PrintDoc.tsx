@@ -3,7 +3,10 @@ import { createPortal } from 'react-dom';
 import {
   buildCertListado,
   buildPresupuestoListado,
+  firmaFor,
+  firmaLugarFecha,
   obraMeta,
+  type Firma,
 } from '../../core/listado';
 import { fmtNum } from '../../core/money';
 import { selectResumen, useObraStore } from '../../store';
@@ -113,6 +116,14 @@ export function PrintDoc({ target, onDone }: { target: PrintTarget; onDone: () =
     }
   }
 
+  // Firma por rol: cert usa el snapshot congelado (o compone en vivo); el resto
+  // (presupuesto/resumen) firma Constructora + Propiedad con la fecha de hoy.
+  const firmaDoc: Firma =
+    target.kind === 'cert'
+      ? firmaFor('cert', obra, certs[target.index])
+      : firmaFor(target.kind, obra, undefined, new Date().toISOString());
+  const firmaLF = firmaLugarFecha(firmaDoc);
+
   return createPortal(
     <div className="print-doc" data-theme="light">
       <header className="pd-head">
@@ -141,19 +152,23 @@ export function PrintDoc({ target, onDone }: { target: PrintTarget; onDone: () =
               <b>Constructora</b> {meta.constructora}
             </span>
           )}
-          {meta.redactor && (
-            <span>
-              <b>Técnico</b> {meta.redactor}
-            </span>
-          )}
           {extraMeta}
         </div>
       </header>
       {body}
-      {(meta.lugarFecha || meta.redactor) && (
+      {firmaDoc.firmantes.length > 0 && (
         <footer className="pd-sign">
-          {meta.lugarFecha && <div>{meta.lugarFecha}</div>}
-          {meta.redactor && <div className="pd-sign-name">{meta.redactor}</div>}
+          {firmaLF && <div className="pd-sign-date">{firmaLF}</div>}
+          <div className={`pd-sign-row${firmaDoc.firmantes.length === 1 ? ' pd-sign-one' : ''}`}>
+            {firmaDoc.firmantes.map((f, i) => (
+              <div className="pd-sign-block" key={`${f.rol}-${i}`}>
+                <div className="caps pd-sign-rol">{f.rol}</div>
+                <div className="pd-sign-gap" />
+                <div className="pd-sign-name">{f.nombre}</div>
+                {f.sub && <div className="pd-sign-sub">{f.sub}</div>}
+              </div>
+            ))}
+          </div>
         </footer>
       )}
     </div>,
