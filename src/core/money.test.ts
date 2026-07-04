@@ -81,6 +81,24 @@ describe('parseEsNumber', () => {
     expect(parseEsNumber('5')).toBe(5);
   });
 
+  it('admite omitir el 0 de la parte entera (",2" → 0,2)', () => {
+    expect(parseEsNumber(',2')).toBe(0.2);
+    expect(parseEsNumber(',7')).toBe(0.7);
+    expect(parseEsNumber(',50')).toBe(0.5);
+    expect(parseEsNumber('-,5')).toBe(-0.5); // corrección "esta certificación" negativa
+  });
+
+  it('la coma sola (sin decimales) sigue siendo inválida', () => {
+    expect(parseEsNumber(',')).toBeNull();
+    expect(parseEsNumber('-,')).toBeNull();
+  });
+
+  it('anteponer el 0 NO afloja la validación: basura mixta sigue rechazada', () => {
+    // El "." sigue siendo separador de miles: sólo la COMA inicial recibe el 0.
+    expect(parseEsNumber('.,5')).toBeNull(); // punto + coma iniciales
+    expect(parseEsNumber('..,5')).toBeNull();
+  });
+
   it('ignora espacios', () => {
     expect(parseEsNumber(' 1.234,56 ')).toBe(1234.56);
   });
@@ -118,6 +136,13 @@ describe('toDecimalComma', () => {
   it('el resultado lo lee parseEsNumber como decimal', () => {
     expect(parseEsNumber(toDecimalComma('14.5'))).toBe(14.5);
     expect(parseEsNumber(toDecimalComma('1.234,56'))).toBe(1234.56);
+  });
+
+  it('tecleado con el 0 omitido (".2"/"-.7") viaja punto→coma→número correcto', () => {
+    // El punto del numpad se muestra como coma y luego se parsea con el 0 puesto.
+    expect(parseEsNumber(toDecimalComma('.2'))).toBe(0.2);
+    expect(parseEsNumber(toDecimalComma('.7'))).toBe(0.7);
+    expect(parseEsNumber(toDecimalComma('-.7'))).toBe(-0.7);
   });
 });
 

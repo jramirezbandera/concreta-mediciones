@@ -1,7 +1,7 @@
 import { Fragment, useMemo } from 'react';
 import { Icon } from '../../components';
 import { certCalc, extrasCantidad, type CertSnapshot } from '../../core/certificacion';
-import { groupBySub } from '../../core/grouping';
+import { groupsForFocus } from '../../core/grouping';
 import { rollupByDepth } from '../../core/tree';
 import { fmtNum, sumCents, toEur, type Cents } from '../../core/money';
 import type { CertExtra, Chapter, Partida } from '../../core/types';
@@ -23,6 +23,7 @@ export function CertChapterCards({
   snap,
   extras,
   prevExtras,
+  focus,
 }: {
   chapter: Chapter;
   partidas: Partida[];
@@ -33,12 +34,16 @@ export function CertChapterCards({
   snap?: CertSnapshot;
   extras: CertExtra[];
   prevExtras: CertExtra[];
+  /** Id de sub activo: aísla su subárbol (navegación de obras grandes). */
+  focus?: string | null;
 }) {
   const addContradictorio = useObraStore((s) => s.addContradictorio);
+  // Aislado a un sub: los contradictorios son del CAPÍTULO → ni filas ni alta.
+  const subFocused = focus != null && focus !== chapter.id;
   // Grupos en pre-orden (N niveles) con subtotal ACUMULADO por cabecera; los
   // contenedores intermedios con descendientes certificables se conservan.
   const groups = useMemo(() => {
-    const gs = groupBySub(chapter, partidas);
+    const gs = groupsForFocus(chapter, partidas, focus);
     const certImporte = (p: Partida): Cents => {
       const k = certCalc(p, curData, prevData, coefK, snap);
       return mode === 'origen' ? k.aOrigen : k.estaCert;
@@ -54,8 +59,8 @@ export function CertChapterCards({
     return gs
       .map((g, i) => ({ ...g, rollup: rollups[i] ?? 0, n: counts[i] ?? 0 }))
       .filter((g) => g.n > 0);
-  }, [chapter, partidas, curData, prevData, coefK, snap, mode]);
-  const chapExtras = extras.filter((e) => e.chapterId === chapter.id);
+  }, [chapter, partidas, curData, prevData, coefK, snap, mode, focus]);
+  const chapExtras = subFocused ? [] : extras.filter((e) => e.chapterId === chapter.id);
   const prevCant = extrasCantidad(prevExtras);
 
   return (
@@ -88,13 +93,15 @@ export function CertChapterCards({
       {chapExtras.map((e) => (
         <CertExtraCard key={e.id} e={e} prevCantidad={prevCant[e.id] ?? 0} mode={mode} />
       ))}
-      <button
-        type="button"
-        className={`tcol ${styles.cardsAdd}`}
-        onClick={() => addContradictorio(chapter.id)}
-      >
-        <Icon name="plus" size={15} /> Añadir precio contradictorio
-      </button>
+      {!subFocused && (
+        <button
+          type="button"
+          className={`tcol ${styles.cardsAdd}`}
+          onClick={() => addContradictorio(chapter.id)}
+        >
+          <Icon name="plus" size={15} /> Añadir precio contradictorio
+        </button>
+      )}
     </div>
   );
 }

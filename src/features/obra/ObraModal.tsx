@@ -90,6 +90,7 @@ export function ObraModal({ open, onClose, compact }: ObraModalProps) {
       subtitle="Personalizan los documentos exportados"
       icon="building"
       compact={compact}
+      closeOnOverlay={false}
       footer={
         <button type="button" onClick={onClose} className={`t150 ${styles.done}`}>
           Hecho

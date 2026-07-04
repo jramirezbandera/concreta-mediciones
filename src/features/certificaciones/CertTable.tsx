@@ -11,7 +11,7 @@ import {
   type CertDeletedRow,
   type CertSnapshot,
 } from '../../core/certificacion';
-import { groupBySub } from '../../core/grouping';
+import { groupsForFocus } from '../../core/grouping';
 import { rollupByDepth } from '../../core/tree';
 import { lineParcial } from '../../core/medicion';
 import { fmtNum, round2, sumCents, toEur, type Cents } from '../../core/money';
@@ -121,7 +121,7 @@ export function CertHead({ mode }: { mode: CertMode }) {
           <th className={styles.thRight} style={{ width: 96 }}>
             {mode === 'origen' ? 'Ejec. a origen' : 'Ejec. esta cert.'}
           </th>
-          <th className={styles.thRight} style={{ width: 116, paddingRight: 12 }}>
+          <th className={styles.thRight} style={{ width: 150, paddingRight: 12 }}>
             % avance
           </th>
           <th className={styles.thRight} style={{ width: 84 }}>
@@ -152,9 +152,13 @@ function CertRow({
   snap?: CertSnapshot;
 }) {
   const onCertEdit = useObraStore((s) => s.onCertEdit);
+  const completePartida = useObraStore((s) => s.completePartida);
+  const uncompletePartida = useObraStore((s) => s.uncompletePartida);
   const [expanded, setExpanded] = useState(false);
   const k = certCalc(p, curData, prevData, coefK, snap);
   const abono = mode === 'origen' ? k.aOrigen : k.estaCert;
+  // «Completada» = ejecutada a origen ≥ ofertada (derivado; sin flag persistido).
+  const complete = k.ofertada > 0 && k.ejecutada >= k.ofertada;
   // La cantidad editable (y su %) son las del MODO en curso (a origen / esta cert).
   const execValue = mode === 'origen' ? k.ejecutada : estaCertDisplay(k.ejecutada, k.prev);
   const execPct = cantidadToPct(k.ofertada, execValue);
@@ -163,6 +167,7 @@ function CertRow({
   return (
     <>
       <tr
+        data-editrow=""
         className={`tcol ${styles.row} ${expanded ? styles.expanded : ''}`}
         onClick={() => setExpanded((v) => !v)}
       >
@@ -193,7 +198,7 @@ function CertRow({
         </td>
         <td className={`mono ${styles.cell} ${styles.cUd}`}>{p.ud}</td>
         <td className={`mono ${styles.cell} ${styles.cNum2}`}>{fmtNum(k.ofertada)}</td>
-        <td className={`${styles.cell} ${styles.cExec}`} onClick={stop}>
+        <td className={`${styles.cell} ${styles.cExec}`} onClick={stop} data-editfield="" data-col="0">
           <EditableNum
             value={execValue}
             dec={2}
@@ -202,12 +207,35 @@ function CertRow({
             onCommit={(v) => onCertEdit(p.id, v, mode)}
           />
         </td>
-        <td className={`${styles.cell} ${styles.cPct}`} onClick={stop}>
+        <td
+          className={`${styles.cell} ${styles.cPct}`}
+          onClick={stop}
+          {...(k.ofertada > 0 ? { 'data-editfield': '', 'data-col': '1' } : {})}
+        >
           {k.ofertada > 0 ? (
-            <PctBar
-              pct={execPct}
-              onCommitPct={(pct) => onCertEdit(p.id, pctToCantidad(k.ofertada, pct), mode)}
-            />
+            <div className={styles.pctCellInner}>
+              <div className={styles.pctBarWrap}>
+                <PctBar
+                  pct={execPct}
+                  onCommitPct={(pct) => onCertEdit(p.id, pctToCantidad(k.ofertada, pct), mode)}
+                />
+              </div>
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={complete}
+                aria-label={complete ? 'Quitar completado de la partida' : 'Completar partida al 100%'}
+                title={
+                  complete
+                    ? `Completada al 100% a origen. Pulsa para deshacer${mode === 'esta' ? ' (esta certificación puede no sumar)' : ''}`
+                    : 'Completar: 100% a origen'
+                }
+                className={`tap-target ${styles.completeCheck} ${complete ? styles.on : ''}`}
+                onClick={() => (complete ? uncompletePartida(p.id) : completePartida(p.id))}
+              >
+                {complete && <Icon name="check" size={12} />}
+              </button>
+            </div>
           ) : (
             <span className={styles.pctDash}>—</span>
           )}
@@ -241,7 +269,7 @@ function CertExtraRow({
   const k = extraCalc(e, prevCantidad);
   const abono = mode === 'origen' ? k.aOrigen : k.estaCert;
   return (
-    <tr className={`tcol ${styles.row} ${styles.extraRow}`}>
+    <tr data-editrow="" className={`tcol ${styles.row} ${styles.extraRow}`}>
       <td className={`${styles.cell} ${styles.cNum}`}>
         <div className={styles.numFlex}>
           <div>
@@ -250,7 +278,7 @@ function CertExtraRow({
           </div>
         </div>
       </td>
-      <td className={`${styles.cell} ${styles.cDesc}`}>
+      <td className={`${styles.cell} ${styles.cDesc}`} data-editfield="">
         <div className={styles.descInner}>
           <span className={styles.pcBadge}>
             <span className="dot" style={{ background: 'var(--state-warn)' }} />
@@ -265,7 +293,7 @@ function CertExtraRow({
           />
         </div>
       </td>
-      <td className={`mono ${styles.cell} ${styles.cUd}`} onClick={stop}>
+      <td className={`mono ${styles.cell} ${styles.cUd}`} onClick={stop} data-editfield="">
         <EditableText
           value={e.ud}
           ariaLabel="Unidad"
@@ -275,7 +303,7 @@ function CertExtraRow({
         />
       </td>
       <td className={`mono ${styles.cell} ${styles.cNum2}`}>—</td>
-      <td className={`${styles.cell} ${styles.cExec}`} onClick={stop}>
+      <td className={`${styles.cell} ${styles.cExec}`} onClick={stop} data-editfield="" data-col="0">
         <EditableNum
           value={e.cantidad}
           dec={2}
@@ -287,7 +315,7 @@ function CertExtraRow({
       <td className={`${styles.cell} ${styles.cPct}`}>
         <span className={styles.pctDash}>—</span>
       </td>
-      <td className={`${styles.cell} ${styles.cPrice}`} onClick={stop}>
+      <td className={`${styles.cell} ${styles.cPrice}`} onClick={stop} data-editfield="">
         <EditableNum
           value={e.precio}
           dec={2}
@@ -378,6 +406,7 @@ export function CertChapterTable({
   snap,
   extras,
   prevExtras,
+  focus,
 }: {
   chapter: Chapter;
   partidas: Partida[];
@@ -388,11 +417,15 @@ export function CertChapterTable({
   snap?: CertSnapshot;
   extras: CertExtra[];
   prevExtras: CertExtra[];
+  /** Id de sub activo: aísla su subárbol (navegación de obras grandes). */
+  focus?: string | null;
 }) {
   const addContradictorio = useObraStore((s) => s.addContradictorio);
   // Grupos en pre-orden (N niveles): se conservan los contenedores intermedios
   // con descendientes certificables; el subtotal de cabecera es el ACUMULADO.
-  const allGroups = groupBySub(chapter, partidas);
+  const allGroups = groupsForFocus(chapter, partidas, focus);
+  // Aislado a un sub: los contradictorios son del CAPÍTULO → ni filas ni alta.
+  const subFocused = focus != null && focus !== chapter.id;
   const certImporte = (p: Partida): Cents => {
     const k = certCalc(p, curData, prevData, coefK, snap);
     return mode === 'origen' ? k.aOrigen : k.estaCert;
@@ -408,7 +441,7 @@ export function CertChapterTable({
   const groups = allGroups
     .map((g, i) => ({ ...g, rollup: rollups[i] ?? 0, n: counts[i] ?? 0 }))
     .filter((g) => g.n > 0);
-  const chapExtras = extras.filter((e) => e.chapterId === chapter.id);
+  const chapExtras = subFocused ? [] : extras.filter((e) => e.chapterId === chapter.id);
   const prevCant = extrasCantidad(prevExtras);
 
   return (
@@ -443,17 +476,19 @@ export function CertChapterTable({
         {chapExtras.map((e) => (
           <CertExtraRow key={e.id} e={e} prevCantidad={prevCant[e.id] ?? 0} mode={mode} />
         ))}
-        <tr className={styles.addRow}>
-          <td colSpan={8}>
-            <button
-              type="button"
-              className={`tcol ${styles.addBtn}`}
-              onClick={() => addContradictorio(chapter.id)}
-            >
-              <Icon name="plus" size={13} /> Añadir precio contradictorio
-            </button>
-          </td>
-        </tr>
+        {!subFocused && (
+          <tr className={styles.addRow}>
+            <td colSpan={8}>
+              <button
+                type="button"
+                className={`tcol ${styles.addBtn}`}
+                onClick={() => addContradictorio(chapter.id)}
+              >
+                <Icon name="plus" size={13} /> Añadir precio contradictorio
+              </button>
+            </td>
+          </tr>
+        )}
       </tbody>
     </table>
   );

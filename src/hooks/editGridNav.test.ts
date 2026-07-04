@@ -52,6 +52,27 @@ describe('cellBelow (Enter)', () => {
     expect(cellBelow(cell('r1c0'), 1)).toBeNull();
     expect(cellBelow(cell('r0c0'), -1)).toBeNull();
   });
+  it('SALTA hacia delante las filas sin esa columna (columna dispersa, p. ej. % con ofertada 0)', () => {
+    document.body.innerHTML = `
+      <div data-editgrid>
+        <div data-editrow>
+          <span data-editfield data-col="0"><button data-editcell id="s0c0">·</button></span>
+          <span data-editfield data-col="1"><button data-editcell id="s0c1">·</button></span>
+        </div>
+        <div data-editrow>
+          <span data-editfield data-col="0"><button data-editcell id="s1c0">·</button></span>
+          <!-- sin col 1: la fila del medio no tiene esa columna -->
+        </div>
+        <div data-editrow>
+          <span data-editfield data-col="0"><button data-editcell id="s2c0">·</button></span>
+          <span data-editfield data-col="1"><button data-editcell id="s2c1">·</button></span>
+        </div>
+      </div>`;
+    const c = (id: string) => document.getElementById(id)!;
+    expect(cellBelow(c('s0c1'), 1)?.id).toBe('s2c1'); // salta s1 (sin col 1)
+    expect(cellBelow(c('s0c0'), 1)?.id).toBe('s1c0'); // col 0 sí está → fila inmediata
+    expect(cellBelow(c('s2c1'), -1)?.id).toBe('s0c1'); // hacia arriba también salta
+  });
 });
 
 describe('colOf / isLastRow', () => {

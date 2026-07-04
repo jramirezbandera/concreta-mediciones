@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
 import { fmtNum, parseEsNumber, toDecimalComma } from '../../core/money';
-import { consumeArmNextEdit } from '../../hooks/editGridNav';
+import { useInlineEdit } from '../../hooks/useInlineEdit';
 import styles from './Presupuesto.module.css';
 
 type Align = 'left' | 'center' | 'right';
@@ -10,11 +9,9 @@ type Align = 'left' | 'center' | 'right';
  * diferencia de `EditableNum`. Enter confirma, Esc cancela. El valor vacío se
  * propaga como `''` (la dimensión no anula la línea).
  *
- * Tab/Enter encadenan edición (hoja de cálculo) vía `useMedGridTab` colgado del
- * contenedor: al recibir el foco con la apertura ARMADA, la celda en reposo
- * entra en edición sola (`onFocus` → `consumeArmNextEdit`). El input hace
- * `focus()+select()` (sin el `focus()` el Tab dejaba el input sin foco). Esc
- * cancela y DEVUELVE el foco a la celda en reposo (no se pierde la posición).
+ * El ciclo de vida (foco+select al editar, refoco en Esc, apertura ARMADA por
+ * Tab/Enter del grid vía `useMedGridTab`) vive en `useInlineEdit`; aquí solo el
+ * parse/formato específico de medición (admite vacío, sin aviso de inválido).
  */
 export function MedNum({
   value,
@@ -29,47 +26,29 @@ export function MedNum({
   onCommit: (value: number | '') => void;
   ariaLabel?: string;
 }) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState('');
-  const ref = useRef<HTMLInputElement>(null);
-  const displayRef = useRef<HTMLButtonElement>(null);
-  const wantRefocus = useRef(false);
-
-  useEffect(() => {
-    if (editing) {
-      ref.current?.focus();
-      ref.current?.select();
-    } else if (wantRefocus.current) {
-      wantRefocus.current = false;
-      displayRef.current?.focus();
-    }
-  }, [editing]);
+  const { editing, draft, setDraft, inputRef, displayRef, begin, cancel, finish, armOpenOnFocus } =
+    useInlineEdit<HTMLButtonElement>();
 
   const isBlank = value === '' || value == null || Number.isNaN(Number(value));
 
   function start() {
-    setDraft(isBlank ? '' : fmtNum(Number(value), dec).replace(/\./g, ''));
-    setEditing(true);
+    begin(isBlank ? '' : fmtNum(Number(value), dec).replace(/\./g, ''));
   }
   function commit() {
-    setEditing(false);
+    finish();
     const s = draft.trim();
     if (s === '') {
-      onCommit('');
+      onCommit(''); // vaciar propaga "" (la dimensión no anula la línea)
       return;
     }
     const n = parseEsNumber(s);
     if (n !== null) onCommit(n);
   }
-  function cancel() {
-    wantRefocus.current = true; // Esc: vuelve el foco a la celda en reposo
-    setEditing(false);
-  }
 
   if (editing) {
     return (
       <input
-        ref={ref}
+        ref={inputRef}
         value={draft}
         inputMode="decimal"
         aria-label={ariaLabel}
@@ -94,9 +73,7 @@ export function MedNum({
       className={`mono tcol ${styles.medCellBtn} ${isBlank ? styles.blank : ''}`}
       style={{ textAlign: align }}
       onClick={start}
-      onFocus={(e) => {
-        if (consumeArmNextEdit(e.currentTarget)) start();
-      }}
+      onFocus={armOpenOnFocus(start)}
     >
       {isBlank ? '·' : fmtNum(Number(value), dec)}
     </button>
@@ -113,39 +90,21 @@ export function MedComment({
   onCommit: (value: string) => void;
   ariaLabel?: string;
 }) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState('');
-  const ref = useRef<HTMLInputElement>(null);
-  const displayRef = useRef<HTMLSpanElement>(null);
-  const wantRefocus = useRef(false);
-
-  useEffect(() => {
-    if (editing) {
-      ref.current?.focus();
-      ref.current?.select();
-    } else if (wantRefocus.current) {
-      wantRefocus.current = false;
-      displayRef.current?.focus();
-    }
-  }, [editing]);
+  const { editing, draft, setDraft, inputRef, displayRef, begin, cancel, finish, armOpenOnFocus } =
+    useInlineEdit<HTMLSpanElement>();
 
   function start() {
-    setDraft(value || '');
-    setEditing(true);
+    begin(value || '');
   }
   function commit() {
-    setEditing(false);
+    finish();
     onCommit(draft);
-  }
-  function cancel() {
-    wantRefocus.current = true;
-    setEditing(false);
   }
 
   if (editing) {
     return (
       <input
-        ref={ref}
+        ref={inputRef}
         value={draft}
         placeholder="Comentario…"
         aria-label={ariaLabel}
@@ -169,9 +128,7 @@ export function MedComment({
       data-editcell=""
       className={`tcol ${styles.medComment} ${value ? '' : styles.empty}`}
       onClick={start}
-      onFocus={(e) => {
-        if (consumeArmNextEdit(e.currentTarget)) start();
-      }}
+      onFocus={armOpenOnFocus(start)}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();

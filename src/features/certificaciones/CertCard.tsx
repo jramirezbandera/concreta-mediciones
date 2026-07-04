@@ -39,9 +39,12 @@ export function CertCard({
   snap?: CertSnapshot;
 }) {
   const onCertEdit = useObraStore((s) => s.onCertEdit);
+  const completePartida = useObraStore((s) => s.completePartida);
+  const uncompletePartida = useObraStore((s) => s.uncompletePartida);
   const [expanded, setExpanded] = useState(false);
   const k = certCalc(p, curData, prevData, coefK, snap);
   const abono = mode === 'origen' ? k.aOrigen : k.estaCert;
+  const complete = k.ofertada > 0 && k.ejecutada >= k.ofertada;
   const execValue = mode === 'origen' ? k.ejecutada : estaCertDisplay(k.ejecutada, k.prev);
   const execPct = cantidadToPct(k.ofertada, execValue);
   // Precio mostrado = el de la valoración (congelado si la cert lo tiene, F7.0).
@@ -105,10 +108,29 @@ export function CertCard({
             </div>
           </div>
           {k.ofertada > 0 && (
-            <PctBar
-              pct={execPct}
-              onCommitPct={(pct) => onCertEdit(p.id, pctToCantidad(k.ofertada, pct), mode)}
-            />
+            <div className={styles.pctCellInner}>
+              <div className={styles.pctBarWrap}>
+                <PctBar
+                  pct={execPct}
+                  onCommitPct={(pct) => onCertEdit(p.id, pctToCantidad(k.ofertada, pct), mode)}
+                />
+              </div>
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={complete}
+                aria-label={complete ? 'Quitar completado de la partida' : 'Completar partida al 100%'}
+                title={
+                  complete
+                    ? `Completada al 100% a origen. Pulsa para deshacer${mode === 'esta' ? ' (esta certificación puede no sumar)' : ''}`
+                    : 'Completar: 100% a origen'
+                }
+                className={`tap-target ${styles.completeCheck} ${complete ? styles.on : ''}`}
+                onClick={() => (complete ? uncompletePartida(p.id) : completePartida(p.id))}
+              >
+                {complete && <Icon name="check" size={12} />}
+              </button>
+            </div>
           )}
         </div>
       </div>

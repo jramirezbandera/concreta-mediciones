@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditableNum } from './EditableNum';
+import { armNextEdit, clearArmedEdit } from '../hooks/editGridNav';
 
 describe('EditableNum', () => {
   it('muestra el valor con formato español', () => {
@@ -33,6 +34,38 @@ describe('EditableNum', () => {
     expect(input).toHaveValue('14,5'); // se muestra ya como coma
     fireEvent.keyDown(input, { key: 'Enter' });
     expect(onCommit).toHaveBeenCalledWith(14.5);
+  });
+
+  it('admite omitir el 0 con el punto del numpad (".2" → 0,2)', () => {
+    const onCommit = vi.fn();
+    render(<EditableNum value={10} onCommit={onCommit} ariaLabel="Cantidad" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Cantidad' }));
+    const input = screen.getByRole('textbox', { name: 'Cantidad' });
+    fireEvent.change(input, { target: { value: '.2' } }); // numpad: punto, sin el 0
+    expect(input).toHaveValue(',2'); // se muestra ya como coma
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onCommit).toHaveBeenCalledWith(0.2);
+  });
+
+  it('admite omitir el 0 con la coma (",2" → 0,2)', () => {
+    const onCommit = vi.fn();
+    render(<EditableNum value={10} onCommit={onCommit} ariaLabel="Cantidad" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Cantidad' }));
+    const input = screen.getByRole('textbox', { name: 'Cantidad' });
+    fireEvent.change(input, { target: { value: ',2' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onCommit).toHaveBeenCalledWith(0.2);
+  });
+
+  it('omitir el 0 en un negativo por la UI ("-.5" → -0,5)', () => {
+    const onCommit = vi.fn();
+    render(<EditableNum value={10} onCommit={onCommit} ariaLabel="Cantidad" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Cantidad' }));
+    const input = screen.getByRole('textbox', { name: 'Cantidad' });
+    fireEvent.change(input, { target: { value: '-.5' } }); // numpad: punto
+    expect(input).toHaveValue('-,5');
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onCommit).toHaveBeenCalledWith(-0.5);
   });
 
   it('confirma al perder el foco (blur)', () => {
@@ -102,5 +135,36 @@ describe('EditableNum', () => {
     fireEvent.blur(input);
     expect(onCommit).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Cantidad' })).toHaveTextContent('10,00');
+  });
+});
+
+// Apertura al foco ARMADO (navegación tipo hoja de cálculo, useMedGridTab): la
+// celda vecina se abre sola SOLO cuando un Tab/Enter la armó. Sin armar (foco a
+// secas, p. ej. flechas o tabulación fuera de un grid) NO abre.
+describe('EditableNum — arm-open al recibir foco', () => {
+  afterEach(() => clearArmedEdit());
+
+  it('foco SIN armar NO abre la celda (evita aperturas espurias)', () => {
+    render(<EditableNum value={10} onCommit={vi.fn()} ariaLabel="n" />);
+    const btn = screen.getByRole('button', { name: 'n' });
+    fireEvent.focus(btn);
+    expect(screen.getByRole('button', { name: 'n' })).toBeInTheDocument(); // sigue en reposo
+    expect(screen.queryByRole('textbox', { name: 'n' })).toBeNull();
+  });
+
+  it('foco ARMADO abre la celda en edición', () => {
+    render(<EditableNum value={10} onCommit={vi.fn()} ariaLabel="n" />);
+    const btn = screen.getByRole('button', { name: 'n' });
+    armNextEdit(btn);
+    fireEvent.focus(btn);
+    expect(screen.getByRole('textbox', { name: 'n' })).toBeInTheDocument();
+  });
+
+  it('Escape devuelve el foco a la celda en reposo (no se pierde la posición de teclado)', () => {
+    render(<EditableNum value={10} onCommit={vi.fn()} ariaLabel="n" />);
+    fireEvent.click(screen.getByRole('button', { name: 'n' }));
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'n' }), { key: 'Escape' });
+    const back = screen.getByRole('button', { name: 'n' });
+    expect(back).toHaveFocus();
   });
 });

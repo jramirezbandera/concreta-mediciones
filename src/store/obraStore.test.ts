@@ -163,6 +163,16 @@ describe('acciones de UI', () => {
     state().setView('resumen');
     expect(state().partidas).toBe(partidasRef);
   });
+
+  it('entrar en Certificaciones abre la cert completa (active → ALL)', () => {
+    state().setActive('02');
+    state().setView('certificaciones');
+    expect(state().active).toBe(ALL);
+    // Ya dentro, la navegación del árbol (setActive) no se resetea.
+    state().setActive('03');
+    state().setView('certificaciones');
+    expect(state().active).toBe('03');
+  });
 });
 
 describe('setObraPath (datos de obra, F6.2)', () => {
@@ -257,6 +267,69 @@ describe('onCertEdit', () => {
     s.onCertEdit('p111', 12345, 'origen');
     expect(state().certs[2]!.data.p111).toBe(12345);
     expect(state().certs[0]!.data.p111).toBe(otraAntes); // cert 0 intacta
+  });
+});
+
+describe('completar partidas (Completado)', () => {
+  const of = (id: string) => partidaCantidad(allPartidas().find((p) => p.id === id)!);
+
+  it('completePartida lleva al 100% a origen (sin anterior)', () => {
+    state().setCurCert(0);
+    state().onCertEdit('p111', 0, 'origen'); // punto de partida conocido
+    state().completePartida('p111');
+    expect(state().certs[0]!.data.p111).toBe(of('p111'));
+  });
+
+  it('never-reduce: NO baja un sobre-tecleo del periodo', () => {
+    state().setCurCert(0);
+    state().onCertEdit('p111', 99999, 'origen'); // muy por encima del 100%
+    state().completePartida('p111');
+    expect(state().certs[0]!.data.p111).toBe(99999); // se conserva (max)
+  });
+
+  it('completar es un override: limpia la certificación por líneas', () => {
+    state().setCurCert(0);
+    const line = allPartidas().find((x) => x.id === 'p111')!.med[0]!;
+    state().setCertLine('p111', line.id, 3);
+    expect(state().certs[0]!.lineQty?.p111).toBeTruthy();
+    state().completePartida('p111');
+    expect(state().certs[0]!.lineQty?.p111).toBeUndefined();
+    expect(state().certs[0]!.data.p111).toBe(of('p111'));
+  });
+
+  it('uncompletePartida vuelve al suelo (a-origen anterior), no a 0 a origen', () => {
+    state().setCurCert(0);
+    state().onCertEdit('p111', 10, 'origen'); // cert anterior deja 10 a origen
+    state().setCurCert(1);
+    state().onCertEdit('p111', 10, 'origen'); // esta cert parte de 10 (< ofertada)
+    state().completePartida('p111');
+    expect(state().certs[1]!.data.p111).toBe(of('p111'));
+    state().uncompletePartida('p111');
+    expect(state().certs[1]!.data.p111).toBe(10); // suelo D-06, nunca negativa
+  });
+
+  it('uncompletePartida sin anterior (prev=0) borra la entrada', () => {
+    state().setCurCert(0);
+    state().onCertEdit('p111', 0, 'origen');
+    state().completePartida('p111');
+    state().uncompletePartida('p111');
+    expect(state().certs[0]!.data.p111).toBeUndefined();
+  });
+
+  it('completePartidas (masiva) aplica en UN solo set (1 notificación, no N)', () => {
+    state().setCurCert(0);
+    const ids = allPartidas().map((p) => p.id);
+    let notifs = 0;
+    const unsub = useObraStore.subscribe(() => {
+      notifs++;
+    });
+    state().completePartidas(ids);
+    unsub();
+    expect(notifs).toBe(1); // conducta observable: un set, no un bucle de onCertEdit
+    for (const id of ids) {
+      const ofertada = of(id);
+      if (ofertada > 0) expect(state().certs[0]!.data[id]).toBe(ofertada);
+    }
   });
 });
 

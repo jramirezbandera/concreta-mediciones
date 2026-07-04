@@ -66,7 +66,10 @@ export function neighborEditCell(from: HTMLElement, dir: 1 | -1): HTMLElement | 
   return next?.querySelector<HTMLElement>('[data-editcell]') ?? null;
 }
 
-/** Celda display en la MISMA columna, fila siguiente/anterior (Enter). `null` en el borde. */
+/** Celda display en la MISMA columna, fila siguiente/anterior (Enter). `null` en el borde.
+ *  SALTA hacia delante las filas que no tengan esa columna (columnas dispersas: p. ej.
+ *  la barra de % de certificación no existe cuando la ofertada es 0). En un grid sin
+ *  huecos (medición) encuentra la fila inmediata → mismo resultado. */
 export function cellBelow(from: HTMLElement, dir: 1 | -1): HTMLElement | null {
   const grid = gridOf(from);
   const cur = from.closest<HTMLElement>('[data-editfield]');
@@ -78,13 +81,14 @@ export function cellBelow(from: HTMLElement, dir: 1 | -1): HTMLElement | null {
     (r) => r.closest('[data-editgrid]') === grid,
   );
   const ri = rows.indexOf(curRow);
-  const row = rows[ri + dir];
-  if (!row) return null;
-  return (
-    row.querySelector<HTMLElement>(`[data-editfield][data-col="${col}"] [data-editcell]`) ??
-    row.querySelector<HTMLElement>(`[data-editfield][data-col="${col}"][data-editcell]`) ??
-    null
-  );
+  for (let i = ri + dir; i >= 0 && i < rows.length; i += dir) {
+    const row = rows[i]!;
+    const cell =
+      row.querySelector<HTMLElement>(`[data-editfield][data-col="${col}"] [data-editcell]`) ??
+      row.querySelector<HTMLElement>(`[data-editfield][data-col="${col}"][data-editcell]`);
+    if (cell) return cell;
+  }
+  return null;
 }
 
 /** Índice de columna (`data-col`) del campo que contiene a `from`, o `null`. */

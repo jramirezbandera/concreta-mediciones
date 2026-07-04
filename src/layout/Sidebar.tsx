@@ -52,6 +52,7 @@ function visibleContainers(ch: Chapter, expanded: Record<string, boolean>): Flat
  * al store (navegación, despliegue y CRUD estructural).
  */
 export function Sidebar({ drawer = false, onAfterSelect }: SidebarProps) {
+  const view = useObraStore((s) => s.view);
   const active = useObraStore((s) => s.active);
   const expanded = useObraStore((s) => s.expanded);
   const chapters = useObraStore((s) => s.chapters);
@@ -110,7 +111,10 @@ export function Sidebar({ drawer = false, onAfterSelect }: SidebarProps) {
 
   const select = (id: string) => {
     setActive(id);
-    setView('presupuesto');
+    // En Certificaciones el árbol navega la CERT (aísla el capítulo/sub que se
+    // está certificando); saltar de vuelta al presupuesto rompía el modo. Desde
+    // cualquier otra vista, seleccionar lleva al presupuesto, como siempre.
+    if (view !== 'certificaciones') setView('presupuesto');
     onAfterSelect?.();
   };
   // `parentId` puede ser el capítulo o un sub a cualquier profundidad (T-17).

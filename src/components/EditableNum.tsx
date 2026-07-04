@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { fmtNum, parseEsNumber, toDecimalComma } from '../core/money';
+import { useInlineEdit } from '../hooks/useInlineEdit';
 import styles from './EditableNum.module.css';
 
 export interface EditableNumProps {
@@ -25,40 +26,44 @@ export function EditableNum({
   accent = false,
   ariaLabel,
 }: EditableNumProps) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState('');
   const [invalid, setInvalid] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (editing) inputRef.current?.select();
-  }, [editing]);
+  const { editing, draft, setDraft, inputRef, displayRef, begin, cancel: cancelEdit, finish, armOpenOnFocus } =
+    useInlineEdit<HTMLButtonElement>();
 
   function start() {
-    // Edita sin separadores de miles: "1.234,50" → "1234,50".
-    setDraft(fmtNum(value, dec).replace(/\./g, ''));
     setInvalid(false);
-    setEditing(true);
+    // Edita sin separadores de miles: "1.234,50" → "1234,50".
+    begin(fmtNum(value, dec).replace(/\./g, ''));
   }
 
   function close() {
-    setEditing(false);
+    finish();
     setInvalid(false);
+  }
+
+  // Esc: cierra sin confirmar y DEVUELVE el foco a la celda en reposo (para no
+  // perder la posición al navegar el grid con teclado).
+  function cancel() {
+    setInvalid(false);
+    cancelEdit();
   }
 
   // Confirmación explícita (Enter): si la entrada NO es un número válido no se
   // cierra ni se descarta en silencio —en una herramienta de dinero perder un
   // número tecleado sin avisar erosiona la confianza—: se marca el campo en
   // aviso y se mantiene abierto, con el texto seleccionado, para corregir.
-  function confirm() {
+  // Devuelve `true` si confirmó/cerró, `false` si sigue abierto por inválido —
+  // el caller usa el booleano para decidir si deja navegar el grid (stopPropagation).
+  function confirm(): boolean {
     const n = parseEsNumber(draft);
     if (n === null) {
       setInvalid(true);
       inputRef.current?.select();
-      return;
+      return false;
     }
     onCommit(n);
     close();
+    return true;
   }
 
   // Salir del campo (blur/Tab): el usuario se va; no se le atrapa el foco. Si el
@@ -84,8 +89,10 @@ export function EditableNum({
         }}
         onBlur={leave}
         onKeyDown={(e) => {
-          if (e.key === 'Enter') confirm();
-          if (e.key === 'Escape') close();
+          // Enter válido → burbujea a useMedGridTab (baja una fila). Enter inválido
+          // → la celda se queda abierta con el aviso y NO se propaga (el grid no mueve).
+          if (e.key === 'Enter' && !confirm()) e.stopPropagation();
+          if (e.key === 'Escape') cancel();
         }}
         className={`mono ${styles.input} ${invalid ? styles.invalid : ''}`}
       />
@@ -94,8 +101,12 @@ export function EditableNum({
 
   return (
     <button
+      ref={displayRef}
       type="button"
       onClick={start}
+      // Tab/Enter arman la apertura de esta celda (useMedGridTab): al recibir el
+      // foco armado, entra en edición sola. Fuera de un grid nadie arma → no-op.
+      onFocus={armOpenOnFocus(start)}
       aria-label={ariaLabel}
       data-editcell=""
       className={`mono tcol ${styles.display}`}

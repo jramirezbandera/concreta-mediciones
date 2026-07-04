@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import App from './App';
-import { useObraStore } from './store';
+import { ALL, useObraStore } from './store';
 
 beforeEach(() => {
   localStorage.clear();
@@ -36,6 +36,20 @@ describe('App shell (F0)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Certificaciones' }));
     // F4.1: la pestaña Certificaciones muestra la vista real (no el placeholder).
     expect(screen.getByText('Ejecución global')).toBeInTheDocument();
+  });
+
+  it('en Certificaciones el árbol navega la cert (no devuelve al presupuesto)', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Certificaciones' }));
+    // Entrar en la pestaña abre la cert COMPLETA, venga de donde venga el activo.
+    expect(useObraStore.getState().active).toBe(ALL);
+    expect(screen.getByText('E02EM030')).toBeInTheDocument(); // cap 01
+    expect(screen.getByText('E04CM040')).toBeInTheDocument(); // cap 02
+    // Seleccionar un capítulo en el árbol AÍSLA dentro del modo certificar.
+    fireEvent.click(screen.getByRole('button', { name: /Cimentación/ }));
+    expect(useObraStore.getState().view).toBe('certificaciones');
+    expect(screen.getByText('E04CM040')).toBeInTheDocument(); // cap 02 aislado
+    expect(screen.queryByText('E02EM030')).toBeNull(); // cap 01 fuera
   });
 
   it('el toggle de tema alterna data-theme', () => {

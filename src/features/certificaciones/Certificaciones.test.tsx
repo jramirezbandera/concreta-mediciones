@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { useObraStore } from '../../store';
+import { ALL, useObraStore } from '../../store';
 import { CertificacionesView } from './CertificacionesView';
 
 beforeEach(() => {
@@ -34,6 +34,30 @@ describe('CertSummary — % con decimales (auditoría B-01/B-02)', () => {
     const a = useObraStore.getState().certs[0]!.ajustes![0]!;
     expect(a.tipo).toBe('pct');
     expect(a.valor).toBe(0.10197); // round2(v/100) lo dejaba en 0.1 (10 %)
+  });
+});
+
+describe('aislamiento por selección del árbol (paridad con Presupuesto)', () => {
+  it('con «Toda la obra» pinta todas las secciones de capítulo', () => {
+    useObraStore.getState().setActive(ALL);
+    render(<CertificacionesView compact={false} />);
+    expect(screen.getByText('E02EM030')).toBeInTheDocument(); // cap 01
+    expect(screen.getByText('E04CM040')).toBeInTheDocument(); // cap 02
+  });
+
+  it('un capítulo activo aísla su sección (las demás no se pintan)', () => {
+    useObraStore.getState().setActive('02');
+    render(<CertificacionesView compact={false} />);
+    expect(screen.getByText('E04CM040')).toBeInTheDocument();
+    expect(screen.queryByText('E02EM030')).toBeNull(); // cap 01 fuera
+  });
+
+  it('un sub activo aísla su subárbol; sin alta de P.C. (es del capítulo)', () => {
+    useObraStore.getState().setActive('01.01');
+    render(<CertificacionesView compact={false} />);
+    expect(screen.getByText('E02EM030')).toBeInTheDocument(); // 1.1 dentro
+    expect(screen.queryByText('E02RW040')).toBeNull(); // 1.2 fuera
+    expect(screen.queryByText('Añadir precio contradictorio')).toBeNull();
   });
 });
 

@@ -7,6 +7,10 @@
   flex: 1;
   overflow: auto;
   min-height: 0;
+  /* La cabecera es sticky (z-index 30). Sin esto, el scroll-into-view del foco
+     programático (Tab/Enter en la tabla, useMedGridTab) parquearía la celda
+     activa BAJO la cabecera → WCAG 2.4.11 (Focus Not Obscured). Reserva su alto. */
+  scroll-padding-top: 112px;
 }
 /* Estado vacío: la raíz en columna flex para que el EmptyState (flex:1) llene
    la altura (si no, el dot-grid mide su contenido y parece recortado). */
@@ -264,6 +268,12 @@
   font-weight: 600;
   color: var(--text-primary);
 }
+/* Capítulo/sub aislado sin nada que certificar (navegación desde el árbol). */
+.chapEmpty {
+  padding: 18px 24px;
+  font-size: 13px;
+  color: var(--text-disabled);
+}
 .tableWrap {
   min-width: 0;
 }
@@ -331,7 +341,7 @@
   padding-right: 4px;
 }
 .cPct {
-  width: 116px;
+  width: 150px;
   padding-right: 12px;
 }
 .cPrice {
@@ -591,6 +601,119 @@
 .lineCheck.on {
   background: var(--accent);
   border-color: var(--accent);
+}
+
+/* ---- «Completado» por partida: check estilo lineCheck, verde = 100% (full) --- */
+.pctCellInner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pctBarWrap {
+  flex: 1;
+  min-width: 0;
+}
+.completeCheck {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1.5px solid var(--border-main);
+  border-radius: 5px;
+  background: var(--bg-surface);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.completeCheck:hover {
+  border-color: var(--state-ok);
+}
+.completeCheck.on {
+  background: var(--state-ok);
+  border-color: var(--state-ok);
+}
+.completeCheck:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-accent);
+}
+
+/* ---- Botón masivo «Completar {alcance}» + diálogo ------------------------- */
+.headerBottomRight {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.massBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 7px;
+  border: 1px solid var(--border-main);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.massBtn:hover:not(:disabled) {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border-color: color-mix(in srgb, var(--state-ok) 50%, var(--border-main));
+}
+.massBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.massList {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+.massWarn {
+  color: var(--state-warn);
+}
+.massMuted {
+  color: var(--text-disabled);
+}
+.mcCancel {
+  padding: 8px 16px;
+  border: 1px solid var(--border-main);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.mcCancel:hover {
+  background: var(--bg-elevated);
+}
+.mcConfirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 18px;
+  border: none;
+  border-radius: 6px;
+  background: var(--state-ok);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.mcConfirm:hover {
+  background: color-mix(in srgb, var(--state-ok) 85%, black);
 }
 .detailMedComment {
   flex: 1;

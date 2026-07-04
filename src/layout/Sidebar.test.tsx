@@ -36,4 +36,13 @@ describe('AjustaModal · PEM objetivo', () => {
     // base 1000 € → objetivo 1234,5 € ⇒ K ≈ 1,2345
     expect(onApply).toHaveBeenCalledWith(expect.closeTo(1.2345, 4));
   });
+
+  it('admite omitir el 0 del decimal (".5" se muestra ",5" y aplica un K)', () => {
+    const { onApply, input } = renderModal();
+    fireEvent.change(input, { target: { value: '.5' } }); // numpad: punto, sin el 0
+    expect(input).toHaveValue(',5');
+    fireEvent.keyDown(input, { key: 'Enter' });
+    // base 1000 € → objetivo 0,5 € ⇒ K = 0,5/1000 = 0,0005
+    expect(onApply).toHaveBeenCalledWith(expect.closeTo(0.0005, 4));
+  });
 });

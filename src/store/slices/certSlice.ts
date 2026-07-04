@@ -5,8 +5,9 @@
    creación y campos de cert, contradictorios y ajustes del resumen. La lógica
    es idéntica a la del store monolítico; solo cambia de fichero.
    =========================================================================== */
-import type { Cert, PartidasMap, Rates } from '../../core/types';
+import type { Cert, Partida, PartidasMap, Rates } from '../../core/types';
 import { estaCertToOrigen, prevDataOf, sumLineQty } from '../../core/certificacion';
+import { partidaCantidad } from '../../core/medicion';
 import { round2 } from '../../core/money';
 import { nextAjusteId, nextExtraId } from '../base';
 import type { ObraSlice, ObraState } from '../obraStore';
@@ -19,27 +20,66 @@ import type { ObraSlice, ObraState } from '../obraStore';
  * congela la primera vez (el snapshot no se refresca); el K se congela con el
  * primer precio. `snapshotAt` estampa el último congelado (trazabilidad F7.1).
  */
-function freezePrecio(
-  partidas: PartidasMap,
-  rates: Rates,
-  cert: Cert,
-  partidaId: string,
-): void {
+function freezePrecioFor(cert: Cert, rates: Rates, p: Partida): void {
+  if (cert.priceSnapshot?.[p.id] != null) return;
+  (cert.priceSnapshot ??= {})[p.id] = p.precio;
+  cert.coefK ??= rates.coefK;
+  cert.snapshotAt = new Date().toISOString();
+}
+
+/** Variante que resuelve la partida por id (escaneo O(capítulos)); para el caso
+ *  de una sola partida. Las acciones masivas usan `freezePrecioFor` con la `p`
+ *  del bucle para no reescanear (design review D2 / eng review Issue 1). */
+function freezePrecio(partidas: PartidasMap, rates: Rates, cert: Cert, partidaId: string): void {
   if (cert.priceSnapshot?.[partidaId] != null) return;
+  const p = findPartida(partidas, partidaId);
+  if (p) freezePrecioFor(cert, rates, p);
+}
+
+/** Resuelve una partida por id escaneando los capítulos (O(capítulos)). */
+function findPartida(partidas: PartidasMap, id: string): Partida | undefined {
   for (const chId in partidas) {
-    const p = partidas[chId]?.find((x) => x.id === partidaId);
-    if (!p) continue;
-    (cert.priceSnapshot ??= {})[partidaId] = p.precio;
-    cert.coefK ??= rates.coefK;
-    cert.snapshotAt = new Date().toISOString();
-    return;
+    const p = partidas[chId]?.find((x) => x.id === id);
+    if (p) return p;
   }
+  return undefined;
+}
+
+/** Quita la certificación por líneas de una partida y limpia el contenedor
+ *  `lineQty` si queda vacío (convención de `setCertLine`). Un solo sitio para
+ *  esta regla, compartido por onCertEdit/setCertLine/completar (eng review Issue 2). */
+function dropLineQty(cert: Cert, partidaId: string): void {
+  if (!cert.lineQty?.[partidaId]) return;
+  delete cert.lineQty[partidaId];
+  if (Object.keys(cert.lineQty).length === 0) cert.lineQty = undefined;
+}
+
+/**
+ * Lleva una partida al 100% a origen en la cert en curso, SIN reducir (design
+ * review / eng review Issue 3): `data = max(actual, ofertada, prev)`. Respeta el
+ * suelo D-06 (`prev`) y conserva un sobre-tecleo del periodo. `ofertada<=0` →
+ * no-op (no hay 100% definible). Mutador PURO sobre el draft: las acciones
+ * masivas lo ejecutan dentro de UN solo `set` (no N `onCertEdit`).
+ */
+function completeDraft(s: ObraState, p: Partida): void {
+  const cert = s.certs[s.curCert];
+  if (!cert) return;
+  const ofertada = partidaCantidad(p);
+  if (ofertada <= 0) return;
+  const prev = prevDataOf(s.certs, s.curCert)[p.id] ?? 0;
+  const current = cert.data[p.id] ?? 0;
+  cert.data[p.id] = round2(Math.max(current, ofertada, prev));
+  dropLineQty(cert, p.id);
+  freezePrecioFor(cert, s.rates, p);
 }
 
 type CertSlice = Pick<
   ObraState,
   | 'onCertEdit'
   | 'setCertLine'
+  | 'completePartida'
+  | 'uncompletePartida'
+  | 'completePartidas'
   | 'addCert'
   | 'setCertField'
   | 'addContradictorio'
@@ -66,12 +106,8 @@ export const createCertSlice: ObraSlice<CertSlice> = (set) => ({
         cert.data[partidaId] = round2(Math.max(0, value));
       }
       // Teclear una cantidad/% es un override del total: deja de certificarse
-      // por líneas (regresión §8a). Si no quedan líneas marcadas en la cert,
-      // limpia el contenedor para no dejar `{}` huérfanos.
-      if (cert.lineQty?.[partidaId]) {
-        delete cert.lineQty[partidaId];
-        if (Object.keys(cert.lineQty).length === 0) cert.lineQty = undefined;
-      }
+      // por líneas (regresión §8a) y limpia el contenedor si queda vacío.
+      dropLineQty(cert, partidaId);
       freezePrecio(s.partidas, s.rates, cert, partidaId); // F7.0
     }),
 
@@ -94,17 +130,52 @@ export const createCertSlice: ObraSlice<CertSlice> = (set) => ({
       const anterior = prevDataOf(s.certs, s.curCert)[partidaId] ?? 0;
       if (Object.keys(lines).length === 0) {
         // Sin líneas marcadas: la partida deja de certificarse por líneas.
-        delete lineQty[partidaId];
+        dropLineQty(cert, partidaId);
         if (anterior > 0) {
           cert.data[partidaId] = anterior; // el suelo también al desmarcar todo
           freezePrecio(s.partidas, s.rates, cert, partidaId); // F7.0
         } else {
           delete cert.data[partidaId];
         }
-        if (Object.keys(lineQty).length === 0) cert.lineQty = undefined;
       } else {
         cert.data[partidaId] = Math.max(sumLineQty(lines), anterior);
         freezePrecio(s.partidas, s.rates, cert, partidaId); // F7.0
+      }
+    }),
+
+  completePartida: (partidaId) =>
+    set((s) => {
+      const p = findPartida(s.partidas, partidaId);
+      if (p) completeDraft(s, p);
+    }),
+
+  uncompletePartida: (partidaId) =>
+    set((s) => {
+      const cert = s.certs[s.curCert];
+      if (!cert) return;
+      // Descompletar = volver al a-origen del periodo anterior (suelo D-06), no
+      // a 0 a origen (no borrar lo ya certificado). prev==0 → borra la entrada.
+      const prev = prevDataOf(s.certs, s.curCert)[partidaId] ?? 0;
+      if (prev > 0) {
+        cert.data[partidaId] = prev;
+        const p = findPartida(s.partidas, partidaId);
+        if (p) freezePrecioFor(cert, s.rates, p);
+      } else {
+        delete cert.data[partidaId];
+      }
+      dropLineQty(cert, partidaId);
+    }),
+
+  completePartidas: (partidaIds) =>
+    set((s) => {
+      // Masiva WYSIWYG (eng review Issue 5): la UI pasa EXACTAMENTE las partidas
+      // visibles (obra / capítulo / lo visible). UN solo `set` (no N onCertEdit →
+      // N autosaves): mapa id→p una vez (O(N)) y `completeDraft` con la p resuelta.
+      const map = new Map<string, Partida>();
+      for (const chId in s.partidas) for (const p of s.partidas[chId] ?? []) map.set(p.id, p);
+      for (const id of partidaIds) {
+        const p = map.get(id);
+        if (p) completeDraft(s, p);
       }
     }),
 

@@ -141,6 +141,22 @@ export interface ObraState extends ObraData {
    */
   setCertLine: (partidaId: string, lineId: string, qty: number | null) => void;
   /**
+   * Marca una partida como COMPLETADA (100% a origen) en la cert en curso, SIN
+   * reducir: `data = max(actual, ofertada, prev)`. Respeta el suelo D-06 y
+   * conserva un sobre-tecleo del periodo; `ofertada<=0` → no-op. Override manual:
+   * limpia la certificación por líneas de esa partida.
+   */
+  completePartida: (partidaId: string) => void;
+  /** Desmarca «Completada»: vuelve al a-origen de la cert anterior (0 esta cert),
+   *  nunca a 0 a origen. prev==0 borra la entrada. Limpia también `lineQty`. */
+  uncompletePartida: (partidaId: string) => void;
+  /**
+   * Completa en LOTE (100% a origen) exactamente las partidas cuyos ids se pasan
+   * —la UI pasa las VISIBLES (obra / capítulo / lo visible), nunca filas ocultas
+   * (eng review Issue 5)—. UN solo `set` (no dispara N autosaves).
+   */
+  completePartidas: (partidaIds: string[]) => void;
+  /**
    * Crea una certificación nueva al final y la deja en curso. Hereda de la
    * ÚLTIMA cronológica (no de la actual): `data` y `lineQty` a-origen (la
    * ejecución es acumulativa), la `retencion` y el periodo en blanco. Así "esta
@@ -418,6 +434,10 @@ export const useObraStore = create<ObraState>()(
 
       setView: (v) =>
         set((s) => {
+          // ENTRAR en Certificaciones abre siempre la cert completa (dogfood
+          // 2026-07-04); aislar capítulo/sub se hace después desde el árbol.
+          // Solo al entrar: navegar el árbol ya dentro no pasa por aquí.
+          if (v === 'certificaciones' && s.view !== 'certificaciones') s.active = ALL;
           s.view = v;
           s.openPartidaId = null; // la selección es contextual a lo que se mira
           s.cowChoice = {}; // memoria COW: viva solo mientras editas la partida

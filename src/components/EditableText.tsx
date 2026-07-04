@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useInlineEdit } from '../hooks/useInlineEdit';
 import styles from './EditableText.module.css';
 
 function autosize(el: HTMLTextAreaElement | null) {
@@ -19,6 +19,10 @@ export interface EditableTextProps {
 /**
  * Texto editable inline (descripciones, títulos). Click → textarea autoajustada
  * con anillo accent; Enter confirma, Shift+Enter salto de línea, Esc cancela.
+ *
+ * El ciclo de vida (estado, arm-open por Tab/Enter del grid, refoco en Esc) vive
+ * en `useInlineEdit`; el editor es un `<textarea>` que al abrirse pone el caret
+ * al final y se autoajusta (no selecciona todo, a diferencia de las numéricas).
  */
 export function EditableText({
   value,
@@ -28,21 +32,18 @@ export function EditableText({
   placeholder = '—',
   ariaLabel,
 }: EditableTextProps) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState('');
-  const ref = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    if (editing && ref.current) {
-      const el = ref.current;
+  const { editing, draft, setDraft, inputRef, displayRef, begin, cancel, finish, armOpenOnFocus } =
+    useInlineEdit<HTMLSpanElement, HTMLTextAreaElement>((el) => {
       el.focus();
-      el.selectionStart = el.selectionEnd = el.value.length;
+      el.selectionStart = el.selectionEnd = el.value.length; // caret al final
       autosize(el);
-    }
-  }, [editing]);
+    });
 
+  function start() {
+    begin(value || '');
+  }
   function commit() {
-    setEditing(false);
+    finish();
     // Permite vaciar el campo (v === ''): solo se omite cuando no hay cambio.
     // Esc cancela sin pasar por aquí, así que blur/Enter con vacío = borrar.
     const v = draft.replace(/\s+$/, '');
@@ -52,7 +53,7 @@ export function EditableText({
   if (editing) {
     return (
       <textarea
-        ref={ref}
+        ref={inputRef}
         value={draft}
         rows={1}
         aria-label={ariaLabel}
@@ -66,7 +67,7 @@ export function EditableText({
             e.preventDefault();
             commit();
           }
-          if (e.key === 'Escape') setEditing(false);
+          if (e.key === 'Escape') cancel();
         }}
         // El `style` del display también se aplica al editor para que tamaño/
         // color de fuente coincidan (p. ej. el título grande de un capítulo).
@@ -78,21 +79,19 @@ export function EditableText({
 
   return (
     <span
+      ref={displayRef}
       role="textbox"
       tabIndex={0}
       aria-label={ariaLabel}
       data-editcell=""
       className={`tcol ${styles.display} ${className}`}
       style={style}
-      onClick={() => {
-        setDraft(value || '');
-        setEditing(true);
-      }}
+      onClick={start}
+      onFocus={armOpenOnFocus(start)}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          setDraft(value || '');
-          setEditing(true);
+          start();
         }
       }}
     >

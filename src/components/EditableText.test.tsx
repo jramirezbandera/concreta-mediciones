@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditableText } from './EditableText';
+import { armNextEdit, clearArmedEdit } from '../hooks/editGridNav';
 
 describe('EditableText', () => {
   it('muestra el valor', () => {
@@ -59,5 +60,34 @@ describe('EditableText', () => {
     fireEvent.change(ta, { target: { value: 'Linea1' } });
     fireEvent.keyDown(ta, { key: 'Enter', shiftKey: true });
     expect(onCommit).not.toHaveBeenCalled();
+  });
+});
+
+// Arm-open (navegación del grid, P.C. en certificación): el textarea se abre al
+// recibir el foco SOLO si un Tab/Enter lo armó. Fuera de un grid nadie arma.
+describe('EditableText — arm-open al recibir foco', () => {
+  afterEach(() => clearArmedEdit());
+
+  it('foco SIN armar NO abre (el display sigue siendo un span)', () => {
+    render(<EditableText value="Hola" onCommit={vi.fn()} ariaLabel="Desc" />);
+    fireEvent.focus(screen.getByRole('textbox', { name: 'Desc' }));
+    expect(screen.getByRole('textbox', { name: 'Desc' }).tagName).toBe('SPAN');
+  });
+
+  it('foco ARMADO abre el textarea', () => {
+    render(<EditableText value="Hola" onCommit={vi.fn()} ariaLabel="Desc" />);
+    const span = screen.getByRole('textbox', { name: 'Desc' });
+    armNextEdit(span);
+    fireEvent.focus(span);
+    expect(screen.getByRole('textbox', { name: 'Desc' }).tagName).toBe('TEXTAREA');
+  });
+
+  it('Escape cierra y devuelve el foco al display', () => {
+    render(<EditableText value="Hola" onCommit={vi.fn()} ariaLabel="Desc" />);
+    fireEvent.click(screen.getByRole('textbox', { name: 'Desc' }));
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'Desc' }), { key: 'Escape' });
+    const back = screen.getByRole('textbox', { name: 'Desc' });
+    expect(back.tagName).toBe('SPAN');
+    expect(back).toHaveFocus();
   });
 });

@@ -11,8 +11,12 @@ import { armNextEdit, cellBelow, colOf, neighborEditCell } from './editGridNav';
  *    crea una línea nueva y enfoca su primer/mismo campo (entrada rápida).
  * Las flechas las sigue gestionando `useGridNav` (celdas en reposo); aquí solo
  * actuamos sobre el input. `lineCount` dispara el autofocus a la fila nueva.
+ *
+ * `addLine` es OPCIONAL: un grid sin «crear fila al final» (p. ej. la tabla de
+ * certificación) lo omite. Sin `addLine`, el borde delantero de Tab/Enter deja
+ * pasar el evento nativo (no atrapa el foco) y Ctrl/⌘+Enter es no-op.
  */
-export function useMedGridTab(addLine: () => void, lineCount: number) {
+export function useMedGridTab(addLine?: () => void, lineCount = 0) {
   const ref = useRef<HTMLDivElement>(null);
   const pendingCol = useRef<number | null>(null);
 
@@ -43,7 +47,9 @@ export function useMedGridTab(addLine: () => void, lineCount: number) {
       if (!t.closest('[data-editgrid]')) return;
 
       // Ctrl/⌘+Enter — añadir línea explícita (el input ya confirma su valor).
+      // Sin `addLine` (grid sin alta al final): no-op, deja el evento nativo.
       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        if (!addLine) return;
         e.preventDefault();
         pendingCol.current = colOf(t) ?? 0;
         addLine();
@@ -57,12 +63,12 @@ export function useMedGridTab(addLine: () => void, lineCount: number) {
           e.preventDefault();
           armNextEdit(target);
           target.focus();
-        } else if (!e.shiftKey) {
+        } else if (!e.shiftKey && addLine) {
           e.preventDefault();
           pendingCol.current = 0; // primer campo de la fila nueva
           addLine();
         }
-        // Shift+Tab en el borde inicial: Tab nativo (sale del grid).
+        // Borde delantero sin `addLine`, o Shift+Tab en el borde inicial: Tab nativo (sale del grid).
       } else {
         // Enter: el input ya confirma en su propio onKeyDown; aquí solo movemos.
         const below = cellBelow(t, e.shiftKey ? -1 : 1);
@@ -70,11 +76,12 @@ export function useMedGridTab(addLine: () => void, lineCount: number) {
           e.preventDefault();
           armNextEdit(below);
           below.focus();
-        } else if (!e.shiftKey) {
+        } else if (!e.shiftKey && addLine) {
           e.preventDefault();
           pendingCol.current = colOf(t) ?? 0; // misma columna en la fila nueva
           addLine();
         }
+        // Borde inferior sin `addLine`: no-op (Enter nativo, sin efecto en un div).
       }
     },
     [addLine],

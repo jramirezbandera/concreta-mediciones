@@ -42,10 +42,18 @@ export function fmtEur(n: number | null | undefined, dec = 2): string {
  * Parsea un número escrito en formato español a `number`.
  * Quita espacios y separadores de miles (punto) y convierte la coma decimal
  * en punto. Devuelve `null` si no es un número válido. Inverso de `fmtNum`.
+ *
+ * Admite OMITIR el 0 de la parte entera de un decimal (agiliza el tecleo en
+ * obra): ",2" → 0,2 y "-,2" → −0,2. Se antepone el 0 ANTES de quitar los miles,
+ * para que la validación siga siendo estricta —"." sigue siendo separador de
+ * miles, así que "-.,5"/"..,5" y demás basura mixta se rechazan igual que antes.
+ * El punto tecleado como decimal lo convierte en coma `toDecimalComma` en el
+ * `onChange` de los inputs, así que aquí el separador decimal es siempre la coma.
  */
 export function parseEsNumber(input: string): number | null {
   const norm = input
     .replace(/\s/g, '')
+    .replace(/^(-?),/, '$10,') // coma inicial sin entero: ",2" → "0,2", "-,2" → "-0,2"
     .replace(/\./g, '') // separador de miles
     .replace(',', '.'); // coma decimal → punto
   // T-6: validar la cadena COMPLETA. `parseFloat` tragaba entrada malformada
