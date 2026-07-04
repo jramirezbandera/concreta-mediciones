@@ -582,7 +582,7 @@ export async function docxFor(target: PrintTarget, s: DocxState): Promise<DocxRe
       [
         ['Periodo', cl.period],
         ['Ejecución global', `${fmtNum(cl.totals.pctGlobal, 1)}%`],
-        ['Precios congelados', fechaCorta(cl.snapshotAt)],
+        ['Precios a fecha', fechaCorta(cl.snapshotAt)],
       ] as [string, string][]
     ).filter((p) => Boolean(p[1]));
     bloques = certBloques(cl);

@@ -266,7 +266,7 @@ export function buildCertXlsx(data: CertListado, meta: ObraMeta, firma: Firma): 
   const congelados = fechaCorta(data.snapshotAt);
   const extra: [string, string][] = [
     ['Periodo', data.period],
-    ['Precios congelados', congelados],
+    ['Precios a fecha', congelados],
   ];
   const rows: Row[] = metaRows(`Certificación de obra nº ${data.num}`, meta, extra);
   const header: Row = [

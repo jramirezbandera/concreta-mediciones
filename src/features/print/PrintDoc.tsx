@@ -105,7 +105,7 @@ export function PrintDoc({ target, onDone }: { target: PrintTarget; onDone: () =
           </span>
           {congelados && (
             <span>
-              <b>Precios congelados</b> {congelados}
+              <b>Precios a fecha</b> {congelados}
             </span>
           )}
         </>

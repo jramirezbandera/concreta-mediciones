@@ -109,7 +109,7 @@ describe('docxFor — certificación', () => {
     const xml = await xmlOf({ kind: 'cert', index: 0 }, state);
     expect(xml).toContain('CERTIFICACIÓN DE OBRA Nº 1');
     expect(xml).toContain('Mayo 2026');
-    expect(xml).toContain('Precios congelados');
+    expect(xml).toContain('Precios a fecha');
     expect(xml).toContain('10,00'); // precio congelado…
     expect(xml).not.toContain('99,00'); // …no el vivo
     expect(xml).toContain('Refuerzo'); // contradictorio

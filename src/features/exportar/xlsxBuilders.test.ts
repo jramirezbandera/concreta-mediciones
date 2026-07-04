@@ -160,7 +160,7 @@ describe('buildCertXlsx', () => {
   it('11 columnas, precios congelados en la cabecera y P.C. en filas', () => {
     expect(doc.columns).toHaveLength(11);
     const strings = cells(doc.rows).map((c) => c.value);
-    expect(strings).toContain('Precios congelados');
+    expect(strings).toContain('Precios a fecha');
     expect(strings).toContain('11/6/2026');
     expect(strings).toContain('P.C.');
   });
