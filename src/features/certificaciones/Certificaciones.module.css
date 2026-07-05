@@ -270,7 +270,14 @@
 }
 /* Capítulo/sub aislado sin nada que certificar (navegación desde el árbol). */
 .chapEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-12);
   padding: 18px var(--sp-24);
+}
+.chapEmptyText {
+  margin: 0;
   font-size: var(--fs-body);
   color: var(--text-secondary);
 }
@@ -778,12 +785,14 @@
   padding: var(--sp-20) var(--sp-24) 40px;
   align-items: start;
 }
+/* Paneles de resumen: sección contenida y quieta, no tarjeta flotante (F7).
+   Sin sombra, borde fino (--border-sub) y mismo fondo que el panel de capítulos
+   → los dos leen igual, agrupan sin gritar (densidad de app UI). */
 .summary {
   border-radius: 11px;
-  border: 1px solid var(--border-main);
-  background: var(--bg-elevated);
+  border: 1px solid var(--border-sub);
+  background: var(--bg-surface);
   padding: var(--sp-16);
-  box-shadow: var(--shadow-panel);
 }
 .sumHead {
   margin-bottom: var(--sp-12);
@@ -1054,7 +1063,7 @@
 
 .chapSummary {
   border-radius: 11px;
-  border: 1px solid var(--border-main);
+  border: 1px solid var(--border-sub);
   background: var(--bg-surface);
   overflow: hidden;
 }
