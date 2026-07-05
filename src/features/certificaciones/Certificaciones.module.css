@@ -52,7 +52,7 @@
 .liqLabel {
   font-size: var(--fs-badge);
   font-weight: 600;
-  color: var(--text-disabled);
+  color: var(--text-secondary);
   white-space: nowrap;
   text-align: right;
 }
@@ -74,7 +74,7 @@
 }
 .globalPct {
   font-size: var(--fs-table);
-  color: var(--text-disabled);
+  color: var(--text-secondary);
 }
 .globalPct .mono {
   color: var(--accent);
@@ -195,7 +195,7 @@
 .selSub {
   display: block;
   font-size: var(--fs-caption);
-  color: var(--text-disabled);
+  color: var(--text-secondary);
 }
 .selLiq {
   font-size: var(--fs-table);
@@ -255,7 +255,7 @@
 }
 .chapPct {
   font-size: var(--fs-caption);
-  color: var(--text-disabled);
+  color: var(--text-secondary);
 }
 .chapPct.full {
   color: var(--state-ok);
@@ -272,7 +272,7 @@
 .chapEmpty {
   padding: 18px var(--sp-24);
   font-size: var(--fs-body);
-  color: var(--text-disabled);
+  color: var(--text-secondary);
 }
 .tableWrap {
   min-width: 0;
@@ -303,7 +303,7 @@
 }
 .code {
   font-size: var(--fs-caption);
-  color: var(--text-disabled);
+  color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -508,7 +508,7 @@
 }
 .pctPct {
   font-size: var(--fs-caption);
-  color: var(--text-disabled);
+  color: var(--text-secondary);
 }
 .pctPct.over {
   color: var(--state-warn);
@@ -549,7 +549,7 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text-disabled);
+  color: var(--text-secondary);
   margin-bottom: var(--sp-6);
 }
 .detailDesc {
@@ -752,7 +752,7 @@
 }
 .detailMedDims {
   font-size: var(--fs-table);
-  color: var(--text-disabled);
+  color: var(--text-secondary);
   flex-shrink: 0;
 }
 .detailMedParcial {
@@ -766,7 +766,7 @@
 .detailEmpty {
   font-size: var(--fs-table);
   font-style: italic;
-  color: var(--text-disabled);
+  color: var(--text-secondary);
   margin: 0;
 }
 
@@ -1038,11 +1038,11 @@
 .liqFinalLabel {
   font-size: var(--fs-badge);
   font-weight: 600;
-  color: var(--text-disabled);
+  color: var(--text-secondary);
 }
 .liqFinalSub {
   font-size: var(--fs-table);
-  color: var(--text-disabled);
+  color: var(--text-secondary);
   margin-top: var(--sp-2);
 }
 .liqFinalVal {
@@ -1119,7 +1119,7 @@
 }
 .chapSumBudget {
   font-size: var(--fs-caption);
-  color: var(--text-disabled);
+  color: var(--text-secondary);
 }
 .chapSumPct {
   font-size: var(--fs-table);
@@ -1178,7 +1178,7 @@
   margin-left: auto;
   font-size: var(--fs-table);
   font-weight: 600;
-  color: var(--text-disabled);
+  color: var(--text-secondary);
 }
 .cardsAdd {
   display: inline-flex;
@@ -1234,7 +1234,7 @@
 }
 .cardCode {
   font-size: var(--fs-caption);
-  color: var(--text-disabled);
+  color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1279,7 +1279,7 @@
 .cStatLabel {
   font-size: var(--fs-micro);
   font-weight: 600;
-  color: var(--text-disabled);
+  color: var(--text-secondary);
   margin-bottom: var(--sp-2);
 }
 .cStatVal {
