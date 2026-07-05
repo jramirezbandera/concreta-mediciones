@@ -1,7 +1,8 @@
-import { memo, type MouseEvent } from 'react';
+import { memo, type KeyboardEvent, type MouseEvent } from 'react';
 import { Badge, CiChip, ContraChip, EditableNum, EditableText, Icon, UdSelect } from '../../components';
 import { fmtNum, toEur } from '../../core/money';
 import type { Partida } from '../../core/types';
+import { armNextEdit, neighborEditCell } from '../../hooks/editGridNav';
 import { useJustRevealed } from '../../hooks/useJustRevealed';
 import { usePartidaRow } from '../../hooks/usePartidaRow';
 import { useObraStore } from '../../store';
@@ -15,6 +16,22 @@ import styles from './Presupuesto.module.css';
  *  vacío de la fila (incluida la banda de la descripción) siga seleccionando. */
 function stop(e: MouseEvent) {
   e.stopPropagation();
+}
+
+/** Tab / Shift+Tab dentro de una celda editable de la fila (Cantidad ↔ Precio):
+ *  pasa a la celda vecina y la ABRE en edición —como el grid de medición—, para
+ *  no tener que hacer click para editar. La fila es su propio `[data-editgrid]`;
+ *  fuera de esas celdas (título, ud) el `from` no está en un `[data-editfield]`
+ *  → `neighborEditCell` devuelve null y el Tab nativo sigue su curso. */
+function tabEditCells(e: KeyboardEvent<HTMLTableRowElement>) {
+  if (e.key !== 'Tab') return;
+  const t = e.target as HTMLElement;
+  if (t.tagName !== 'INPUT' && t.tagName !== 'TEXTAREA') return; // no en el input de edición
+  const next = neighborEditCell(t, e.shiftKey ? -1 : 1);
+  if (!next) return; // borde de la fila: deja salir el foco (Tab nativo)
+  e.preventDefault();
+  armNextEdit(next);
+  next.focus();
 }
 
 /**
@@ -51,9 +68,12 @@ export const PartidaRow = memo(function PartidaRow({
     <>
       <tr
         id={`partida-${p.id}`}
+        data-editgrid=""
+        data-editrow=""
         className={`tcol ${styles.row} ${open ? `${styles.expanded} ${styles.selected}` : ''} ${justRevealed ? styles.justRevealed : ''}`}
         aria-selected={open}
         onClick={() => togglePartida(p.id)}
+        onKeyDown={tabEditCells}
       >
         <td className={styles.cNum}>
           <div className={styles.numFlex}>
@@ -95,6 +115,8 @@ export const PartidaRow = memo(function PartidaRow({
         </td>
         <td
           className={`mono ${styles.cQty}`}
+          data-editfield={sinMedicion ? '' : undefined}
+          data-col={sinMedicion ? 0 : undefined}
           title={sinMedicion ? 'Cantidad fija (sin líneas de medición)' : undefined}
         >
           {sinMedicion ? (
@@ -112,6 +134,8 @@ export const PartidaRow = memo(function PartidaRow({
         </td>
         <td
           className={styles.priceCellEdit}
+          data-editfield=""
+          data-col={1}
           title={
             isOverride
               ? `Precio fijado a mano (no coincide con su descompuesto: ${fmtNum(descompUnit)} €)`
