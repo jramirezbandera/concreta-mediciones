@@ -10,7 +10,7 @@
 .remember {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-8);
   margin-top: 14px;
   font-size: var(--fs-table);
   color: var(--text-secondary);
@@ -21,7 +21,7 @@
 }
 
 .cancel {
-  padding: 8px 16px;
+  padding: var(--sp-8) var(--sp-16);
   border: 1px solid var(--border-main);
   border-radius: 6px;
   background: transparent;
@@ -30,7 +30,7 @@
   cursor: pointer;
 }
 .secondary {
-  padding: 8px 16px;
+  padding: var(--sp-8) var(--sp-16);
   border: 1px solid var(--border-main);
   border-radius: 6px;
   background: transparent;
@@ -45,7 +45,7 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 8px 18px;
+  padding: var(--sp-8) 18px;
   border: none;
   border-radius: 6px;
   background: var(--accent);

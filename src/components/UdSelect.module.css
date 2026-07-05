@@ -6,8 +6,8 @@
 .trigger {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 4px 2px 6px;
+  gap: var(--sp-4);
+  padding: var(--sp-2) var(--sp-4) var(--sp-2) var(--sp-6);
   border-radius: 5px;
   border: 0;
   background: transparent;
@@ -42,8 +42,8 @@
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 9px;
+  gap: var(--sp-8);
+  padding: var(--sp-6) 9px;
   border-radius: 6px;
   border: 0;
   cursor: pointer;
@@ -75,14 +75,14 @@
 }
 
 .customRow {
-  margin-top: 4px;
-  padding-top: 6px;
+  margin-top: var(--sp-4);
+  padding-top: var(--sp-6);
   border-top: 1px solid var(--border-sub);
 }
 .customInput {
   width: 100%;
   border-radius: 5px;
-  padding: 5px 8px;
+  padding: 5px var(--sp-8);
   outline: none;
   font-size: var(--fs-table);
   font-family: inherit;

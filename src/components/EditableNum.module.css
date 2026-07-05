@@ -3,7 +3,7 @@
   width: 100%;
   text-align: right;
   border-radius: 4px;
-  padding: 3px 6px;
+  padding: 3px var(--sp-6);
   margin: -2px 0;
   border: 0;
   cursor: text;
@@ -28,7 +28,7 @@
   width: 100%;
   text-align: right;
   border-radius: 4px;
-  padding: 3px 6px;
+  padding: 3px var(--sp-6);
   margin: -2px 0;
   outline: none;
   font-size: var(--fs-table);

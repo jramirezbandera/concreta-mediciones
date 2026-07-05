@@ -6,7 +6,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: var(--sp-24);
 }
 /* Compacto: hoja inferior anclada al borde de abajo. */
 .sheet {
@@ -37,7 +37,7 @@
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-10);
   padding: 15px 18px;
   border-bottom: 1px solid var(--border-main);
 }
@@ -70,14 +70,14 @@
   padding: 18px 22px;
 }
 .sheet .body {
-  padding: 14px 16px;
+  padding: 14px var(--sp-16);
 }
 
 .footer {
   flex-shrink: 0;
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--sp-8);
   padding: 11px 18px;
   border-top: 1px solid var(--border-main);
   background: var(--bg-elevated);

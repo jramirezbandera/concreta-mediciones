@@ -12,13 +12,13 @@
 /* ---- cabecera ---- */
 .head {
   flex-shrink: 0;
-  padding: 10px 12px;
+  padding: var(--sp-10) var(--sp-12);
   border-bottom: 1px solid var(--border-main);
 }
 .headTop {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-8);
   margin-bottom: 9px;
 }
 .headTitle {
@@ -40,7 +40,7 @@
   align-items: center;
   gap: 9px;
   height: 38px;
-  padding: 0 10px;
+  padding: 0 var(--sp-10);
   border-radius: 8px;
   border: 1px solid var(--border-main);
   background: var(--bg-surface);
@@ -85,7 +85,7 @@
   left: 0;
   right: 0;
   z-index: 200;
-  padding: 6px;
+  padding: var(--sp-6);
   border-radius: 11px;
   background: var(--bg-surface);
   border: 1px solid var(--border-main);
@@ -95,8 +95,8 @@
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 9px;
+  gap: var(--sp-10);
+  padding: var(--sp-8) 9px;
   border-radius: 8px;
   border: 0;
   cursor: pointer;
@@ -130,14 +130,14 @@
 .srcDivider {
   height: 1px;
   background: var(--border-sub);
-  margin: 5px 8px;
+  margin: 5px var(--sp-8);
 }
 
 /* fila de fuente con acción de quitar (solo obras de referencia importadas) */
 .srcRow {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--sp-2);
 }
 .srcRow > .srcOpt {
   flex: 1 1 auto;
@@ -164,12 +164,12 @@
 
 /* ---- buscador ---- */
 .search {
-  margin-top: 8px;
+  margin-top: var(--sp-8);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-8);
   height: 34px;
-  padding: 0 10px;
+  padding: 0 var(--sp-10);
   border-radius: 8px;
   background: var(--bg-elevated);
   border: 1px solid var(--border-main);
@@ -189,7 +189,7 @@
   background: transparent;
   cursor: pointer;
   color: var(--text-disabled);
-  padding: 2px;
+  padding: var(--sp-2);
   display: inline-flex;
 }
 
@@ -197,16 +197,16 @@
 .tree {
   flex: 1;
   overflow-y: auto;
-  padding: 8px 8px 12px;
+  padding: var(--sp-8) var(--sp-8) var(--sp-12);
 }
 .chap {
-  margin-bottom: 2px;
+  margin-bottom: var(--sp-2);
 }
 .chapRow {
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 7px 8px;
+  padding: 7px var(--sp-8);
   border-radius: 7px;
   cursor: grab;
 }
@@ -268,7 +268,7 @@
 .partList {
   /* La sangría se ACUMULA por nivel (los partList se anidan): cada subcapítulo
      queda más adentro que su padre, dejando ver la jerarquía del banco. */
-  padding-left: 12px;
+  padding-left: var(--sp-12);
   display: flex;
   flex-direction: column;
   gap: 1px;
@@ -289,7 +289,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 7px 8px 7px 6px;
+  padding: 7px var(--sp-8) 7px var(--sp-6);
   border-radius: 7px;
   cursor: grab;
   border: 1px solid transparent;
@@ -391,10 +391,10 @@
 
 /* ---- detalle de partida (descripción + descomposición) ---- */
 .partDetail {
-  padding: 4px 12px 12px 32px;
+  padding: var(--sp-4) var(--sp-12) var(--sp-12) 32px;
 }
 .partDesc {
-  margin: 4px 0 10px;
+  margin: var(--sp-4) 0 var(--sp-10);
   font-size: var(--fs-table);
   line-height: 1.6;
   color: var(--text-secondary);
@@ -409,13 +409,13 @@
   font-size: var(--fs-micro);
   font-weight: 600;
   color: var(--text-disabled);
-  padding: 7px 10px 5px;
+  padding: 7px var(--sp-10) 5px;
 }
 .descompRow {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 5px 10px;
+  gap: var(--sp-8);
+  padding: 5px var(--sp-10);
   border-top: 1px solid var(--border-sub);
 }
 .descompDesc {
@@ -443,14 +443,14 @@
 .partDetailActions {
   display: flex;
   justify-content: flex-end;
-  margin-top: 8px;
+  margin-top: var(--sp-8);
 }
 .partCopyBig {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-6);
   height: 30px;
-  padding: 0 12px;
+  padding: 0 var(--sp-12);
   border-radius: 7px;
   border: 0;
   cursor: pointer;
@@ -464,19 +464,19 @@
 /* ---- barra de acción ---- */
 .actionBar {
   flex-shrink: 0;
-  padding: 10px 12px;
+  padding: var(--sp-10) var(--sp-12);
   border-top: 1px solid var(--border-main);
   background: var(--bg-elevated);
 }
 .selBox {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--sp-8);
 }
 .selInfo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-10);
 }
 .selText {
   font-size: var(--fs-table);
@@ -566,8 +566,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 28px 16px;
+  gap: var(--sp-8);
+  padding: 28px var(--sp-16);
   color: var(--text-secondary);
   font-size: var(--fs-body);
   text-align: center;
@@ -579,7 +579,7 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 12px;
+  gap: var(--sp-12);
   padding: 34px 22px;
   color: var(--text-secondary);
 }

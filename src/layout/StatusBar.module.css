@@ -13,7 +13,7 @@
 
 .group {
   display: flex;
-  gap: 16px;
+  gap: var(--sp-16);
   align-items: center;
 }
 
@@ -49,7 +49,7 @@
   align-items: center;
   gap: 5px;
   max-width: 280px;
-  padding: 1px 4px 1px 7px;
+  padding: 1px var(--sp-4) 1px 7px;
   border-radius: 5px;
   background: var(--accent-soft);
   color: var(--accent);

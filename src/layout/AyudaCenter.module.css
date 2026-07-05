@@ -5,7 +5,7 @@
 /* ---------- pestañas (segmented) ----------------------------------------- */
 .seg {
   display: inline-flex;
-  gap: 2px;
+  gap: var(--sp-2);
   padding: 3px;
   margin-bottom: 14px;
   border-radius: 9px;
@@ -20,7 +20,7 @@
   font-size: var(--fs-table);
   font-weight: 500;
   color: var(--text-secondary);
-  padding: 6px 12px;
+  padding: var(--sp-6) var(--sp-12);
   border-radius: 7px;
 }
 .segBtn.on {
@@ -37,7 +37,7 @@
   gap: 18px;
 }
 .stackHead {
-  margin-bottom: 8px;
+  margin-bottom: var(--sp-8);
 }
 
 /* ---------- primeros pasos ----------------------------------------------- */
@@ -53,7 +53,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--sp-10);
 }
 .step {
   display: flex;
@@ -103,7 +103,7 @@
   font-size: var(--fs-table);
   font-weight: 600;
   cursor: pointer;
-  padding: 5px 10px;
+  padding: 5px var(--sp-10);
   border-radius: 7px;
   white-space: nowrap;
 }
@@ -115,12 +115,12 @@
 .featGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: var(--sp-12);
 }
 .feat {
   display: flex;
-  gap: 10px;
-  padding: 12px;
+  gap: var(--sp-10);
+  padding: var(--sp-12);
   border-radius: 10px;
   border: 1px solid var(--border-main);
   background: var(--bg-elevated);
@@ -144,32 +144,32 @@
   font-size: var(--fs-table);
   line-height: 1.5;
   color: var(--text-secondary);
-  margin-top: 2px;
+  margin-top: var(--sp-2);
 }
 
 /* ---------- atajos -------------------------------------------------------- */
 .groups {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--sp-16);
 }
 .group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--sp-4);
 }
 .groupTitle {
-  margin-bottom: 4px;
+  margin-bottom: var(--sp-4);
 }
 .row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 4px 0;
+  gap: var(--sp-12);
+  padding: var(--sp-4) 0;
 }
 .keys {
   display: inline-flex;
-  gap: 4px;
+  gap: var(--sp-4);
   flex-shrink: 0;
   min-width: 92px;
 }
@@ -179,7 +179,7 @@
   justify-content: center;
   min-width: 22px;
   height: 22px;
-  padding: 0 6px;
+  padding: 0 var(--sp-6);
   border-radius: 6px;
   background: var(--bg-elevated);
   border: 1px solid var(--border-main);

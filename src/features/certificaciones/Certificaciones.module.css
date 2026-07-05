@@ -21,7 +21,7 @@
 
 /* ---------- cabecera (selector + periodo + líquido + toggle) -------------- */
 .header {
-  padding: 14px 24px 14px;
+  padding: 14px var(--sp-24) 14px;
   border-bottom: 1px solid var(--border-main);
   background: var(--bg-surface);
   position: sticky;
@@ -32,20 +32,20 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--sp-12);
   flex-wrap: wrap;
 }
 .headerLeft {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-10);
   min-width: 0;
   flex-wrap: wrap;
 }
 .period {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-6);
   font-size: var(--fs-body);
   color: var(--text-secondary);
 }
@@ -66,11 +66,11 @@
   text-align: right;
 }
 .headerBottom {
-  margin-top: 12px;
+  margin-top: var(--sp-12);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--sp-12);
 }
 .globalPct {
   font-size: var(--fs-table);
@@ -93,7 +93,7 @@
 }
 .segBtn {
   height: 28px;
-  padding: 0 12px;
+  padding: 0 var(--sp-12);
   border-radius: 7px;
   border: 0;
   cursor: pointer;
@@ -117,9 +117,9 @@
 .selBtn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-8);
   height: 34px;
-  padding: 0 12px;
+  padding: 0 var(--sp-12);
   border-radius: 8px;
   border: 1px solid var(--border-main);
   background: var(--bg-surface);
@@ -135,21 +135,21 @@
   left: 0;
   width: 300px;
   z-index: 200;
-  padding: 6px;
+  padding: var(--sp-6);
   border-radius: 11px;
   background: var(--bg-surface);
   border: 1px solid var(--border-main);
   box-shadow: var(--shadow-float);
 }
 .selHead {
-  padding: 6px 10px;
+  padding: var(--sp-6) var(--sp-10);
 }
 .selItem {
   width: 100%;
   display: flex;
   align-items: center;
   gap: 11px;
-  padding: 8px 10px;
+  padding: var(--sp-8) var(--sp-10);
   border-radius: 8px;
   border: 0;
   cursor: pointer;
@@ -209,7 +209,7 @@
 .selDivider {
   height: 1px;
   background: var(--border-sub);
-  margin: 5px 8px;
+  margin: 5px var(--sp-8);
 }
 .selAdd {
   color: var(--accent);
@@ -221,17 +221,17 @@
 
 /* ---------- banda de capítulo + tabla ------------------------------------ */
 .chapBand {
-  padding: 10px 24px;
+  padding: var(--sp-10) var(--sp-24);
   background: var(--bg-elevated);
   border-top: 1px solid var(--border-main);
   border-bottom: 1px solid var(--border-main);
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--sp-12);
 }
 .chapCode {
   font-size: var(--fs-caption);
-  padding: 2px 7px;
+  padding: var(--sp-2) 7px;
   border-radius: 4px;
   background: var(--bg-surface);
   border: 1px solid var(--border-main);
@@ -270,7 +270,7 @@
 }
 /* Capítulo/sub aislado sin nada que certificar (navegación desde el árbol). */
 .chapEmpty {
-  padding: 18px 24px;
+  padding: 18px var(--sp-24);
   font-size: var(--fs-body);
   color: var(--text-disabled);
 }
@@ -289,7 +289,7 @@
   text-align: right;
 }
 .cell {
-  padding: 10px 8px;
+  padding: var(--sp-10) var(--sp-8);
   vertical-align: middle;
 }
 .cNum {
@@ -314,7 +314,7 @@
 .descInner {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-8);
 }
 .title {
   font-size: var(--fs-body);
@@ -332,30 +332,30 @@
   width: 92px;
   font-size: var(--fs-table);
   color: var(--text-secondary);
-  padding-left: 4px;
-  padding-right: 4px;
+  padding-left: var(--sp-4);
+  padding-right: var(--sp-4);
 }
 .cExec {
   width: 96px;
-  padding-left: 4px;
-  padding-right: 4px;
+  padding-left: var(--sp-4);
+  padding-right: var(--sp-4);
 }
 .cPct {
   width: 150px;
-  padding-right: 12px;
+  padding-right: var(--sp-12);
 }
 .cPrice {
   text-align: right;
   width: 84px;
   font-size: var(--fs-table);
   color: var(--text-secondary);
-  padding-left: 4px;
-  padding-right: 4px;
+  padding-left: var(--sp-4);
+  padding-right: var(--sp-4);
 }
 .cAbono {
   text-align: right;
   width: 116px;
-  padding-right: 20px;
+  padding-right: var(--sp-20);
   font-size: var(--fs-body);
   font-weight: 600;
   color: var(--text-primary);
@@ -367,9 +367,9 @@
 .pcBadge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--sp-4);
   flex-shrink: 0;
-  padding: 1px 6px 1px 5px;
+  padding: 1px var(--sp-6) 1px 5px;
   border-radius: 5px;
   font-size: var(--fs-badge);
   font-weight: 600;
@@ -381,13 +381,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--sp-8);
 }
 .extraDel {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 2px;
+  padding: var(--sp-2);
   border: 0;
   border-radius: 4px;
   background: transparent;
@@ -405,9 +405,9 @@
 .addBtn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-6);
   width: 100%;
-  padding: 8px 16px;
+  padding: var(--sp-8) var(--sp-16);
   border: 0;
   background: transparent;
   color: var(--text-disabled);
@@ -444,7 +444,7 @@
   color: var(--text-primary);
 }
 .subImporte {
-  padding: 9px 20px 9px 8px;
+  padding: 9px var(--sp-20) 9px var(--sp-8);
   text-align: right;
   font-size: var(--fs-table);
   font-weight: 600;
@@ -455,7 +455,7 @@
 .pctBar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-8);
   justify-content: flex-end;
 }
 .pctTrack {
@@ -493,7 +493,7 @@
 .pctDash {
   display: block;
   text-align: right;
-  padding-right: 10px;
+  padding-right: var(--sp-10);
   font-size: var(--fs-table);
   color: var(--text-disabled);
 }
@@ -527,7 +527,7 @@
 .numFlex {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-8);
 }
 .chev {
   flex-shrink: 0;
@@ -540,7 +540,7 @@
   padding: 0;
 }
 .detail {
-  padding: 12px 24px 16px;
+  padding: var(--sp-12) var(--sp-24) var(--sp-16);
   background: var(--bg-elevated);
   border-bottom: 1px solid var(--border-main);
 }
@@ -550,7 +550,7 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-disabled);
-  margin-bottom: 6px;
+  margin-bottom: var(--sp-6);
 }
 .detailDesc {
   font-size: var(--fs-body);
@@ -568,8 +568,8 @@
 .detailMedRow {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 7px 12px;
+  gap: var(--sp-12);
+  padding: 7px var(--sp-12);
   border-top: 1px solid var(--border-sub);
 }
 .detailMedRow:first-child {
@@ -624,7 +624,7 @@
 .pctCellInner {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-8);
 }
 .pctBarWrap {
   flex: 1;
@@ -669,9 +669,9 @@
 .massBtn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-6);
   height: 28px;
-  padding: 0 12px;
+  padding: 0 var(--sp-12);
   border-radius: 7px;
   border: 1px solid var(--border-main);
   background: var(--bg-surface);
@@ -695,7 +695,7 @@
   padding-left: 18px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--sp-6);
   font-size: var(--fs-body);
   color: var(--text-primary);
 }
@@ -706,7 +706,7 @@
   color: var(--text-disabled);
 }
 .mcCancel {
-  padding: 8px 16px;
+  padding: var(--sp-8) var(--sp-16);
   border: 1px solid var(--border-main);
   border-radius: 6px;
   background: transparent;
@@ -722,7 +722,7 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 8px 18px;
+  padding: var(--sp-8) 18px;
   border: none;
   border-radius: 6px;
   background: var(--state-ok);
@@ -774,19 +774,19 @@
 .summaryGrid {
   display: grid;
   grid-template-columns: 1.1fr 0.9fr;
-  gap: 16px;
-  padding: 20px 24px 40px;
+  gap: var(--sp-16);
+  padding: var(--sp-20) var(--sp-24) 40px;
   align-items: start;
 }
 .summary {
   border-radius: 11px;
   border: 1px solid var(--border-main);
   background: var(--bg-elevated);
-  padding: 16px;
+  padding: var(--sp-16);
   box-shadow: var(--shadow-panel);
 }
 .sumHead {
-  margin-bottom: 12px;
+  margin-bottom: var(--sp-12);
 }
 .sumGroup {
   display: flex;
@@ -796,13 +796,13 @@
 .sumDivider {
   height: 1px;
   background: var(--border-main);
-  margin: 12px 0;
+  margin: var(--sp-12) 0;
 }
 .sumRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--sp-10);
 }
 .sumLabel {
   display: flex;
@@ -842,7 +842,7 @@
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 2px 0 4px;
+  padding: var(--sp-2) 0 var(--sp-4);
 }
 .globalBarTrack {
   flex: 1;
@@ -865,8 +865,8 @@
 .retInput {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  padding: 1px 4px;
+  gap: var(--sp-2);
+  padding: 1px var(--sp-4);
   border-radius: 5px;
   background: var(--bg-surface);
   border: 1px solid var(--border-main);
@@ -879,8 +879,8 @@
 .ajuste {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 7px 8px;
+  gap: var(--sp-6);
+  padding: 7px var(--sp-8);
   border-radius: 7px;
   background: var(--bg-surface);
   border: 1px solid var(--border-main);
@@ -888,7 +888,7 @@
 .ajusteTop {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-6);
 }
 .ajusteConcepto {
   flex: 1;
@@ -900,12 +900,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--sp-8);
 }
 .ajusteControls {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-6);
 }
 .ajNeg {
   color: var(--state-warn);
@@ -917,7 +917,7 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 1px 4px;
+  padding: 1px var(--sp-4);
   border-radius: 5px;
   background: var(--bg-elevated);
   border: 1px solid var(--border-main);
@@ -941,7 +941,7 @@
 }
 .segToggle button {
   min-width: 19px;
-  padding: 1px 6px;
+  padding: 1px var(--sp-6);
   border: 0;
   border-radius: 4px;
   background: transparent;
@@ -974,7 +974,7 @@
 .ajusteRecur {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--sp-4);
   font-size: var(--fs-caption);
   color: var(--text-disabled);
   cursor: pointer;
@@ -1014,8 +1014,8 @@
 .ajusteAdd {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 2px;
+  gap: var(--sp-6);
+  padding: var(--sp-4) var(--sp-2);
   border: none;
   background: transparent;
   color: var(--accent);
@@ -1043,7 +1043,7 @@
 .liqFinalSub {
   font-size: var(--fs-table);
   color: var(--text-disabled);
-  margin-top: 2px;
+  margin-top: var(--sp-2);
 }
 .liqFinalVal {
   font-size: var(--fs-hero);
@@ -1059,18 +1059,18 @@
   overflow: hidden;
 }
 .chapSumHead {
-  padding: 13px 16px 10px;
+  padding: 13px var(--sp-16) var(--sp-10);
 }
 .chapSumRow {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
+  gap: var(--sp-12);
+  padding: var(--sp-10) var(--sp-16);
   border-top: 1px solid var(--border-sub);
 }
 .chapSumCode {
   font-size: var(--fs-caption);
-  padding: 2px 6px;
+  padding: var(--sp-2) var(--sp-6);
   border-radius: 4px;
   background: var(--bg-elevated);
   border: 1px solid var(--border-main);
@@ -1147,19 +1147,19 @@
   grid-template-columns: 1fr;
 }
 .cards {
-  padding: 12px;
+  padding: var(--sp-12);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--sp-10);
 }
 .cardsSubHead {
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 10px 2px 0;
+  padding: var(--sp-10) var(--sp-2) 0;
 }
 .cardsSubHead.first {
-  padding-top: 2px;
+  padding-top: var(--sp-2);
 }
 .cardsSubCode {
   font-size: var(--fs-table);
@@ -1210,7 +1210,7 @@
   background: color-mix(in srgb, var(--state-warn) 4%, var(--bg-surface));
 }
 .cardHead {
-  padding: 12px 13px 13px;
+  padding: var(--sp-12) 13px 13px;
 }
 .card:not(.extraCard) .cardHead {
   cursor: pointer;
@@ -1225,7 +1225,7 @@
   flex: 1;
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--sp-8);
 }
 .cardPos {
   font-size: var(--fs-table);
@@ -1248,9 +1248,9 @@
 .cardTitleRow {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: var(--sp-8);
   margin-top: 9px;
-  padding-left: 24px;
+  padding-left: var(--sp-24);
 }
 .card .cardTitle {
   font-size: var(--fs-body);
@@ -1261,7 +1261,7 @@
   display: flex;
   align-items: stretch;
   margin-top: 11px;
-  margin-left: 24px;
+  margin-left: var(--sp-24);
   border: 1px solid var(--border-sub);
   border-radius: 8px;
   background: var(--bg-primary);
@@ -1270,7 +1270,7 @@
 .cStat {
   flex: 1;
   min-width: 0;
-  padding: 7px 10px;
+  padding: 7px var(--sp-10);
   border-right: 1px solid var(--border-sub);
 }
 .cStat.last {
@@ -1280,7 +1280,7 @@
   font-size: var(--fs-micro);
   font-weight: 600;
   color: var(--text-disabled);
-  margin-bottom: 2px;
+  margin-bottom: var(--sp-2);
 }
 .cStatVal {
   font-size: var(--fs-table);
@@ -1290,9 +1290,9 @@
 .cardExec {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-top: 10px;
-  margin-left: 24px;
+  gap: var(--sp-12);
+  margin-top: var(--sp-10);
+  margin-left: var(--sp-24);
 }
 .cExecField {
   flex-shrink: 0;

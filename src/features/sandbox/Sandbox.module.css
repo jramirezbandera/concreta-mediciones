@@ -12,8 +12,8 @@
   height: 48px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 0 16px;
+  gap: var(--sp-12);
+  padding: 0 var(--sp-16);
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border-main);
 }
@@ -21,7 +21,7 @@
 .back {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-6);
   height: 30px;
   padding: 0 11px;
   border-radius: 6px;
@@ -48,13 +48,13 @@
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-10);
 }
 
 .content {
   max-width: 940px;
   margin: 0 auto;
-  padding: 28px 24px 80px;
+  padding: 28px var(--sp-24) 80px;
   display: flex;
   flex-direction: column;
   gap: 30px;
@@ -68,23 +68,23 @@
 }
 
 .sectionHead {
-  padding: 12px 16px;
+  padding: var(--sp-12) var(--sp-16);
   border-bottom: 1px solid var(--border-sub);
   background: var(--bg-elevated);
 }
 
 .sectionBody {
-  padding: 18px 16px;
+  padding: 18px var(--sp-16);
   display: flex;
   flex-wrap: wrap;
-  gap: 18px 24px;
+  gap: 18px var(--sp-24);
   align-items: center;
 }
 
 .cell {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--sp-6);
 }
 
 .cellLabel {
@@ -99,7 +99,7 @@
   min-width: 130px;
   border: 1px solid var(--border-main);
   border-radius: 7px;
-  padding: 6px 8px;
+  padding: var(--sp-6) var(--sp-8);
 }
 
 .barCol {
@@ -109,7 +109,7 @@
 .iconGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
-  gap: 10px;
+  gap: var(--sp-10);
   width: 100%;
 }
 
@@ -117,8 +117,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 12px 6px;
+  gap: var(--sp-6);
+  padding: var(--sp-12) var(--sp-6);
   border-radius: 8px;
   border: 1px solid var(--border-sub);
   color: var(--text-secondary);
@@ -131,7 +131,7 @@
 
 .swatches {
   display: flex;
-  gap: 8px;
+  gap: var(--sp-8);
 }
 .swatch {
   width: 26px;
@@ -148,7 +148,7 @@
 .themeBtn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-6);
   height: 30px;
   padding: 0 11px;
   border-radius: 6px;

@@ -10,7 +10,7 @@
   align-items: center;
   gap: 7px;
   max-width: calc(100vw - 24px);
-  padding: 8px 14px;
+  padding: var(--sp-8) 14px;
   border-radius: 8px;
   background: var(--bg-elevated);
   border: 1px solid var(--border-main);
@@ -28,14 +28,14 @@
 /* Botón de acción (p.ej. «Deshacer»): el toast no captura clicks, este sí. */
 .toastAction {
   pointer-events: auto;
-  margin-left: 4px;
+  margin-left: var(--sp-4);
   border: 0;
   background: transparent;
   color: var(--accent);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
-  padding: 2px 6px;
+  padding: var(--sp-2) var(--sp-6);
   border-radius: 5px;
 }
 .toastAction:hover {

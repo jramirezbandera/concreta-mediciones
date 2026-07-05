@@ -4,17 +4,17 @@
 .list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--sp-8);
 }
 .row {
-  padding: 10px;
+  padding: var(--sp-10);
   border: 1px solid var(--border-sub);
   border-radius: 10px;
 }
 .rowHead {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--sp-8);
   min-width: 0;
 }
 .code {
@@ -32,8 +32,8 @@
 }
 .compare {
   display: flex;
-  gap: 16px;
-  margin: 6px 0 10px;
+  gap: var(--sp-16);
+  margin: var(--sp-6) 0 var(--sp-10);
 }
 .cell {
   font-size: var(--fs-table);
@@ -64,7 +64,7 @@
 }
 
 .cancel {
-  padding: 8px 16px;
+  padding: var(--sp-8) var(--sp-16);
   border: 1px solid var(--border-main);
   border-radius: 6px;
   background: transparent;
@@ -76,7 +76,7 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 8px 18px;
+  padding: var(--sp-8) 18px;
   border: none;
   border-radius: 6px;
   background: var(--accent);

@@ -7,10 +7,10 @@
 .page {
   max-width: 880px;
   margin: 0 auto;
-  padding: 24px 32px;
+  padding: var(--sp-24) 32px;
 }
 .compact .page {
-  padding: 16px;
+  padding: var(--sp-16);
 }
 
 .kicker {
@@ -18,7 +18,7 @@
   font-weight: 600;
   letter-spacing: 0.11em;
   color: var(--accent);
-  margin-bottom: 6px;
+  margin-bottom: var(--sp-6);
 }
 .title {
   font-size: var(--fs-hero);
@@ -39,15 +39,15 @@
   box-shadow: var(--shadow-panel);
 }
 .compact .sheet {
-  padding: 16px;
+  padding: var(--sp-16);
 }
 
 /* desglose por capítulos */
 .chapRow {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 0;
+  gap: var(--sp-10);
+  padding: var(--sp-8) 0;
   border-bottom: 1px solid var(--border-sub);
 }
 .chapCode {
@@ -68,7 +68,7 @@
 .leader {
   flex: 1;
   border-bottom: 1px dotted var(--border-main);
-  margin: 0 4px;
+  margin: 0 var(--sp-4);
   transform: translateY(-3px);
 }
 .chapPct {
@@ -92,14 +92,14 @@
 
 /* totales */
 .totals {
-  margin-top: 16px;
+  margin-top: var(--sp-16);
 }
 .pemRow {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
-  padding: 10px 0;
+  gap: var(--sp-12);
+  padding: var(--sp-10) 0;
   border-top: 2px solid var(--border-main);
 }
 .pemLabel {
@@ -117,14 +117,14 @@
 .pctRow {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--sp-12);
   padding: 9px 0;
   border-top: 1px solid var(--border-sub);
 }
 .pctLeft {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-8);
   min-width: 0;
 }
 .swatch {
@@ -140,8 +140,8 @@
 .pctEdit {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  padding: 1px 6px 1px 4px;
+  gap: var(--sp-2);
+  padding: 1px var(--sp-6) 1px var(--sp-4);
   border-radius: 6px;
   background: var(--bg-elevated);
   border: 1px solid var(--border-main);
@@ -170,7 +170,7 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--sp-12);
   padding: 9px 0;
   border-top: 1px solid var(--border-sub);
 }
@@ -200,8 +200,8 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
-  padding: 14px 0 2px;
+  gap: var(--sp-12);
+  padding: 14px 0 var(--sp-2);
   border-top: 1px solid var(--border-main);
 }
 .bigLabel {
@@ -219,7 +219,7 @@
 
 /* observaciones */
 .notesCard {
-  margin-top: 16px;
+  margin-top: var(--sp-16);
   border-radius: 12px;
   border: 1px solid var(--border-main);
   background: var(--bg-surface);
@@ -227,7 +227,7 @@
   box-shadow: var(--shadow-panel);
 }
 .compact .notesCard {
-  padding: 14px 16px;
+  padding: 14px var(--sp-16);
 }
 .notesArea {
   width: 100%;
@@ -263,7 +263,7 @@
   max-width: 320px;
 }
 .emptyIcon {
-  margin: 0 auto 12px;
+  margin: 0 auto var(--sp-12);
   width: 48px;
   height: 48px;
   border-radius: 12px;
@@ -281,7 +281,7 @@
 .emptyText {
   font-size: var(--fs-table);
   color: var(--text-secondary);
-  margin-top: 4px;
+  margin-top: var(--sp-4);
   line-height: 1.5;
 }
 .emptyBtn {

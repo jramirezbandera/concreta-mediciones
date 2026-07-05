@@ -4,7 +4,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--sp-8);
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border-main);
 }
@@ -32,7 +32,7 @@
   width: 1px;
   height: 18px;
   background: var(--border-main);
-  margin: 0 4px;
+  margin: 0 var(--sp-4);
 }
 
 .kicker {
@@ -52,7 +52,7 @@
   border: 0;
   background: transparent;
   cursor: pointer;
-  padding: 2px 6px;
+  padding: var(--sp-2) var(--sp-6);
   border-radius: 5px;
   font-family: inherit;
   font-size: var(--fs-body);
@@ -71,7 +71,7 @@
   display: flex;
   align-items: stretch;
   height: 100%;
-  gap: 2px;
+  gap: var(--sp-2);
 }
 
 .tab {
@@ -104,7 +104,7 @@
 .actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-6);
   justify-content: flex-end;
   flex-shrink: 0;
 }
@@ -112,7 +112,7 @@
 .refBtn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-6);
   height: 30px;
   padding: 0 11px;
   border-radius: 6px;

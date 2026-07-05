@@ -7,7 +7,7 @@
    =========================================================================== */
 .wrap {
   position: relative;
-  padding: 12px 10px 10px;
+  padding: var(--sp-12) var(--sp-10) var(--sp-10);
   border-bottom: 1px solid var(--border-main);
 }
 
@@ -15,9 +15,9 @@
 .search {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-8);
   height: 34px;
-  padding: 0 10px;
+  padding: 0 var(--sp-10);
   border-radius: 8px;
   background: var(--bg-elevated);
   border: 1px solid var(--border-main);
@@ -40,7 +40,7 @@
   background: transparent;
   cursor: pointer;
   color: var(--text-disabled);
-  padding: 2px;
+  padding: var(--sp-2);
   display: inline-flex;
 }
 .clear:hover {
@@ -53,7 +53,7 @@
   z-index: 300;
   max-height: min(60vh, 380px);
   overflow-y: auto;
-  padding: 6px;
+  padding: var(--sp-6);
   border-radius: 11px;
   background: var(--bg-surface);
   border: 1px solid var(--border-main);
@@ -63,7 +63,7 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--sp-2);
   padding: 7px 9px;
   border-radius: 8px;
   border: 0;
@@ -79,7 +79,7 @@
 .optTop {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--sp-8);
   min-width: 0;
 }
 .optCode {
@@ -113,13 +113,13 @@
 
 /* ---- estados ------------------------------------------------------------ */
 .empty {
-  padding: 12px 10px;
+  padding: var(--sp-12) var(--sp-10);
   font-size: var(--fs-table);
   color: var(--text-secondary);
   text-align: center;
 }
 .more {
-  padding: 7px 9px 4px;
+  padding: 7px 9px var(--sp-4);
   font-size: var(--fs-caption);
   color: var(--text-disabled);
   text-align: center;

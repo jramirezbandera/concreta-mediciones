@@ -1,14 +1,14 @@
 .section {
-  margin-bottom: 20px;
+  margin-bottom: var(--sp-20);
 }
 .section:last-child {
-  margin-bottom: 4px;
+  margin-bottom: var(--sp-4);
 }
 
 .secHead {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-8);
   margin-bottom: 11px;
   color: var(--accent);
 }
@@ -25,7 +25,7 @@
 .field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--sp-4);
   min-width: 0;
 }
 .full {
@@ -40,7 +40,7 @@
 .input {
   height: 34px;
   border-radius: 7px;
-  padding: 0 10px;
+  padding: 0 var(--sp-10);
   outline: none;
   font-size: var(--fs-body);
   color: var(--text-primary);
@@ -56,7 +56,7 @@
 
 .done {
   height: 34px;
-  padding: 0 16px;
+  padding: 0 var(--sp-16);
   border-radius: 7px;
   border: 0;
   cursor: pointer;
@@ -71,24 +71,24 @@
 .dfList {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--sp-8);
 }
 .dfRow {
   display: flex;
-  gap: 8px;
+  gap: var(--sp-8);
   align-items: flex-end;
 }
 .dfField {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--sp-4);
   min-width: 0;
   flex: 1;
 }
 .dfColegiado {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--sp-4);
   min-width: 0;
   flex: 0 0 120px;
 }
@@ -115,7 +115,7 @@
   align-items: stretch;
   border: 1px solid var(--border-sub);
   border-radius: 9px;
-  padding: 10px;
+  padding: var(--sp-10);
 }
 .dfRowCompact .dfColegiado {
   flex: 1;
@@ -126,10 +126,10 @@
 .dfAdd {
   align-self: flex-start;
   height: 30px;
-  padding: 0 12px;
+  padding: 0 var(--sp-12);
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-6);
   border-radius: 7px;
   border: 1px dashed var(--border-main);
   background: transparent;

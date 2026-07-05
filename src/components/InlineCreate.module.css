@@ -1,8 +1,8 @@
 .wrap {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
+  gap: var(--sp-6);
+  padding: var(--sp-4) var(--sp-8);
 }
 
 .input {
@@ -10,7 +10,7 @@
   min-width: 0;
   height: 28px;
   border-radius: 5px;
-  padding: 0 8px;
+  padding: 0 var(--sp-8);
   font-size: var(--fs-table);
   color: var(--text-primary);
   background: var(--bg-primary);
