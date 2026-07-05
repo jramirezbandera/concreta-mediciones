@@ -173,11 +173,22 @@ function CertRow({
       >
         <td className={`${styles.cell} ${styles.cNum}`}>
           <div className={styles.numFlex}>
-            <Icon
-              name={expanded ? 'chevronDown' : 'chevron'}
-              size={13}
-              className={`${styles.chev} ${expanded ? styles.open : ''}`}
-            />
+            <button
+              type="button"
+              className={`tap-target ${styles.chevBtn}`}
+              aria-expanded={expanded}
+              aria-label={expanded ? `Contraer ${p.title}` : `Desplegar ${p.title}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpanded((v) => !v);
+              }}
+            >
+              <Icon
+                name={expanded ? 'chevronDown' : 'chevron'}
+                size={13}
+                className={`${styles.chev} ${expanded ? styles.open : ''}`}
+              />
+            </button>
             <div>
               <div className={`mono ${styles.pos}`}>{p.pos}</div>
               <div className={`mono ${styles.code}`}>{p.code}</div>
@@ -328,7 +339,7 @@ function CertExtraRow({
           {fmtNum(toEur(abono))}
           <button
             type="button"
-            className={styles.extraDel}
+            className={`tap-target ${styles.extraDel}`}
             aria-label="Eliminar contradictorio"
             onClick={() => deleteContradictorio(e.id)}
           >

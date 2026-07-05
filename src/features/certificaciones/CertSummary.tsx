@@ -155,7 +155,7 @@ export function CertSummary({ totals, retencion }: { totals: CertTotals; retenci
                 </span>
                 <button
                   type="button"
-                  className={styles.ajusteDel}
+                  className={`tap-target ${styles.ajusteDel}`}
                   title="Eliminar ajuste"
                   aria-label="Eliminar ajuste"
                   onClick={() => deleteAjuste(a.id)}

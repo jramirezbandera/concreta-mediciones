@@ -54,11 +54,22 @@ export function CertCard({
     <div className={`${styles.card} ${expanded ? styles.open : ''}`}>
       <div className={styles.cardHead} onClick={() => setExpanded((v) => !v)}>
         <div className={styles.cardTop}>
-          <Icon
-            name={expanded ? 'chevronDown' : 'chevron'}
-            size={15}
-            className={`${styles.chev} ${expanded ? styles.open : ''}`}
-          />
+          <button
+            type="button"
+            className={`tap-target ${styles.chevBtn}`}
+            aria-expanded={expanded}
+            aria-label={expanded ? `Contraer ${p.title}` : `Desplegar ${p.title}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              setExpanded((v) => !v);
+            }}
+          >
+            <Icon
+              name={expanded ? 'chevronDown' : 'chevron'}
+              size={15}
+              className={`${styles.chev} ${expanded ? styles.open : ''}`}
+            />
+          </button>
           <div className={styles.cardId}>
             <span className={`mono ${styles.cardPos}`}>{p.pos}</span>
             <span className={`mono ${styles.cardCode}`}>{p.code}</span>
@@ -173,7 +184,7 @@ export function CertExtraCard({
           <span className={`mono ${styles.cardAbono}`}>{fmtNum(toEur(abono))}</span>
           <button
             type="button"
-            className={styles.extraDel}
+            className={`tap-target ${styles.extraDel}`}
             aria-label="Eliminar contradictorio"
             onClick={() => deleteContradictorio(e.id)}
           >
