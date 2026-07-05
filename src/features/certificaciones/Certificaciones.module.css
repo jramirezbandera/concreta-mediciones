@@ -989,7 +989,7 @@
   cursor: pointer;
 }
 .ajusteDel:hover {
-  color: var(--state-warn);
+  color: var(--state-danger);
   background: var(--bg-elevated);
 }
 .ajusteAdd {
