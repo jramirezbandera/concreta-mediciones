@@ -709,14 +709,16 @@
   border: none;
   border-radius: 6px;
   background: var(--state-ok);
-  color: #fff;
+  /* Texto oscuro sobre verde (idioma de botón relleno del sistema, como .done):
+     blanco sobre --state-ok fallaba contraste AA (~2,3:1). */
+  color: var(--on-accent);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
 }
 .mcConfirm:hover {
-  background: color-mix(in srgb, var(--state-ok) 85%, black);
+  background: color-mix(in srgb, var(--state-ok) 88%, black);
 }
 .detailMedComment {
   flex: 1;
