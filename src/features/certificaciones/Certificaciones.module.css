@@ -631,9 +631,12 @@
 .completeCheck:hover {
   border-color: var(--state-ok);
 }
+/* Completada: tinte verde suave (no relleno macizo) — baja la intensidad y no
+   ahoga el % de al lado. Usa el idioma de tinte de los badges de recurso. */
 .completeCheck.on {
-  background: var(--state-ok);
+  background: color-mix(in srgb, var(--state-ok) 16%, transparent);
   border-color: var(--state-ok);
+  color: var(--state-ok);
 }
 .completeCheck:focus-visible {
   outline: none;
