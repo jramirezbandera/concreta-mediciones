@@ -13,6 +13,9 @@ export function PctBar({ pct, onCommitPct }: { pct: number; onCommitPct?: (pct: 
   const state = certPctState(pct);
   const stCls = state === 'over' ? styles.over : state === 'full' ? styles.full : '';
   const overTitle = state === 'over' ? 'Sobre-certificado: supera el 100 % del presupuesto' : undefined;
+  // Al 100 % redondo se pinta sin decimales ("100 %", no "100,0 %"): el ",0"
+  // sobra y empujaba el número contra el check de completado hasta pisarlo.
+  const dec = Math.round(pct * 10) === 1000 ? 0 : 1;
   return (
     <div className={styles.pctBar} title={overTitle}>
       <div className={styles.pctTrack}>
@@ -24,12 +27,12 @@ export function PctBar({ pct, onCommitPct }: { pct: number; onCommitPct?: (pct: 
       {onCommitPct ? (
         <span className={styles.pctEditWrap}>
           <span className={styles.pctEditBox}>
-            <EditableNum value={round2(pct)} dec={1} ariaLabel="% de ejecución" onCommit={onCommitPct} />
+            <EditableNum value={round2(pct)} dec={dec} ariaLabel="% de ejecución" onCommit={onCommitPct} />
           </span>
           <span className={`mono ${styles.pctPct} ${stCls}`}>%</span>
         </span>
       ) : (
-        <span className={`mono ${styles.pctNum} ${stCls}`}>{fmtNum(pct, 1)}%</span>
+        <span className={`mono ${styles.pctNum} ${stCls}`}>{fmtNum(pct, dec)}%</span>
       )}
     </div>
   );
