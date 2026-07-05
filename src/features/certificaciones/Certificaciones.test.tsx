@@ -59,6 +59,27 @@ describe('aislamiento por selección del árbol (paridad con Presupuesto)', () =
     expect(screen.queryByText('E02RW040')).toBeNull(); // 1.2 fuera
     expect(screen.queryByText('Añadir precio contradictorio')).toBeNull();
   });
+
+  it('un capítulo VACÍO aislado permite añadir precios contradictorios', () => {
+    useObraStore.getState().addChapter('Capítulo sin partidas');
+    const empty = useObraStore.getState().chapters.at(-1)!;
+    useObraStore.getState().setActive(empty.id);
+    render(<CertificacionesView compact={false} />);
+    // Estado vacío + afordancia de alta conviven (antes era un callejón sin salida).
+    expect(screen.getByText(/no tiene partidas/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Añadir precio contradictorio'));
+    const s = useObraStore.getState();
+    const extras = s.certs[s.curCert]!.extras!;
+    expect(extras).toHaveLength(1);
+    expect(extras[0]!.chapterId).toBe(empty.id); // cuelga del capítulo vacío
+  });
+
+  it('un capítulo VACÍO se mantiene oculto en «Toda la obra» (hasta tener un P.C.)', () => {
+    useObraStore.getState().addChapter('Capítulo sin partidas');
+    useObraStore.getState().setActive(ALL);
+    render(<CertificacionesView compact={false} />);
+    expect(screen.queryByText('Capítulo sin partidas')).toBeNull(); // no ensucia la vista global
+  });
 });
 
 describe('CertificacionesView (F4.1)', () => {

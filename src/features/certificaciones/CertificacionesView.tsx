@@ -67,6 +67,7 @@ export function CertificacionesView({
   const coefK = useObraStore((s) => s.rates.coefK);
   const setCertField = useObraStore((s) => s.setCertField);
   const completePartidas = useObraStore((s) => s.completePartidas);
+  const addContradictorio = useObraStore((s) => s.addContradictorio);
   const totals = useObraStore(selectCertTotals);
   const chapterRows = useObraStore(selectCertChapterRows);
   // Navegación tipo hoja de cálculo en la tabla: flechas mueven el foco entre
@@ -240,10 +241,24 @@ export function CertificacionesView({
               </div>
             </div>
             {ps.length === 0 && chExtras.length === 0 ? (
-              <p className={styles.chapEmpty}>
-                {focusSub ? 'Este subcapítulo' : 'Este capítulo'} no tiene partidas que
-                certificar.
-              </p>
+              // Capítulo (no sub) aislado y vacío: se puede seguir dándole precios
+              // contradictorios aunque no tenga partidas. Los P.C. son de CAPÍTULO,
+              // así que en un sub aislado vacío solo se muestra el mensaje.
+              <div className={styles.chapEmpty}>
+                <p className={styles.chapEmptyText}>
+                  {focusSub ? 'Este subcapítulo' : 'Este capítulo'} no tiene partidas que
+                  certificar.
+                </p>
+                {activeChapter && !focusSub && (
+                  <button
+                    type="button"
+                    className={`tcol ${styles.cardsAdd}`}
+                    onClick={() => addContradictorio(ch.id)}
+                  >
+                    <Icon name="plus" size={15} /> Añadir precio contradictorio
+                  </button>
+                )}
+              </div>
             ) : compact ? (
               <CertChapterCards
                 chapter={ch}

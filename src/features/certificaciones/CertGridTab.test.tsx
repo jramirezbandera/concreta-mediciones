@@ -106,13 +106,14 @@ describe('Flechas mueven el foco entre celdas en reposo (sin abrir)', () => {
   });
 });
 
-// Precios contradictorios (P.C.): las filas CertExtraRow encadenan Tab por sus 4
-// campos (título/ud = EditableText; cantidad/precio = EditableNum). Requiere el
-// arm-open en EditableText. `cantidad` es data-col 0 → enlaza con la columna Ejec.
-describe('Tab en las filas de precio contradictorio (P.C.)', () => {
+// Precios contradictorios (P.C.): las filas CertExtraRow. La unidad usa ahora el
+// selector `UdSelect` (botón disparador de un popover), igual que el presupuesto,
+// en lugar de texto libre. Tab lleva del título al selector; el par numérico
+// (cantidad↔precio, `EditableNum`) sigue encadenándose con apertura en edición.
+describe('Precios contradictorios (P.C.): unidad y navegación', () => {
   const pcRow = () => screen.getByLabelText('Título del contradictorio').closest('tr')!;
 
-  it('Tab encadena título → ud → cantidad, abriendo cada campo en edición con foco', () => {
+  it('Tab lleva del título al selector de unidad (UdSelect), con foco', () => {
     render(<CertificacionesView compact={false} />);
     fireEvent.click(screen.getAllByText('Añadir precio contradictorio')[0]!);
 
@@ -120,16 +121,32 @@ describe('Tab en las filas de precio contradictorio (P.C.)', () => {
     fireEvent.click(within(pcRow()).getByLabelText('Título del contradictorio'));
     expect(within(pcRow()).getByLabelText('Título del contradictorio').tagName).toBe('TEXTAREA');
 
-    // Tab → Ud (EditableText) abierto y con foco (arm-open en EditableText).
+    // Tab → Ud es ahora un selector: botón disparador con foco, NO un textarea.
     fireEvent.keyDown(within(pcRow()).getByLabelText('Título del contradictorio'), { key: 'Tab' });
     const ud = within(pcRow()).getByLabelText('Unidad');
-    expect(ud.tagName).toBe('TEXTAREA');
+    expect(ud.tagName).toBe('BUTTON');
     expect(ud).toHaveFocus();
+  });
 
-    // Tab → Cantidad (EditableNum) abierto y con foco (puente texto → número).
-    fireEvent.keyDown(ud, { key: 'Tab' });
-    const cant = within(pcRow()).getByLabelText('Cantidad ejecutada');
-    expect(cant.tagName).toBe('INPUT');
-    expect(cant).toHaveFocus();
+  it('el selector de unidad abre el listado y fija la unidad elegida', () => {
+    render(<CertificacionesView compact={false} />);
+    fireEvent.click(screen.getAllByText('Añadir precio contradictorio')[0]!);
+
+    fireEvent.click(within(pcRow()).getByLabelText('Unidad'));
+    fireEvent.click(screen.getByRole('option', { name: /superficie/i })); // «m²»
+    expect(within(pcRow()).getByLabelText('Unidad')).toHaveTextContent('m²');
+  });
+
+  it('Tab encadena cantidad → precio, abriendo cada campo en edición con foco', () => {
+    render(<CertificacionesView compact={false} />);
+    fireEvent.click(screen.getAllByText('Añadir precio contradictorio')[0]!);
+
+    fireEvent.click(within(pcRow()).getByLabelText('Cantidad ejecutada'));
+    expect(within(pcRow()).getByLabelText('Cantidad ejecutada').tagName).toBe('INPUT');
+
+    fireEvent.keyDown(within(pcRow()).getByLabelText('Cantidad ejecutada'), { key: 'Tab' });
+    const precio = within(pcRow()).getByLabelText('Precio');
+    expect(precio.tagName).toBe('INPUT');
+    expect(precio).toHaveFocus();
   });
 });

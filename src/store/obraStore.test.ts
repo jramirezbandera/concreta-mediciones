@@ -8,7 +8,7 @@ import {
   prevDataOf,
 } from '../core/certificacion';
 import { buildCertListado } from '../core/listado';
-import { partidaCantidad } from '../core/medicion';
+import { lineParcial, partidaCantidad } from '../core/medicion';
 import { toEur } from '../core/money';
 import { descompUnit, precioCuadraDescompuesto, precioSegunModo } from '../core/banco';
 // Bases demo: ya no se cargan en la app (REF_SOURCES vacío), pero siguen como
@@ -366,14 +366,16 @@ describe('completar partidas (Completado)', () => {
     expect(state().certs[0]!.data.p111).toBe(99999); // se conserva (max)
   });
 
-  it('completar es un override: limpia la certificación por líneas', () => {
+  it('completar una partida con medición marca TODAS sus líneas (sync con el desplegable)', () => {
     state().setCurCert(0);
-    const line = allPartidas().find((x) => x.id === 'p111')!.med[0]!;
-    state().setCertLine('p111', line.id, 3);
-    expect(state().certs[0]!.lineQty?.p111).toBeTruthy();
+    const p = allPartidas().find((x) => x.id === 'p111')!;
+    state().setCertLine('p111', p.med[0]!.id, 3); // se parte con una línea marcada
     state().completePartida('p111');
-    expect(state().certs[0]!.lineQty?.p111).toBeUndefined();
-    expect(state().certs[0]!.data.p111).toBe(of('p111'));
+    // Completar no suelta lineQty: marca cada línea a su parcial a-origen.
+    const lines = state().certs[0]!.lineQty!.p111!;
+    expect(Object.keys(lines).sort()).toEqual(p.med.map((l) => l.id).sort());
+    for (const l of p.med) expect(lines[l.id]).toBe(lineParcial(l));
+    expect(state().certs[0]!.data.p111).toBe(of('p111')); // Σ parciales = ofertada
   });
 
   it('uncompletePartida vuelve al suelo (a-origen anterior), no a 0 a origen', () => {

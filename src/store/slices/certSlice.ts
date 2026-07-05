@@ -7,7 +7,7 @@
    =========================================================================== */
 import type { Cert, Partida, PartidasMap, Rates } from '../../core/types';
 import { estaCertToOrigen, prevDataOf, sumLineQty } from '../../core/certificacion';
-import { partidaCantidad } from '../../core/medicion';
+import { lineParcial, partidaCantidad } from '../../core/medicion';
 import { round2 } from '../../core/money';
 import { nextAjusteId, nextExtraId } from '../base';
 import type { ObraSlice, ObraState } from '../obraStore';
@@ -60,6 +60,13 @@ function dropLineQty(cert: Cert, partidaId: string): void {
  * suelo D-06 (`prev`) y conserva un sobre-tecleo del periodo. `ofertada<=0` →
  * no-op (no hay 100% definible). Mutador PURO sobre el draft: las acciones
  * masivas lo ejecutan dentro de UN solo `set` (no N `onCertEdit`).
+ *
+ * Si la partida tiene MEDICIÓN, completar equivale a marcar TODAS sus líneas al
+ * parcial a-origen (no a soltar `lineQty`): así el desplegable queda
+ * sincronizado —todas las casillas marcadas— con el 100% de la partida. Antes se
+ * soltaba `lineQty` y el detalle mostraba las líneas SIN marcar pese a estar la
+ * partida completa (desconcertante en obra). Como Σ de parciales = ofertada, el
+ * a-origen sale idéntico; el `max` conserva el suelo y un sobre-tecleo previo.
  */
 function completeDraft(s: ObraState, p: Partida): void {
   const cert = s.certs[s.curCert];
@@ -68,8 +75,21 @@ function completeDraft(s: ObraState, p: Partida): void {
   if (ofertada <= 0) return;
   const prev = prevDataOf(s.certs, s.curCert)[p.id] ?? 0;
   const current = cert.data[p.id] ?? 0;
-  cert.data[p.id] = round2(Math.max(current, ofertada, prev));
-  dropLineQty(cert, p.id);
+  const med = p.med ?? [];
+  if (med.length > 0) {
+    // Marca cada línea a su parcial (>0; una línea de parcial 0 no se certifica,
+    // como en `setCertLine`). ofertada>0 garantiza ≥1 parcial positivo.
+    const lines: Record<string, number> = {};
+    for (const l of med) {
+      const parcial = lineParcial(l);
+      if (parcial > 0) lines[l.id] = parcial;
+    }
+    (cert.lineQty ??= {})[p.id] = lines;
+    cert.data[p.id] = round2(Math.max(sumLineQty(lines), current, prev));
+  } else {
+    cert.data[p.id] = round2(Math.max(current, ofertada, prev));
+    dropLineQty(cert, p.id);
+  }
   freezePrecioFor(cert, s.rates, p);
 }
 

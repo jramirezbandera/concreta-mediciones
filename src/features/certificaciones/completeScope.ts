@@ -14,7 +14,7 @@ export interface CompleteScope {
   fill: number;
   /** Ya estaban ≥100% a origen: intactas. */
   already: number;
-  /** De las que cambian, cuántas se certifican por líneas (su marcado se borra). */
+  /** De las que cambian, cuántas se certifican por líneas (se marcan todas sus líneas). */
   withLines: number;
   /** Ofertada 0: sin 100% definible, se saltan. */
   skipped: number;

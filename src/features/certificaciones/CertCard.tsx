@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Badge, EditableNum, EditableText, Icon } from '../../components';
+import { Badge, EditableNum, EditableText, Icon, UdSelect } from '../../components';
 import {
   cantidadToPct,
   certCalc,
@@ -206,11 +206,9 @@ export function CertExtraCard({
           <div className={styles.cStat}>
             <div className={`caps ${styles.cStatLabel}`}>Ud.</div>
             <div className={`mono ${styles.cStatVal}`}>
-              <EditableText
+              <UdSelect
                 value={e.ud}
                 ariaLabel="Unidad"
-                placeholder="ud"
-                style={{ fontSize: 12.5 }}
                 onCommit={(v) => editContradictorio(e.id, 'ud', v)}
               />
             </div>

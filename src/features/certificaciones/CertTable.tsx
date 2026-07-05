@@ -1,5 +1,5 @@
 import { Fragment, useState, type MouseEvent } from 'react';
-import { Badge, EditableNum, EditableText, Icon } from '../../components';
+import { Badge, EditableNum, EditableText, Icon, UdSelect } from '../../components';
 import {
   cantidadToPct,
   certCalc,
@@ -305,11 +305,9 @@ function CertExtraRow({
         </div>
       </td>
       <td className={`mono ${styles.cell} ${styles.cUd}`} onClick={stop} data-editfield="">
-        <EditableText
+        <UdSelect
           value={e.ud}
           ariaLabel="Unidad"
-          placeholder="ud"
-          style={{ fontSize: 12.5, textAlign: 'center' }}
           onCommit={(v) => editContradictorio(e.id, 'ud', v)}
         />
       </td>

@@ -69,7 +69,7 @@ export function MassComplete({
           {scope.withLines > 0 && (
             <li className={styles.massWarn}>
               <b className="mono">{scope.withLines}</b> se certificaba
-              {scope.withLines === 1 ? '' : 'n'} por líneas: su marcado se sobrescribe.
+              {scope.withLines === 1 ? '' : 'n'} por líneas: se marcan todas sus líneas.
             </li>
           )}
           {scope.already > 0 && (
