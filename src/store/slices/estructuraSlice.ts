@@ -449,8 +449,15 @@ export const createEstructuraSlice: ObraSlice<EstructuraSlice> = (set) => ({
       // inexistente crearía un bucket fantasma que ninguna vista pinta pero
       // que SÍ suma al PEM — y el autosave lo fosilizaría en el blob.
       if (!s.chapters.some((c) => c.id === chapterId)) return;
-      delete s.bajas[partida.id]; // el undo la devuelve VIVA: fuera el tombstone
       const list = (s.partidas[chapterId] ??= []);
+      // El tombstone se limpia ANTES de la guarda (auditoría 2026-07-05): en las
+      // DOS salidas la partida queda viva, y viva + tombstone es el estado
+      // inconsistente que fosilizaría un huérfano en «Eliminado del presupuesto».
+      delete s.bajas[partida.id];
+      // Idempotente (voz externa / eng-review undo/redo): si la partida ya está
+      // (p.ej. un undo GLOBAL la restauró antes de que se pulse «Deshacer» en el
+      // toast de borrado), no reinsertar → evitar duplicarla.
+      if (list.some((p) => p.id === partida.id)) return;
       const at = Math.max(0, Math.min(index, list.length));
       list.splice(at, 0, partida);
       renumberInPlace(

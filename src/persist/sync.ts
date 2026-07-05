@@ -21,6 +21,8 @@ import {
   type ObraData,
   type ObraState,
 } from '../store';
+import { DOMAIN_KEYS } from '../store/schema';
+import { __resetHistoryForTests } from '../store/temporal';
 import { OBRA_KEY, OBRA_KEY_PREFIX, clearObra, flush, loadObraEnvelope, loadRaw, obraKey } from './persist';
 import {
   createObra,
@@ -108,9 +110,13 @@ export function getActiveObraId(): string | null {
   return activeId();
 }
 
-/** Slice de DOMINIO: el autosave solo reacciona a estos (no a la navegación). */
+/** Slice de DOMINIO: el autosave solo reacciona a estos (no a la navegación).
+ *  Derivado de `DOMAIN_KEYS` (fuente única en schema, compartida con el
+ *  historial de undo): la lista manual omitía `bajas` y divergía de lo que el
+ *  undo restaura — un undo cuyo único delta fuese `bajas` no se persistía
+ *  (auditoría 2026-07-05). */
 function domainSlice(s: ObraState) {
-  return [s.chapters, s.partidas, s.recursos, s.certs, s.rates, s.obra] as const;
+  return DOMAIN_KEYS.map((k) => s[k]);
 }
 
 function persistNow(): Promise<boolean> {
@@ -482,4 +488,8 @@ export function __resetSyncForTests(): void {
   releaseActiveLock(); // T-19: suelta el lock de obra entre pestañas
   isOwner = true;
   useSessionStore.setState({ obras: [], activeId: null, switching: false, readonly: false });
+  // El historial de undo es plumbing hermano del autosave (misma suscripción de
+  // dominio): resetear uno sin el otro filtraría suscripción + pilas entre tests
+  // (seam exigido por el diseño; auditoría 2026-07-05).
+  __resetHistoryForTests();
 }

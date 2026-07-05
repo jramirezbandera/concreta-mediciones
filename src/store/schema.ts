@@ -53,6 +53,34 @@ export interface ObraData {
 }
 
 /**
+ * Claves MUTABLES del dominio (todo `ObraData` salvo `schemaVersion`, que es
+ * constante en runtime). FUENTE ÚNICA para las tres suscripciones/vistas del
+ * dominio: el autosave (`persist/sync.domainSlice`), el historial de undo
+ * (`store/temporal.partialize`) y esta serialización. La auditoría 2026-07-05
+ * encontró las listas divergidas (el autosave omitía `bajas`); derivarlas de
+ * aquí convierte el drift en imposible.
+ */
+export const DOMAIN_KEYS = [
+  'chapters',
+  'partidas',
+  'recursos',
+  'certs',
+  'rates',
+  'obra',
+  'bajas',
+] as const satisfies readonly (keyof ObraData)[];
+export type DomainKey = (typeof DOMAIN_KEYS)[number];
+
+/** Exhaustividad EN COMPILACIÓN: añadir un campo a `ObraData` sin listarlo en
+ *  `DOMAIN_KEYS` (o excluirlo aquí a propósito, como `schemaVersion`) rompe el
+ *  build nombrando la clave que falta — el drift silencioso era el bug. */
+type MissingDomainKey = Exclude<keyof ObraData, 'schemaVersion' | DomainKey>;
+const domainKeysExhaustive: MissingDomainKey extends never
+  ? true
+  : ['falta en DOMAIN_KEYS:', MissingDomainKey] = true;
+void domainKeysExhaustive;
+
+/**
  * Construye el estado de dominio desde `core/seed`. Clona partidas/capítulos
  * (en F2 se mutan), deriva el banco con `buildRecursos` y siembra el histórico
  * de certificaciones. Las tasas y la obra se copian (no se comparte referencia

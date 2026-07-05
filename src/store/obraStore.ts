@@ -29,15 +29,21 @@ import { REF_SOURCES, type RefCopyItem, type RefDrag, type Resolution } from '..
 import type { View } from '../layout/types';
 import { useToastStore } from './toastStore';
 import { ALL, nextAgenteId } from './base';
-import { SCHEMA_VERSION, blankObraData, seedObraData, type ObraData } from './schema';
+import { DOMAIN_KEYS, SCHEMA_VERSION, blankObraData, seedObraData, type ObraData } from './schema';
 import { createCertSlice } from './slices/certSlice';
 import { createCopySlice, type PendingCopy } from './slices/copySlice';
 import { createEstructuraSlice } from './slices/estructuraSlice';
+// Historial de Deshacer/Rehacer (undo/redo global): `loadObra`/`reset` envuelven
+// su `set` en `pauseHistory` para NO registrar la carga y vaciar el historial (un
+// undo no cruza obras, análogo D-08). Import de un solo sentido: `temporal` solo
+// importa el TIPO de este módulo (se borra en compilación) → sin ciclo runtime.
+import { pauseHistory } from './temporal';
 
 // --- superficie pública de `./obraStore` (invariante F-04: no cambia nada) ---
 export { ALL };
-export { SCHEMA_VERSION, blankObraData, seedObraData };
+export { DOMAIN_KEYS, SCHEMA_VERSION, blankObraData, seedObraData };
 export { toSerializable, fromSerializable } from './schema';
+export type { DomainKey } from './schema';
 export { copyTargetOf } from './slices/copySlice';
 export type { ObraData };
 export type { CopyTarget, PendingCopy } from './slices/copySlice';
@@ -144,8 +150,9 @@ export interface ObraState extends ObraData {
   /**
    * Marca una partida como COMPLETADA (100% a origen) en la cert en curso, SIN
    * reducir: `data = max(actual, ofertada, prev)`. Respeta el suelo D-06 y
-   * conserva un sobre-tecleo del periodo; `ofertada<=0` → no-op. Override manual:
-   * limpia la certificación por líneas de esa partida.
+   * conserva un sobre-tecleo del periodo; `ofertada<=0` → no-op. Si tiene
+   * medición, marca TODAS sus líneas al parcial (el desplegable queda sincronizado
+   * con el 100%), en vez de soltar la certificación por líneas.
    */
   completePartida: (partidaId: string) => void;
   /** Desmarca «Completada»: vuelve al a-origen de la cert anterior (0 esta cert),
@@ -549,17 +556,21 @@ export const useObraStore = create<ObraState>()(
         // D-08: un toast «Deshacer» pendiente capturó (capítulo, partida) de la
         // obra SALIENTE; ejecutarlo tras cargar otra inyectaría datos ajenos.
         useToastStore.getState().clear();
-        set((s) => {
-          // `bajas: {}` por delante: un `ImportedObra` (.bc3) no trae tombstones
-          // y sin el default arrastraría los de la obra ANTERIOR (v3).
-          Object.assign(s, { schemaVersion: SCHEMA_VERSION, bajas: {}, ...data });
-          Object.assign(s, seedUi(data.certs));
-          const first = data.chapters[0]?.id;
-          s.view = 'presupuesto';
-          s.active = first ?? ALL;
-          s.expanded = {}; // árbol colapsado: una obra recién importada se explora
-          s.refOpen = false;
-        });
+        // pauseHistory: no registrar la carga y vaciar el historial (un Ctrl+Z tras
+        // importar/restaurar/conmutar no debe resucitar la obra anterior — D-08).
+        pauseHistory(() =>
+          set((s) => {
+            // `bajas: {}` por delante: un `ImportedObra` (.bc3) no trae tombstones
+            // y sin el default arrastraría los de la obra ANTERIOR (v3).
+            Object.assign(s, { schemaVersion: SCHEMA_VERSION, bajas: {}, ...data });
+            Object.assign(s, seedUi(data.certs));
+            const first = data.chapters[0]?.id;
+            s.view = 'presupuesto';
+            s.active = first ?? ALL;
+            s.expanded = {}; // árbol colapsado: una obra recién importada se explora
+            s.refOpen = false;
+          }),
+        );
       },
 
       setObraPath: (path, value) =>
@@ -605,13 +616,15 @@ export const useObraStore = create<ObraState>()(
 
       reset: () => {
         useToastStore.getState().clear(); // como loadObra: mata el «Deshacer» capturado (D-08)
-        set((s) => {
-          // Object.assign desde seedObraData(): añadir un campo a ObraData lo
-          // resetea automáticamente (sin drift silencioso campo-a-campo).
-          const fresh = seedObraData();
-          Object.assign(s, fresh);
-          Object.assign(s, seedUi(fresh.certs));
-        });
+        pauseHistory(() =>
+          set((s) => {
+            // Object.assign desde seedObraData(): añadir un campo a ObraData lo
+            // resetea automáticamente (sin drift silencioso campo-a-campo).
+            const fresh = seedObraData();
+            Object.assign(s, fresh);
+            Object.assign(s, seedUi(fresh.certs));
+          }),
+        );
       },
 
       // --- slices (F-04): certificación, copia de Referencia, CRUD/edición ---
@@ -622,3 +635,8 @@ export const useObraStore = create<ObraState>()(
   }),
   ),
 );
+
+/** Tipo del store completo (con la pila de middleware subscribeWithSelector +
+ *  immer). Lo consume `store/temporal` (solo como TIPO) para tipar el store que
+ *  se le inyecta en `initHistory` sin crear un ciclo de import runtime. */
+export type ObraStore = typeof useObraStore;

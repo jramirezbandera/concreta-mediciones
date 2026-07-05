@@ -1515,6 +1515,28 @@ describe('tombstones de partidas borradas (schema v3)', () => {
     expect(state().bajas.p111).toBeUndefined(); // vuelve viva: fuera el tombstone
   });
 
+  it('restorePartida es idempotente: un segundo restore (toast tras undo global) no duplica', () => {
+    const p111Data = { ...state().partidas['01']!.find((x) => x.id === 'p111')! };
+    state().deletePartida('01', 'p111');
+    expect(state().partidas['01']!.filter((p) => p.id === 'p111')).toHaveLength(0);
+    state().restorePartida('01', p111Data, 0); // p.ej. el undo global la restaura
+    state().restorePartida('01', p111Data, 0); // el toast «Deshacer» tras el undo: NO duplica
+    expect(state().partidas['01']!.filter((p) => p.id === 'p111')).toHaveLength(1);
+  });
+
+  it('restorePartida limpia un tombstone huérfano aunque la partida ya esté viva', () => {
+    const p111Data = { ...state().partidas['01']!.find((x) => x.id === 'p111')! };
+    // Estado inconsistente artificial (partida VIVA + tombstone): la limpieza va
+    // ANTES de la guarda de idempotencia — un huérfano en `bajas` se fosilizaría
+    // en el blob y saldría en «Eliminado del presupuesto» con la partida viva.
+    useObraStore.setState((s) => {
+      s.bajas['p111'] = { code: 'X', title: 'T', ud: 'ud' };
+    });
+    state().restorePartida('01', p111Data, 0); // guarda: ya viva → no reinserta…
+    expect(state().partidas['01']!.filter((p) => p.id === 'p111')).toHaveLength(1);
+    expect(state().bajas['p111']).toBeUndefined(); // …pero el tombstone se limpió
+  });
+
   it('deleteChapter deja tombstone de cada partida certificada del capítulo', () => {
     state().setCurCert(0);
     state().setCertLine('p111', 'p111-m1', 61.2);

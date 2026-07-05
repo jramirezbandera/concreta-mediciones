@@ -28,4 +28,27 @@ con el grid de medición de presupuesto.
 
 ---
 
-_Backlog vacío. Los tres TODOs de la navegación de teclado en certificaciones están hechos._
+## Pestaña de solo-lectura (T-19): las ediciones no se bloquean
+
+**Qué:** en una pestaña marcada solo-lectura (otra pestaña es dueña de la obra, Web
+Locks / T-19), hoy solo se inhibe el autosave (`isOwner`) y se muestra un banner
+([PersistUI.tsx](src/persist/PersistUI.tsx)); las acciones del store **sí** mutan el
+estado en memoria. Un usuario puede teclear cambios que no se persisten y se pierden
+en el próximo handoff/recarga, sin más aviso que el banner.
+
+**Por qué:** divergencia silenciosa de datos entre pestañas. Bloquear (o avisar
+explícitamente al intentar editar) todas las mutaciones cuando `readonly` cierra el
+agujero de raíz.
+
+**Contexto:** `readonly` vive en `sessionStore` y solo se consume en `PersistUI`
+(banner) y `sync.ts` (gate del autosave). Para arreglarlo habría que gatear las
+acciones del store (transversal, todas las acciones) o interceptar en la capa de UI.
+Fuera del alcance del PR de Deshacer/Rehacer (que decidió PERMITIR undo/redo en
+readonly por coherencia con este comportamiento actual). Lo confirmó también la voz
+externa (Codex) en la revisión de ingeniería de undo/redo (2026-07-05).
+
+**Depende de:** nada; latente hoy, independiente de undo/redo.
+
+---
+
+_Backlog: 1 TODO (mutaciones en pestaña readonly). Los de navegación de teclado en certificaciones están hechos._
