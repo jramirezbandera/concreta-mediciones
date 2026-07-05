@@ -14,12 +14,14 @@ import {
   certChapterRows as certChapterRowsCore,
   certSnapshotOf,
   certTotals as certTotalsCore,
+  retenidoAcumulado as retenidoAcumuladoCore,
+  tieneRetencion,
   type CertChapterRow,
   type CertTotals,
 } from '../core/certificacion';
 import { buildResumen, type ResumenListado } from '../core/listado';
 import type { Cents } from '../core/money';
-import type { Ajuste, CertExtra, Chapter, PartidasMap, Rates } from '../core/types';
+import type { Ajuste, Cert, CertExtra, Chapter, PartidasMap, Rates } from '../core/types';
 import { chapterTotals as chapterTotalsCore, pec as pecCore, pem as pemCore, totalConIva as totalConIvaCore } from '../core/totales';
 import { copyTargetOf, type CopyTarget, type ObraState } from './obraStore';
 
@@ -175,6 +177,22 @@ export const selectCertChapterRows = (s: ObraState): CertChapterRow[] =>
     s.certs[s.curCert]?.priceSnapshot,
     s.certs[s.curCert]?.coefK,
   );
+
+// Cruza TODAS las certs ≤ curCert → memo por identidad de `[partidas, certs,
+// index, rates]` (las mutaciones inmutables de Immer cambian la referencia solo
+// al tocar algo). `null` cuando la obra no ha tenido retención hasta aquí = no
+// se pinta la línea; un número (incluido 0) = se pinta (constancia).
+const _retenidoAcumulado = memo1(
+  (partidas: PartidasMap, certs: Cert[], index: number, rates: Rates): Cents | null =>
+    tieneRetencion(certs, index)
+      ? retenidoAcumuladoCore(Object.values(partidas).flat(), certs, index, rates)
+      : null,
+);
+
+/** Retenido de garantía acumulado neto hasta la cert en curso (céntimos); `null`
+ *  si la obra no ha tenido retención hasta aquí (la línea informativa no se muestra). */
+export const selectRetenidoAcumulado = (s: ObraState): Cents | null =>
+  _retenidoAcumulado(s.partidas, s.certs, s.curCert, s.rates);
 
 /* ---- selector de la hoja Resumen (F7.1) ---- */
 

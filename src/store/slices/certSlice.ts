@@ -6,7 +6,7 @@
    es idéntica a la del store monolítico; solo cambia de fichero.
    =========================================================================== */
 import type { Cert, Partida, PartidasMap, Rates } from '../../core/types';
-import { estaCertToOrigen, prevDataOf, sumLineQty } from '../../core/certificacion';
+import { ajusteEsRetencion, estaCertToOrigen, prevDataOf, sumLineQty } from '../../core/certificacion';
 import { lineParcial, partidaCantidad } from '../../core/medicion';
 import { round2 } from '../../core/money';
 import { nextAjusteId, nextExtraId } from '../base';
@@ -34,6 +34,20 @@ function freezePrecio(partidas: PartidasMap, rates: Rates, cert: Cert, partidaId
   if (cert.priceSnapshot?.[partidaId] != null) return;
   const p = findPartida(partidas, partidaId);
   if (p) freezePrecioFor(cert, rates, p);
+}
+
+/** Último % de retención usado en la obra (fracción 0..1), de la cert más
+ *  reciente que lo tenga: prioriza el ajuste-retención (%) y cae al `Cert.retencion`
+ *  legacy. `undefined` si nunca se usó → el preset arranca en el 5% estándar. */
+function lastRetencionRate(s: ObraState): number | undefined {
+  for (let i = s.certs.length - 1; i >= 0; i--) {
+    const c = s.certs[i];
+    if (!c) continue;
+    const ret = c.ajustes?.find((a) => ajusteEsRetencion(a) && a.tipo === 'pct');
+    if (ret) return ret.valor;
+    if (c.retencion > 0) return c.retencion;
+  }
+  return undefined;
 }
 
 /** Resuelve una partida por id escaneando los capítulos (O(capítulos)). */
@@ -294,11 +308,26 @@ export const createCertSlice: ObraSlice<CertSlice> = (set) => ({
       if (cert.extras.length === 0) cert.extras = undefined;
     }),
 
-  addAjuste: () =>
+  addAjuste: (preset) =>
     set((s) => {
       const cert = s.certs[s.curCert];
       if (!cert) return;
       const ajustes = (cert.ajustes ??= []);
+      if (preset === 'retencion') {
+        // Retención de garantía predefinida: % recurrente (se hereda cert a cert)
+        // que RESTA. Precarga el último % de retención usado en la obra (ajuste o
+        // legacy) o el 5% estándar (obra privada / LCSP) si es la primera vez.
+        ajustes.push({
+          id: nextAjusteId(),
+          concepto: 'Retención garantía',
+          tipo: 'pct',
+          valor: lastRetencionRate(s) ?? 0.05,
+          signo: -1,
+          recurrente: true,
+          preset: 'retencion',
+        });
+        return;
+      }
       // Por defecto: descuento fijo puntual (el caso más común: una corrección).
       ajustes.push({
         id: nextAjusteId(),

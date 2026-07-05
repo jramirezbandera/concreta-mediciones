@@ -17,6 +17,8 @@ import {
   extraCalc,
   extrasCantidad,
   prevDataOf,
+  retenidoAcumulado,
+  tieneRetencion,
   type CertTotals,
 } from './certificacion';
 import { groupBySub } from './grouping';
@@ -382,6 +384,10 @@ export interface CertListado {
   snapshotAt?: string;
   capitulos: CertCapituloListado[];
   totals: CertTotals;
+  /** Retenido de garantía acumulado neto (Σ retenido − Σ devuelto) hasta esta
+   *  cert inclusive, en céntimos. `null` si la obra no ha tenido retención hasta
+   *  aquí → la línea informativa no se emite. Es cross-cert (no sale de `totals`). */
+  retenidoAcumulado: Cents | null;
 }
 
 /**
@@ -513,6 +519,7 @@ export function buildCertListado(
     });
   }
 
+  const allPartidas = Object.values(partidas).flat();
   return {
     num: cert.num,
     period: cert.period,
@@ -520,7 +527,7 @@ export function buildCertListado(
     snapshotAt: cert.snapshotAt,
     capitulos,
     totals: certTotals(
-      Object.values(partidas).flat(),
+      allPartidas,
       cert.data,
       prevData,
       rates,
@@ -531,5 +538,10 @@ export function buildCertListado(
       snap,
       cert.ajustes ?? [],
     ),
+    // Cross-cert: la garantía retenida hasta esta cert (calculada una vez con el
+    // motor). `null` = sin retención en la obra hasta aquí → no se emite la línea.
+    retenidoAcumulado: tieneRetencion(certs, index)
+      ? retenidoAcumulado(allPartidas, certs, index, rates)
+      : null,
   };
 }

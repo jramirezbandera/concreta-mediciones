@@ -160,6 +160,12 @@ export function PrintCert({ data }: { data: CertListado }) {
           <span>Líquido a abonar</span>
           <span className="mono">{fmtCents(t.liquido)}</span>
         </div>
+        {data.retenidoAcumulado != null && (
+          <div className="pd-summary-note">
+            <span>Retenido acumulado (garantía) hasta esta certificación</span>
+            <span className="mono">{fmtCents(data.retenidoAcumulado)}</span>
+          </div>
+        )}
       </div>
     </div>
   );

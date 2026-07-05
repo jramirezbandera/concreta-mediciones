@@ -189,8 +189,13 @@ export interface ObraState extends ObraData {
   deleteContradictorio: (extraId: string) => void;
 
   /* ---- ajustes configurables del resumen (pago adelantado, correcciones…) ---- */
-  /** Añade un ajuste en blanco (descuento fijo, puntual) al resumen de la cert en curso. */
-  addAjuste: () => void;
+  /**
+   * Añade un ajuste al resumen de la cert en curso. Sin argumento: en blanco
+   * (descuento fijo, puntual). `'retencion'`: retención de garantía predefinida
+   * (% recurrente que resta, `preset:'retencion'`), reusando el último % de
+   * retención de la obra o el 5% estándar si es la primera.
+   */
+  addAjuste: (preset?: 'retencion') => void;
   /**
    * Edita un campo de un ajuste de la cert en curso. Al cambiar `tipo` RESETEA
    * `valor` a 0 (una fracción y unos euros no son intercambiables). `valor` se

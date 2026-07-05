@@ -2,6 +2,13 @@
 
 > Sesión de office-hours. Producto de diseño, no implementación.
 > Fecha: 2026-07-04 · rama `main` · continúa de `8036b9c` (la retención dejó de ser fila fija).
+>
+> **IMPLEMENTADO (2026-07-05).** Las dos features del plan están en código con test:
+> `Ajuste.preset` + `addAjuste('retencion')` (menú en "Añadir ajuste" con guarda de
+> doble retención), `retenidoEstaCert`/`retenidoAcumulado`/`tieneRetencion` en el
+> motor, `selectRetenidoAcumulado`, la fila informativa en el resumen y la línea
+> "Retenido acumulado (garantía)" bajo el líquido en PDF/DOCX/XLSX. Suite 767→789.
+> Queda la asignación de dogfood (validar el número contra el control real, §La asignación).
 
 ## Objetivo
 

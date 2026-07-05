@@ -937,6 +937,36 @@ describe('acciones F4 (certificaciones)', () => {
     state().addAjuste();
     const a = state().certs[0]!.ajustes![0]!;
     expect(a).toMatchObject({ concepto: '', tipo: 'fijo', valor: 0, signo: -1, recurrente: false });
+    expect(a.preset).toBeUndefined(); // sin marca semántica → ajuste normal
+  });
+
+  it("addAjuste('retencion') rellena la plantilla de retención de garantía (% recurrente, tag)", () => {
+    state().setCurCert(state().certs.length - 1);
+    state().addAjuste('retencion');
+    const a = state().certs.at(-1)!.ajustes![0]!;
+    expect(a).toMatchObject({
+      concepto: 'Retención garantía',
+      tipo: 'pct',
+      signo: -1,
+      recurrente: true,
+      preset: 'retencion',
+    });
+  });
+
+  it("addAjuste('retencion') reutiliza el último % de retención usado en la obra", () => {
+    const last = state().certs.length - 1;
+    state().setCurCert(last);
+    state().setCertField('retencion', 0.03); // la obra ya retiene al 3%
+    state().addAjuste('retencion');
+    expect(state().certs[last]!.ajustes![0]!.valor).toBe(0.03);
+  });
+
+  it("addAjuste('retencion') arranca en el 5% estándar sin retención previa", () => {
+    // Limpia la retención legacy sembrada (0,05) de todas las certs.
+    useObraStore.setState((s) => ({ certs: s.certs.map((c) => ({ ...c, retencion: 0 })) }));
+    state().setCurCert(0);
+    state().addAjuste('retencion');
+    expect(state().certs[0]!.ajustes![0]!.valor).toBe(0.05);
   });
 
   it('editAjuste: cambiar de tipo RESETEA valor; clampa pct a [0,1] y fijo a ≥0', () => {
@@ -991,6 +1021,17 @@ describe('acciones F4 (certificaciones)', () => {
     state().addAjuste(); // puntual por defecto
     state().addCert();
     expect(state().certs.at(-1)!.ajustes).toBeUndefined();
+  });
+
+  it('addCert hereda el ajuste-retención recurrente conservando el preset (id nuevo)', () => {
+    state().setCurCert(state().certs.length - 1);
+    state().addAjuste('retencion'); // recurrente + preset:'retencion'
+    const prevId = state().certs.at(-1)!.ajustes![0]!.id;
+    state().addCert();
+    const nueva = state().certs.at(-1)!;
+    expect(nueva.ajustes).toHaveLength(1);
+    expect(nueva.ajustes![0]!).toMatchObject({ preset: 'retencion', recurrente: true, tipo: 'pct' });
+    expect(nueva.ajustes![0]!.id).not.toBe(prevId); // id nuevo por cert
   });
 });
 

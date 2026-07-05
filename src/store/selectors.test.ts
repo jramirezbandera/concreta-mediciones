@@ -9,7 +9,12 @@
    cur/prev) y verifica la memoización por identidad.
    =========================================================================== */
 import { beforeEach, describe, expect, it } from 'vitest';
-import { certChapterRows, certSnapshotOf, certTotals } from '../core/certificacion';
+import {
+  certChapterRows,
+  certSnapshotOf,
+  certTotals,
+  retenidoAcumulado,
+} from '../core/certificacion';
 import { buildResumen } from '../core/listado';
 import { pec, pem, totalConIva } from '../core/totales';
 import {
@@ -19,6 +24,7 @@ import {
   selectPec,
   selectPem,
   selectResumen,
+  selectRetenidoAcumulado,
   selectTotalConIva,
   useObraStore,
 } from './index';
@@ -95,6 +101,22 @@ describe('selectors — humo contra el core (B-08)', () => {
   it('selectResumen == buildResumen', () => {
     const s = state();
     expect(selectResumen(s)).toEqual(buildResumen(s.chapters, s.partidas, s.rates));
+  });
+
+  it('selectRetenidoAcumulado == core y cruza SOLO las certs ≤ curCert', () => {
+    // El seed retiene al 5% en las 3 certs → hay retención → no es null.
+    withTwoCerts(); // curCert = 1
+    const s = state();
+    const direct = retenidoAcumulado(Object.values(s.partidas).flat(), s.certs, s.curCert, s.rates);
+    expect(selectRetenidoAcumulado(s)).toBe(direct);
+    // en la cert 0 el acumulado es menor (no ve la cert 1)
+    state().setCurCert(0);
+    expect(selectRetenidoAcumulado(state())!).toBeLessThan(direct);
+  });
+
+  it('selectRetenidoAcumulado es null cuando la obra no ha tenido retención', () => {
+    useObraStore.setState((s) => ({ certs: s.certs.map((c) => ({ ...c, retencion: 0 })) }));
+    expect(selectRetenidoAcumulado(state())).toBeNull();
   });
 
   it('memoización: mismo estado ⇒ mismo objeto (identidad, no solo igualdad)', () => {

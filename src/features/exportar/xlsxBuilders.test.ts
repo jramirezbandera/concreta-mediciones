@@ -183,6 +183,15 @@ describe('buildCertXlsx', () => {
       .map((c) => c.value as number);
     expect(nums).toContain(-4.17); // retención 5% de 83,30
   });
+
+  it('emite la línea informativa de retenido acumulado (garantía) bajo el líquido', () => {
+    const strings = cells(doc.rows).map((c) => c.value);
+    expect(strings).toContain('Retenido acumulado (garantía)');
+    const nums = cells(doc.rows)
+      .filter((c) => c.format === FMT_NUM)
+      .map((c) => c.value as number);
+    expect(nums).toContain(4.17); // acumulado = retenido de la única cert (positivo, informativo)
+  });
 });
 
 describe('xlsxFileName', () => {

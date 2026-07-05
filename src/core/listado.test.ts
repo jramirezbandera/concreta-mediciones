@@ -232,6 +232,16 @@ describe('buildCertListado (con snapshot F7.0 + contradictorios)', () => {
     expect(buildCertListado(chapters, partidas, certs, 9, rates)).toBeNull();
   });
 
+  it('retenidoAcumulado en el payload: neto hasta esta cert; null sin retención', () => {
+    const l0 = buildCertListado(chapters, partidas, certs, 0, rates)!;
+    const l1 = buildCertListado(chapters, partidas, certs, 1, rates)!;
+    expect(l0.retenidoAcumulado).not.toBeNull();
+    expect(l1.retenidoAcumulado!).toBeGreaterThan(l0.retenidoAcumulado!); // crece cert a cert
+    // sin retención en ninguna cert → no se emite la línea (null)
+    const sinRet = certs.map((c) => ({ ...c, retencion: 0 }));
+    expect(buildCertListado(chapters, partidas, sinRet, 1, rates)!.retenidoAcumulado).toBeNull();
+  });
+
   it('D-01/D-02: el rastro borrado va al capítulo sintético y Σ capítulos == certPEM', () => {
     const certsDel: Cert[] = [
       {

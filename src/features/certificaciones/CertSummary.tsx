@@ -1,5 +1,6 @@
+import { useEffect, useRef, useState } from 'react';
 import { EditableNum, EditableText, Icon, IvaSelect } from '../../components';
-import type { CertChapterRow, CertTotals } from '../../core/certificacion';
+import { ajusteEsRetencion, type CertChapterRow, type CertTotals } from '../../core/certificacion';
 import { fmtCents, fmtNum, pctToRate, round2, toEur, type Cents } from '../../core/money';
 import { useObraStore } from '../../store';
 import { certPctState } from './certPctState';
@@ -34,7 +35,16 @@ function Row({
 }
 
 /** Resumen económico de la certificación (retención editable + IVA + líquido). */
-export function CertSummary({ totals, retencion }: { totals: CertTotals; retencion: number }) {
+export function CertSummary({
+  totals,
+  retencion,
+  retenidoAcumulado,
+}: {
+  totals: CertTotals;
+  retencion: number;
+  /** Garantía retenida acumulada hasta esta cert (céntimos); `null` = no mostrar. */
+  retenidoAcumulado: Cents | null;
+}) {
   const iva = useObraStore((s) => s.rates.iva);
   const gg = useObraStore((s) => s.rates.gg);
   const bi = useObraStore((s) => s.rates.bi);
@@ -46,6 +56,50 @@ export function CertSummary({ totals, retencion }: { totals: CertTotals; retenci
   const deleteAjuste = useObraStore((s) => s.deleteAjuste);
   // Importe valorado de cada ajuste (con su etiqueta y signo) por id, desde el motor.
   const importeById = new Map(totals.ajustesRows.map((r) => [r.id, r.importe]));
+
+  // Menú de "Añadir ajuste": blanco vs retención de garantía predefinida. Posición
+  // FIJA calculada desde el trigger (el resumen puede vivir en un contenedor con
+  // scroll que recortaría un popover absoluto), se cierra al pinchar fuera o scroll
+  // (mismo patrón que TypeSelect/UdSelect).
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const addRef = useRef<HTMLDivElement>(null);
+  // Guarda de doble retención (P3): la obra ya retiene si hay retención legacy o
+  // un ajuste-retención → la opción del menú se desactiva.
+  const yaRetiene = retencion > 0 || (ajustes ?? []).some(ajusteEsRetencion);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onDoc(e: MouseEvent) {
+      if (addRef.current && !addRef.current.contains(e.target as Node)) setMenuOpen(false);
+    }
+    function onScroll() {
+      setMenuOpen(false);
+    }
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('scroll', onScroll, true);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('scroll', onScroll, true);
+    };
+  }, [menuOpen]);
+
+  function toggleMenu() {
+    if (!menuOpen) {
+      const r = addRef.current?.getBoundingClientRect();
+      if (r) {
+        const alto = 132;
+        const top = r.bottom + alto > window.innerHeight ? Math.max(8, r.top - alto) : r.bottom + 4;
+        setMenuPos({ top, left: Math.min(r.left, window.innerWidth - 244 - 8) });
+      }
+    }
+    setMenuOpen((o) => !o);
+  }
+
+  function pick(preset?: 'retencion') {
+    addAjuste(preset);
+    setMenuOpen(false);
+  }
 
   return (
     <div className={styles.summary}>
@@ -220,9 +274,45 @@ export function CertSummary({ totals, retencion }: { totals: CertTotals; retenci
             </div>
           );
         })}
-        <button type="button" className={`tcol ${styles.ajusteAdd}`} onClick={() => addAjuste()}>
-          <Icon name="plus" size={13} /> Añadir ajuste
-        </button>
+        <div ref={addRef} className={styles.ajusteAddWrap}>
+          <button
+            type="button"
+            className={`tcol ${styles.ajusteAdd}`}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            onClick={toggleMenu}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setMenuOpen(false);
+            }}
+          >
+            <Icon name="plus" size={13} /> Añadir ajuste
+            <Icon name="chevronDown" size={11} style={{ color: 'var(--text-disabled)' }} />
+          </button>
+          {menuOpen && menuPos && (
+            <div role="menu" className={styles.ajusteMenu} style={{ top: menuPos.top, left: menuPos.left }}>
+              <button
+                type="button"
+                role="menuitem"
+                className={`tcol ${styles.ajusteMenuItem}`}
+                onClick={() => pick()}
+              >
+                <span className={styles.ajusteMenuTitle}>Ajuste en blanco</span>
+                <span className={styles.ajusteMenuSub}>Descuento o cargo puntual</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                disabled={yaRetiene}
+                title={yaRetiene ? 'Esta certificación ya tiene retención' : undefined}
+                className={`tcol ${styles.ajusteMenuItem}`}
+                onClick={() => pick('retencion')}
+              >
+                <span className={styles.ajusteMenuTitle}>Retención de garantía</span>
+                <span className={styles.ajusteMenuSub}>% recurrente que se retiene cada cert</span>
+              </button>
+            </div>
+          )}
+        </div>
 
         <Row label="Base imponible" value={totals.base} strong />
         <div className={styles.sumRow}>
@@ -241,6 +331,19 @@ export function CertSummary({ totals, retencion }: { totals: CertTotals; retenci
         </div>
         <span className={`mono ${styles.liqFinalVal}`}>{fmtCents(totals.liquido)}</span>
       </div>
+
+      {/* Informativa (jerarquía menor, no se descuenta aquí): garantía en poder de
+          la propiedad hasta esta cert. Cross-cert, llega por prop. Se muestra en
+          cuanto la obra tuvo retención, aunque el neto vuelva a 0 (constancia). */}
+      {retenidoAcumulado != null && (
+        <div
+          className={styles.retAcum}
+          title="Garantía retenida hasta esta certificación (retenido − devuelto)"
+        >
+          <span className={styles.retAcumLabel}>Retenido acumulado (garantía)</span>
+          <span className={`mono ${styles.retAcumVal}`}>{fmtCents(retenidoAcumulado)}</span>
+        </div>
+      )}
     </div>
   );
 }

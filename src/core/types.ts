@@ -136,6 +136,11 @@ export interface Ajuste {
   signo: -1 | 1;
   /** true → `addCert()` lo hereda a la cert siguiente (como la retención). */
   recurrente: boolean;
+  /** Marca semántica. `'retencion'` = retención de garantía: cuenta en el retenido
+   *  acumulado y recibe trato especial en la UI (opción predefinida al añadir,
+   *  guarda de doble retención). `undefined` = ajuste normal. Campo opcional y
+   *  retrocompatible: no necesita migración de esquema (undefined = lo de antes). */
+  preset?: 'retencion';
 }
 
 /** Certificación: `data[partidaId]` = cantidad ejecutada A ORIGEN. */

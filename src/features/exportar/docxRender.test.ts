@@ -117,6 +117,9 @@ describe('docxFor — certificación', () => {
     expect(xml).toContain('Líquido a abonar');
     // certPEM 70 → PEC 83,30 → ret 4,17 → base 79,13 → IVA 7,91 → líquido 87,04
     expect(xml).toContain('87,04 €');
+    // Línea informativa de garantía retenida acumulada (5% de 83,30 = 4,17 €).
+    expect(xml).toContain('Retenido acumulado (garantía)');
+    expect(xml).toContain('4,17 €');
   });
 
   it('cert inexistente → null (no genera archivo)', async () => {

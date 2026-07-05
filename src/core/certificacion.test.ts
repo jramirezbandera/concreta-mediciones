@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   DELETED_ROW_ID,
+  ajusteEsRetencion,
   ajusteImporte,
   ajusteLabel,
   cantidadToPct,
@@ -15,7 +16,10 @@ import {
   extraCalc,
   prevDataOf,
   pctToCantidad,
+  retenidoAcumulado,
+  retenidoEstaCert,
   sumLineQty,
+  tieneRetencion,
 } from './certificacion';
 import { toCents, toEur } from './money';
 import type { Ajuste, Cert, CertExtra, Chapter, Partida, PartidasMap, Rates } from './types';
@@ -252,6 +256,110 @@ describe('certTotals con ajustes configurables', () => {
     expect(t.ajustesRows).toHaveLength(0);
     expect(t.ajustesTotal).toBe(0);
     expect(toEur(t.base)).toBe(339.15); // 357 − 17,85, como antes
+  });
+});
+
+describe('retención de garantía como ajuste etiquetado (preset:"retencion")', () => {
+  const pecEsta = toCents(357); // fixture: importe de esta cert = 357 €
+
+  it('ajusteEsRetencion distingue el ajuste etiquetado del normal', () => {
+    expect(ajusteEsRetencion(aj({ preset: 'retencion' }))).toBe(true);
+    expect(ajusteEsRetencion(aj({}))).toBe(false);
+  });
+
+  it('retención legacy: retenido = pecEsta × %', () => {
+    expect(toEur(retenidoEstaCert(pecEsta, 0.05, []))).toBe(17.85); // 357 × 5%
+  });
+
+  it('ajuste-retención con signo − (retiene) SUMA al retenido', () => {
+    const ret = retenidoEstaCert(pecEsta, 0, [
+      aj({ preset: 'retencion', tipo: 'pct', valor: 0.05, signo: -1 }),
+    ]);
+    expect(toEur(ret)).toBe(17.85);
+  });
+
+  it('ajuste-retención con signo + (devolución) RESTA del retenido', () => {
+    // Legacy retiene 35,70 y una devolución fija de 17,85 lo baja a 17,85.
+    const ret = retenidoEstaCert(pecEsta, 0.1, [
+      aj({ preset: 'retencion', tipo: 'fijo', valor: 17.85, signo: 1 }),
+    ]);
+    expect(toEur(ret)).toBe(17.85); // 35,70 − 17,85
+  });
+
+  it('legacy y ajuste-retención conviven; los ajustes normales NO cuentan', () => {
+    const ret = retenidoEstaCert(pecEsta, 0.05, [
+      aj({ preset: 'retencion', tipo: 'pct', valor: 0.05, signo: -1 }), // +17,85
+      aj({ tipo: 'fijo', valor: 100, signo: -1 }), // ajuste normal → ignorado
+    ]);
+    expect(toEur(ret)).toBe(35.7); // 17,85 (legacy) + 17,85 (tag)
+  });
+
+  it('pecEsta negativa (cert correctora a la baja) → retenido negativo (reduce el acumulado)', () => {
+    expect(toEur(retenidoEstaCert(toCents(-357), 0.05, []))).toBe(-17.85);
+  });
+});
+
+describe('retenido acumulado (cross-cert)', () => {
+  const partidas = [partida({ id: 'p1', cantidad: 100, precio: 10 })];
+  // c0: a-origen 20 (pecEsta 238 €); c1: a-origen 50 (pecEsta 357 €).
+  const certs: Cert[] = [
+    { id: 'c0', num: 1, period: '', retencion: 0.05, data: { p1: 20 } },
+    { id: 'c1', num: 2, period: '', retencion: 0.05, data: { p1: 50 } },
+  ];
+
+  it('suma el retenido de cada cert ≤ index (neto, hasta esa cert inclusive)', () => {
+    expect(toEur(retenidoAcumulado(partidas, certs, 0, rates))).toBe(11.9); // 238 × 5%
+    expect(toEur(retenidoAcumulado(partidas, certs, 1, rates))).toBe(29.75); // +357 × 5%
+  });
+
+  it('solo cuenta certs ≤ index (index 0 no ve la cert 1)', () => {
+    const acc0 = retenidoAcumulado(partidas, certs, 0, rates);
+    const acc1 = retenidoAcumulado(partidas, certs, 1, rates);
+    expect(acc1).toBeGreaterThan(acc0);
+  });
+
+  it('una devolución (ajuste-retención signo +) baja el acumulado a 0 al cierre', () => {
+    const conDevolucion: Cert[] = [
+      {
+        id: 'c0',
+        num: 1,
+        period: '',
+        retencion: 0,
+        data: { p1: 50 },
+        // pecEsta0 = 595 € → retiene 29,75 (5%).
+        ajustes: [aj({ id: 'r0', preset: 'retencion', tipo: 'pct', valor: 0.05, signo: -1 })],
+      },
+      {
+        id: 'c1',
+        num: 2,
+        period: '',
+        retencion: 0,
+        data: { p1: 50 }, // a-origen igual → pecEsta1 = 0
+        // Devolución al cierre: línea de retención fija con signo + por lo retenido.
+        ajustes: [aj({ id: 'r1', preset: 'retencion', tipo: 'fijo', valor: 29.75, signo: 1 })],
+      },
+    ];
+    expect(toEur(retenidoAcumulado(partidas, conDevolucion, 0, rates))).toBe(29.75);
+    expect(toEur(retenidoAcumulado(partidas, conDevolucion, 1, rates))).toBe(0); // devuelto
+  });
+
+  it('tieneRetencion: false sin retención; true en cuanto una cert ≤ index la tiene', () => {
+    const sin: Cert[] = [{ id: 'c0', num: 1, period: '', retencion: 0, data: { p1: 20 } }];
+    expect(tieneRetencion(sin, 0)).toBe(false);
+    expect(tieneRetencion(certs, 0)).toBe(true); // legacy retencion > 0
+    const conTag: Cert[] = [
+      { id: 'c0', num: 1, period: '', retencion: 0, data: {} },
+      {
+        id: 'c1',
+        num: 2,
+        period: '',
+        retencion: 0,
+        data: {},
+        ajustes: [aj({ preset: 'retencion' })],
+      },
+    ];
+    expect(tieneRetencion(conTag, 0)).toBe(false); // la retención está en c1
+    expect(tieneRetencion(conTag, 1)).toBe(true);
   });
 });
 

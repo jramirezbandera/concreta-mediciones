@@ -22,10 +22,34 @@ describe('CertSummary — % con decimales (auditoría B-01/B-02)', () => {
     expect(useObraStore.getState().certs[0]!.retencion).toBe(0.025);
   });
 
+  it('el menú "Añadir ajuste" crea la retención de garantía como % recurrente etiquetado', () => {
+    render(<CertificacionesView compact={false} />);
+    useObraStore.getState().setCurCert(0);
+    useObraStore.getState().setCertField('retencion', 0); // sin retención legacy → opción disponible
+    fireEvent.click(screen.getByText('Añadir ajuste')); // abre el menú
+    fireEvent.click(screen.getByText('Retención de garantía'));
+    const a = useObraStore.getState().certs[0]!.ajustes![0]!;
+    expect(a).toMatchObject({ preset: 'retencion', tipo: 'pct', signo: -1, recurrente: true });
+  });
+
+  it('la opción "Retención de garantía" se desactiva si la cert ya retiene (guarda P3)', () => {
+    render(<CertificacionesView compact={false} />);
+    useObraStore.getState().setCurCert(0);
+    useObraStore.getState().setCertField('retencion', 0.05); // ya hay retención legacy
+    fireEvent.click(screen.getByText('Añadir ajuste'));
+    expect(screen.getByText('Retención de garantía').closest('button')).toBeDisabled();
+  });
+
+  it('muestra la línea informativa de retenido acumulado cuando la obra retiene', () => {
+    render(<CertificacionesView compact={false} />); // seed retiene al 5% → visible
+    expect(screen.getByText('Retenido acumulado (garantía)')).toBeInTheDocument();
+  });
+
   it('B-02: un ajuste porcentual admite milésimas de % (10,197 % → 0,10197)', () => {
     render(<CertificacionesView compact={false} />);
     useObraStore.getState().setCurCert(0);
-    fireEvent.click(screen.getByText('Añadir ajuste'));
+    fireEvent.click(screen.getByText('Añadir ajuste')); // abre el menú
+    fireEvent.click(screen.getByText('Ajuste en blanco')); // crea el ajuste puntual
     fireEvent.click(screen.getByTitle('Porcentaje sobre la base')); // conmuta a %
     fireEvent.click(screen.getByLabelText('Porcentaje del ajuste')); // abre el editor
     const input = screen.getByLabelText('Porcentaje del ajuste');

@@ -224,6 +224,16 @@
   font-size: 13px;
   font-weight: 600;
 }
+/* Informativa (garantía retenida acumulada): jerarquía menor bajo el líquido,
+   sin borde ni negrita — no se descuenta aquí, solo deja constancia. */
+.pd-summary-note {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 5px 0 0;
+  font-size: 9px;
+  color: var(--text-secondary);
+}
 
 /* pie de firma por rol */
 .pd-sign {

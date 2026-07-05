@@ -219,6 +219,80 @@ export function ajusteLabel(a: Ajuste): string {
   return `${a.concepto} ${pct} %`.trim();
 }
 
+/* ---- Retención de garantía como ajuste etiquetado + retenido acumulado -------
+   La retención de garantía es un ajuste con `preset:'retencion'` (misma
+   valoración y mismo flujo a exports que cualquier ajuste, pero ETIQUETADO para
+   que el acumulador y la UI lo reconozcan sin depender del texto del concepto).
+   El acumulado es cross-cert: la garantía en poder de la propiedad a fecha de
+   una cert (Σ retenido − Σ devuelto en las certs ≤ N). */
+
+/** ¿Es este ajuste una retención de garantía (marca semántica)? */
+export function ajusteEsRetencion(a: Ajuste): boolean {
+  return a.preset === 'retencion';
+}
+
+/** Retenido de garantía de UNA cert (céntimos; magnitud positiva = dinero que la
+ *  propiedad retiene). La retención legacy (`Cert.retencion`) siempre retiene; cada
+ *  ajuste-retención aporta `(−signo)·importe`, de modo que `signo −1` (retiene)
+ *  SUMA al retenido y `signo +1` (devolución de garantía) lo RESTA — un único
+ *  modelo. `pecEsta` = importe de esa cert (base de los `pct`). */
+export function retenidoEstaCert(pecEsta: Cents, retencion: number, ajustes: Ajuste[] = []): Cents {
+  let ret = scaleCents(pecEsta, retencion);
+  for (const a of ajustes) {
+    if (ajusteEsRetencion(a)) ret += -a.signo * ajusteImporte(a, pecEsta);
+  }
+  return ret;
+}
+
+/** ¿Hubo cualquier retención de garantía (legacy o ajuste etiquetado) en las
+ *  certs ≤ `index`? Decide si se muestra la línea informativa del retenido
+ *  acumulado, aunque el neto haya vuelto a 0 (constancia de garantía devuelta). */
+export function tieneRetencion(certs: Cert[], index: number): boolean {
+  for (let i = 0; i <= index && i < certs.length; i++) {
+    const c = certs[i];
+    if (!c) continue;
+    if (c.retencion > 0) return true;
+    if (c.ajustes?.some(ajusteEsRetencion)) return true;
+  }
+  return false;
+}
+
+/** Retenido de garantía ACUMULADO NETO hasta la cert `index` inclusive (céntimos):
+ *  Σ `retenidoEstaCert` de cada cert i ≤ index, cada una valorada con SU snapshot
+ *  de precios (F7.0) y su `pecEsta`. Es la garantía en poder de la propiedad a
+ *  fecha de esa cert; crece al retener y baja al devolver.
+ *
+ *  Reutiliza `certTotals` por cert para no divergir del `pecEsta` canónico (el
+ *  audit marcó esta zona; para obras típicas —pocas certs— el coste es bajo, y el
+ *  selector que lo envuelve lo memoiza por `[partidas, certs, index, rates]`). */
+export function retenidoAcumulado(
+  partidas: Partida[],
+  certs: Cert[],
+  index: number,
+  rates: Rates,
+): Cents {
+  let acc = 0;
+  for (let i = 0; i <= index && i < certs.length; i++) {
+    const cert = certs[i];
+    if (!cert) continue;
+    const prevExtras = i > 0 ? (certs[i - 1]?.extras ?? []) : [];
+    const t = certTotals(
+      partidas,
+      cert.data,
+      prevDataOf(certs, i),
+      rates,
+      cert.retencion,
+      rates.coefK,
+      cert.extras ?? [],
+      prevExtras,
+      certSnapshotOf(cert, rates.coefK),
+      cert.ajustes ?? [],
+    );
+    acc += retenidoEstaCert(t.pecEsta, cert.retencion, cert.ajustes ?? []);
+  }
+  return acc;
+}
+
 export interface CertTotals {
   budgetPEM: Cents; // PEM del presupuesto (para el % global)
   certPEM: Cents; // PEM certificado a origen (Σ aOrigen)

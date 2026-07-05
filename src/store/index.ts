@@ -21,6 +21,7 @@ export {
   selectPem,
   selectRecursoUsage,
   selectResumen,
+  selectRetenidoAcumulado,
   selectTotalConIva,
 } from './selectors';
 export type { Counts } from './selectors';

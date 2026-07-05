@@ -527,6 +527,11 @@ function certBloques(data: CertListado): (Paragraph | Table)[] {
         fila('Base imponible', t.base),
         fila('IVA', t.iva),
         fila('Líquido a abonar', t.liquido, true, 24),
+        // Informativa (garantía retenida acumulada): bajo el líquido, sin negrita
+        // ni borde. `null` = la obra no ha tenido retención → no se emite.
+        ...(data.retenidoAcumulado != null
+          ? [fila('Retenido acumulado (garantía)', data.retenidoAcumulado)]
+          : []),
       ],
     }),
   );

@@ -369,6 +369,10 @@ export function buildCertXlsx(data: CertListado, meta: ObraMeta, firma: Firma): 
   rows.push(fila('Base imponible', t.base));
   rows.push(fila('IVA', t.iva));
   rows.push(fila('Líquido a abonar', t.liquido, true));
+  // Informativa (garantía retenida acumulada): bajo el líquido, sin negrita ni
+  // borde. `null` = la obra no ha tenido retención → no se emite la línea.
+  if (data.retenidoAcumulado != null)
+    rows.push(fila('Retenido acumulado (garantía)', data.retenidoAcumulado));
   rows.push(...firmaRows(firma));
   return {
     fileName: xlsxFileName(`Certificación nº ${data.num}`, meta.denominacion),

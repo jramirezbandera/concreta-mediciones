@@ -1020,6 +1020,11 @@
   color: var(--state-danger);
   background: var(--bg-elevated);
 }
+.ajusteAddWrap {
+  position: relative;
+  display: inline-flex;
+  align-self: flex-start;
+}
 .ajusteAdd {
   display: inline-flex;
   align-items: center;
@@ -1033,7 +1038,67 @@
   cursor: pointer;
 }
 .ajusteAdd:hover {
-  text-decoration: underline;
+  color: color-mix(in srgb, var(--accent) 80%, var(--text-primary));
+}
+/* fixed: el resumen puede vivir en un contenedor con scroll que recortaría un
+   popover absoluto; la posición se calcula desde el rect del trigger. */
+.ajusteMenu {
+  position: fixed;
+  width: 244px;
+  z-index: 400;
+  padding: 5px;
+  border-radius: 9px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-main);
+  box-shadow: var(--shadow-float);
+}
+.ajusteMenuItem {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: var(--sp-6) 9px;
+  border-radius: 6px;
+  border: 0;
+  cursor: pointer;
+  background: transparent;
+  text-align: left;
+  font-family: inherit;
+}
+.ajusteMenuItem:not(:disabled):hover {
+  background: var(--bg-elevated);
+}
+.ajusteMenuItem:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+.ajusteMenuTitle {
+  font-size: var(--fs-table);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.ajusteMenuSub {
+  font-size: var(--fs-caption);
+  color: var(--text-disabled);
+}
+
+.retAcum {
+  margin-top: var(--sp-8);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-10);
+}
+.retAcumLabel {
+  font-size: var(--fs-caption);
+  color: var(--text-disabled);
+}
+.retAcumVal {
+  font-size: var(--fs-table);
+  font-weight: 500;
+  color: var(--text-secondary);
+  flex-shrink: 0;
 }
 
 .liqFinal {

@@ -18,6 +18,7 @@ import {
   ALL,
   selectCertChapterRows,
   selectCertTotals,
+  selectRetenidoAcumulado,
   useObraStore,
   type CertMode,
 } from '../../store';
@@ -70,6 +71,7 @@ export function CertificacionesView({
   const addContradictorio = useObraStore((s) => s.addContradictorio);
   const totals = useObraStore(selectCertTotals);
   const chapterRows = useObraStore(selectCertChapterRows);
+  const retenidoAcumulado = useObraStore(selectRetenidoAcumulado);
   // Navegación tipo hoja de cálculo en la tabla: flechas mueven el foco entre
   // celdas en reposo (`useGridNav`) y Tab/Enter encadenan edición (`useMedGridTab`
   // sin «alta al final», a diferencia de la medición). Se componen como en DetailPanel.
@@ -338,7 +340,7 @@ export function CertificacionesView({
 
       <div className={styles.summaryGrid}>
         <CertChapterSummary rows={chapterRows} />
-        <CertSummary totals={totals} retencion={cur.retencion} />
+        <CertSummary totals={totals} retencion={cur.retencion} retenidoAcumulado={retenidoAcumulado} />
       </div>
     </div>
   );
