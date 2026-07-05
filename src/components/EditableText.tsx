@@ -1,10 +1,35 @@
 import { useInlineEdit } from '../hooks/useInlineEdit';
 import styles from './EditableText.module.css';
 
+/** Ancestro scrollable más cercano (null si sólo scrollea el documento). */
+function scrollParent(el: HTMLElement): HTMLElement | null {
+  for (let node = el.parentElement; node; node = node.parentElement) {
+    const oy = getComputedStyle(node).overflowY;
+    if ((oy === 'auto' || oy === 'scroll') && node.scrollHeight > node.clientHeight) return node;
+  }
+  return null;
+}
+
+/**
+ * Ajusta la altura del textarea al contenido y NEUTRALIZA el salto de scroll:
+ * con el editor dentro de una cabecera `sticky`, al teclear el navegador hace
+ * scroll-into-view del caret DESPUÉS del evento de input y, respetando el
+ * `scroll-padding-top` del contenedor, empuja la lista hacia arriba en cada tecla.
+ * Restaurar el `scrollTop` de forma síncrona no basta (el navegador re-scrollea
+ * tras el handler); hay que restaurarlo en el siguiente frame, ya pasado ese
+ * scroll. Fuera de un contenedor sticky el scrollTop no cambia → no-op.
+ */
 function autosize(el: HTMLTextAreaElement | null) {
   if (!el) return;
+  const scroller = scrollParent(el);
+  const top = scroller?.scrollTop;
   el.style.height = 'auto';
   el.style.height = `${el.scrollHeight}px`;
+  if (scroller && top != null) {
+    requestAnimationFrame(() => {
+      if (scroller.scrollTop !== top) scroller.scrollTop = top;
+    });
+  }
 }
 
 export interface EditableTextProps {
