@@ -11,7 +11,7 @@
   height: 28px;
   border-radius: 5px;
   padding: 0 8px;
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   color: var(--text-primary);
   background: var(--bg-primary);
   border: 1px solid var(--accent);

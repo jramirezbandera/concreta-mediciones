@@ -16,7 +16,7 @@
   border: 1px solid var(--border-main);
   box-shadow: var(--shadow-float);
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 500;
   white-space: nowrap;
   pointer-events: none;

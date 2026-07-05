@@ -32,13 +32,13 @@
   margin-bottom: 12px;
 }
 .title {
-  font-size: 22px;
+  font-size: var(--fs-hero);
   font-weight: 600;
   margin: 0 0 6px;
   color: var(--text-primary);
 }
 .desc {
-  font-size: 13.5px;
+  font-size: var(--fs-body);
   line-height: 1.6;
   color: var(--text-secondary);
   margin: 0 auto;
@@ -75,13 +75,13 @@
   display: none;
 }
 .dropTitle {
-  font-size: 15px;
+  font-size: var(--fs-title);
   font-weight: 600;
   color: var(--text-primary);
   margin-top: 6px;
 }
 .dropHint {
-  font-size: 12px;
+  font-size: var(--fs-table);
   color: var(--text-disabled);
 }
 .spin {
@@ -108,20 +108,20 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 13.5px;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--state-danger);
 }
 .errorMsg {
   margin: 8px 0 0;
-  font-size: 13px;
+  font-size: var(--fs-body);
   line-height: 1.5;
   color: var(--text-secondary);
 }
 .diagList {
   margin: 10px 0 0;
   padding-left: 18px;
-  font-size: 11.5px;
+  font-size: var(--fs-table);
   color: var(--text-disabled);
   line-height: 1.5;
 }
@@ -140,13 +140,13 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  font-size: 13.5px;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--text-primary);
   min-width: 0;
 }
 .resultMeta {
-  font-size: 11.5px;
+  font-size: var(--fs-table);
   color: var(--text-disabled);
 }
 .stats {
@@ -164,13 +164,13 @@
   background: var(--bg-primary);
 }
 .statLabel {
-  font-size: 9px;
+  font-size: var(--fs-micro);
   font-weight: 600;
   color: var(--text-disabled);
   margin-bottom: 3px;
 }
 .statVal {
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -185,7 +185,7 @@
   gap: 7px;
   padding: 9px 12px;
   border-radius: 8px;
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   font-weight: 500;
 }
 .gate.ok {
@@ -208,7 +208,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11.5px;
+  font-size: var(--fs-table);
   color: var(--state-warn);
 }
 
@@ -221,7 +221,7 @@
   margin-top: 16px;
 }
 .replaceHint {
-  font-size: 11.5px;
+  font-size: var(--fs-table);
   color: var(--text-disabled);
   margin-right: auto;
 }
@@ -234,7 +234,7 @@
   border-radius: 9px;
   border: 0;
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 600;
   font-family: inherit;
   color: var(--on-accent);
@@ -251,7 +251,7 @@
 /* ---- modal de confirmación de reemplazo ---- */
 .confirmBody {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-body);
   line-height: 1.65;
   color: var(--text-secondary);
 }
@@ -266,7 +266,7 @@
   border: 1px solid var(--border-main);
   background: transparent;
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 500;
   font-family: inherit;
   color: var(--text-secondary);
@@ -281,7 +281,7 @@
   border-radius: 9px;
   border: 0;
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 600;
   font-family: inherit;
   color: var(--on-accent);

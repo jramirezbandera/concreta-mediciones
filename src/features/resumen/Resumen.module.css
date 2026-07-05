@@ -14,21 +14,21 @@
 }
 
 .kicker {
-  font-size: 10.5px;
+  font-size: var(--fs-caption);
   font-weight: 600;
   letter-spacing: 0.11em;
   color: var(--accent);
   margin-bottom: 6px;
 }
 .title {
-  font-size: 25px;
+  font-size: var(--fs-hero);
   font-weight: 600;
   color: var(--text-primary);
   letter-spacing: -0.02em;
   margin: 0 0 18px;
 }
 .compact .title {
-  font-size: 20px;
+  font-size: var(--fs-lg);
 }
 
 .sheet {
@@ -51,13 +51,13 @@
   border-bottom: 1px solid var(--border-sub);
 }
 .chapCode {
-  font-size: 11.5px;
+  font-size: var(--fs-table);
   color: var(--text-disabled);
   width: 24px;
   flex-shrink: 0;
 }
 .chapTitle {
-  font-size: 13px;
+  font-size: var(--fs-body);
   color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -72,7 +72,7 @@
   transform: translateY(-3px);
 }
 .chapPct {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   color: var(--text-disabled);
   flex-shrink: 0;
   width: 44px;
@@ -82,7 +82,7 @@
   display: none;
 }
 .chapImp {
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 500;
   color: var(--text-primary);
   flex-shrink: 0;
@@ -103,12 +103,12 @@
   border-top: 2px solid var(--border-main);
 }
 .pemLabel {
-  font-size: 13.5px;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--text-primary);
 }
 .pemVal {
-  font-size: 16px;
+  font-size: var(--fs-title);
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap; /* el importe nunca parte el € a otra línea (móvil) */
@@ -134,7 +134,7 @@
   flex-shrink: 0;
 }
 .pctLabel {
-  font-size: 13px;
+  font-size: var(--fs-body);
   color: var(--text-secondary);
 }
 .pctEdit {
@@ -151,16 +151,16 @@
   display: inline-block;
 }
 .pctUnit {
-  font-size: 11.5px;
+  font-size: var(--fs-table);
   color: var(--text-disabled);
 }
 .pctStatic {
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   color: var(--text-secondary);
 }
 .pctVal {
   margin-left: auto;
-  font-size: 13.5px;
+  font-size: var(--fs-body);
   font-weight: 500;
   color: var(--text-primary);
   flex-shrink: 0;
@@ -178,16 +178,16 @@
   border-top: 1px solid var(--border-main);
 }
 .totalLabel {
-  font-size: 13px;
+  font-size: var(--fs-body);
   color: var(--text-secondary);
 }
 .strong .totalLabel {
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--text-primary);
 }
 .totalVal {
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 500;
   color: var(--text-primary);
   white-space: nowrap;
@@ -205,12 +205,12 @@
   border-top: 1px solid var(--border-main);
 }
 .bigLabel {
-  font-size: 15px;
+  font-size: var(--fs-title);
   font-weight: 600;
   color: var(--text-primary);
 }
 .bigVal {
-  font-size: 23px;
+  font-size: var(--fs-hero);
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
@@ -236,7 +236,7 @@
   border-radius: 8px;
   padding: 11px 13px;
   outline: none;
-  font-size: 13px;
+  font-size: var(--fs-body);
   line-height: 1.6;
   color: var(--text-primary);
   background: var(--bg-primary);
@@ -274,12 +274,12 @@
   color: var(--text-disabled);
 }
 .emptyTitle {
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 500;
   color: var(--text-primary);
 }
 .emptyText {
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   color: var(--text-secondary);
   margin-top: 4px;
   line-height: 1.5;
@@ -292,7 +292,7 @@
   height: 32px;
   padding: 0 13px;
   border-radius: 6px;
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   font-weight: 600;
   color: var(--on-accent);
   background: var(--accent);

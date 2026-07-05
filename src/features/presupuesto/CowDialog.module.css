@@ -2,7 +2,7 @@
 
 .body {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-body);
   line-height: 1.5;
   color: var(--text-secondary);
 }
@@ -12,7 +12,7 @@
   align-items: center;
   gap: 8px;
   margin-top: 14px;
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   color: var(--text-secondary);
   cursor: pointer;
 }
@@ -26,7 +26,7 @@
   border-radius: 6px;
   background: transparent;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--fs-body);
   cursor: pointer;
 }
 .secondary {
@@ -35,7 +35,7 @@
   border-radius: 6px;
   background: transparent;
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: var(--fs-body);
   cursor: pointer;
 }
 .secondary:hover {
@@ -50,7 +50,7 @@
   border-radius: 6px;
   background: var(--accent);
   color: var(--on-accent);
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;

@@ -45,6 +45,33 @@
   --ring-accent:  0 0 0 2px color-mix(in srgb, var(--accent) 28%, transparent);
 }
 
+/* ── Escala tipográfica (T-15): un único sitio para los tamaños de fuente.
+   Colapsa la deriva de medios píxeles (12/12.5/13, 9.5/10…) a 8 pasos legibles.
+   Independiente del tema. ── */
+:root {
+  --fs-hero:    24px; /* H1, importes/números hero (22–25) */
+  --fs-lg:      18px; /* títulos grandes puntuales (17–20) */
+  --fs-title:   15px; /* títulos de panel (15–16) */
+  --fs-body:    13px; /* cuerpo y UI por defecto (13–14) */
+  --fs-table:   12px; /* tabla densa, etiquetas (11.5–12.5) */
+  --fs-caption: 11px; /* barra de estado, sub-labels, mono (10.5–11) */
+  --fs-badge:   10px; /* badges de recurso (9.5–10) */
+  --fs-micro:    9px; /* micro-etiquetas caps (8.5–9) */
+
+  /* Escala de espaciado (T-16): rejilla 2/4. Solo se tokenizan los valores YA en
+     rejilla (cero cambio visual); los sueltos intencionales (7/9/11/14) se dejan
+     literales a propósito. */
+  --sp-2:   2px;
+  --sp-4:   4px;
+  --sp-6:   6px;
+  --sp-8:   8px;
+  --sp-10: 10px;
+  --sp-12: 12px;
+  --sp-16: 16px;
+  --sp-20: 20px;
+  --sp-24: 24px;
+}
+
 /* ── LIGHT (toggle) ── */
 [data-theme="light"] {
   color-scheme: light;
@@ -107,7 +134,7 @@ button, input, select, textarea { font-family:inherit; }
 
 /* section header (10px caps) */
 .sec-head {
-  font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.11em;
+  font-size: var(--fs-badge); font-weight:600; text-transform:uppercase; letter-spacing:.11em;
   /* Texto informativo (etiquetas de sección): --secondary pasa AA (6,8:1);
      --disabled daba 2,3:1 y fallaba incluso el umbral UI. */
   color:var(--text-secondary);
@@ -116,7 +143,7 @@ button, input, select, textarea { font-family:inherit; }
 /* verdict / resource badge */
 .badge {
   display:inline-flex; align-items:center; gap:5px;
-  font-family:"Geist Mono",monospace; font-size:10px; font-weight:600;
+  font-family:"Geist Mono",monospace; font-size: var(--fs-badge); font-weight:600;
   padding:1px 6px 1px 5px; border-radius:4px; letter-spacing:.02em; white-space:nowrap;
 }
 .badge .dot { width:5px; height:5px; border-radius:50%; }
@@ -124,7 +151,7 @@ button, input, select, textarea { font-family:inherit; }
 /* check table base */
 .ctable { width:100%; border-collapse:collapse; }
 .ctable th {
-  font-weight:600; font-size:9.5px; letter-spacing:.09em; text-transform:uppercase;
+  font-weight:600; font-size: var(--fs-badge); letter-spacing:.09em; text-transform:uppercase;
   /* Cabeceras de columna: info real → --secondary (AA); --disabled fallaba. */
   color:var(--text-secondary); padding:11px 8px; border-bottom:1px solid var(--border-main);
   background:var(--bg-surface); white-space:nowrap;

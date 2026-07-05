@@ -37,7 +37,7 @@
   flex-wrap: wrap;
 }
 .chCodeChip {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   padding: 2px 7px;
   border-radius: 4px;
   background: var(--bg-elevated);
@@ -46,14 +46,14 @@
 }
 .chCount,
 .chPct {
-  font-size: 12px;
+  font-size: var(--fs-table);
   color: var(--text-disabled);
 }
 .chDot {
   color: var(--border-main);
 }
 .chTitle {
-  font-size: 23px;
+  font-size: var(--fs-hero);
   font-weight: 600;
   color: var(--text-primary);
   letter-spacing: -0.02em;
@@ -66,13 +66,13 @@
   flex-shrink: 0;
 }
 .chImpLabel {
-  font-size: 10px;
+  font-size: var(--fs-badge);
   font-weight: 600;
   color: var(--text-disabled);
   white-space: nowrap;
 }
 .chImporte {
-  font-size: 25px;
+  font-size: var(--fs-hero);
   font-weight: 600;
   color: var(--text-primary);
   letter-spacing: -0.02em;
@@ -85,10 +85,10 @@
   padding: 13px 16px 12px;
 }
 .compact .chTitle {
-  font-size: 18px;
+  font-size: var(--fs-lg);
 }
 .compact .chImporte {
-  font-size: 19px;
+  font-size: var(--fs-lg);
 }
 
 /* ---------- Contenedor de tabla ------------------------------------------ */
@@ -183,13 +183,13 @@
   line-height: 1.25;
 }
 .pos {
-  font-size: 12px;
+  font-size: var(--fs-table);
   font-weight: 500;
   color: var(--text-secondary);
   white-space: nowrap;
 }
 .code {
-  font-size: 10.5px;
+  font-size: var(--fs-caption);
   /* código de partida (info identificativa) → --secondary para pasar AA */
   color: var(--text-secondary);
   white-space: nowrap;
@@ -205,14 +205,14 @@
   gap: 8px;
 }
 .title {
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 500;
   color: var(--text-primary);
   line-height: 1.4;
   min-width: 0;
 }
 .cUd {
-  font-size: 12px;
+  font-size: var(--fs-table);
   color: var(--text-secondary);
   white-space: nowrap;
   width: 48px;
@@ -223,7 +223,7 @@
   padding-right: 10px;
 }
 .qtyNum {
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   font-weight: 500;
   color: var(--text-primary);
 }
@@ -233,7 +233,7 @@
 }
 .importeNum {
   text-align: right;
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -268,19 +268,19 @@
   gap: 9px;
 }
 .subCode {
-  font-size: 11.5px;
+  font-size: var(--fs-table);
   font-weight: 600;
   color: var(--accent);
 }
 .subTitle {
-  font-size: 11.5px;
+  font-size: var(--fs-table);
   font-weight: 600;
   color: var(--text-primary);
 }
 .subImporte {
   padding: 9px 12px 9px 8px;
   text-align: right;
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -307,12 +307,12 @@
   color: var(--text-disabled);
 }
 .emptyTitle {
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 500;
   color: var(--text-primary);
 }
 .emptyText {
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   color: var(--text-secondary);
   margin-top: 4px;
   line-height: 1.5;
@@ -335,7 +335,7 @@
   padding: 13px 16px 12px;
 }
 .allChip {
-  font-size: 10.5px;
+  font-size: var(--fs-caption);
   padding: 2px 7px;
   border-radius: 4px;
   background: var(--bg-elevated);
@@ -343,7 +343,7 @@
   border: 1px solid var(--border-main);
 }
 .allPemSmall {
-  font-size: 14px;
+  font-size: var(--fs-body);
   color: var(--text-secondary);
   margin-top: 4px;
 }
@@ -360,7 +360,7 @@
   padding: 9px 16px;
 }
 .bandCode {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   padding: 2px 7px;
   border-radius: 4px;
   background: var(--bg-surface);
@@ -369,7 +369,7 @@
   flex-shrink: 0;
 }
 .bandTitle {
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--text-primary);
   overflow: hidden;
@@ -377,7 +377,7 @@
   white-space: nowrap;
 }
 .bandCount {
-  font-size: 12px;
+  font-size: var(--fs-table);
   color: var(--text-disabled);
   flex-shrink: 0;
 }
@@ -389,18 +389,18 @@
   flex-shrink: 0;
 }
 .bandPct {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   color: var(--text-disabled);
 }
 .bandImporte {
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--text-primary);
 }
 .bandEmpty {
   padding: 12px 24px;
   border-bottom: 1px solid var(--border-sub);
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   color: var(--text-disabled);
   font-style: italic;
 }
@@ -446,7 +446,7 @@
   border: 0;
   cursor: pointer;
   font-family: inherit;
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   font-weight: 500;
   background: transparent;
   color: var(--text-secondary);
@@ -461,7 +461,7 @@
   box-shadow: var(--shadow-panel);
 }
 .segCount {
-  font-size: 10.5px;
+  font-size: var(--fs-caption);
   padding: 1px 6px;
   border-radius: 20px;
   background: var(--bg-elevated);
@@ -478,17 +478,17 @@
   flex-shrink: 0;
 }
 .detailQtyLabel {
-  font-size: 9.5px;
+  font-size: var(--fs-badge);
   font-weight: 600;
   color: var(--text-disabled);
 }
 .detailQtyVal {
-  font-size: 17px;
+  font-size: var(--fs-lg);
   font-weight: 600;
   color: var(--accent);
 }
 .detailQtyUd {
-  font-size: 12px;
+  font-size: var(--fs-table);
   color: var(--text-disabled);
 }
 
@@ -505,7 +505,7 @@
 }
 .medTh {
   padding: 10px 10px;
-  font-size: 9.5px;
+  font-size: var(--fs-badge);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -528,7 +528,7 @@
 .medParcial {
   text-align: right;
   padding-right: 8px;
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--accent);
 }
@@ -551,7 +551,7 @@
 .medEmpty {
   padding: 24px 16px;
   text-align: center;
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   color: var(--text-disabled);
 }
 .medFoot {
@@ -574,7 +574,7 @@
   height: 30px;
   padding: 0 11px;
   border-radius: 6px;
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   font-weight: 500;
   border: 0;
   cursor: pointer;
@@ -600,7 +600,7 @@
   border: 0;
   cursor: text;
   background: transparent;
-  font-size: 12px;
+  font-size: var(--fs-table);
   color: var(--text-primary);
   font-family: inherit;
 }
@@ -616,7 +616,7 @@
   padding: 3px 6px;
   margin: -2px 0;
   outline: none;
-  font-size: 12px;
+  font-size: var(--fs-table);
   color: var(--text-primary);
   background: var(--bg-surface);
   border: 1px solid var(--accent);
@@ -629,7 +629,7 @@
   padding: 3px 7px;
   margin: -3px -7px;
   cursor: text;
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   color: var(--text-secondary);
 }
 .medComment.empty {
@@ -645,7 +645,7 @@
   padding: 3px 7px;
   margin: -2px 0;
   outline: none;
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   color: var(--text-primary);
   background: var(--bg-surface);
   border: 1px solid var(--accent);
@@ -684,7 +684,7 @@
 }
 .jTh {
   padding: 9px 10px;
-  font-size: 9.5px;
+  font-size: var(--fs-badge);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -704,7 +704,7 @@
   padding-left: 12px;
 }
 .jCode {
-  font-size: 11.5px;
+  font-size: var(--fs-table);
   color: var(--text-disabled);
 }
 .jConcept {
@@ -713,13 +713,13 @@
   gap: 8px;
 }
 .jCIDesc {
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   color: var(--text-secondary);
 }
 .jImporte {
   text-align: right;
   padding-right: 14px;
-  font-size: 12px;
+  font-size: var(--fs-table);
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -727,7 +727,7 @@
   display: block;
   text-align: right;
   padding-right: 6px;
-  font-size: 12px;
+  font-size: var(--fs-table);
   color: var(--text-disabled);
 }
 .jShared {
@@ -737,7 +737,7 @@
   flex-shrink: 0;
   padding: 1px 6px 1px 4px;
   border-radius: 20px;
-  font-size: 10px;
+  font-size: var(--fs-badge);
   font-weight: 600;
   background: var(--accent-soft);
   color: var(--accent);
@@ -757,19 +757,19 @@
   gap: 9px;
 }
 .jFootLabel {
-  font-size: 9.5px;
+  font-size: var(--fs-badge);
   font-weight: 600;
   color: var(--text-disabled);
 }
 .jFootVal {
-  font-size: 15px;
+  font-size: var(--fs-title);
   font-weight: 600;
   color: var(--text-primary);
 }
 .jEmpty {
   padding: 22px 16px;
   text-align: center;
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   color: var(--text-disabled);
 }
 
@@ -781,7 +781,7 @@
   padding: 9px 14px;
   border-top: 1px solid var(--border-main);
   background: color-mix(in srgb, var(--state-warn) 9%, var(--bg-elevated));
-  font-size: 11.5px;
+  font-size: var(--fs-table);
   line-height: 1.4;
   color: var(--state-warn);
 }
@@ -855,7 +855,7 @@
   padding-left: 24px;
 }
 .menuCode {
-  font-size: 10.5px;
+  font-size: var(--fs-caption);
   color: var(--text-disabled);
   flex-shrink: 0;
   width: 22px;
@@ -866,14 +866,14 @@
 .menuLabel {
   flex: 1;
   min-width: 0;
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .menuActual {
-  font-size: 10px;
+  font-size: var(--fs-badge);
   color: var(--text-disabled);
   flex-shrink: 0;
 }
@@ -894,7 +894,7 @@
   background: transparent;
   text-align: left;
   font-family: inherit;
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   font-weight: 500;
   color: var(--state-danger);
 }
@@ -913,7 +913,7 @@
   background: transparent;
   text-align: left;
   font-family: inherit;
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   font-weight: 500;
   color: var(--accent);
 }
@@ -934,7 +934,7 @@
   height: 28px;
   padding: 0 9px;
   border-radius: 5px;
-  font-size: 12px;
+  font-size: var(--fs-table);
   font-weight: 600;
   border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
   cursor: pointer;
@@ -956,7 +956,7 @@
   height: 28px;
   padding: 0 8px;
   border-radius: 5px;
-  font-size: 12px;
+  font-size: var(--fs-table);
   font-weight: 500;
   border: 0;
   cursor: pointer;
@@ -974,7 +974,7 @@
   height: 32px;
   padding: 0 12px;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 500;
   border: 0;
   cursor: pointer;
@@ -996,7 +996,7 @@
   flex: 1;
   height: 34px;
   padding: 0 8px;
-  font-size: 12px;
+  font-size: var(--fs-table);
 }
 .detail.compact .descBox {
   padding: 14px 16px;
@@ -1019,12 +1019,12 @@
   padding-top: 2px;
 }
 .cardsSubCode {
-  font-size: 11.5px;
+  font-size: var(--fs-table);
   font-weight: 600;
   color: var(--accent);
 }
 .cardsSubTitle {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 600;
   color: var(--text-secondary);
   overflow: hidden;
@@ -1033,7 +1033,7 @@
 }
 .cardsSubImporte {
   margin-left: auto;
-  font-size: 12px;
+  font-size: var(--fs-table);
   font-weight: 600;
   color: var(--text-disabled);
 }
@@ -1053,7 +1053,7 @@
   cursor: pointer;
   background: transparent;
   color: var(--accent);
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 500;
   font-family: inherit;
 }
@@ -1069,7 +1069,7 @@
   cursor: pointer;
   background: var(--accent-soft);
   color: var(--accent);
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 600;
   font-family: inherit;
 }
@@ -1107,19 +1107,19 @@
   gap: 8px;
 }
 .pCardPos {
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   font-weight: 600;
   color: var(--text-secondary);
 }
 .pCardCode {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   color: var(--text-disabled);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .pCardImporte {
-  font-size: 15px;
+  font-size: var(--fs-title);
   font-weight: 600;
   color: var(--text-primary);
   flex-shrink: 0;
@@ -1151,13 +1151,13 @@
   border-right: 0;
 }
 .pStatLabel {
-  font-size: 8.5px;
+  font-size: var(--fs-micro);
   font-weight: 600;
   color: var(--text-disabled);
   margin-bottom: 2px;
 }
 .pStatVal {
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   font-weight: 500;
   color: var(--text-primary);
 }
@@ -1203,7 +1203,7 @@
   gap: 4px;
 }
 .medFieldLabel {
-  font-size: 9px;
+  font-size: var(--fs-micro);
   font-weight: 600;
   color: var(--text-disabled);
 }
@@ -1223,19 +1223,19 @@
   border-top: 1px solid var(--border-sub);
 }
 .medCardParcLabel {
-  font-size: 9px;
+  font-size: var(--fs-micro);
   font-weight: 600;
   color: var(--text-disabled);
 }
 .medCardParcVal {
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--accent);
 }
 .medCardsEmpty {
   padding: 22px 14px;
   text-align: center;
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   color: var(--text-disabled);
   border-radius: 9px;
   border: 1px dashed var(--border-main);
@@ -1267,7 +1267,7 @@
 }
 .jCardImporte {
   margin-left: auto;
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -1299,7 +1299,7 @@
   align-items: center;
   gap: 4px;
   margin-bottom: 7px;
-  font-size: 11.5px;
+  font-size: var(--fs-table);
   color: var(--text-disabled);
 }
 .chCrumbSep {
@@ -1311,7 +1311,7 @@
   cursor: pointer;
   color: var(--text-secondary);
   font-family: inherit;
-  font-size: 11.5px;
+  font-size: var(--fs-table);
   padding: 1px 4px;
   border-radius: 4px;
 }
@@ -1324,7 +1324,7 @@
   font-weight: 600;
 }
 .chCrumb .mono {
-  font-size: 10.5px;
+  font-size: var(--fs-caption);
 }
 
 /* ---- pulso "aquí está" (buscador → revealPartida) ----------------------- */

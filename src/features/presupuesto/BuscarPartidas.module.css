@@ -31,7 +31,7 @@
   border: 0;
   outline: 0;
   background: transparent;
-  font-size: 13px;
+  font-size: var(--fs-body);
   color: var(--text-primary);
   font-family: inherit;
 }
@@ -83,7 +83,7 @@
   min-width: 0;
 }
 .optCode {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   color: var(--text-disabled);
   flex-shrink: 0;
 }
@@ -93,7 +93,7 @@
 .optTitle {
   flex: 1;
   min-width: 0;
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   font-weight: 600;
   color: var(--text-primary);
   overflow: hidden;
@@ -104,7 +104,7 @@
   color: var(--accent);
 }
 .optLoc {
-  font-size: 10.5px;
+  font-size: var(--fs-caption);
   color: var(--text-disabled);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -114,13 +114,13 @@
 /* ---- estados ------------------------------------------------------------ */
 .empty {
   padding: 12px 10px;
-  font-size: 12px;
+  font-size: var(--fs-table);
   color: var(--text-secondary);
   text-align: center;
 }
 .more {
   padding: 7px 9px 4px;
-  font-size: 10.5px;
+  font-size: var(--fs-caption);
   color: var(--text-disabled);
   text-align: center;
 }

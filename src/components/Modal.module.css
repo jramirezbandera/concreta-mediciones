@@ -56,12 +56,12 @@
   min-width: 0;
 }
 .title {
-  font-size: 15px;
+  font-size: var(--fs-title);
   font-weight: 600;
   color: var(--text-primary);
 }
 .subtitle {
-  font-size: 12px;
+  font-size: var(--fs-table);
   color: var(--text-disabled);
 }
 

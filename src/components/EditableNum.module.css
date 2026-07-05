@@ -8,7 +8,7 @@
   border: 0;
   cursor: text;
   background: transparent;
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   /* Affordance PERSISTENTE de editabilidad: un punteado tenue que abraza el
      número (no toda la celda) para que se vea editable sin tener que pasar el
      ratón —en móvil no hay hover—, manteniéndolo sutil en tablas densas. */
@@ -31,7 +31,7 @@
   padding: 3px 6px;
   margin: -2px 0;
   outline: none;
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   color: var(--text-primary);
   background: var(--bg-primary);
   border: 1px solid var(--accent);

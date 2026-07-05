@@ -17,7 +17,7 @@
   background: transparent;
   cursor: pointer;
   font: inherit;
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   font-weight: 500;
   color: var(--text-secondary);
   padding: 6px 12px;
@@ -43,7 +43,7 @@
 /* ---------- primeros pasos ----------------------------------------------- */
 .intro {
   margin: 0 0 14px;
-  font-size: 13px;
+  font-size: var(--fs-body);
   line-height: 1.6;
   color: var(--text-secondary);
 }
@@ -69,7 +69,7 @@
   border-radius: 50%;
   background: var(--bg-elevated);
   border: 1px solid var(--border-main);
-  font-size: 11.5px;
+  font-size: var(--fs-table);
   font-weight: 600;
   color: var(--text-secondary);
 }
@@ -83,12 +83,12 @@
   min-width: 0;
 }
 .stepTitle {
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--text-primary);
 }
 .stepDesc {
-  font-size: 12px;
+  font-size: var(--fs-table);
   line-height: 1.5;
   color: var(--text-secondary);
   margin-top: 1px;
@@ -100,7 +100,7 @@
   background: var(--bg-elevated);
   color: var(--accent);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--fs-table);
   font-weight: 600;
   cursor: pointer;
   padding: 5px 10px;
@@ -136,12 +136,12 @@
   color: var(--accent);
 }
 .featTitle {
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   font-weight: 600;
   color: var(--text-primary);
 }
 .featDesc {
-  font-size: 11.5px;
+  font-size: var(--fs-table);
   line-height: 1.5;
   color: var(--text-secondary);
   margin-top: 2px;
@@ -185,12 +185,12 @@
   border: 1px solid var(--border-main);
   border-bottom-width: 2px;
   font-family: inherit;
-  font-size: 11.5px;
+  font-size: var(--fs-table);
   font-weight: 600;
   color: var(--text-secondary);
 }
 .rowLabel {
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   color: var(--text-primary);
 }
 

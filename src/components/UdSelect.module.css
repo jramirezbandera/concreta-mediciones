@@ -13,7 +13,7 @@
   background: transparent;
   cursor: pointer;
   font-family: inherit;
-  font-size: 12px;
+  font-size: var(--fs-table);
   color: var(--text-secondary);
 }
 .trigger:hover {
@@ -58,7 +58,7 @@
   background: var(--accent-soft);
 }
 .optUd {
-  font-size: 12px;
+  font-size: var(--fs-table);
   font-weight: 600;
   width: 30px;
   flex-shrink: 0;
@@ -66,7 +66,7 @@
 }
 .optLabel {
   flex: 1;
-  font-size: 12px;
+  font-size: var(--fs-table);
   color: var(--text-secondary);
 }
 .on .optUd,
@@ -84,7 +84,7 @@
   border-radius: 5px;
   padding: 5px 8px;
   outline: none;
-  font-size: 12px;
+  font-size: var(--fs-table);
   font-family: inherit;
   color: var(--text-primary);
   background: var(--bg-primary);

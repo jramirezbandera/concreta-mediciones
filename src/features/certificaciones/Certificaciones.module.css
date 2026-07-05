@@ -46,18 +46,18 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--fs-body);
   color: var(--text-secondary);
 }
 .liqLabel {
-  font-size: 10px;
+  font-size: var(--fs-badge);
   font-weight: 600;
   color: var(--text-disabled);
   white-space: nowrap;
   text-align: right;
 }
 .liqVal {
-  font-size: 24px;
+  font-size: var(--fs-hero);
   font-weight: 600;
   color: var(--text-primary);
   letter-spacing: -0.02em;
@@ -73,7 +73,7 @@
   gap: 12px;
 }
 .globalPct {
-  font-size: 12px;
+  font-size: var(--fs-table);
   color: var(--text-disabled);
 }
 .globalPct .mono {
@@ -98,7 +98,7 @@
   border: 0;
   cursor: pointer;
   font-family: inherit;
-  font-size: 12px;
+  font-size: var(--fs-table);
   font-weight: 500;
   background: transparent;
   color: var(--text-secondary);
@@ -125,7 +125,7 @@
   background: var(--bg-surface);
   cursor: pointer;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -172,7 +172,7 @@
   flex-shrink: 0;
   background: var(--bg-elevated);
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: var(--fs-table);
   font-weight: 600;
 }
 .selItem.on .selNum {
@@ -185,7 +185,7 @@
 }
 .selTitle {
   display: block;
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   font-weight: 500;
   color: var(--text-primary);
 }
@@ -194,11 +194,11 @@
 }
 .selSub {
   display: block;
-  font-size: 11px;
+  font-size: var(--fs-caption);
   color: var(--text-disabled);
 }
 .selLiq {
-  font-size: 12px;
+  font-size: var(--fs-table);
   font-weight: 600;
   flex-shrink: 0;
   color: var(--text-secondary);
@@ -230,7 +230,7 @@
   gap: 12px;
 }
 .chapCode {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   padding: 2px 7px;
   border-radius: 4px;
   background: var(--bg-surface);
@@ -239,7 +239,7 @@
   flex-shrink: 0;
 }
 .chapTitle {
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--text-primary);
   overflow: hidden;
@@ -254,7 +254,7 @@
   flex-shrink: 0;
 }
 .chapPct {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   color: var(--text-disabled);
 }
 .chapPct.full {
@@ -264,14 +264,14 @@
   color: var(--state-warn);
 }
 .chapImporte {
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--text-primary);
 }
 /* Capítulo/sub aislado sin nada que certificar (navegación desde el árbol). */
 .chapEmpty {
   padding: 18px 24px;
-  font-size: 13px;
+  font-size: var(--fs-body);
   color: var(--text-disabled);
 }
 .tableWrap {
@@ -297,12 +297,12 @@
   width: 116px;
 }
 .pos {
-  font-size: 12px;
+  font-size: var(--fs-table);
   font-weight: 500;
   color: var(--text-secondary);
 }
 .code {
-  font-size: 10.5px;
+  font-size: var(--fs-caption);
   color: var(--text-disabled);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -317,20 +317,20 @@
   gap: 8px;
 }
 .title {
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 500;
   color: var(--text-primary);
   line-height: 1.35;
 }
 .cUd {
-  font-size: 12px;
+  font-size: var(--fs-table);
   color: var(--text-secondary);
   width: 44px;
 }
 .cNum2 {
   text-align: right;
   width: 92px;
-  font-size: 12px;
+  font-size: var(--fs-table);
   color: var(--text-secondary);
   padding-left: 4px;
   padding-right: 4px;
@@ -347,7 +347,7 @@
 .cPrice {
   text-align: right;
   width: 84px;
-  font-size: 12px;
+  font-size: var(--fs-table);
   color: var(--text-secondary);
   padding-left: 4px;
   padding-right: 4px;
@@ -356,7 +356,7 @@
   text-align: right;
   width: 116px;
   padding-right: 20px;
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -371,7 +371,7 @@
   flex-shrink: 0;
   padding: 1px 6px 1px 5px;
   border-radius: 5px;
-  font-size: 9.5px;
+  font-size: var(--fs-badge);
   font-weight: 600;
   letter-spacing: 0.03em;
   background: color-mix(in srgb, var(--state-warn) 13%, transparent);
@@ -411,7 +411,7 @@
   border: 0;
   background: transparent;
   color: var(--text-disabled);
-  font-size: 12px;
+  font-size: var(--fs-table);
   font-weight: 500;
   cursor: pointer;
   transition:
@@ -434,19 +434,19 @@
   gap: 9px;
 }
 .subCode {
-  font-size: 11.5px;
+  font-size: var(--fs-table);
   font-weight: 600;
   color: var(--accent);
 }
 .subTitle {
-  font-size: 11.5px;
+  font-size: var(--fs-table);
   font-weight: 600;
   color: var(--text-primary);
 }
 .subImporte {
   padding: 9px 20px 9px 8px;
   text-align: right;
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -479,7 +479,7 @@
   background: var(--state-warn);
 }
 .pctNum {
-  font-size: 11.5px;
+  font-size: var(--fs-table);
   width: 42px;
   text-align: right;
   color: var(--text-secondary);
@@ -494,7 +494,7 @@
   display: block;
   text-align: right;
   padding-right: 10px;
-  font-size: 11.5px;
+  font-size: var(--fs-table);
   color: var(--text-disabled);
 }
 .pctEditWrap {
@@ -507,7 +507,7 @@
   width: 40px;
 }
 .pctPct {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   color: var(--text-disabled);
 }
 .pctPct.over {
@@ -545,7 +545,7 @@
   border-bottom: 1px solid var(--border-main);
 }
 .detailLabel {
-  font-size: 9.5px;
+  font-size: var(--fs-badge);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -553,7 +553,7 @@
   margin-bottom: 6px;
 }
 .detailDesc {
-  font-size: 13px;
+  font-size: var(--fs-body);
   line-height: 1.6;
   color: var(--text-secondary);
   max-width: 880px;
@@ -677,7 +677,7 @@
   background: var(--bg-surface);
   color: var(--text-secondary);
   font-family: inherit;
-  font-size: 12px;
+  font-size: var(--fs-table);
   font-weight: 500;
   cursor: pointer;
 }
@@ -696,7 +696,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--fs-body);
   color: var(--text-primary);
 }
 .massWarn {
@@ -711,7 +711,7 @@
   border-radius: 6px;
   background: transparent;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--fs-body);
   cursor: pointer;
   font-family: inherit;
 }
@@ -729,7 +729,7 @@
   /* Texto oscuro sobre verde (idioma de botón relleno del sistema, como .done):
      blanco sobre --state-ok fallaba contraste AA (~2,3:1). */
   color: var(--on-accent);
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
@@ -740,7 +740,7 @@
 .detailMedComment {
   flex: 1;
   min-width: 0;
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -751,12 +751,12 @@
   font-style: italic;
 }
 .detailMedDims {
-  font-size: 11.5px;
+  font-size: var(--fs-table);
   color: var(--text-disabled);
   flex-shrink: 0;
 }
 .detailMedParcial {
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   font-weight: 600;
   color: var(--accent);
   width: 84px;
@@ -764,7 +764,7 @@
   flex-shrink: 0;
 }
 .detailEmpty {
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   font-style: italic;
   color: var(--text-disabled);
   margin: 0;
@@ -808,7 +808,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 12px;
+  font-size: var(--fs-table);
   white-space: nowrap;
   color: var(--text-secondary);
 }
@@ -823,7 +823,7 @@
   flex-shrink: 0;
 }
 .sumVal {
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   font-weight: 500;
   flex-shrink: 0;
   color: var(--text-secondary);
@@ -893,7 +893,7 @@
 .ajusteConcepto {
   flex: 1;
   min-width: 0;
-  font-size: 12px;
+  font-size: var(--fs-table);
   color: var(--text-primary);
 }
 .ajusteBot {
@@ -946,7 +946,7 @@
   border-radius: 4px;
   background: transparent;
   color: var(--text-disabled);
-  font-size: 11.5px;
+  font-size: var(--fs-table);
   font-weight: 500;
   line-height: 1.3;
   cursor: pointer;
@@ -975,7 +975,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
+  font-size: var(--fs-caption);
   color: var(--text-disabled);
   cursor: pointer;
   user-select: none;
@@ -989,7 +989,7 @@
   color: var(--accent);
 }
 .ajusteImporte {
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   font-weight: 600;
   flex-shrink: 0;
   white-space: nowrap;
@@ -1019,7 +1019,7 @@
   border: none;
   background: transparent;
   color: var(--accent);
-  font-size: 11.5px;
+  font-size: var(--fs-table);
   font-weight: 500;
   cursor: pointer;
 }
@@ -1036,17 +1036,17 @@
   justify-content: space-between;
 }
 .liqFinalLabel {
-  font-size: 9.5px;
+  font-size: var(--fs-badge);
   font-weight: 600;
   color: var(--text-disabled);
 }
 .liqFinalSub {
-  font-size: 11.5px;
+  font-size: var(--fs-table);
   color: var(--text-disabled);
   margin-top: 2px;
 }
 .liqFinalVal {
-  font-size: 22px;
+  font-size: var(--fs-hero);
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--text-primary);
@@ -1069,7 +1069,7 @@
   border-top: 1px solid var(--border-sub);
 }
 .chapSumCode {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   padding: 2px 6px;
   border-radius: 4px;
   background: var(--bg-elevated);
@@ -1082,7 +1082,7 @@
   flex: 1;
 }
 .chapSumTitle {
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 500;
   color: var(--text-primary);
   overflow: hidden;
@@ -1113,16 +1113,16 @@
   width: 116px;
 }
 .chapSumCert {
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--text-primary);
 }
 .chapSumBudget {
-  font-size: 10.5px;
+  font-size: var(--fs-caption);
   color: var(--text-disabled);
 }
 .chapSumPct {
-  font-size: 12px;
+  font-size: var(--fs-table);
   font-weight: 600;
   width: 48px;
   text-align: right;
@@ -1162,12 +1162,12 @@
   padding-top: 2px;
 }
 .cardsSubCode {
-  font-size: 11.5px;
+  font-size: var(--fs-table);
   font-weight: 600;
   color: var(--accent);
 }
 .cardsSubTitle {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 600;
   color: var(--text-secondary);
   overflow: hidden;
@@ -1176,7 +1176,7 @@
 }
 .cardsSubImporte {
   margin-left: auto;
-  font-size: 12px;
+  font-size: var(--fs-table);
   font-weight: 600;
   color: var(--text-disabled);
 }
@@ -1191,7 +1191,7 @@
   cursor: pointer;
   background: transparent;
   color: var(--state-warn);
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 500;
   font-family: inherit;
 }
@@ -1228,19 +1228,19 @@
   gap: 8px;
 }
 .cardPos {
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   font-weight: 600;
   color: var(--text-secondary);
 }
 .cardCode {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   color: var(--text-disabled);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .cardAbono {
-  font-size: 15px;
+  font-size: var(--fs-title);
   font-weight: 600;
   color: var(--text-primary);
   flex-shrink: 0;
@@ -1253,7 +1253,7 @@
   padding-left: 24px;
 }
 .card .cardTitle {
-  font-size: 13px;
+  font-size: var(--fs-body);
   line-height: 1.4;
   color: var(--text-primary);
 }
@@ -1277,13 +1277,13 @@
   border-right: 0;
 }
 .cStatLabel {
-  font-size: 8.5px;
+  font-size: var(--fs-micro);
   font-weight: 600;
   color: var(--text-disabled);
   margin-bottom: 2px;
 }
 .cStatVal {
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   font-weight: 500;
   color: var(--text-primary);
 }

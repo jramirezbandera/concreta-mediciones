@@ -12,7 +12,7 @@
   border: 1px solid var(--border-main);
   cursor: pointer;
   font-family: inherit;
-  font-size: 11.5px;
+  font-size: var(--fs-table);
   font-weight: 500;
   color: var(--text-secondary);
 }
@@ -50,7 +50,7 @@
 }
 
 .optPct {
-  font-size: 12px;
+  font-size: var(--fs-table);
   font-weight: 600;
   width: 34px;
   flex-shrink: 0;
@@ -58,7 +58,7 @@
 }
 .optLabel {
   flex: 1;
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   color: var(--text-secondary);
 }
 .on .optPct,

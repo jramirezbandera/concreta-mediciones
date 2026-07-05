@@ -52,7 +52,7 @@
 }
 .optLabel {
   flex: 1;
-  font-size: 12px;
+  font-size: var(--fs-table);
   color: var(--text-secondary);
 }
 .on .optLabel {

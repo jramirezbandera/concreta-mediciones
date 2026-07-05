@@ -28,7 +28,7 @@
   border: 0;
   cursor: pointer;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 500;
   background: transparent;
   color: var(--text-secondary);
@@ -39,7 +39,7 @@
 }
 
 .barTitle {
-  font-size: 15px;
+  font-size: var(--fs-title);
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -88,7 +88,7 @@
 }
 
 .cellLabel {
-  font-size: 10px;
+  font-size: var(--fs-badge);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.09em;
@@ -125,7 +125,7 @@
 }
 .iconName {
   font-family: 'Geist Mono', monospace;
-  font-size: 10px;
+  font-size: var(--fs-badge);
   color: var(--text-disabled);
 }
 
@@ -155,7 +155,7 @@
   border: 1px solid var(--border-main);
   cursor: pointer;
   font-family: inherit;
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   background: transparent;
   color: var(--text-secondary);
 }

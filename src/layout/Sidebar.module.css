@@ -61,7 +61,7 @@
 }
 .allLabel {
   flex: 1;
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 500;
   color: var(--text-primary);
 }
@@ -70,7 +70,7 @@
   color: var(--accent);
 }
 .allK {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 500;
   color: var(--text-disabled);
 }
@@ -168,7 +168,7 @@
   flex-shrink: 0;
 }
 .chapCode {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   flex-shrink: 0;
   /* nº de capítulo (info identificativa) → --secondary para pasar AA */
   color: var(--text-secondary);
@@ -182,7 +182,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 500;
   color: var(--text-secondary);
 }
@@ -221,7 +221,7 @@
   color: var(--state-warn);
 }
 .chapK {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 500;
   flex-shrink: 0;
   color: var(--text-disabled);
@@ -294,7 +294,7 @@
   flex-shrink: 0;
 }
 .subCode {
-  font-size: 10.5px;
+  font-size: var(--fs-caption);
   opacity: 0.8;
 }
 .subTitle {
@@ -303,7 +303,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12.5px;
+  font-size: var(--fs-table);
 }
 .subRowWrap {
   position: relative;
@@ -357,7 +357,7 @@
   cursor: pointer;
   text-align: left;
   font-family: inherit;
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   color: var(--text-primary);
 }
 .menuItem:hover {
@@ -402,21 +402,21 @@
   cursor: default;
 }
 .menuCode {
-  font-size: 10.5px;
+  font-size: var(--fs-caption);
   color: var(--text-disabled);
   flex-shrink: 0;
 }
 .menuLabel {
   flex: 1;
   min-width: 0;
-  font-size: 12.5px;
+  font-size: var(--fs-table);
   color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .menuActual {
-  font-size: 10px;
+  font-size: var(--fs-badge);
   color: var(--text-disabled);
   flex-shrink: 0;
 }
@@ -467,12 +467,12 @@
   background: var(--bg-primary);
 }
 .kCap {
-  font-size: 9px;
+  font-size: var(--fs-micro);
   letter-spacing: 0.06em;
   color: var(--text-disabled);
 }
 .kNum {
-  font-size: 12px;
+  font-size: var(--fs-table);
   font-weight: 600;
 }
 .kBtn {
@@ -484,7 +484,7 @@
   border-radius: 999px;
   background: var(--accent);
   color: var(--on-accent);
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 600;
   cursor: pointer;
   transition: filter 0.15s ease;
@@ -508,7 +508,7 @@
   gap: 6px;
 }
 .ajustaLabel {
-  font-size: 10px;
+  font-size: var(--fs-badge);
   letter-spacing: 0.06em;
   color: var(--text-secondary);
 }
@@ -531,12 +531,12 @@
   border: none;
   background: transparent;
   outline: none;
-  font-size: 20px;
+  font-size: var(--fs-lg);
   font-weight: 600;
   color: var(--text-primary);
 }
 .ajustaUnit {
-  font-size: 16px;
+  font-size: var(--fs-title);
   color: var(--text-secondary);
 }
 .ajustaPreview {
@@ -553,7 +553,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  font-size: 13px;
+  font-size: var(--fs-body);
   color: var(--text-secondary);
 }
 .ajustaPrevK {
@@ -561,7 +561,7 @@
   color: var(--accent);
 }
 .ajustaPrevStrong {
-  font-size: 16px;
+  font-size: var(--fs-title);
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -570,7 +570,7 @@
   align-items: flex-start;
   gap: 6px;
   margin-top: 2px;
-  font-size: 11px;
+  font-size: var(--fs-caption);
   line-height: 1.4;
   color: var(--text-secondary);
 }
@@ -578,7 +578,7 @@
 .ajustaApply {
   padding: 9px 16px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 600;
   cursor: pointer;
 }
@@ -624,7 +624,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 12px;
+  font-size: var(--fs-table);
   white-space: nowrap;
   color: var(--text-secondary);
 }
@@ -635,7 +635,7 @@
   flex-shrink: 0;
 }
 .resVal {
-  font-size: 12px;
+  font-size: var(--fs-table);
   flex-shrink: 0;
   font-weight: 500;
   color: var(--text-secondary);
@@ -653,12 +653,12 @@
   justify-content: space-between;
 }
 .resTotalLabel {
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--text-primary);
 }
 .resTotalVal {
-  font-size: 18px;
+  font-size: var(--fs-lg);
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--text-primary);
