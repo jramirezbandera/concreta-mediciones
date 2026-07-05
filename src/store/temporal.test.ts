@@ -72,6 +72,20 @@ describe('temporal — mecánica del historial', () => {
     expect(__historyState().past).toBe(2);
   });
 
+  it('ventana deslizante: teclear seguido más allá de la ventana inicial sigue siendo UNA entrada', () => {
+    __setThrottleMsForTests(700);
+    vi.useFakeTimers();
+    // Sesión de tecleo continua (~150 ms/pulsación) que CRUZA el límite de la
+    // ventana inicial (t=700): sin deslizamiento se partiría en 2 entradas.
+    for (let t = 0, i = 0; t <= 1800; t += 150, i++) {
+      vi.setSystemTime(t);
+      state().setObraPath('denominacion', 'x'.repeat(i + 1));
+    }
+    expect(__historyState().past).toBe(1);
+    undo();
+    expect(state().obra.denominacion).not.toMatch(/^x+$/); // valor pre-sesión
+  });
+
   it('respeta el límite de profundidad (descarta la entrada más vieja)', () => {
     __setThrottleMsForTests(0); // cada edición = una entrada
     for (let i = 0; i < 30; i++) state().setObraPath('denominacion', `v${i}`);

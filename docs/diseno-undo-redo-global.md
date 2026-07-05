@@ -18,7 +18,31 @@ aplicados: undo/redo limpian el toast pendiente (D-08 simétrico); guarda de
 flanco en notify(); `DOMAIN_KEYS` canónico en schema.ts (exhaustividad en tipos)
 compartido por autosave (ya con `bajas`) e historial; tombstone limpiado antes de
 la guarda de idempotencia en restorePartida; `__resetSyncForTests` resetea también
-el historial. Pendiente sin cambio: T8 (medir memoria antes de subir LIMIT=25).
+el historial.
+
+**T6 HECHO (2026-07-05):** botones Deshacer/Rehacer en TopBar (desktop/tablet;
+móvil pendiente de un pase de UX — los atajos no aplican sin teclado) +
+Ctrl/⌘+Z, Ctrl+Shift+Z y Ctrl+Y en useAppHotkeys (antes del early-return de
+modificadores; `isTextEditingTarget` deja el undo nativo del input;
+`hasBlockingOverlay` no deshace bajo un modal). `.icon-btn:disabled` nuevo en
+tokens.css.
+
+**T8 HECHO (2026-07-05):**
+· T8a (modelo de commit): las celdas de dinero/medición commitean en Enter/blur
+  (1 set por edición confirmada — EditableNum solo toca el draft en onChange).
+  TRES superficies escriben por pulsación: ObraModal (`setObraPath`), notas del
+  Resumen (`setObraPath`) y editor de DF (`editAgenteDF`). Decisión: throttle con
+  **ventana DESLIZANTE** (cada set la extiende) → una sesión de tecleo continua =
+  UNA entrada que restaura el valor pre-sesión. Trade-off aceptado: dos commits
+  de grid encadenados a <700 ms se fusionan en una entrada (un Ctrl+Z revierte
+  ese mini-lote). Alternativa futura si molesta: normalizar esas 3 superficies a
+  commit-en-blur y eliminar el throttle.
+· T8b (memoria, medido con spike + gc forzado): peor caso absoluto — obra de
+  2.000 partidas TODAS reescritas en cada una de las 25 entradas (editRecurso de
+  un recurso compartido por todas) — retiene **7,1 MB** (~291 KB/entrada);
+  `clearHistory` libera 6,8 MB (el historial suelta bien, sin fuga). Para la obra
+  de dogfood (cientos de partidas) el peor caso ronda 1 MB. **LIMIT=25
+  confirmado.**
 
 ## Problema
 

@@ -187,6 +187,8 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .icon-btn { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px;
   border-radius:6px; border:0; background:none; cursor:pointer; color:var(--text-secondary); }
 .icon-btn:hover { color:var(--text-primary); background:var(--bg-elevated); }
+.icon-btn:disabled { opacity:.35; cursor:default; }
+.icon-btn:disabled:hover { color:var(--text-secondary); background:none; }
 
 /* a11y §6: en punteros táctiles los botones-icono crecen a ≥44px de área táctil */
 @media (pointer: coarse) {

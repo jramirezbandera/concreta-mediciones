@@ -2,6 +2,7 @@ import { Icon } from '../components/Icon';
 import type { Breakpoint } from '../hooks/useBreakpoint';
 import type { Theme } from '../hooks/useTheme';
 import { TABS, type View } from './types';
+import { UndoRedoButtons } from './UndoRedoButtons';
 import styles from './TopBar.module.css';
 
 export interface TopBarProps {
@@ -118,6 +119,10 @@ export function TopBar({
 
       {/* Acciones */}
       <div className={styles.actions}>
+        {/* Deshacer/Rehacer: en móvil no caben (la barra ya va justa a 390px);
+            pendiente de un pase de UX móvil (¿Drawer?). Los atajos Ctrl+Z/Ctrl+Y
+            viven en useAppHotkeys. */}
+        {!isMobile && <UndoRedoButtons />}
         {importAction}
         {/* La ayuda vive en la barra de estado inferior (desktop). En móvil no hay
             StatusBar, así que se mantiene aquí como único punto de entrada. */}

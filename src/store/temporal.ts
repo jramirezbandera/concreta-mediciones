@@ -144,9 +144,15 @@ function onDomainChange(_next: DomainSnapshot, prev: DomainSnapshot): void {
     // Borde de entrada de una ráfaga nueva: guarda el estado pre-ráfaga.
     past.push(prev);
     if (past.length > LIMIT) past.shift();
-    throttleUntil = now + throttleMs;
   }
-  // Dentro de la ventana: se coalesce (no se empuja otra entrada).
+  // Ventana DESLIZANTE (T8a): cada set —también los coalescidos— la extiende.
+  // Las celdas de dinero commitean en Enter/blur (1 set por edición), pero tres
+  // superficies de texto (ObraModal, notas del Resumen, editor de DF) escriben
+  // POR PULSACIÓN: sin deslizar, una sesión de tecleo fragmentaba en ~1 entrada
+  // por ventana. Deslizando, teclear seguido = UNA entrada que restaura el valor
+  // pre-sesión. Trade-off aceptado: dos commits de grid encadenados a <700 ms
+  // también se fusionan (un Ctrl+Z revierte ese mini-lote; tolerable).
+  throttleUntil = now + throttleMs;
   notify();
 }
 

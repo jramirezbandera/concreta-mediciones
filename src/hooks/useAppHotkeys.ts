@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { ALL, useObraStore } from '../store';
+import { redo, undo } from '../store/temporal';
 import {
   hasBlockingOverlay,
   hasNativeSelection,
@@ -13,6 +14,9 @@ import { chapterIdOfPartida, deletePartidaWithUndo } from './usePartidaDelete';
 /**
  * Atajos globales de la app (montar UNA vez en App):
  *  - Ctrl/⌘+K → foco al buscador de partidas.
+ *  - Ctrl/⌘+Z → deshacer; Ctrl+Shift+Z / Ctrl+Y → rehacer (historial de dominio).
+ *               Dentro de un campo de texto NO se intercepta: ahí manda el undo
+ *               NATIVO del input (expectativa del navegador).
  *  - ?        → abre la chuleta de atajos.
  *  - Supr     → elimina la partida seleccionada (con toast «Deshacer»). Red de
  *               seguridad: ignora si el foco está en un campo, en un botón, en
@@ -29,6 +33,21 @@ export function useAppHotkeys({ onHelp }: { onHelp: () => void }): void {
         if (hasBlockingOverlay()) return;
         e.preventDefault();
         useObraStore.getState().focusSearch();
+        return;
+      }
+      // Ctrl/⌘+Z / Ctrl+Shift+Z / Ctrl+Y — deshacer/rehacer del dominio. ANTES
+      // del early-return de modificadores (si no, nunca se ejecutarían).
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        !e.altKey &&
+        (e.key.toLowerCase() === 'z' || e.key.toLowerCase() === 'y')
+      ) {
+        // En un campo de texto, el undo nativo del input; bajo un modal, nada
+        // (deshacer dominio con el modal abierto desconcertaría).
+        if (isTextEditingTarget() || hasBlockingOverlay()) return;
+        e.preventDefault();
+        if (e.key.toLowerCase() === 'y' || e.shiftKey) redo();
+        else undo();
         return;
       }
       if (e.ctrlKey || e.metaKey || e.altKey) return; // resto: sin modificadores

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useObraStore, useToastStore } from '../store';
+import { __resetHistoryForTests, initHistory } from '../store/temporal';
 import { BuscarPartidas } from '../features/presupuesto/BuscarPartidas';
 import { useAppHotkeys } from './useAppHotkeys';
 
@@ -57,5 +58,43 @@ describe('useAppHotkeys', () => {
     render(<Harness />);
     fireEvent.keyDown(document.body, { key: 'Escape' });
     expect(useObraStore.getState().openPartidaId).toBeNull();
+  });
+});
+
+describe('useAppHotkeys — deshacer/rehacer (T6)', () => {
+  const denominacion = () => useObraStore.getState().obra.denominacion;
+
+  beforeEach(() => {
+    __resetHistoryForTests();
+    useObraStore.getState().reset();
+    initHistory(useObraStore); // la obra sembrada es la línea base
+  });
+  afterEach(() => {
+    __resetHistoryForTests();
+  });
+
+  it('Ctrl+Z deshace; Ctrl+Shift+Z y Ctrl+Y rehacen', () => {
+    render(<Harness />);
+    const before = denominacion();
+    useObraStore.getState().setObraPath('denominacion', 'Editada');
+
+    fireEvent.keyDown(document.body, { key: 'z', ctrlKey: true });
+    expect(denominacion()).toBe(before); // deshecho
+
+    fireEvent.keyDown(document.body, { key: 'Z', ctrlKey: true, shiftKey: true });
+    expect(denominacion()).toBe('Editada'); // rehecho (Ctrl+Shift+Z)
+
+    fireEvent.keyDown(document.body, { key: 'z', ctrlKey: true });
+    fireEvent.keyDown(document.body, { key: 'y', ctrlKey: true });
+    expect(denominacion()).toBe('Editada'); // rehecho (Ctrl+Y)
+  });
+
+  it('Ctrl+Z con el foco en un campo de texto NO deshace (undo nativo del input)', () => {
+    render(<Harness />);
+    useObraStore.getState().setObraPath('denominacion', 'Editada');
+    const input = screen.getByLabelText('Buscar partida en la obra');
+    input.focus();
+    fireEvent.keyDown(input, { key: 'z', ctrlKey: true });
+    expect(denominacion()).toBe('Editada'); // intacto: el input gestiona su undo
   });
 });

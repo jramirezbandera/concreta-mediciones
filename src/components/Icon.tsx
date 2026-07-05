@@ -29,12 +29,14 @@ import {
   MoreVertical,
   Pencil,
   Plus,
+  Redo2,
   Ruler,
   Search,
   Sun,
   Moon,
   Target,
   Trash2,
+  Undo2,
   Upload,
   X,
   type LucideIcon,
@@ -84,6 +86,8 @@ export const ICONS = {
   loader: Loader2,
   alert: AlertTriangle,
   target: Target,
+  undo: Undo2,
+  redo: Redo2,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICONS;
