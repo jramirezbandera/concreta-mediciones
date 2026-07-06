@@ -223,7 +223,7 @@ export default function App() {
         onObra={() => setObraOpen(true)}
         onHelp={() => openHelp('inicio')}
         obraSwitcher={<ObraSwitcher />}
-        importAction={view === 'presupuesto' ? <ImportPartidaButton compact={bp.isMobile} /> : undefined}
+        importAction={view === 'presupuesto' ? <ImportPartidaButton compact={bp.isCompact} /> : undefined}
       />
 
       <div className={styles.body}>

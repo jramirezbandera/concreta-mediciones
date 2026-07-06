@@ -22,7 +22,7 @@ import { create, type StateCreator } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import type { Agente, Cert, MedLine, Partida, Rates, ResourceType } from '../core/types';
-import { composeCertFirmantes } from '../core/listado';
+import { composeCertFirmantes, firmaCertDefinitiva } from '../core/listado';
 import { ancestorIds, findNode } from '../core/tree';
 import type { ImportedObra } from '../core/bc3import';
 import { REF_SOURCES, type RefCopyItem, type RefDrag, type Resolution } from '../core/refdata';
@@ -407,10 +407,10 @@ export interface ObraState extends ObraData {
   deleteAgenteDF: (id: string) => void;
   /**
    * Congela los firmantes de la cert `index` (pie de firma reproducible, OV1):
-   * si aún no tiene `firmantesSnapshot` CON firmantes, sella la DF+Constructora
-   * vivas y la fecha `firmadoAt`. Exportar sin agentes rellenos NO sella nada
-   * (se podrá firmar cuando se rellenen). Idempotente una vez sellada. Se llama
-   * al exportar la certificación.
+   * sella la DF+Constructora vivas y la fecha `firmadoAt` mientras el snapshot no
+   * sea DEFINITIVO (ver `firmaCertDefinitiva`: aún sin DF). Exportar/previsualizar
+   * antes de rellenar la DF sella un pie PROVISIONAL que se refresca al reexportar;
+   * en cuanto incluye a la DF queda fijado (idempotente). Se llama al exportar.
    */
   freezeCertFirmantes: (index: number, nowIso?: string) => void;
 
@@ -616,10 +616,12 @@ export const useObraStore = create<ObraState>()(
       freezeCertFirmantes: (index, nowIso) =>
         set((s) => {
           const cert = s.certs[index];
-          // Snapshot con firmantes → doc ya firmado, no se reescribe. Uno VACÍO
-          // (exportó antes de rellenar DF/constructora) no es una firma: se
-          // re-sella cuando por fin haya firmantes que congelar.
-          if (!cert || cert.firmantesSnapshot?.length) return;
+          if (!cert) return;
+          // Snapshot DEFINITIVO (ya incluye la DF) → doc firmado, no se reescribe.
+          // Uno PROVISIONAL (vacío o solo constructora, sellado antes de rellenar
+          // la DF) sí se re-sella: exportar/previsualizar pronto no debe clavar una
+          // firma incompleta (los directores añadidos después han de aparecer).
+          if (firmaCertDefinitiva(cert.firmantesSnapshot)) return;
           const firmantes = composeCertFirmantes(s.obra);
           if (!firmantes.length) return;
           cert.firmantesSnapshot = firmantes;

@@ -183,10 +183,11 @@ export interface Cert {
   snapshotAt?: string;
   /**
    * Pies de firma por rol (eng-review OV1): firmantes CONGELADOS en la primera
-   * exportación CON firmantes. Reexportar una cert vieja reproduce QUIÉN la
-   * firmó, aunque después cambie la dirección facultativa o la constructora.
-   * Espeja `priceSnapshot`/`lineQty`; si falta o está VACÍO (exportó antes de
-   * rellenar los agentes) se compone en vivo hasta que haya sello real.
+   * exportación con firma DEFINITIVA (con Dirección Facultativa). Reexportar una
+   * cert vieja reproduce QUIÉN la firmó, aunque después cambie la DF o la
+   * constructora. Espeja `priceSnapshot`/`lineQty`; si falta o es PROVISIONAL
+   * (vacío o solo constructora, sellado antes de rellenar la DF) se compone en
+   * vivo hasta que haya sello definitivo (`firmaCertDefinitiva`).
    */
   firmantesSnapshot?: Firmante[];
   /** Fecha ISO de firma, congelada junto a `firmantesSnapshot` (línea «En X, a Y»). */

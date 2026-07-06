@@ -11,6 +11,10 @@
   /* Más sitio para el nombre de obra (se quitó el breadcrumb): crece en pantallas
      anchas y se recorta con elegancia en las medianas sin apretar las pestañas. */
   max-width: clamp(240px, 26vw, 420px);
+  /* min-width:0 cierra la cadena de encogido flex (bar → brand → wrap → trigger →
+     triggerName): sin él el trigger conserva su ancho natural y el nombre de obra
+     desbordaba la marca pisando las pestañas en tablet. */
+  min-width: 0;
   padding: 3px 7px;
   border: 1px solid transparent;
   border-radius: 7px;

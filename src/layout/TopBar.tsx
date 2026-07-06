@@ -158,7 +158,7 @@ export function TopBar({
           <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={15} />
         </button>
         {onToggleRef &&
-          (isMobile ? (
+          (isCompact ? (
             <button
               type="button"
               onClick={onToggleRef}
@@ -184,15 +184,15 @@ export function TopBar({
           ))}
         {onExport && (
           <>
-            {!isMobile && <span className={styles.sep} />}
+            {!isCompact && <span className={styles.sep} />}
             <button
               type="button"
               onClick={onExport}
               title="Exportar listados"
-              className={`t150 ${styles.export} ${isMobile ? styles.compact : ''}`}
+              className={`t150 ${styles.export} ${isCompact ? styles.compact : ''}`}
             >
-              <Icon name="download" size={isMobile ? 16 : 14} />
-              {!isMobile && 'Exportar'}
+              <Icon name="download" size={isCompact ? 16 : 14} />
+              {!isCompact && 'Exportar'}
             </button>
           </>
         )}

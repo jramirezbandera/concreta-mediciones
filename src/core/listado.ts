@@ -103,11 +103,14 @@ function firmantesDF(obra: Obra): Firmante[] {
   }));
 }
 
+/** Rol del bloque de la Constructora (marca el firmante que NO es DF). */
+export const ROL_CONSTRUCTORA = 'La Constructora';
+
 /** Bloque de la Constructora: razón social + «Por la constructora: [jefe]» (OV4). */
 function firmanteConstructora(obra: Obra): Firmante {
   const jefe = str(obra, 'constructor.jefe');
   return {
-    rol: 'La Constructora',
+    rol: ROL_CONSTRUCTORA,
     nombre: str(obra, 'constructor.nombre'),
     sub: jefe ? `Por la constructora: ${jefe}` : undefined,
   };
@@ -123,10 +126,23 @@ export function composeCertFirmantes(obra: Obra): Firmante[] {
 }
 
 /**
+ * ¿El snapshot de firmantes es una firma DEFINITIVA? Solo lo es cuando incluye a
+ * la Dirección Facultativa (el firmante esencial de una certificación de obra):
+ * un snapshot vacío o SOLO con la constructora se selló antes de rellenar la DF
+ * y es PROVISIONAL — se re-sella en la siguiente exportación cuando ya hay
+ * directores que congelar. Así el bloqueo (OV1) protege lo firmado de verdad sin
+ * dejar clavada una firma incompleta por haber exportado (o previsualizado) pronto.
+ */
+export function firmaCertDefinitiva(firmantes: readonly Firmante[] | undefined): boolean {
+  return !!firmantes?.some((f) => f.rol !== ROL_CONSTRUCTORA && f.nombre.trim());
+}
+
+/**
  * Firma de un documento por tipo:
  *   presupuesto/resumen → Constructora + Propiedad
  *   cert                → DF (0..n) + Constructora, con el snapshot congelado si
- *                         existe (OV1) o compuesto en vivo si no (certs legadas)
+ *                         es DEFINITIVO (OV1) o compuesto en vivo si no (snapshot
+ *                         provisional —solo constructora/vacío— o cert legada)
  * `nowIso` es la fecha de presupuesto/resumen (la de la cert va en `cert.firmadoAt`).
  */
 export function firmaFor(
@@ -137,9 +153,12 @@ export function firmaFor(
 ): Firma {
   const firmantes =
     kind === 'cert'
-      ? // Un snapshot VACÍO no es una firma (bug legado: se sellaba al exportar
-        // aunque no hubiera agentes): se compone en vivo hasta que haya sello real.
-        (cert?.firmantesSnapshot?.length ? cert.firmantesSnapshot : composeCertFirmantes(obra))
+      ? // Solo un snapshot DEFINITIVO (con DF) fija la firma; uno provisional
+        // (vacío o solo constructora, sellado antes de rellenar la DF) se compone
+        // en vivo para que los directores añadidos después sí aparezcan.
+        (firmaCertDefinitiva(cert?.firmantesSnapshot)
+          ? cert!.firmantesSnapshot!
+          : composeCertFirmantes(obra))
       : [
           firmanteConstructora(obra),
           { rol: 'La Propiedad', nombre: str(obra, 'promotor.nombre') },

@@ -258,6 +258,28 @@ describe('dirección facultativa (pies de firma por rol)', () => {
     expect(state().certs[0]!.firmadoAt).toBe('2026-07-06T00:00:00.000Z');
   });
 
+  it('un snapshot PROVISIONAL (solo constructora) se refresca al añadir la DF y reexportar', () => {
+    // Bug reportado: se exportó la cert con la constructora rellena pero SIN DF →
+    // se selló `[constructora]`. Añadir los directores después no aparecía porque
+    // el snapshot se daba por firmado. Ahora, sin DF, es provisional y se re-sella.
+    state().setObraPath('constructor.nombre', 'BuildCo');
+    state().freezeCertFirmantes(0, '2026-07-01T00:00:00.000Z');
+    expect(state().certs[0]!.firmantesSnapshot!.map((f) => f.nombre)).toEqual(['BuildCo']);
+    // Se añaden los directores de obra y se reexporta.
+    state().addAgenteDF();
+    state().editAgenteDF(state().obra.direccionFacultativa![0]!.id, 'nombre', 'J. Ramírez');
+    state().addAgenteDF();
+    state().editAgenteDF(state().obra.direccionFacultativa![1]!.id, 'nombre', 'A. Vargas');
+    state().freezeCertFirmantes(0, '2026-07-06T00:00:00.000Z');
+    expect(state().certs[0]!.firmantesSnapshot!.map((f) => f.nombre)).toEqual(['J. Ramírez', 'A. Vargas', 'BuildCo']);
+    expect(state().certs[0]!.firmadoAt).toBe('2026-07-06T00:00:00.000Z');
+    // Ya es DEFINITIVO (tiene DF): un nuevo freeze con la DF cambiada NO reescribe.
+    state().editAgenteDF(state().obra.direccionFacultativa![0]!.id, 'nombre', 'Otro');
+    state().freezeCertFirmantes(0, '2026-09-09T00:00:00.000Z');
+    expect(state().certs[0]!.firmantesSnapshot!.map((f) => f.nombre)).toEqual(['J. Ramírez', 'A. Vargas', 'BuildCo']);
+    expect(state().certs[0]!.firmadoAt).toBe('2026-07-06T00:00:00.000Z');
+  });
+
   it('freezeCertFirmantes re-sella una cert legada con snapshot VACÍO (bug de firma perdida)', () => {
     // Obras guardadas con el bug: el export selló `[]` y bloqueaba la firma para siempre.
     useObraStore.setState((s) => {

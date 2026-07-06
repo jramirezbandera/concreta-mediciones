@@ -5,6 +5,7 @@ import {
   buildPresupuestoListado,
   buildResumen,
   composeCertFirmantes,
+  firmaCertDefinitiva,
   firmaFor,
   firmaLugarFecha,
   obraMeta,
@@ -339,12 +340,33 @@ describe('firmaFor (pies de firma por rol, eng-review OV1/OV2/OV3/OV4)', () => {
     expect(f.firmantes.map((x) => x.nombre)).toEqual(['J. Ramírez', 'M. Ruiz', 'BuildCo SL']);
   });
 
+  it('cert con snapshot PROVISIONAL (solo constructora, sin DF) compone en vivo', () => {
+    // Bug reportado: se selló antes de rellenar la DF → la firma no es definitiva
+    // y debe recomponer para incluir los directores añadidos después.
+    const snap = [{ rol: 'La Constructora', nombre: 'BuildCo SL', sub: 'Por la constructora: Pedro Gil' }];
+    const f = firmaFor('cert', obra, { firmantesSnapshot: snap, firmadoAt: '2026-01-01T00:00:00.000Z' });
+    expect(f.firmantes.map((x) => x.nombre)).toEqual(['J. Ramírez', 'M. Ruiz', 'BuildCo SL']);
+  });
+
   it('composeCertFirmantes es la fuente única del snapshot (DF + Constructora, filtrada)', () => {
     expect(composeCertFirmantes(obra).map((x) => x.nombre)).toEqual([
       'J. Ramírez',
       'M. Ruiz',
       'BuildCo SL',
     ]);
+  });
+
+  it('firmaCertDefinitiva: definitiva solo con DF (con nombre); vacío/solo-constructora = provisional', () => {
+    expect(firmaCertDefinitiva(undefined)).toBe(false);
+    expect(firmaCertDefinitiva([])).toBe(false);
+    expect(firmaCertDefinitiva([{ rol: 'La Constructora', nombre: 'BuildCo SL' }])).toBe(false);
+    expect(firmaCertDefinitiva([{ rol: 'Director de obra', nombre: '' }])).toBe(false); // DF sin nombre
+    expect(
+      firmaCertDefinitiva([
+        { rol: 'Director de obra', nombre: 'J. Ramírez' },
+        { rol: 'La Constructora', nombre: 'BuildCo SL' },
+      ]),
+    ).toBe(true);
   });
 
   it('no rompe con direccionFacultativa malformada (no-array o entradas basura)', () => {
