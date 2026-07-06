@@ -45,4 +45,12 @@ describe('TopBar (F8.1 — responsive del chrome)', () => {
     expect(screen.getByText('Concreta')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Presupuesto' })).toBeInTheDocument();
   });
+
+  it('en escritorio estrecho (1024–1180) el wordmark se oculta para no pisar las pestañas', () => {
+    // Justo por encima del umbral de tablet el selector de obra + pestañas +
+    // acciones van muy justos; el wordmark cede el sitio hasta que sobra (>1180).
+    render(bar(1100));
+    expect(screen.queryByText('Concreta')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Presupuesto' })).toBeInTheDocument();
+  });
 });

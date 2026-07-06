@@ -42,7 +42,7 @@ export function TopBar({
   obraSwitcher,
   importAction,
 }: TopBarProps) {
-  const { isMobile, isTablet, isCompact } = bp;
+  const { isMobile, isCompact } = bp;
 
   return (
     <header className={styles.bar} style={{ padding: isMobile ? '0 10px' : '0 14px' }}>
@@ -69,9 +69,13 @@ export function TopBar({
           className={styles.logo}
           alt=""
         />
-        {/* En tablet las pestañas viven en el TopBar y no cabe el wordmark:
-            solo logo (en móvil las pestañas van abajo y el nombre sí cabe). */}
-        {!isTablet && <span className={styles.name}>Concreta</span>}
+        {/* Cuándo mostrar el wordmark (no es monótono con el ancho):
+            · móvil (<760): SÍ — las pestañas van a la barra inferior y sobra sitio;
+            · tablet (760–1023): NO — las pestañas viven aquí, solo cabe el logo;
+            · escritorio 1024–1180: NO — selector de obra + pestañas + acciones van
+              justos y el wordmark pisaría las pestañas;
+            · escritorio holgado (>1180): SÍ, junto al kicker «Mediciones» (mismo umbral). */}
+        {(isMobile || bp.w > 1180) && <span className={styles.name}>Concreta</span>}
         <span className={`hide-sm ${styles.sep}`} />
         <span className={`mono caps hide-md ${styles.kicker}`}>Mediciones</span>
         {obraSwitcher ? (

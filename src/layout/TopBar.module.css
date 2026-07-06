@@ -101,6 +101,15 @@
   border-radius: 2px 2px 0 0;
 }
 
+/* En tablet (las pestañas viven en el TopBar junto a la marca y las acciones)
+   el presupuesto horizontal va justo: apretamos el padding de las pestañas para
+   que el selector de obra tenga sitio y no lo pisen en el extremo estrecho. */
+@media (max-width: 1023px) {
+  .tab {
+    padding: 0 9px;
+  }
+}
+
 .actions {
   display: flex;
   align-items: center;
