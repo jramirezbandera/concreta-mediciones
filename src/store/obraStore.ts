@@ -407,8 +407,10 @@ export interface ObraState extends ObraData {
   deleteAgenteDF: (id: string) => void;
   /**
    * Congela los firmantes de la cert `index` (pie de firma reproducible, OV1):
-   * si aún no tiene `firmantesSnapshot`, sella la DF+Constructora vivas y la
-   * fecha `firmadoAt`. Idempotente. Se llama al exportar la certificación.
+   * si aún no tiene `firmantesSnapshot` CON firmantes, sella la DF+Constructora
+   * vivas y la fecha `firmadoAt`. Exportar sin agentes rellenos NO sella nada
+   * (se podrá firmar cuando se rellenen). Idempotente una vez sellada. Se llama
+   * al exportar la certificación.
    */
   freezeCertFirmantes: (index: number, nowIso?: string) => void;
 
@@ -614,8 +616,13 @@ export const useObraStore = create<ObraState>()(
       freezeCertFirmantes: (index, nowIso) =>
         set((s) => {
           const cert = s.certs[index];
-          if (!cert || cert.firmantesSnapshot) return;
-          cert.firmantesSnapshot = composeCertFirmantes(s.obra);
+          // Snapshot con firmantes → doc ya firmado, no se reescribe. Uno VACÍO
+          // (exportó antes de rellenar DF/constructora) no es una firma: se
+          // re-sella cuando por fin haya firmantes que congelar.
+          if (!cert || cert.firmantesSnapshot?.length) return;
+          const firmantes = composeCertFirmantes(s.obra);
+          if (!firmantes.length) return;
+          cert.firmantesSnapshot = firmantes;
           cert.firmadoAt = nowIso ?? new Date().toISOString();
         }),
 

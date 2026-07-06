@@ -334,6 +334,11 @@ describe('firmaFor (pies de firma por rol, eng-review OV1/OV2/OV3/OV4)', () => {
     expect(f.fecha).toBe('2026-01-01T00:00:00.000Z');
   });
 
+  it('cert con snapshot VACÍO (bug legado: selló sin agentes) compone en vivo', () => {
+    const f = firmaFor('cert', obra, { firmantesSnapshot: [], firmadoAt: '2026-01-01T00:00:00.000Z' });
+    expect(f.firmantes.map((x) => x.nombre)).toEqual(['J. Ramírez', 'M. Ruiz', 'BuildCo SL']);
+  });
+
   it('composeCertFirmantes es la fuente única del snapshot (DF + Constructora, filtrada)', () => {
     expect(composeCertFirmantes(obra).map((x) => x.nombre)).toEqual([
       'J. Ramírez',

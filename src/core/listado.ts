@@ -137,7 +137,9 @@ export function firmaFor(
 ): Firma {
   const firmantes =
     kind === 'cert'
-      ? cert?.firmantesSnapshot ?? composeCertFirmantes(obra)
+      ? // Un snapshot VACÍO no es una firma (bug legado: se sellaba al exportar
+        // aunque no hubiera agentes): se compone en vivo hasta que haya sello real.
+        (cert?.firmantesSnapshot?.length ? cert.firmantesSnapshot : composeCertFirmantes(obra))
       : [
           firmanteConstructora(obra),
           { rol: 'La Propiedad', nombre: str(obra, 'promotor.nombre') },
@@ -185,6 +187,9 @@ export interface PartidaListadoRow {
   cantidad: number;
   /** Precio unitario efectivo en euros (CON coeficiente K), redondeado a 2 dec. */
   precio: number;
+  /** El mismo precio SIN round2: con K ≠ 1 es el que produce `importe` (el K
+   *  escala sin cuantizar) — las fórmulas del XLSX lo usan para cuadrar al céntimo. */
+  precioExacto: number;
   importe: Cents;
   med: MedLineListado[];
 }
@@ -238,6 +243,7 @@ export function buildPresupuestoListado(
             ud: p.ud,
             cantidad: partidaCantidad(p),
             precio: round2((p.precio ?? 0) * coefK),
+            precioExacto: (p.precio ?? 0) * coefK,
             importe: partidaImporte(p, coefK),
             med: p.med.map((l) => ({
               id: l.id,
@@ -340,6 +346,8 @@ export interface CertListadoRow {
   pct: number;
   /** Precio efectivo de la cert en euros: congelado si hay snapshot (F7.0). */
   precio: number;
+  /** El mismo precio SIN round2 (el que produce los importes; con K ≠ 1 difieren). */
+  precioExacto: number;
   aOrigen: Cents;
   anterior: Cents;
   estaCert: Cents;
@@ -384,6 +392,9 @@ export interface CertListado {
   snapshotAt?: string;
   capitulos: CertCapituloListado[];
   totals: CertTotals;
+  /** Tasas con las que se calcularon los totales (GG+BI e IVA): las fórmulas
+   *  del XLSX las emiten como literales para que el resumen sea recalculable. */
+  rates: Rates;
   /** Retenido de garantía acumulado neto (Σ retenido − Σ devuelto) hasta esta
    *  cert inclusive, en céntimos. `null` si la obra no ha tenido retención hasta
    *  aquí → la línea informativa no se emite. Es cross-cert (no sale de `totals`). */
@@ -452,6 +463,7 @@ export function buildCertListado(
               ejecutada: k.ejecutada,
               pct: k.pct,
               precio: round2(certPrecioK(p, rates.coefK, snap)),
+              precioExacto: certPrecioK(p, rates.coefK, snap),
               aOrigen: k.aOrigen,
               anterior: k.anterior,
               estaCert: k.estaCert,
@@ -500,6 +512,7 @@ export function buildCertListado(
     ejecutada: r.ejecutada,
     pct: 0,
     precio: r.precio,
+    precioExacto: r.precioExacto,
     aOrigen: r.aOrigen,
     anterior: r.anterior,
     estaCert: r.estaCert,
@@ -538,6 +551,7 @@ export function buildCertListado(
       snap,
       cert.ajustes ?? [],
     ),
+    rates,
     // Cross-cert: la garantía retenida hasta esta cert (calculada una vez con el
     // motor). `null` = sin retención en la obra hasta aquí → no se emite la línea.
     retenidoAcumulado: tieneRetencion(certs, index)

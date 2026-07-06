@@ -243,6 +243,32 @@ describe('dirección facultativa (pies de firma por rol)', () => {
     expect(state().certs[0]!.firmantesSnapshot!.map((f) => f.nombre)).toEqual(['J. Ramírez', 'BuildCo']);
     expect(state().certs[0]!.firmadoAt).toBe('2026-07-04T10:00:00.000Z');
   });
+
+  it('freezeCertFirmantes NO sella si aún no hay firmantes; sella al rellenar después', () => {
+    // Exportar ANTES de rellenar DF/constructora: no debe sellar un pie vacío.
+    state().freezeCertFirmantes(0, '2026-07-01T00:00:00.000Z');
+    expect(state().certs[0]!.firmantesSnapshot).toBeUndefined();
+    expect(state().certs[0]!.firmadoAt).toBeUndefined();
+    // El usuario rellena los agentes DESPUÉS y reexporta → ahora sí se sella.
+    state().addAgenteDF();
+    const id = state().obra.direccionFacultativa![0]!.id;
+    state().editAgenteDF(id, 'nombre', 'J. Ramírez');
+    state().freezeCertFirmantes(0, '2026-07-06T00:00:00.000Z');
+    expect(state().certs[0]!.firmantesSnapshot!.map((f) => f.nombre)).toEqual(['J. Ramírez']);
+    expect(state().certs[0]!.firmadoAt).toBe('2026-07-06T00:00:00.000Z');
+  });
+
+  it('freezeCertFirmantes re-sella una cert legada con snapshot VACÍO (bug de firma perdida)', () => {
+    // Obras guardadas con el bug: el export selló `[]` y bloqueaba la firma para siempre.
+    useObraStore.setState((s) => {
+      s.certs[0]!.firmantesSnapshot = [];
+      s.certs[0]!.firmadoAt = '2026-07-01T00:00:00.000Z';
+    });
+    state().setObraPath('constructor.nombre', 'BuildCo');
+    state().freezeCertFirmantes(0, '2026-07-06T00:00:00.000Z');
+    expect(state().certs[0]!.firmantesSnapshot!.map((f) => f.nombre)).toEqual(['BuildCo']);
+    expect(state().certs[0]!.firmadoAt).toBe('2026-07-06T00:00:00.000Z');
+  });
 });
 
 describe('migración de esquema v3→v4 (pies de firma por rol)', () => {

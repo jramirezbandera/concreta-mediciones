@@ -98,6 +98,9 @@ export interface CertDeletedRow {
   ud: string;
   /** Precio efectivo (euros) con el que la cert la valora: congelado × K congelado. */
   precio: number;
+  /** El mismo precio SIN round2: es con el que se calculan los importes (con
+   *  K ≠ 1 difieren) — las fórmulas del XLSX lo necesitan para cuadrar al céntimo. */
+  precioExacto: number;
   ejecutada: number;
   prev: number;
   aOrigen: Cents;
@@ -138,6 +141,7 @@ export function certDeletedRows(
       title: b?.title ?? 'Partida eliminada del presupuesto',
       ud: b?.ud ?? '',
       precio: round2(precio),
+      precioExacto: precio,
       ejecutada,
       prev,
       aOrigen,
@@ -201,6 +205,11 @@ export interface AjusteRow {
   label: string; // etiqueta legible (auto-compone el % si es porcentual)
   signo: -1 | 1;
   importe: Cents; // magnitud SIN signo (el signo va aparte, como la retención)
+  /** Cómo se valoró (del `Ajuste` origen): un 'pct' es función de `pecEsta` y el
+   *  XLSX lo emite como fórmula recalculable; un 'fijo' es un valor suelto. */
+  tipo: 'pct' | 'fijo';
+  /** pct → fracción 0..1 sobre `pecEsta`; fijo → euros. */
+  valor: number;
 }
 
 /** Importe (céntimos, sin signo) de un ajuste sobre el importe de esta cert. */
@@ -367,6 +376,8 @@ export function certTotals(
     label: ajusteLabel(a),
     signo: a.signo,
     importe: ajusteImporte(a, pecEsta),
+    tipo: a.tipo,
+    valor: a.valor,
   }));
   const ajustesTotal = sumCents(ajustesRows.map((r) => r.signo * r.importe));
   const base = pecEsta - ret + ajustesTotal;

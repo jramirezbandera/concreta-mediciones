@@ -1,4 +1,4 @@
-﻿/* ===========================================================================
+/* ===========================================================================
    features/exportar/xlsxBuilders — filas XLSX desde `core/listado` (F7.2).
    ---------------------------------------------------------------------------
    PURO (sin la librería en runtime: solo type-imports → no entra al bundle).
@@ -6,8 +6,21 @@
    van como CELDAS NUMÉRICAS (`type: Number`) con formato `#,##0.00` (Excel lo
    pinta es-ES: 1.234,56), NUNCA strings preformateados. Los importes llegan en
    céntimos (enteros exactos) y se convierten a euros con `toEur` justo al
-   emitir la celda: la división entre 100 es la única operación de float y es
-   exacta a 2 decimales.
+   emitir la celda.
+
+   POLÍTICA DE FÓRMULAS (F7.2b): todo importe DERIVADO se emite como FÓRMULA
+   (`type: 'Formula'`), no como número muerto — importe = ROUND(cant·precio,2),
+   cantidad = Σ parciales, subtotales/PEM/resumen encadenados por referencia —
+   para que la hoja recalcule al editarla. Reglas:
+     · La fórmula va SIN «=» inicial (OOXML la guarda desnuda en `<f>`) y en
+       sintaxis en-US (funciones en inglés, coma de argumentos, punto decimal):
+       Excel/LibreOffice la muestran localizadas (ROUND → REDONDEAR).
+     · ROUND(x,2) replica `round2`/`importeCents` (half away from zero): la
+       hoja reproduce los céntimos del motor. El precio se emite con su valor
+       EXACTO (`precioExacto`, sin round2) mostrado a 2 dec: con K ≠ 1 los
+       importes salen del precio sin cuantizar (como en la app y el PDF).
+     · Subtotales de grupo/capítulo = SUBTOTAL(9,rango): los SUBTOTAL anidados
+       se excluyen solos, así los grupos jerárquicos no cuentan doble.
    =========================================================================== */
 import type { CellObject, Row } from 'write-excel-file/browser';
 import type {
@@ -34,6 +47,8 @@ const BANDA = '#eef1f6';
 export interface XlsxDoc {
   fileName: string;
   sheet: string;
+  /** Orientación de página al imprimir (la inyecta el feature de impresión). */
+  orientation: 'portrait' | 'landscape';
   columns: { width?: number }[];
   rows: Row[];
 }
@@ -54,8 +69,19 @@ function num(value: number, over: Partial<CellObject> = {}): CellObject {
   return { value, type: Number, format: FMT_NUM, align: 'right', ...over };
 }
 
+/** Celda de FÓRMULA con el mismo aspecto que `eur`/`num` (política F7.2b). */
+function fx(expr: string, over: Partial<CellObject> = {}): CellObject {
+  return { value: expr, type: 'Formula', format: FMT_NUM, align: 'right', ...over };
+}
+
 function bold(cell: CellObject): CellObject {
   return { ...cell, fontWeight: 'bold' };
+}
+
+/** Tasa (fracción) como literal de fórmula: punto decimal y sin ruido float
+ *  (0.13+0.06 → "0.19", no "0.19000000000000003"). */
+function rateLit(rate: number): string {
+  return String(Math.round(rate * 1e9) / 1e9);
 }
 
 /** Nombre de archivo .xlsx (sanitizado en `fileName.ts`, compartido con DOCX). */
@@ -122,7 +148,7 @@ function medLabel(l: MedLineListado): string {
 
 /** Sangría de cabecera de grupo por profundidad (NBSP: Excel no la recorta). */
 function sangria(depth: number): string {
-  return '   '.repeat(Math.max(0, depth - 1));
+  return '   '.repeat(Math.max(0, depth - 1));
 }
 
 export function buildPresupuestoXlsx(data: PresupuestoListado, meta: ObraMeta, firma: Firma): XlsxDoc {
@@ -136,7 +162,12 @@ export function buildPresupuestoXlsx(data: PresupuestoListado, meta: ObraMeta, f
     txt('Precio', { fontWeight: 'bold', backgroundColor: BANDA, align: 'right' }),
     txt('Importe', { fontWeight: 'bold', backgroundColor: BANDA, align: 'right' }),
   ];
+  /** Filas «Total capítulo» (col G): la fórmula del PEM las suma. */
+  const totalesCap: number[] = [];
   for (const c of data.capitulos) {
+    // La cabecera del capítulo repite el total: misma fórmula, se rellena al
+    // cerrar el bloque (aún no se conoce dónde acaba).
+    const capTotal = bold(fx(''));
     rows.push([
       txt(c.code, { fontWeight: 'bold' }),
       txt(c.title, { fontWeight: 'bold', columnSpan: 5 }),
@@ -144,11 +175,17 @@ export function buildPresupuestoXlsx(data: PresupuestoListado, meta: ObraMeta, f
       null,
       null,
       null,
-      bold(eur(c.total)),
+      capTotal,
     ]);
     rows.push(header);
+    const inicio = rows.length + 1; // primera fila de contenido del capítulo
+    /** Cabeceras de grupo pendientes de rango: en PRE-ORDEN, el subárbol de
+     *  cada una termina donde empieza el siguiente grupo de profundidad ≤. */
+    const gruposAbiertos: { cell: CellObject; row: number; depth: number }[] = [];
     for (const g of c.grupos) {
       if (g.sub) {
+        const cell = fx('', { textColor: GRIS });
+        gruposAbiertos.push({ cell, row: rows.length + 1, depth: g.depth });
         rows.push([
           txt(sangria(g.depth) + g.sub.code, { textColor: GRIS, fontWeight: 'bold' }),
           txt(g.sub.title.toUpperCase(), { textColor: GRIS, fontWeight: 'bold', columnSpan: 5 }),
@@ -156,18 +193,25 @@ export function buildPresupuestoXlsx(data: PresupuestoListado, meta: ObraMeta, f
           null,
           null,
           null,
-          eur(g.total, { textColor: GRIS }),
+          cell,
         ]);
       }
       for (const r of g.rows) {
+        const fila = rows.length + 1;
+        // Las líneas de medición van DEBAJO (tras la descripción, si la hay):
+        // la cantidad de la partida es su Σ, como `medTotal`.
+        const medInicio = fila + (r.desc ? 2 : 1);
+        const cantidad = r.med.length
+          ? fx(`ROUND(SUM(E${medInicio}:E${medInicio + r.med.length - 1}),2)`)
+          : num(r.cantidad);
         rows.push([
           txt(r.pos),
           txt(r.code),
           txt(r.title, { wrap: true }),
           txt(r.ud),
-          num(r.cantidad),
-          num(r.precio),
-          eur(r.importe),
+          cantidad,
+          num(r.precioExacto),
+          fx(`ROUND(E${fila}*F${fila},2)`),
         ]);
         if (r.desc) {
           rows.push([null, null, txt(r.desc, { textColor: GRIS, fontSize: 9, wrap: true, columnSpan: 5 }), null, null, null, null]);
@@ -185,6 +229,14 @@ export function buildPresupuestoXlsx(data: PresupuestoListado, meta: ObraMeta, f
         }
       }
     }
+    const fin = rows.length; // última fila de contenido del capítulo
+    for (const [i, h] of gruposAbiertos.entries()) {
+      const cierre = gruposAbiertos.slice(i + 1).find((x) => x.depth <= h.depth);
+      h.cell.value = `SUBTOTAL(9,G${h.row + 1}:G${cierre ? cierre.row - 1 : fin})`;
+    }
+    const capExpr = `SUBTOTAL(9,G${inicio}:G${fin})`;
+    capTotal.value = capExpr;
+    totalesCap.push(rows.length + 1);
     rows.push([
       null,
       null,
@@ -192,7 +244,7 @@ export function buildPresupuestoXlsx(data: PresupuestoListado, meta: ObraMeta, f
       null,
       null,
       null,
-      bold(eur(c.total, { topBorderStyle: 'thin' })),
+      bold(fx(capExpr, { topBorderStyle: 'thin' })),
     ]);
     rows.push([]);
   }
@@ -203,12 +255,15 @@ export function buildPresupuestoXlsx(data: PresupuestoListado, meta: ObraMeta, f
     null,
     null,
     null,
-    bold(eur(data.pem, { topBorderStyle: 'medium' })),
+    totalesCap.length
+      ? bold(fx(totalesCap.map((n) => `G${n}`).join('+'), { topBorderStyle: 'medium' }))
+      : bold(eur(data.pem, { topBorderStyle: 'medium' })),
   ]);
   rows.push(...firmaRows(firma));
   return {
     fileName: xlsxFileName('Presupuesto y mediciones', meta.denominacion),
     sheet: 'Presupuesto',
+    orientation: 'portrait',
     columns: [{ width: 9 }, { width: 12 }, { width: 56 }, { width: 6 }, { width: 11 }, { width: 11 }, { width: 13 }],
     rows,
   };
@@ -224,37 +279,53 @@ export function buildResumenXlsx(data: ResumenListado, meta: ObraMeta, firma: Fi
     txt('% PEM', { fontWeight: 'bold', backgroundColor: BANDA, align: 'right' }),
     txt('Importe', { fontWeight: 'bold', backgroundColor: BANDA, align: 'right' }),
   ]);
-  for (const r of data.rows) {
+  // Filas de capítulo (una por capítulo) y, tras una fila en blanco, la cadena
+  // PEM → GG → BI → PEC → IVA → total: posiciones deterministas, se calculan
+  // aquí para que los % y la cadena se refieran entre sí por fórmula.
+  const inicio = rows.length + 1;
+  const n = data.rows.length;
+  const pemRow = inicio + n + 1;
+  const [ggRow, biRow, pecRow, ivaRow] = [pemRow + 1, pemRow + 2, pemRow + 3, pemRow + 4];
+  for (const [i, r] of data.rows.entries()) {
     rows.push([
       txt(r.code),
       txt(r.title, { wrap: true }),
-      { value: r.pct, type: Number, format: FMT_PCT, align: 'right', textColor: GRIS },
+      fx(`IF(D${pemRow}=0,0,D${inicio + i}/D${pemRow}*100)`, { format: FMT_PCT, textColor: GRIS }),
       eur(r.importe),
     ]);
   }
   rows.push([]);
-  const linea = (
-    label: string,
-    value: Cents,
-    opts: { rate?: number; strong?: boolean } = {},
-  ): Row => [
+  const linea = (label: string, cell: CellObject, opts: { rate?: number; strong?: boolean } = {}): Row => [
     null,
     txt(label, { fontWeight: opts.strong ? 'bold' : undefined }),
     opts.rate != null
       ? { value: opts.rate * 100, type: Number, format: FMT_PCT, align: 'right', textColor: GRIS }
       : null,
-    opts.strong ? bold(eur(value, { topBorderStyle: 'thin' })) : eur(value),
+    opts.strong ? bold({ ...cell, topBorderStyle: 'thin' }) : cell,
   ];
-  rows.push(linea('Presupuesto de Ejecución Material (PEM)', data.pem, { strong: true }));
-  rows.push(linea('Gastos generales', data.gg, { rate: data.rates.gg }));
-  rows.push(linea('Beneficio industrial', data.bi, { rate: data.rates.bi }));
-  rows.push(linea('Presupuesto de Ejecución por Contrata (s/ IVA)', data.pec, { strong: true }));
-  rows.push(linea('IVA', data.iva, { rate: data.rates.iva }));
-  rows.push(linea('Presupuesto base de licitación', data.total, { strong: true }));
+  rows.push(
+    linea(
+      'Presupuesto de Ejecución Material (PEM)',
+      n ? fx(`SUM(D${inicio}:D${inicio + n - 1})`) : eur(data.pem),
+      { strong: true },
+    ),
+  );
+  // GG/BI/IVA leen su % de la celda de al lado (col C, expresado 0–100):
+  // cambiarlo en la hoja recalcula la cadena entera.
+  rows.push(linea('Gastos generales', fx(`ROUND(D${pemRow}*C${ggRow}/100,2)`), { rate: data.rates.gg }));
+  rows.push(linea('Beneficio industrial', fx(`ROUND(D${pemRow}*C${biRow}/100,2)`), { rate: data.rates.bi }));
+  rows.push(
+    linea('Presupuesto de Ejecución por Contrata (s/ IVA)', fx(`D${pemRow}+D${ggRow}+D${biRow}`), {
+      strong: true,
+    }),
+  );
+  rows.push(linea('IVA', fx(`ROUND(D${pecRow}*C${ivaRow}/100,2)`), { rate: data.rates.iva }));
+  rows.push(linea('Presupuesto base de licitación', fx(`D${pecRow}+D${ivaRow}`), { strong: true }));
   rows.push(...firmaRows(firma));
   return {
     fileName: xlsxFileName('Resumen de presupuesto', meta.denominacion),
     sheet: 'Resumen',
+    orientation: 'portrait',
     columns: [{ width: 9 }, { width: 48 }, { width: 10 }, { width: 14 }],
     rows,
   };
@@ -284,7 +355,12 @@ export function buildCertXlsx(data: CertListado, meta: ObraMeta, firma: Firma): 
   ].map((h, i) =>
     txt(h, { fontWeight: 'bold', backgroundColor: BANDA, align: i >= 4 ? 'right' : 'left' }),
   );
+  /** Filas «Total capítulo»: certPEM (col I) y PEM anterior (col J) las suman. */
+  const totalesCap: number[] = [];
   for (const c of data.capitulos) {
+    // Totales de la cabecera del capítulo: misma fórmula que su fila de total,
+    // se rellenan al cerrar el bloque.
+    const cab = { i: bold(fx('')), j: bold(fx('')), k: bold(fx('')) };
     rows.push([
       txt(c.code, { fontWeight: 'bold' }),
       txt(c.title, { fontWeight: 'bold', columnSpan: 7 }),
@@ -294,11 +370,12 @@ export function buildCertXlsx(data: CertListado, meta: ObraMeta, firma: Firma): 
       null,
       null,
       null,
-      bold(eur(c.aOrigen)),
-      bold(eur(c.anterior)),
-      bold(eur(c.estaCert)),
+      cab.i,
+      cab.j,
+      cab.k,
     ]);
     rows.push(header);
+    const inicio = rows.length + 1; // primera fila de contenido del capítulo
     for (const g of c.grupos) {
       if (g.sub) {
         rows.push([
@@ -308,6 +385,7 @@ export function buildCertXlsx(data: CertListado, meta: ObraMeta, firma: Firma): 
         ]);
       }
       for (const r of g.rows) {
+        const fila = rows.length + 1;
         rows.push([
           txt(r.pos),
           txt(r.code),
@@ -315,15 +393,17 @@ export function buildCertXlsx(data: CertListado, meta: ObraMeta, firma: Firma): 
           txt(r.ud),
           num(r.ofertada),
           num(r.ejecutada),
-          { value: r.pct, type: Number, format: FMT_PCT, align: 'right', textColor: GRIS },
-          num(r.precio),
-          eur(r.aOrigen),
+          fx(`IF(E${fila}=0,0,F${fila}/E${fila}*100)`, { format: FMT_PCT, textColor: GRIS }),
+          num(r.precioExacto),
+          fx(`ROUND(F${fila}*H${fila},2)`),
+          // «Anterior» no es derivable de esta hoja (viene de la cert N−1).
           eur(r.anterior),
-          eur(r.estaCert),
+          fx(`I${fila}-J${fila}`),
         ]);
       }
     }
     for (const e of c.extras) {
+      const fila = rows.length + 1;
       rows.push([
         txt(e.pos),
         txt('P.C.', { textColor: '#b45309', fontWeight: 'bold' }),
@@ -333,50 +413,94 @@ export function buildCertXlsx(data: CertListado, meta: ObraMeta, firma: Firma): 
         num(e.cantidad),
         null,
         num(e.precio),
-        eur(e.aOrigen),
+        fx(`ROUND(F${fila}*H${fila},2)`),
         eur(e.anterior),
-        eur(e.estaCert),
+        fx(`I${fila}-J${fila}`),
       ]);
     }
+    const fin = rows.length; // última fila de contenido del capítulo
+    const st = (col: string) => `SUBTOTAL(9,${col}${inicio}:${col}${fin})`;
+    cab.i.value = st('I');
+    cab.j.value = st('J');
+    cab.k.value = st('K');
+    totalesCap.push(rows.length + 1);
     rows.push([
       null,
       null,
       txt(`Total capítulo ${c.code}`, { fontWeight: 'bold', columnSpan: 6 }),
       ...Array<null>(5).fill(null),
-      bold(eur(c.aOrigen, { topBorderStyle: 'thin' })),
-      bold(eur(c.anterior, { topBorderStyle: 'thin' })),
-      bold(eur(c.estaCert, { topBorderStyle: 'thin' })),
+      bold(fx(st('I'), { topBorderStyle: 'thin' })),
+      bold(fx(st('J'), { topBorderStyle: 'thin' })),
+      bold(fx(st('K'), { topBorderStyle: 'thin' })),
     ]);
     rows.push([]);
   }
+  // Resumen económico (col K): cadena de fórmulas que replica `certTotals` —
+  // PEM certificado (Σ capítulos, col I) → GG+BI → PEC a origen → menos el PEC
+  // anterior (Σ col J + sus GG+BI, misma fórmula que pecOrigen, auditoría B-03)
+  // → esta cert → retención/ajustes → base → IVA → líquido.
   const t = data.totals;
-  const fila = (label: string, value: Cents, strong = false): Row => [
+  const ggbi = rateLit(data.rates.gg + data.rates.bi);
+  const sumI = totalesCap.map((n) => `I${n}`).join('+');
+  const sumJ = totalesCap.map((n) => `J${n}`).join('+');
+  const hayCaps = totalesCap.length > 0;
+  const fila = (label: string, cell: CellObject, strong = false): Row => [
     ...Array<null>(7).fill(null),
     txt(label, { fontWeight: strong ? 'bold' : undefined, columnSpan: 3 }),
     null,
     null,
-    strong ? bold(eur(value, { topBorderStyle: 'thin' })) : eur(value),
+    strong ? bold({ ...cell, topBorderStyle: 'thin' }) : cell,
   ];
-  rows.push(fila('Ejecución material a origen', t.certPEM, true));
-  rows.push(fila('Gastos generales y B.I.', t.ggbiOrigen));
-  rows.push(fila('Ejecución por contrata a origen', t.pecOrigen));
-  rows.push(fila('Certificado anterior', -t.pecPrev));
-  rows.push(fila('Esta certificación', t.pecEsta, true));
+  const pemRow = rows.length + 1;
+  rows.push(fila('Ejecución material a origen', hayCaps ? fx(sumI) : eur(t.certPEM), true));
+  const ggbiRow = rows.length + 1;
+  rows.push(fila('Gastos generales y B.I.', fx(`ROUND(K${pemRow}*${ggbi},2)`)));
+  const pecRow = rows.length + 1;
+  rows.push(fila('Ejecución por contrata a origen', fx(`K${pemRow}+K${ggbiRow}`)));
+  const prevRow = rows.length + 1;
+  rows.push(
+    fila(
+      'Certificado anterior',
+      hayCaps ? fx(`-((${sumJ})+ROUND((${sumJ})*${ggbi},2))`) : eur(-t.pecPrev),
+    ),
+  );
+  const estaRow = rows.length + 1;
+  rows.push(fila('Esta certificación', fx(`K${pecRow}+K${prevRow}`), true));
   // Retención solo si la obra la tiene (>0): sin ella no se emite una línea de 0.
   if (data.retencion > 0)
-    rows.push(fila(`Retención (${(data.retencion * 100).toLocaleString('es-ES')}%)`, -t.retencion));
-  for (const a of t.ajustesRows) rows.push(fila(a.label || 'Ajuste', a.signo * a.importe));
-  rows.push(fila('Base imponible', t.base));
-  rows.push(fila('IVA', t.iva));
-  rows.push(fila('Líquido a abonar', t.liquido, true));
+    rows.push(
+      fila(
+        `Retención (${(data.retencion * 100).toLocaleString('es-ES')}%)`,
+        fx(`-ROUND(K${estaRow}*${rateLit(data.retencion)},2)`),
+      ),
+    );
+  for (const a of t.ajustesRows)
+    rows.push(
+      fila(
+        a.label || 'Ajuste',
+        // Un ajuste % se valora sobre «esta certificación» → fórmula; uno fijo
+        // es un valor suelto (no depende de nada de la hoja).
+        a.tipo === 'pct'
+          ? fx(`${a.signo < 0 ? '-' : ''}ROUND(K${estaRow}*${rateLit(a.valor)},2)`)
+          : eur(a.signo * a.importe),
+      ),
+    );
+  const baseRow = rows.length + 1;
+  // base = esta cert − retención + ajustes: todo lo emitido desde `estaRow`.
+  rows.push(fila('Base imponible', fx(`SUM(K${estaRow}:K${rows.length})`)));
+  const ivaRow = rows.length + 1;
+  rows.push(fila('IVA', fx(`ROUND(K${baseRow}*${rateLit(data.rates.iva)},2)`)));
+  rows.push(fila('Líquido a abonar', fx(`K${baseRow}+K${ivaRow}`), true));
   // Informativa (garantía retenida acumulada): bajo el líquido, sin negrita ni
   // borde. `null` = la obra no ha tenido retención → no se emite la línea.
+  // Cross-cert: no es derivable de esta hoja, va como valor.
   if (data.retenidoAcumulado != null)
-    rows.push(fila('Retenido acumulado (garantía)', data.retenidoAcumulado));
+    rows.push(fila('Retenido acumulado (garantía)', eur(data.retenidoAcumulado)));
   rows.push(...firmaRows(firma));
   return {
     fileName: xlsxFileName(`Certificación nº ${data.num}`, meta.denominacion),
     sheet: `Certificación ${data.num}`,
+    orientation: 'landscape',
     columns: [
       { width: 9 },
       { width: 12 },
