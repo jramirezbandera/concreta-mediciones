@@ -33,6 +33,7 @@ import {
   Ruler,
   Search,
   Send,
+  Settings,
   Sparkles,
   Sun,
   Moon,
@@ -92,6 +93,7 @@ export const ICONS = {
   redo: Redo2,
   assistant: Sparkles,
   send: Send,
+  settings: Settings,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICONS;

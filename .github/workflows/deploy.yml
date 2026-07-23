@@ -45,6 +45,11 @@ jobs:
         run: npm run build
         env:
           GITHUB_PAGES: 'true'
+          # Clave Gemini COMPARTIDA horneada en el bundle (PÚBLICA por necesidad:
+          # cliente sin backend). Debe ser un proyecto Google SIN facturación
+          # (peor caso 429). Se define como Secret del repo; si falta, el bundle
+          # sale sin clave y el asistente queda BYOK puro (sin romper el build).
+          VITE_AI_SHARED_GEMINI_KEY: ${{ secrets.VITE_AI_SHARED_GEMINI_KEY }}
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

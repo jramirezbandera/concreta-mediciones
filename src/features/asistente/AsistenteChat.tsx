@@ -376,7 +376,7 @@ export function AsistenteChat() {
               aria-label="Ajustes del asistente"
               onClick={() => setSettingsOpen(true)}
             >
-              <Icon name="command" size={15} />
+              <Icon name="settings" size={15} />
             </button>
             <button
               type="button"
