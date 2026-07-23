@@ -78,6 +78,36 @@ function registrarBaja(s: { certs: Cert[]; bajas: Record<string, PartidaBaja> },
   s.bajas[p.id] = { code: p.code, title: p.title, ud: p.ud };
 }
 
+/**
+ * Inserta una partida vacía con el `id` dado en el capítulo/sub destino y su `pos`
+ * correlativa. Cuerpo compartido por `addPartida` (id generado dentro del set) y
+ * `createPartida` (id generado fuera para devolverlo). Un `subId` inexistente en
+ * el capítulo se RECHAZA (partida huérfana que ninguna vista pinta). Devuelve si
+ * insertó.
+ */
+function insertPartida(s: ObraState, chapterId: string, subId: string | null, id: string): boolean {
+  const ch = s.chapters.find((c) => c.id === chapterId);
+  if (!ch) return false;
+  const sub = subId ? subIn(ch, subId) : undefined;
+  if (subId && !sub) return false;
+  const list = (s.partidas[chapterId] ??= []);
+  const base = sub ? sub.code : ch.code;
+  const sameSub = list.filter((p) => (subId ? p.sub === subId : !p.sub)).length;
+  list.push({
+    id,
+    sub: subId || undefined,
+    pos: nextPos(base, sameSub + 1),
+    code: '——',
+    title: '',
+    ud: 'ud',
+    precio: 0,
+    desc: '',
+    med: [],
+    items: [],
+  });
+  return true;
+}
+
 type EstructuraSlice = Pick<
   ObraState,
   | 'editPartidaField'
@@ -101,6 +131,8 @@ type EstructuraSlice = Pick<
   | 'deleteSubchapter'
   | 'moveSubtree'
   | 'addPartida'
+  | 'createPartida'
+  | 'addMedLines'
   | 'deletePartida'
   | 'restorePartida'
   | 'movePartida'
@@ -404,28 +436,38 @@ export const createEstructuraSlice: ObraSlice<EstructuraSlice> = (set) => ({
 
   addPartida: (chapterId, subId) =>
     set((s) => {
-      const ch = s.chapters.find((c) => c.id === chapterId);
-      if (!ch) return;
-      // El sub destino se resuelve a CUALQUIER profundidad; un subId que no
-      // exista en el capítulo se RECHAZA (crearía una partida huérfana cuyo
-      // grupo ninguna vista pinta — eng-review 2026-06-12, Tensión 2).
-      const sub = subId ? subIn(ch, subId) : undefined;
-      if (subId && !sub) return;
-      const list = (s.partidas[chapterId] ??= []);
-      const base = sub ? sub.code : ch.code;
-      const sameSub = list.filter((p) => (subId ? p.sub === subId : !p.sub)).length;
-      list.push({
-        id: nextPartidaId(),
-        sub: subId || undefined,
-        pos: nextPos(base, sameSub + 1),
-        code: '——',
-        title: '',
-        ud: 'ud',
-        precio: 0,
-        desc: '',
-        med: [],
-        items: [],
-      });
+      // El sub destino se resuelve a CUALQUIER profundidad; un subId que no exista
+      // en el capítulo se RECHAZA dentro de `insertPartida` (crearía una partida
+      // huérfana cuyo grupo ninguna vista pinta — eng-review 2026-06-12, Tensión 2).
+      insertPartida(s, chapterId, subId, nextPartidaId());
+    }),
+
+  createPartida: (chapterId, subId) => {
+    // Id fuera del `set` para DEVOLVERLO (patrón de `forkResource`): el executor
+    // del asistente lo usa para setear campos/mediciones sin inferir por diferencia.
+    const id = nextPartidaId();
+    let ok = false;
+    set((s) => {
+      ok = insertPartida(s, chapterId, subId, id);
+    });
+    return ok ? id : '';
+  },
+
+  addMedLines: (chapterId, partidaId, lines) =>
+    set((s) => {
+      const p = s.partidas[chapterId]?.find((x) => x.id === partidaId);
+      if (!p || lines.length === 0) return;
+      for (const l of lines) {
+        p.med.push({
+          id: nextMedLineId(),
+          comment: l.comment ?? '',
+          uds: l.uds ?? '',
+          largo: l.largo ?? '',
+          ancho: l.ancho ?? '',
+          alto: l.alto ?? '',
+        });
+      }
+      p.fromBase = false;
     }),
 
   deletePartida: (chapterId, partidaId) =>

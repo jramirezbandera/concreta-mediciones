@@ -35,6 +35,14 @@ export function useAppHotkeys({ onHelp }: { onHelp: () => void }): void {
         useObraStore.getState().focusSearch();
         return;
       }
+      // Ctrl/⌘+J — abre/cierra el asistente de IA (F-A2). Combinación libre (K, Z,
+      // Y, ?, Supr, Esc ya están tomadas). No bajo un modal.
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'j') {
+        if (hasBlockingOverlay()) return;
+        e.preventDefault();
+        useObraStore.getState().setAsistenteOpen();
+        return;
+      }
       // Ctrl/⌘+Z / Ctrl+Shift+Z / Ctrl+Y — deshacer/rehacer del dominio. ANTES
       // del early-return de modificadores (si no, nunca se ejecutarían).
       if (
@@ -86,6 +94,13 @@ export function useAppHotkeys({ onHelp }: { onHelp: () => void }): void {
         }
         if (s.refOpen) {
           s.setRefOpen(false);
+          e.preventDefault();
+          return;
+        }
+        // Asistente abierto: Esc lo cierra (cuando el foco NO está en su composer;
+        // ahí lo gestiona el propio panel, y isTextEditingTarget ya nos sacó antes).
+        if (s.asistenteOpen) {
+          s.setAsistenteOpen(false);
           e.preventDefault();
           return;
         }

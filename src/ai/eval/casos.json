@@ -1,0 +1,42 @@
+[
+  {
+    "id": "crear-capitulo",
+    "prompt": "Crea un capítulo que se llame Saneamiento",
+    "expect": { "op": "crear_capitulo" }
+  },
+  {
+    "id": "crear-partida",
+    "prompt": "En el capítulo 2, añade una partida de hormigón de limpieza HL-150, medida en m², a 8,90 € el metro cuadrado",
+    "expect": { "op": "crear_partida", "ud": "m²", "precio": 8.9 }
+  },
+  {
+    "id": "crear-partida-con-medicion",
+    "prompt": "Añade una partida de solado de baldosa en el capítulo 2, medida en m², a 24 € el m², con una línea de medición de 5 metros de largo por 4 de ancho",
+    "expect": { "op": "crear_partida", "ud": "m²", "precio": 24, "parcial": 20 }
+  },
+  {
+    "id": "agregar-lineas",
+    "prompt": "En la partida 1.1 añade una línea de medición de 3 unidades de 2 por 1,5 metros",
+    "expect": { "op": "agregar_lineas", "ref": "1.1", "linea": { "uds": 3, "largo": 2, "ancho": 1.5 } }
+  },
+  {
+    "id": "set-precio",
+    "prompt": "Cambia el precio de la partida 1.1 a 20 euros",
+    "expect": { "op": "set_precio", "ref": "1.1", "valor": 20 }
+  },
+  {
+    "id": "editar-partida",
+    "prompt": "Renombra la partida 1.1 como Excavación manual en zanjas",
+    "expect": { "op": "editar_partida", "ref": "1.1", "campo": "titulo" }
+  },
+  {
+    "id": "borrar-linea",
+    "prompt": "Borra la primera línea de medición de la partida 1.1",
+    "expect": { "op": "borrar_linea", "ref": "1.1", "indice": 1 }
+  },
+  {
+    "id": "consulta",
+    "prompt": "¿Cuánto suma la obra en total?",
+    "expect": { "op": "ninguna" }
+  }
+]

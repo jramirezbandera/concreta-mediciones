@@ -15,6 +15,8 @@ export interface TopBarProps {
   obraName: string;
   refOpen?: boolean;
   onToggleRef?: () => void;
+  asistenteOpen?: boolean;
+  onToggleAsistente?: () => void;
   onExport?: () => void;
   onObra?: () => void;
   /** Abre el Centro de Ayuda. Punto de entrada universal (también en móvil). */
@@ -36,6 +38,8 @@ export function TopBar({
   obraName,
   refOpen = false,
   onToggleRef,
+  asistenteOpen = false,
+  onToggleAsistente,
   onExport,
   onObra,
   onHelp,
@@ -161,6 +165,22 @@ export function TopBar({
         >
           <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={15} />
         </button>
+        {onToggleAsistente && (
+          <button
+            type="button"
+            onClick={onToggleAsistente}
+            title="Asistente de IA (Ctrl/⌘+J)"
+            aria-label="Asistente de IA"
+            aria-pressed={asistenteOpen}
+            className="tcol icon-btn"
+            style={{
+              background: asistenteOpen ? 'var(--accent-soft)' : undefined,
+              color: asistenteOpen ? 'var(--accent)' : undefined,
+            }}
+          >
+            <Icon name="assistant" size={16} />
+          </button>
+        )}
         {onToggleRef &&
           (isCompact ? (
             <button

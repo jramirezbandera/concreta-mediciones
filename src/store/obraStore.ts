@@ -51,6 +51,19 @@ export type { CopyTarget, PendingCopy } from './slices/copySlice';
 /** Modo de edición de una certificación: importe a origen vs. de esta cert. */
 export type CertMode = 'origen' | 'esta';
 
+/**
+ * Datos de una línea de medición nueva para altas POR LOTE (`addMedLines`, F-A3):
+ * el asistente dicta varias líneas de golpe. Dimensión ausente = factor 1 (regla
+ * de `core/medicion`); un 0 explícito anula la línea.
+ */
+export interface NewMedLine {
+  comment?: string;
+  uds?: number | '';
+  largo?: number | '';
+  ancho?: number | '';
+  alto?: number | '';
+}
+
 /** Salida del copy-on-write: forkar copia privada vs. editar el compartido en todas. */
 export type CowChoice = 'copy' | 'all';
 
@@ -66,6 +79,9 @@ export interface ObraState extends ObraData {
   curCert: number;
   /** Panel de Referencia abierto (F5). */
   refOpen: boolean;
+  /** Panel del asistente de IA abierto (F-A2). Comparte el hueco lateral con
+   *  Referencia: abrir uno pliega el otro (regla única, diseño D4). */
+  asistenteOpen: boolean;
   /** Fuente de referencia seleccionada (id de `REF_SOURCES`). */
   refSourceId: string;
   /** Ancho del panel en modo split (px, clamp 320–640). */
@@ -210,8 +226,12 @@ export interface ObraState extends ObraData {
   deleteAjuste: (id: string) => void;
 
   /* ---- acciones F5 (panel Referencia) ---- */
-  /** Abre/cierra el panel de Referencia; sin argumento alterna. */
+  /** Abre/cierra el panel de Referencia; sin argumento alterna. Abrirlo pliega el
+   *  asistente (comparten el hueco lateral, diseño D4). */
   setRefOpen: (open?: boolean) => void;
+  /** Abre/cierra el panel del asistente de IA; sin argumento alterna. Abrirlo
+   *  pliega Referencia (regla única del hueco lateral, diseño D4). */
+  setAsistenteOpen: (open?: boolean) => void;
   /** Selecciona la fuente de referencia activa (id de `REF_SOURCES`). */
   setRefSource: (id: string) => void;
   /** Fija el ancho del panel en split (se clampa a 320–640). */
@@ -377,6 +397,18 @@ export interface ObraState extends ObraData {
   moveSubtree: (nodeId: string, toParentId: string) => void;
   /** Añade una partida vacía al capítulo/subcapítulo, con su `pos` correlativa. */
   addPartida: (chapterId: string, subId: string | null) => void;
+  /**
+   * Como `addPartida` pero DEVUELVE el id de la partida creada (F-A3): el executor
+   * del asistente lo usa para setear campos y añadir mediciones sin inferir el id
+   * por diferencia. Devuelve '' si el destino no existe (capítulo/sub inválido).
+   */
+  createPartida: (chapterId: string, subId: string | null) => string;
+  /**
+   * Añade VARIAS líneas de medición con valores en una sola acción (dictado del
+   * asistente, F-A3). Reúne lo que la UI hace con `addMedLine`+`editMedLine`
+   * repetidos en un único `set`; partida inexistente o lista vacía = no-op.
+   */
+  addMedLines: (chapterId: string, partidaId: string, lines: NewMedLine[]) => void;
   /** Elimina una partida y renumera su capítulo. */
   deletePartida: (chapterId: string, partidaId: string) => void;
   /**
@@ -437,6 +469,7 @@ function seedUi(certs: Cert[]) {
     expanded: {} as Record<string, boolean>,
     curCert: Math.max(0, certs.length - 1), // la última cert queda en curso
     refOpen: false,
+    asistenteOpen: false,
     refSourceId: REF_SOURCES[0]?.id ?? '',
     refWidth: 400,
     refMaximized: false,
@@ -537,6 +570,18 @@ export const useObraStore = create<ObraState>()(
           s.refOpen = open ?? !s.refOpen;
           // Al cerrar, salir de pantalla completa: reabrir no debe sorprender maximizado.
           if (!s.refOpen) s.refMaximized = false;
+          // Regla única del hueco lateral (diseño D4): abrir uno pliega el otro.
+          if (s.refOpen) s.asistenteOpen = false;
+        }),
+
+      setAsistenteOpen: (open) =>
+        set((s) => {
+          s.asistenteOpen = open ?? !s.asistenteOpen;
+          // Abrir el asistente pliega Referencia (y su pantalla completa).
+          if (s.asistenteOpen) {
+            s.refOpen = false;
+            s.refMaximized = false;
+          }
         }),
 
       setRefSource: (id) =>

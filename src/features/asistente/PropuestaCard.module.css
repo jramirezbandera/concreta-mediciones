@@ -1,0 +1,159 @@
+/* Tarjeta de propuesta — la única superficie con forma de tarjeta del asistente.
+   Calibrada contra tokens.css (DESIGN.md). */
+
+.card {
+  border: 1px solid var(--border-main);
+  border-radius: 10px;
+  background: var(--bg-primary);
+  box-shadow: var(--shadow-1, 0 1px 3px rgb(0 0 0 / 8%));
+  overflow: hidden;
+}
+
+/* --- recuento (primero, D5) --- */
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 11px;
+  border-bottom: 1px solid var(--border-main);
+  background: var(--bg-surface);
+}
+.count {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.affected {
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+}
+
+/* --- diff --- */
+.diffList {
+  list-style: none;
+  margin: 0;
+  padding: 6px 0;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+.group {
+  padding: 5px 11px;
+}
+.group + .group {
+  border-top: 1px dashed var(--border-soft, var(--border-main));
+}
+.target {
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 3px;
+}
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 2px 0;
+}
+.field {
+  font-size: var(--fs-table);
+  color: var(--text-secondary);
+  flex: none;
+}
+.values {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  text-align: right;
+  font-size: var(--fs-table);
+}
+/* Valor anterior: neutro y TACHADO (T27), nunca rojo. */
+.antes {
+  color: var(--text-secondary);
+  text-decoration: line-through;
+  overflow-wrap: anywhere;
+}
+.arrow {
+  color: var(--text-disabled);
+  flex: none;
+}
+/* Valor propuesto: accent (cambio permitido, no error). */
+.despues {
+  color: var(--accent);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+/* Único caso de rojo: borrado/destrucción. */
+.despuesDel {
+  color: var(--state-danger);
+  font-weight: 500;
+}
+
+.moreBtn {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-top: 1px solid var(--border-main);
+  background: none;
+  padding: 7px 11px;
+  font: inherit;
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  color: var(--accent);
+  cursor: pointer;
+  text-align: left;
+}
+.moreBtn:hover {
+  background: var(--accent-soft);
+}
+
+/* --- acciones (botón con número, D5) --- */
+.actions {
+  display: flex;
+  gap: 8px;
+  padding: 9px 11px;
+  border-top: 1px solid var(--border-main);
+  background: var(--bg-surface);
+}
+.discard {
+  flex: none;
+  border: 1px solid var(--border-main);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.discard:hover {
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+}
+.apply {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font: inherit;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+.apply:hover {
+  background: var(--accent-hover);
+}
+.apply:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-accent);
+}

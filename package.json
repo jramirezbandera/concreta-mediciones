@@ -12,9 +12,11 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "test": "vitest run",
     "test:watch": "vitest",
+    "eval:ia": "vitest run -c vitest.eval.config.ts",
     "coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@google/genai": "^2.13.0",
     "docx": "^9.7.1",
     "idb-keyval": "^6.2.5",
     "immer": "^11.1.8",

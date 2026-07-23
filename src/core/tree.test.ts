@@ -6,8 +6,11 @@ import {
   emptyContainers,
   findChapterIdForContainer,
   findNode,
+  findPartidaById,
   flattenContainers,
   partidasByContainer,
+  resolveContainerRef,
+  resolvePartidaRef,
   rollupByDepth,
 } from './tree';
 import { groupBySub, groupsForFocus } from './grouping';
@@ -214,5 +217,34 @@ describe('groupBySub (pre-orden + depth) y rollupByDepth', () => {
     // [∅, 1.1, 1.1.1, 1.1.2, 1.2]
     expect(direct).toEqual([100, 10, 1, 2, 5]);
     expect(roll).toEqual([100, 13, 1, 2, 5]); // 1.1 = 10+1+2; ∅ no absorbe nada
+  });
+});
+
+describe('resolución de referencias (F-A3)', () => {
+  const partidas: Record<string, Partida[]> = {
+    c1: [P('p1', undefined), P('p2', undefined)].map((p, i) => ({ ...p, pos: `1.${i + 1}` })),
+    c2: [{ ...P('p3', undefined), pos: '2.1' }],
+  };
+  const chapters: Chapter[] = [
+    { id: 'c1', code: '1', title: 'Movimiento de tierras', children: [{ id: 's1', code: '1.1', title: 'Desbroce' }] },
+    { id: 'c2', code: '2', title: 'Albañilería', children: [] },
+  ];
+
+  it('findPartidaById localiza la partida y su capítulo', () => {
+    expect(findPartidaById(partidas, 'p3')).toEqual({ partida: partidas.c2![0], chapterId: 'c2' });
+    expect(findPartidaById(partidas, 'nope')).toBeNull();
+  });
+
+  it('resolvePartidaRef resuelve por pos y por id', () => {
+    expect(resolvePartidaRef(partidas, '2.1')?.partida.id).toBe('p3');
+    expect(resolvePartidaRef(partidas, 'p1')?.chapterId).toBe('c1');
+    expect(resolvePartidaRef(partidas, '9.9')).toBeNull();
+  });
+
+  it('resolveContainerRef resuelve por código y por título', () => {
+    expect(resolveContainerRef(chapters, '2')?.node.id).toBe('c2');
+    expect(resolveContainerRef(chapters, '1.1')?.node.id).toBe('s1'); // subcapítulo por código
+    expect(resolveContainerRef(chapters, 'albañilería')?.node.id).toBe('c2'); // título case-insensitive
+    expect(resolveContainerRef(chapters, 'no existe')).toBeNull();
   });
 });

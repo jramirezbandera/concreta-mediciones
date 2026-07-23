@@ -1,0 +1,294 @@
+/* Panel del asistente — calibrado contra tokens.css (DESIGN.md). Denso y
+   tabular como el resto de la app; nada de componentes de chat genéricos. */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--bg-surface);
+}
+
+/* --- cabecera de contexto --- */
+.head {
+  flex: none;
+  border-bottom: 1px solid var(--border-main);
+  padding: 8px 10px;
+}
+.headTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-title);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.title svg {
+  color: var(--accent);
+}
+.headActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.ctx {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 5px;
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+  min-width: 0;
+}
+.ctxObra {
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.ctxRest {
+  color: var(--text-secondary);
+}
+.ro {
+  font-family: 'Geist Mono', monospace;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--state-warn);
+  background: color-mix(in srgb, var(--state-warn) 13%, transparent);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+/* --- log de conversación (filas compactas) --- */
+.log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.role {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+}
+.msg {
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.rowUser .role {
+  color: var(--accent);
+}
+.rowUser .msg {
+  color: var(--text-secondary);
+}
+.rowError .role {
+  color: var(--state-danger);
+}
+.rowError .msg {
+  color: var(--text-primary);
+}
+
+/* --- informe de ejecución (filas con punto de color) --- */
+.rowReport {
+  gap: 0;
+}
+.informe {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.repRow {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  font-size: var(--fs-caption);
+  line-height: 1.45;
+}
+.dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-top: 5px;
+  background: var(--text-disabled);
+}
+.dot_ok {
+  background: var(--state-ok);
+}
+.dot_warn {
+  background: var(--state-warn);
+}
+.dot_danger {
+  background: var(--state-danger);
+}
+.repText {
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+.repReason {
+  color: var(--text-secondary);
+}
+
+.linkBtn {
+  margin-left: 8px;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  color: var(--accent);
+  cursor: pointer;
+}
+.linkBtn:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
+}
+
+/* --- espera --- */
+.waiting {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+}
+.spin {
+  animation: spin 0.9s linear infinite;
+  color: var(--accent);
+  flex: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: none;
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* --- estado vacío (onboarding) --- */
+.empty {
+  border: 1px dashed var(--border-main);
+  border-radius: 10px;
+  padding: 16px;
+  --dot-size: 22px;
+}
+.emptyTitle {
+  margin: 0 0 4px;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.emptyDesc {
+  margin: 0 0 12px;
+  font-size: var(--fs-table);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chip {
+  border: 1px solid var(--border-main);
+  border-radius: 20px;
+  padding: 5px 11px;
+  font: inherit;
+  font-size: var(--fs-table);
+  color: var(--text-secondary);
+  background: var(--bg-primary);
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+.chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* --- composer --- */
+.composer {
+  flex: none;
+  border-top: 1px solid var(--border-main);
+  padding: 8px;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  /* En móvil (drawer a pantalla completa) respeta la zona segura del teclado. */
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+}
+.textarea {
+  flex: 1;
+  resize: none;
+  min-height: 34px;
+  max-height: 140px;
+  border: 1px solid var(--border-main);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--fs-body);
+  line-height: 1.4;
+  padding: 7px 9px;
+}
+.textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--ring-accent);
+}
+.textarea::placeholder {
+  color: var(--text-disabled);
+}
+.send {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--on-accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+.send:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+.send:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

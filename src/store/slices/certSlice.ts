@@ -7,6 +7,7 @@
    =========================================================================== */
 import type { Cert, Partida, PartidasMap, Rates } from '../../core/types';
 import { ajusteEsRetencion, estaCertToOrigen, prevDataOf, sumLineQty } from '../../core/certificacion';
+import { findPartidaById } from '../../core/tree';
 import { lineParcial, partidaCantidad } from '../../core/medicion';
 import { round2 } from '../../core/money';
 import { nextAjusteId, nextExtraId } from '../base';
@@ -50,13 +51,10 @@ function lastRetencionRate(s: ObraState): number | undefined {
   return undefined;
 }
 
-/** Resuelve una partida por id escaneando los capítulos (O(capítulos)). */
+/** Resuelve una partida por id (delega en el resolvedor compartido `core/tree`,
+ *  única implementación tras el refactor T6 de F-A3). */
 function findPartida(partidas: PartidasMap, id: string): Partida | undefined {
-  for (const chId in partidas) {
-    const p = partidas[chId]?.find((x) => x.id === id);
-    if (p) return p;
-  }
-  return undefined;
+  return findPartidaById(partidas, id)?.partida;
 }
 
 /** Quita la certificación por líneas de una partida y limpia el contenedor

@@ -19,7 +19,7 @@
    referencia cíclica (dato corrupto) degrada a ignorar la repetición, nunca a
    reventar la pila.
    =========================================================================== */
-import type { Chapter, Partida, SubChapter } from './types';
+import type { Chapter, Partida, PartidasMap, SubChapter } from './types';
 import { sumCents, type Cents } from './money';
 import { partidaImporte } from './medicion';
 
@@ -86,6 +86,71 @@ export function findNode(chapters: Chapter[], id: string): FoundNode | null {
 /** Capítulo dueño de un contenedor (o `null` si el id no existe). */
 export function findChapterIdForContainer(chapters: Chapter[], id: string): string | null {
   return findNode(chapters, id)?.chapter.id ?? null;
+}
+
+/* ---- resolución de referencias (compartida store ↔ asistente) -------------- */
+
+/** Una partida localizada junto al id de su capítulo (el bucket de `PartidasMap`). */
+export interface PartidaHit {
+  partida: Partida;
+  chapterId: string;
+}
+
+/**
+ * Localiza una partida por ID escaneando los buckets de `PartidasMap` (O(n)).
+ * ÚNICA implementación de «encontrar una partida por id» (F-A3, refactor T6):
+ * la consumen el `findPartida` privado de `certSlice` y `resolvePartidaRef`.
+ */
+export function findPartidaById(partidas: PartidasMap, id: string): PartidaHit | null {
+  for (const chId in partidas) {
+    const p = partidas[chId]?.find((x) => x.id === id);
+    if (p) return { partida: p, chapterId: chId };
+  }
+  return null;
+}
+
+/**
+ * Resuelve la referencia que el asistente da a una partida: primero por `pos`
+ * (`"1.2.3"`, lo que el usuario dicta y ve), y si no, por `id` (identificador
+ * estable). El `code` NO sirve como identificador: `addPartida` crea con
+ * `code:'——'`, así que muchas partidas lo comparten. Devuelve la primera
+ * coincidencia o `null`.
+ */
+export function resolvePartidaRef(partidas: PartidasMap, ref: string): PartidaHit | null {
+  const needle = ref.trim();
+  if (!needle) return null;
+  for (const chId in partidas) {
+    const p = partidas[chId]?.find((x) => x.pos === needle);
+    if (p) return { partida: p, chapterId: chId };
+  }
+  return findPartidaById(partidas, needle);
+}
+
+/**
+ * Resuelve la referencia que el asistente da a un CONTENEDOR (capítulo o
+ * subcapítulo) para crear dentro: por `code` (`"1"`, `"1.2"`, lo que se ve en el
+ * árbol) y, si no, por título exacto (sin distinguir mayúsculas/acentos-no). El
+ * modelo tiende a nombrar el capítulo por su número o su nombre; ambos valen.
+ */
+export function resolveContainerRef(chapters: Chapter[], ref: string): FoundNode | null {
+  const needle = ref.trim();
+  if (!needle) return null;
+  const lower = needle.toLowerCase();
+  // 1) por código exacto (capítulo o sub a cualquier profundidad).
+  for (const ch of chapters) {
+    if (ch.code === needle) return { chapter: ch, node: ch, depth: 0 };
+    for (const f of flattenContainers(ch)) {
+      if (f.sub.code === needle) return { chapter: ch, node: f.sub, depth: f.depth };
+    }
+  }
+  // 2) por título exacto (case-insensitive) como red para «el capítulo Albañilería».
+  for (const ch of chapters) {
+    if (ch.title.trim().toLowerCase() === lower) return { chapter: ch, node: ch, depth: 0 };
+    for (const f of flattenContainers(ch)) {
+      if (f.sub.title.trim().toLowerCase() === lower) return { chapter: ch, node: f.sub, depth: f.depth };
+    }
+  }
+  return null;
 }
 
 /**

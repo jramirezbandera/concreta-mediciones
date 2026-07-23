@@ -17,6 +17,9 @@ coverage/
 .env
 .env.*
 !.env.example
+# .env.test se versiona: anula la clave compartida en modo test (tiene prioridad
+# sobre .env.local, que sí lleva la clave real). Sin secreto, seguro de commitear.
+!.env.test
 
 # Logs
 *.log

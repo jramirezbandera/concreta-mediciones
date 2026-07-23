@@ -5,6 +5,7 @@ import { ObraModal } from './features/obra';
 import { PresupuestoView } from './features/presupuesto';
 import { type PrintTarget } from './features/print';
 import { ConflictModal, ReferenciaPanel, refStyles } from './features/referencia';
+import { AsistenteChat } from './features/asistente';
 import { ImportPartidaButton } from './features/importar/ImportPartidaButton';
 import { Icon } from './components';
 import { ClipboardToast } from './layout/ClipboardToast';
@@ -80,6 +81,13 @@ export default function App() {
   const setRefWidth = useObraStore((s) => s.setRefWidth);
   const setRefDrag = useObraStore((s) => s.setRefDrag);
   const requestCopyRefPartidas = useObraStore((s) => s.requestCopyRefPartidas);
+
+  // Asistente de IA (F-A2): comparte el hueco lateral con Referencia (abrir uno
+  // pliega el otro — lo garantiza el store). Sin pantalla completa en el primer
+  // incremento: split (ancho) u overlay (estrecho), reusando el ancho de Referencia.
+  const asistenteOpen = useObraStore((s) => s.asistenteOpen);
+  const setAsistenteOpen = useObraStore((s) => s.setAsistenteOpen);
+  const asistSplit = asistenteOpen && bp.w >= SPLIT_WIDTH;
 
   // Redimensionar el panel en split: se arrastra el tirador (320–640 lo clampa el store).
   const startRefResize = useCallback(
@@ -219,6 +227,8 @@ export default function App() {
         obraName={obraName}
         refOpen={refOpen}
         onToggleRef={() => setRefOpen()}
+        asistenteOpen={asistenteOpen}
+        onToggleAsistente={() => setAsistenteOpen()}
         onExport={() => setExportOpen(true)}
         onObra={() => setObraOpen(true)}
         onHelp={() => openHelp('inicio')}
@@ -334,6 +344,30 @@ export default function App() {
               style={splitOpen ? { width: refWidth } : undefined}
             >
               <ReferenciaPanel onImport={() => setRefImportOpen(true)} />
+            </aside>
+          </>
+        )}
+
+        {/* Asistente de IA en el MISMO hueco lateral (mutuamente excluyente con
+            Referencia: el store garantiza que solo uno esté abierto). Reusa las
+            clases del aside y el tirador de ancho de Referencia. */}
+        {asistenteOpen && (
+          <>
+            {asistSplit && (
+              <div
+                key="asist-divider"
+                className={`no-print ${refStyles.divider}`}
+                onPointerDown={startRefResize}
+                role="separator"
+                aria-orientation="vertical"
+              />
+            )}
+            <aside
+              key="asist-panel"
+              className={`no-print ${asistSplit ? refStyles.aside : refStyles.overlay}`}
+              style={asistSplit ? { width: refWidth } : undefined}
+            >
+              <AsistenteChat />
             </aside>
           </>
         )}

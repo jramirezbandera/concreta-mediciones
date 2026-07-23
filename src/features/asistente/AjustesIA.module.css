@@ -1,0 +1,85 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: min(420px, 80vw);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.label {
+  font-size: var(--fs-table);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.input {
+  height: 34px;
+  border: 1px solid var(--border-main);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Geist Mono', monospace;
+  font-size: var(--fs-body);
+  padding: 0 9px;
+}
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--ring-accent);
+}
+.getKey {
+  font-size: var(--fs-caption);
+  color: var(--accent);
+  text-decoration: none;
+  width: fit-content;
+}
+.getKey:hover {
+  text-decoration: underline;
+}
+
+.note,
+.shared,
+.warn {
+  margin: 0;
+  font-size: var(--fs-table);
+  line-height: 1.5;
+  border-radius: 8px;
+  padding: 9px 11px;
+}
+.note {
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+}
+.shared {
+  color: var(--text-primary);
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.warn {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--state-warn) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--state-warn) 30%, transparent);
+}
+
+.privacy {
+  border-top: 1px solid var(--border-sub);
+  padding-top: 12px;
+}
+.privacyTitle {
+  display: block;
+  font-size: var(--fs-badge);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  color: var(--text-secondary);
+  margin-bottom: 5px;
+}
+.privacy p {
+  margin: 0;
+  font-size: var(--fs-table);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
