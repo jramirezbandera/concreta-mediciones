@@ -9,7 +9,25 @@
    `type` array y `null` en enums), a diferencia de OpenAI/Anthropic (F-A5).
    =========================================================================== */
 import { AiError, aiErrorKindFromStatus, chatSystemText } from '../types';
-import type { ProviderChatFn } from '../types';
+import type { ChatTurn, ProviderChatFn } from '../types';
+
+/** Una `part` de contenido de Gemini: imagen embebida o texto. */
+type GeminiPart = { inlineData: { mimeType: string; data: string } } | { text: string };
+
+/**
+ * Construye las `parts` de un turno para Gemini: las imágenes primero
+ * (`inlineData`) y el texto después. OMITE el part de texto vacío cuando el turno
+ * lleva imágenes (un turno solo-imagen manda `text: ''`, y la API rechaza un part
+ * de texto vacío junto a una imagen). Un turno sin imágenes siempre lleva su part
+ * de texto, aunque esté vacío, para no quedarse sin `parts`. Exportado para tests.
+ */
+export function turnToParts(turn: ChatTurn): GeminiPart[] {
+  const parts: GeminiPart[] = (turn.images ?? []).map((img) => ({
+    inlineData: { mimeType: img.mediaType, data: img.data },
+  }));
+  if (turn.text !== '' || parts.length === 0) parts.push({ text: turn.text });
+  return parts;
+}
 
 type GeminiApiErrorClass = (typeof import('@google/genai'))['ApiError'];
 
@@ -101,12 +119,7 @@ export const chatRaw: ProviderChatFn = async (req, apiKey, model) => {
       model,
       contents: req.turns.map((turn) => ({
         role: turn.role === 'assistant' ? 'model' : 'user',
-        parts: [
-          ...(turn.images ?? []).map((img) => ({
-            inlineData: { mimeType: img.mediaType, data: img.data },
-          })),
-          { text: turn.text },
-        ],
+        parts: turnToParts(turn),
       })),
       config: {
         // Caché de prompt: en Gemini es IMPLÍCITA y automática (cachea el prefijo

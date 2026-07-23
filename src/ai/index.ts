@@ -3,6 +3,7 @@ export * from './types';
 export * from './models';
 export * from './sharedKey';
 export * from './chatHistory';
+export * from './imagePrep';
 export * from './settingsStore';
 export * from './ops';
 export * from './schema';

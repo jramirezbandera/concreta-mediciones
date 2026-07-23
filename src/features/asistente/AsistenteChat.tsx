@@ -27,10 +27,17 @@ import {
   buildObraSnapshot,
   CHAT_ENVELOPE_SCHEMA,
   currentSeal,
+  IMAGE_ACCEPT_ATTR,
+  MAX_IMAGES,
+  MAX_IMAGES_OVERFLOW_TOAST,
+  MAX_IMAGES_TOAST,
   planTurn,
+  prepareImage,
   applyProposals,
   runChatTurn,
   selectActiveKey,
+  useAiSettings,
+  type AiImageAttachment,
   type ApplyResult,
   type DiscardedOp,
   type PlanResult,
@@ -55,10 +62,16 @@ interface Report {
 }
 
 type ChatItem =
-  | { kind: 'user'; text: string }
+  | { kind: 'user'; text: string; images?: AiImageAttachment[] }
   | { kind: 'assistant'; reply: string; rawEnvelope: string }
   | { kind: 'report'; report: Report }
   | { kind: 'error'; message: string };
+
+/** Imagen adjunta pendiente de enviar, con id de sesión para poder quitarla. */
+interface PendingImage {
+  id: number;
+  attachment: AiImageAttachment;
+}
 
 /** Propuestas pendientes de confirmar en la tarjeta, con el sello de su turno. */
 interface Pending {
@@ -169,6 +182,8 @@ export function AsistenteChat() {
   const [items, setItems] = useState<ChatItem[]>([]);
   const [pending, setPending] = useState<Pending | null>(null);
   const [draft, setDraft] = useState('');
+  const [images, setImages] = useState<PendingImage[]>([]);
+  const [dragOver, setDragOver] = useState(false);
   const [busy, setBusy] = useState(false);
   const [slow, setSlow] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -179,9 +194,19 @@ export function AsistenteChat() {
   const reqIdRef = useRef(0);
   const slowTimerRef = useRef<number | undefined>(undefined);
   const pendingTextRef = useRef('');
+  const pendingImagesRef = useRef<AiImageAttachment[]>([]);
   const lastUserTextRef = useRef('');
+  const imageIdRef = useRef(0);
   const logRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Clave de caché de prompt estable por conversación (la usa OpenAI para enrutar
+  // el acierto; Gemini la ignora). Se fija una vez al montar el panel.
+  const cacheKeyRef = useRef<string | null>(null);
+  if (cacheKeyRef.current === null) {
+    cacheKeyRef.current =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `ck-${Date.now()}`;
+  }
 
   const setAsistenteOpen = useObraStore((s) => s.setAsistenteOpen);
 
@@ -239,10 +264,11 @@ export function AsistenteChat() {
       if (reqIdRef.current === reqId) setSlow(true);
     }, SLOW_MS);
 
-    runChatTurn(activeKey, {
+    runChatTurn(useAiSettings.getState().provider, activeKey, {
       system,
       schema: CHAT_ENVELOPE_SCHEMA,
       turns,
+      cacheKey: cacheKeyRef.current ?? undefined,
       signal: controller.signal,
     })
       .then((env) => {
@@ -279,18 +305,94 @@ export function AsistenteChat() {
       });
   }, []);
 
+  // --- adjuntar imágenes (foto de hoja de mediciones, croquis, tabla) ---
+  const addFiles = useCallback(
+    async (incoming: File[]) => {
+      const slots = MAX_IMAGES - images.length;
+      if (slots <= 0) {
+        useToastStore.getState().show(MAX_IMAGES_TOAST);
+        return;
+      }
+      if (incoming.length > slots) useToastStore.getState().show(MAX_IMAGES_OVERFLOW_TOAST);
+      for (const file of incoming.slice(0, slots)) {
+        try {
+          const attachment = await prepareImage(file);
+          // El guard con `prev.length` cierra la carrera de varios ficheros a la vez.
+          setImages((prev) =>
+            prev.length >= MAX_IMAGES ? prev : [...prev, { id: ++imageIdRef.current, attachment }],
+          );
+        } catch (err) {
+          useToastStore
+            .getState()
+            .show(err instanceof Error ? err.message : 'No se pudo procesar la imagen.');
+        }
+      }
+    },
+    [images.length],
+  );
+
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files ?? []);
+      e.target.value = ''; // permite volver a elegir el mismo fichero
+      if (files.length > 0) void addFiles(files);
+    },
+    [addFiles],
+  );
+
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      const files = Array.from(e.clipboardData.items)
+        .filter((it) => it.kind === 'file')
+        .map((it) => it.getAsFile())
+        .filter((f): f is File => f !== null && f.type.startsWith('image/'));
+      if (files.length > 0) {
+        e.preventDefault(); // no pegar el nombre del fichero como texto
+        void addFiles(files);
+      }
+    },
+    [addFiles],
+  );
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation(); // no lo trate el drop-zone de Referencia del <main>
+      setDragOver(false);
+      const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'));
+      if (files.length > 0) void addFiles(files);
+    },
+    [addFiles],
+  );
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    if (Array.from(e.dataTransfer.types).includes('Files')) {
+      e.preventDefault();
+      setDragOver(true);
+    }
+  }, []);
+
+  const removeImage = useCallback((id: number) => {
+    setImages((prev) => prev.filter((img) => img.id !== id));
+  }, []);
+
   const sendText = useCallback(
     (text: string) => {
       const t = text.trim();
-      if (!t || busy) return;
+      const imgs = images.map((i) => i.attachment);
+      if ((!t && imgs.length === 0) || busy) return;
       pendingTextRef.current = t;
+      pendingImagesRef.current = imgs;
       setPending(null); // un turno nuevo descarta una propuesta sin confirmar
-      const next: ChatItem[] = [...itemsRef.current, { kind: 'user', text: t }];
+      const userItem: ChatItem =
+        imgs.length > 0 ? { kind: 'user', text: t, images: imgs } : { kind: 'user', text: t };
+      const next: ChatItem[] = [...itemsRef.current, userItem];
       setItems(next);
       setDraft('');
+      setImages([]);
       runRequest(next, t);
     },
-    [busy, runRequest],
+    [busy, images, runRequest],
   );
 
   // Los handlers mutan el store (applyProposals): corren en el cuerpo del handler,
@@ -318,9 +420,11 @@ export function AsistenteChat() {
     window.clearTimeout(slowTimerRef.current);
     setBusy(false);
     setSlow(false);
-    // Devuelve el texto del turno en vuelo al composer y quita ese turno del log.
+    // Devuelve el texto y las imágenes del turno en vuelo al composer y quita ese
+    // turno del log (para reintentar sin reescribir ni re-adjuntar).
     setItems((prev) => (prev[prev.length - 1]?.kind === 'user' ? prev.slice(0, -1) : prev));
     setDraft(pendingTextRef.current);
+    setImages(pendingImagesRef.current.map((attachment) => ({ id: ++imageIdRef.current, attachment })));
     inputRef.current?.focus();
   }, []);
 
@@ -402,7 +506,8 @@ export function AsistenteChat() {
             <h3 className={styles.emptyTitle}>¿Qué necesitas de esta obra?</h3>
             <p className={styles.emptyDesc}>
               Puedo resolver dudas y actuar sobre tu presupuesto: crear partidas, dictar mediciones,
-              editar precios… Los cambios sobre datos existentes te los muestro antes de aplicar.
+              editar precios… También puedes adjuntar una foto de tu hoja de mediciones y la leo. Los
+              cambios sobre datos existentes te los muestro antes de aplicar.
             </p>
             <div className={styles.chips}>
               {CHIPS.filter((c) => !c.when || c.when(useObraStore.getState())).map((c) => (
@@ -423,7 +528,19 @@ export function AsistenteChat() {
               return (
                 <div key={i} className={`${styles.row} ${styles.rowUser}`}>
                   <span className={styles.role}>Tú</span>
-                  <span className={styles.msg}>{it.text}</span>
+                  {it.images && it.images.length > 0 && (
+                    <div className={styles.msgThumbs}>
+                      {it.images.map((img, k) => (
+                        <img
+                          key={k}
+                          className={styles.msgThumb}
+                          src={`data:${img.mediaType};base64,${img.data}`}
+                          alt="Imagen adjunta"
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {it.text && <span className={styles.msg}>{it.text}</span>}
                 </div>
               );
             }
@@ -473,27 +590,75 @@ export function AsistenteChat() {
         )}
       </div>
 
-      <div className={styles.composer}>
-        <textarea
-          ref={inputRef}
-          className={`scroll-thin ${styles.textarea}`}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={onComposerKey}
-          placeholder="Pide algo…  (Enter = salto de línea, Ctrl+Enter = enviar)"
-          rows={2}
-          aria-label="Escribe tu consulta o una orden"
-        />
-        <button
-          type="button"
-          className={styles.send}
-          onClick={() => sendText(draft)}
-          disabled={busy || draft.trim() === ''}
-          title="Enviar (Ctrl+Enter)"
-          aria-label="Enviar"
-        >
-          <Icon name="send" size={16} />
-        </button>
+      <div
+        className={`${styles.composer} ${dragOver ? styles.dropOver : ''}`}
+        onDragOver={handleDragOver}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={handleDrop}
+      >
+        {images.length > 0 && (
+          <div className={styles.thumbs}>
+            {images.map((img) => (
+              <div key={img.id} className={styles.thumb}>
+                <img
+                  src={`data:${img.attachment.mediaType};base64,${img.attachment.data}`}
+                  alt="Imagen adjunta"
+                />
+                <button
+                  type="button"
+                  className={styles.thumbRemove}
+                  onClick={() => removeImage(img.id)}
+                  aria-label="Quitar imagen"
+                >
+                  <Icon name="x" size={11} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className={styles.composerRow}>
+          <button
+            type="button"
+            className={`tap-target ${styles.attach}`}
+            onClick={() => fileInputRef.current?.click()}
+            disabled={busy || images.length >= MAX_IMAGES}
+            title="Adjuntar foto (hoja de mediciones, croquis…)"
+            aria-label="Adjuntar foto"
+          >
+            <Icon name="image" size={16} />
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={IMAGE_ACCEPT_ATTR}
+            multiple
+            onChange={handleFileChange}
+            className={styles.fileInput}
+            aria-hidden="true"
+            tabIndex={-1}
+          />
+          <textarea
+            ref={inputRef}
+            className={`scroll-thin ${styles.textarea}`}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={onComposerKey}
+            onPaste={handlePaste}
+            placeholder="Pide algo o adjunta una foto…  (Ctrl+Enter = enviar)"
+            rows={2}
+            aria-label="Escribe tu consulta o una orden"
+          />
+          <button
+            type="button"
+            className={styles.send}
+            onClick={() => sendText(draft)}
+            disabled={busy || (draft.trim() === '' && images.length === 0)}
+            title="Enviar (Ctrl+Enter)"
+            aria-label="Enviar"
+          >
+            <Icon name="send" size={16} />
+          </button>
+        </div>
       </div>
 
       <AjustesIA open={settingsOpen} onClose={() => setSettingsOpen(false)} />

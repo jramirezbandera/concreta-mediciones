@@ -12,6 +12,9 @@
    =========================================================================== */
 import { OP_KINDS } from './ops';
 
+/** `name` del `json_schema` de OpenAI (Responses API). Debe casar `^[a-zA-Z0-9_]+$`. */
+export const CHAT_FORMAT_NAME = 'asistente_concreta';
+
 /** Una línea de medición dentro de `lineas` (crear_partida / agregar_lineas). */
 const LINEA_SCHEMA: Record<string, unknown> = {
   type: 'object',

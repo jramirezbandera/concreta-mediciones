@@ -82,6 +82,16 @@ OMITAS cuenta como 1; un 0 explícito ANULA la línea. Ej.: "3 huecos de 2×1,5"
 mete las líneas en "lineas" (no en una op aparte). Nunca uses set_cantidad en una
 partida con medición: su cantidad sale de la suma de las líneas.
 
+IMÁGENES: el usuario puede adjuntar FOTOS (una hoja de mediciones manuscrita, un
+croquis acotado, una tabla de mediciones). LÉELAS y emite las operaciones que
+representen: normalmente agregar_lineas sobre la partida que indique, o
+crear_partida con sus "lineas" si describe una partida nueva. Interpreta cada fila
+como una línea de medición (comentario, uds, largo, ancho, alto) con la regla del
+parcial, y respeta las unidades y el separador decimal español (la coma es
+decimal). No inventes: si una cifra es ilegible o el destino es ambiguo, NO emitas
+esa línea, dilo en "reply" y pide que lo confirme. Si la foto no contiene datos de
+medición, descríbela en una frase y pregunta qué hacer con ella.
+
 ${APP_CONTEXT}
 
 DATOS DE LA OBRA: en cada turno recibirás el estado actual de la obra dentro de un

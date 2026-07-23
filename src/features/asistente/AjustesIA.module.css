@@ -30,6 +30,39 @@
   border-color: var(--accent);
   box-shadow: var(--ring-accent);
 }
+/* Selector de proveedor (control segmentado). */
+.providers {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--border-main);
+  border-radius: 8px;
+  background: var(--bg-primary);
+}
+.provider {
+  flex: 1;
+  border: 0;
+  border-radius: 6px;
+  padding: 7px 10px;
+  font: inherit;
+  font-size: var(--fs-table);
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  cursor: pointer;
+  transition: color 120ms ease, background 120ms ease;
+}
+.provider:hover {
+  color: var(--text-primary);
+}
+.providerActive {
+  color: var(--on-accent);
+  background: var(--accent);
+}
+.providerActive:hover {
+  color: var(--on-accent);
+}
+
 .getKey {
   font-size: var(--fs-caption);
   color: var(--accent);

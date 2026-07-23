@@ -244,10 +244,116 @@
   border-top: 1px solid var(--border-main);
   padding: 8px;
   display: flex;
-  align-items: flex-end;
+  flex-direction: column;
   gap: 6px;
   /* En móvil (drawer a pantalla completa) respeta la zona segura del teclado. */
   padding-bottom: max(8px, env(safe-area-inset-bottom));
+  transition: background 120ms ease, box-shadow 120ms ease;
+}
+/* Resalte al arrastrar una imagen sobre el composer. */
+.dropOver {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.composerRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+/* Tira de miniaturas de las imágenes adjuntas pendientes de enviar. */
+.thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.thumb {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  flex: none;
+}
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--border-main);
+  display: block;
+}
+.thumbRemove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--border-main);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+.thumbRemove:hover {
+  color: var(--state-danger);
+  border-color: var(--state-danger);
+}
+
+/* Botón de adjuntar (icono), a juego con .send pero en tono secundario. */
+.attach {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border-main);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+.attach:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.attach:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+/* Input de fichero fuera de pantalla: el botón .attach es el control accesible. */
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Miniaturas dentro de una fila de usuario del log. */
+.msgThumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 2px 0;
+}
+.msgThumb {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--border-main);
+  display: block;
 }
 .textarea {
   flex: 1;

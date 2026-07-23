@@ -19,6 +19,7 @@ import {
   GripVertical,
   HardHat,
   HelpCircle,
+  ImagePlus,
   Layers,
   LayoutGrid,
   List,
@@ -94,6 +95,7 @@ export const ICONS = {
   assistant: Sparkles,
   send: Send,
   settings: Settings,
+  image: ImagePlus,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICONS;

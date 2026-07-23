@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AiError } from '../types';
-import { numericStatus, parseJsonText, scrub, toAiError } from './gemini';
+import { numericStatus, parseJsonText, scrub, toAiError, turnToParts } from './gemini';
 
 /** Doble de `ApiError` del SDK: `toAiError` solo lo usa para `instanceof` + `.status`. */
 class FakeApiError extends Error {
@@ -53,6 +53,31 @@ describe('parseJsonText', () => {
       expect(e).toBeInstanceOf(AiError);
       expect((e as AiError).kind).toBe('bad-response');
     }
+  });
+});
+
+describe('turnToParts (mapeo de imágenes/texto a Gemini)', () => {
+  it('turno de solo texto → un part de texto', () => {
+    expect(turnToParts({ role: 'user', text: 'hola' })).toEqual([{ text: 'hola' }]);
+  });
+
+  it('turno con imagen y texto → inlineData primero, texto después', () => {
+    const img = { data: 'QUJD', mediaType: 'image/png' as const };
+    expect(turnToParts({ role: 'user', text: 'lee esto', images: [img] })).toEqual([
+      { inlineData: { mimeType: 'image/png', data: 'QUJD' } },
+      { text: 'lee esto' },
+    ]);
+  });
+
+  it('turno SOLO imagen (texto vacío) → NO añade un part de texto vacío', () => {
+    const img = { data: 'QUJD', mediaType: 'image/jpeg' as const };
+    expect(turnToParts({ role: 'user', text: '', images: [img] })).toEqual([
+      { inlineData: { mimeType: 'image/jpeg', data: 'QUJD' } },
+    ]);
+  });
+
+  it('turno vacío sin imágenes → conserva el part de texto para no quedarse sin parts', () => {
+    expect(turnToParts({ role: 'user', text: '' })).toEqual([{ text: '' }]);
   });
 });
 

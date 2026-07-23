@@ -133,7 +133,7 @@ describe.skipIf(!KEY)('eval:ia — frase de obra → ops (Gemini real)', () => {
     it(`${caso.id}: ${caso.prompt}`, async () => {
       const snap = buildObraSnapshot(snapshotInput());
       const system = buildChatSystem(snap);
-      const env = await runChatTurn(KEY, { system, schema: CHAT_ENVELOPE_SCHEMA, turns: [{ role: 'user', text: caso.prompt }] });
+      const env = await runChatTurn('gemini', KEY, { system, schema: CHAT_ENVELOPE_SCHEMA, turns: [{ role: 'user', text: caso.prompt }] });
       const ops = env.ops ?? [];
 
       // Sanidad de integración: las ops de acción se aplican sobre el store real.
