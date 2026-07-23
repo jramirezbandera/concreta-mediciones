@@ -340,6 +340,67 @@
   border: 0;
 }
 
+/* Micro de dictado por voz (mismo molde que .attach). Activo = acento (el rojo se
+   reserva para errores), con pulso desactivado en reduce-motion. */
+.mic {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border-main);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+.mic:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.micActive,
+.micActive:hover {
+  color: var(--on-accent);
+  background: var(--accent);
+  border-color: var(--accent);
+  animation: micPulse 1.4s ease-in-out infinite;
+}
+@keyframes micPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--accent-soft);
+  }
+  50% {
+    box-shadow: 0 0 0 4px var(--accent-soft);
+  }
+}
+
+/* Aviso «Escuchando…» mientras dicta. */
+.dictHint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+}
+.dictDot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: micPulse 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .micActive,
+  .dictDot {
+    animation: none;
+  }
+}
+
 /* Miniaturas dentro de una fila de usuario del log. */
 .msgThumbs {
   display: flex;

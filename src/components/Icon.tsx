@@ -26,6 +26,7 @@ import {
   Loader2,
   Maximize2,
   Menu,
+  Mic,
   Minimize2,
   MoreVertical,
   Pencil,
@@ -96,6 +97,7 @@ export const ICONS = {
   send: Send,
   settings: Settings,
   image: ImagePlus,
+  mic: Mic,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICONS;

@@ -18,6 +18,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Icon } from '../../components';
 import { findNode } from '../../core/tree';
+import { useSpeechDictation } from '../../hooks/useSpeechDictation';
 import { useSessionStore } from '../../persist';
 import {
   AI_ERROR_MESSAGES,
@@ -207,6 +208,9 @@ export function AsistenteChat() {
     cacheKeyRef.current =
       typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `ck-${Date.now()}`;
   }
+  // Texto del composer en el instante en que arrancó el dictado: cada evento de voz
+  // reescribe `base + transcrito`, así el interino se ve en vivo sin pisar lo escrito.
+  const dictationBaseRef = useRef('');
 
   const setAsistenteOpen = useObraStore((s) => s.setAsistenteOpen);
 
@@ -375,6 +379,30 @@ export function AsistenteChat() {
   const removeImage = useCallback((id: number) => {
     setImages((prev) => prev.filter((img) => img.id !== id));
   }, []);
+
+  // --- dictado por voz (Web Speech API, es-ES) ---
+  const dictation = useSpeechDictation({
+    onTranscript: ({ final, interim }) => setDraft(dictationBaseRef.current + final + interim),
+    onError: (error) => {
+      if (error === 'not-allowed' || error === 'service-not-allowed') {
+        useToastStore.getState().show('No hay permiso para el micrófono. Actívalo en el navegador.');
+      } else if (error === 'audio-capture') {
+        useToastStore.getState().show('No se detecta ningún micrófono.');
+      }
+    },
+  });
+
+  // Micro del composer: alterna la escucha. Al arrancar fija como base el texto ya
+  // escrito (con separador para no pegar palabras), así lo dictado se AÑADE.
+  const toggleDictation = () => {
+    if (dictation.listening) {
+      dictation.stop();
+      return;
+    }
+    const needsSep = draft !== '' && !/\s$/.test(draft);
+    dictationBaseRef.current = needsSep ? `${draft} ` : draft;
+    dictation.start();
+  };
 
   const sendText = useCallback(
     (text: string) => {
@@ -596,6 +624,12 @@ export function AsistenteChat() {
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
       >
+        {dictation.listening && (
+          <div className={styles.dictHint} role="status">
+            <span className={styles.dictDot} aria-hidden="true" />
+            Escuchando… pulsa el micrófono para parar.
+          </div>
+        )}
         {images.length > 0 && (
           <div className={styles.thumbs}>
             {images.map((img) => (
@@ -637,6 +671,18 @@ export function AsistenteChat() {
             aria-hidden="true"
             tabIndex={-1}
           />
+          {dictation.supported && (
+            <button
+              type="button"
+              className={`tap-target ${styles.mic} ${dictation.listening ? styles.micActive : ''}`}
+              onClick={toggleDictation}
+              aria-label={dictation.listening ? 'Detener dictado' : 'Dictar por voz'}
+              aria-pressed={dictation.listening}
+              title={dictation.listening ? 'Detener dictado' : 'Dictar por voz (es-ES)'}
+            >
+              <Icon name="mic" size={16} />
+            </button>
+          )}
           <textarea
             ref={inputRef}
             className={`scroll-thin ${styles.textarea}`}
