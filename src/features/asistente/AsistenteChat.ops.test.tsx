@@ -59,6 +59,22 @@ describe('AsistenteChat · ops (integración)', () => {
     expect(useObraStore.getState().partidas.c1![0]!.precio).toBe(99);
   });
 
+  it('op de certificación → tarjeta con cert destino nombrada → Aplicar certifica', async () => {
+    useObraStore.setState({
+      partidas: { c1: [partida({ id: 'p1', pos: '1.1', title: 'Excavación', ud: 'm³', cantidad: 6 })] },
+      certs: [{ id: 'c1', num: 1, period: 'junio 2026', retencion: 0, data: {} }],
+      curCert: 0,
+    });
+    mockChat.mockResolvedValue({ reply: 'Te lo propongo.', ops: [{ op: 'certificar', ref: '1.1', valor: 6, modo: 'origen' }] });
+    render(<AsistenteChat />);
+    await send('certifica la 1.1 al completo');
+
+    const apply = await screen.findByRole('button', { name: /Aplicar 1 cambio/ });
+    expect(screen.getByText(/Certificación nº 1 · junio 2026/)).toBeInTheDocument();
+    await userEvent.setup().click(apply);
+    expect(useObraStore.getState().certs[0]!.data.p1).toBe(6);
+  });
+
   it('op mal formada del modelo → se descarta con motivo en el informe (no muta)', async () => {
     mockChat.mockResolvedValue({ reply: 'Ok', ops: [{ op: 'crear_partida', titulo: 'Sin unidad' }] });
     render(<AsistenteChat />);

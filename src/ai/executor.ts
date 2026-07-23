@@ -26,13 +26,14 @@
    editar_*, borrar_* y set_* pasan por TARJETA (propuesta con diff) y se aplican
    al pulsar «Aplicar», revalidando el sello.
    =========================================================================== */
-import { fmtEur, fmtNum, round2 } from '../core/money';
-import { lineParcial } from '../core/medicion';
-import { findNode, findPartidaById, resolveContainerRef, resolvePartidaRef } from '../core/tree';
-import type { MedLine } from '../core/types';
+import { estaCertToOrigen, prevDataOf } from '../core/certificacion';
+import { fmtEur, fmtNum, round2, toEur, type Cents } from '../core/money';
+import { lineParcial, partidaCantidad, partidaImporte } from '../core/medicion';
+import { findNode, findPartidaById, resolveContainerRef, resolvePartidaRef, subtreeIds } from '../core/tree';
+import type { MedLine, Partida, SubChapter } from '../core/types';
 import { getActiveObraId, useSessionStore } from '../persist';
-import { copyTargetOf, useObraStore, type NewMedLine } from '../store';
-import { isDirect, type LineaField, type Operation, type OpLinea, type PartidaField } from './ops';
+import { ALL, copyTargetOf, useObraStore, type NewMedLine, type ObraState } from '../store';
+import { type LineaField, type Operation, type OpLinea, type PartidaField } from './ops';
 
 /** Tope de operaciones aplicadas por turno; lo que exceda se anuncia (T15). */
 export const MAX_OPS_PER_TURN = 40;
@@ -73,18 +74,40 @@ export interface Diff {
   destructivo?: boolean;
 }
 
+/** Certificación destino de una propuesta de cert (F-A4): se nombra en la tarjeta
+ *  y avisa si ya se exportó (`firmado`), el riesgo real (aterrizar en la equivocada). */
+export interface CertDest {
+  num: number;
+  period: string;
+  firmado: boolean;
+}
+
+/** Resumen de un ámbito de `certificar_100`: recuento e importe afectado, con los
+ *  ids ya resueltos (fase 1) y las etiquetas para el detalle desplegable. */
+export interface ScopeInfo {
+  ids: string[];
+  count: number;
+  importe: string;
+  labels: string[];
+}
+
 /** Una operación con consecuencias, a confirmar en la tarjeta antes de aplicar. */
 export interface Proposal {
   id: string;
   op: Operation;
-  /** Destino legible ("Partida 1.2 · Excavación"). */
+  /** Destino legible ("Partida 1.2 · Excavación", "Capítulo 2 · Albañilería"). */
   target: string;
   diffs: Diff[];
+  /** '' en ops de nivel cert/ámbito (certificar_100, crear_certificacion). */
   partidaId: string;
   chapterId: string;
   /** editar_linea/borrar_linea: id ESTABLE de la línea (fase 1); en aplicación se
    *  reconvierte a índice actual (dos fases, regresión Issue 2). */
   lineId?: string;
+  /** Cert destino nombrada (ops de certificación): banner + aviso si `firmado`. */
+  certDest?: CertDest;
+  /** certificar_100: recuento/importe del ámbito (diff agregado en vez de por fila). */
+  scope?: ScopeInfo;
 }
 
 export interface PlanResult {
@@ -168,6 +191,28 @@ function partidaLabel(pos: string, title: string): string {
   return `Partida ${pos} · ${title || '(sin título)'}`;
 }
 
+function eur(c: Cents): string {
+  return fmtEur(toEur(c));
+}
+
+/** Parcial de una línea cruda del modelo (dimensión ausente = factor 1). */
+function opLineaParcial(l: OpLinea): number {
+  return lineParcial({ uds: l.uds ?? '', largo: l.largo ?? '', ancho: l.ancho ?? '', alto: l.alto ?? '' });
+}
+
+/** Cert en curso como destino nombrado, o undefined si no hay ninguna. */
+function currentCertDest(): CertDest | undefined {
+  const st = useObraStore.getState();
+  const cur = st.certs[st.curCert];
+  return cur ? { num: cur.num, period: cur.period, firmado: !!cur.firmadoAt } : undefined;
+}
+
+/** ¿La partida aparece certificada (con cantidad > 0) en ALGUNA cert? Decide la
+ *  reclasificación de `agregar_lineas` a tarjeta (baja el % certificado en silencio). */
+function partidaCertificada(st: ObraState, id: string): boolean {
+  return st.certs.some((c) => (c.data[id] ?? 0) > 0);
+}
+
 let proposalSeq = 0;
 
 /* ---- planificación (aplica directas, recolecta propuestas) ------------------ */
@@ -207,12 +252,8 @@ export function planTurn(ops: Operation[], seal: Seal): PlanResult {
   let lastCreated: { id: string; chapterId: string; subId: string | null } | null = null;
 
   for (const op of capped) {
-    if (isDirect(op.op)) {
-      const created = applyDirect(op, res);
-      if (created) lastCreated = created;
-    } else {
-      planProposal(op, res);
-    }
+    const created = dispatch(op, res);
+    if (created) lastCreated = created;
   }
 
   // Lleva al usuario a la última partida creada (salto + pulso). Solo toca UI, así
@@ -234,8 +275,41 @@ function ensureChapterForPartidas(ops: Operation[], res: PlanResult): void {
   res.createdChapter = title;
 }
 
-/** Aplica una op DIRECTA con postcondición. Devuelve la partida creada si la hubo
- *  (para el `revealPartida` final). */
+/** Enruta cada op a su handler: crear_* directas, agregar_lineas condicional (cert),
+ *  el resto (edición/precio/certificación) a tarjeta. Devuelve la partida creada. */
+function dispatch(
+  op: Operation,
+  res: PlanResult,
+): { id: string; chapterId: string; subId: string | null } | null {
+  switch (op.op) {
+    case 'crear_capitulo':
+    case 'crear_subcapitulo':
+    case 'crear_partida':
+      return applyDirect(op, res);
+    case 'agregar_lineas':
+      planAgregarLineas(op, res);
+      return null;
+    case 'editar_partida':
+    case 'editar_linea':
+    case 'borrar_linea':
+    case 'set_precio':
+    case 'set_cantidad':
+      planProposal(op, res);
+      return null;
+    case 'certificar':
+      planCertificar(op, res);
+      return null;
+    case 'certificar_100':
+      planCertificar100(op, res);
+      return null;
+    case 'crear_certificacion':
+      planCrearCert(op, res);
+      return null;
+  }
+}
+
+/** Aplica una op DIRECTA (crear_*) con postcondición. Devuelve la partida creada
+ *  si la hubo (para el `revealPartida` final). */
 function applyDirect(
   op: Operation,
   res: PlanResult,
@@ -270,25 +344,66 @@ function applyDirect(
     }
     case 'crear_partida':
       return applyCrearPartida(op, res);
-    case 'agregar_lineas': {
-      const hit = resolvePartidaRef(st.partidas, op.ref);
-      if (!hit) {
-        res.notFound.push({ status: 'no-encontrada', label: `Partida ${op.ref}`, detail: 'añadir mediciones', reason: `no encuentro la partida ${op.ref}` });
-        return null;
-      }
-      const before = hit.partida.med.length;
-      st.addMedLines(hit.chapterId, hit.partida.id, op.lineas.map(toNewMedLine));
-      const after = findPartidaById(useObraStore.getState().partidas, hit.partida.id)?.partida.med.length ?? before;
-      const label = partidaLabel(hit.partida.pos, hit.partida.title);
-      if (after > before) {
-        res.applied.push({ status: 'aplicada', label, detail: `+${after - before} línea(s) de medición` });
-      } else {
-        res.skipped.push({ status: 'omitida', label, detail: 'añadir mediciones', reason: 'no se añadió ninguna línea' });
-      }
-      return null;
-    }
     default:
-      return null; // las de tarjeta no llegan aquí
+      return null; // agregar_lineas y las de tarjeta no llegan por aquí
+  }
+}
+
+/**
+ * `agregar_lineas`: DIRECTA salvo que la partida ya esté certificada (añadir
+ * medición sube la ofertada y BAJA el % certificado en silencio → pasa a tarjeta,
+ * mostrando el % antes/después). Ref inexistente → no-encontrada.
+ */
+function planAgregarLineas(op: Extract<Operation, { op: 'agregar_lineas' }>, res: PlanResult): void {
+  const st = useObraStore.getState();
+  const hit = resolvePartidaRef(st.partidas, op.ref);
+  if (!hit) {
+    res.notFound.push({ status: 'no-encontrada', label: `Partida ${op.ref}`, detail: 'añadir mediciones', reason: `no encuentro la partida ${op.ref}` });
+    return;
+  }
+  const p = hit.partida;
+  if (!partidaCertificada(st, p.id)) {
+    doAgregarLineas(hit.chapterId, p.id, p.pos, p.title, op.lineas, res);
+    return;
+  }
+  // Certificada: propuesta con el % certificado antes/después (por cada cert que la tiene).
+  const added = op.lineas.reduce((s, l) => s + opLineaParcial(l), 0);
+  const ofertadaAntes = partidaCantidad(p);
+  const ofertadaDespues = round2(ofertadaAntes + added);
+  const cur = st.certs[st.curCert];
+  const cert = cur?.data[p.id] ?? 0;
+  const pct = (of: number) => (of > 0 ? `${Math.round((cert / of) * 100)}%` : '—');
+  res.proposals.push({
+    id: `prop-${++proposalSeq}`,
+    op,
+    target: partidaLabel(p.pos, p.title),
+    partidaId: p.id,
+    chapterId: hit.chapterId,
+    certDest: currentCertDest(),
+    diffs: [
+      { campo: `Ofertada (${p.ud})`, antes: fmtNum(ofertadaAntes), despues: fmtNum(ofertadaDespues) },
+      { campo: '% certificado', antes: pct(ofertadaAntes), despues: pct(ofertadaDespues) },
+    ],
+  });
+}
+
+/** Aplica `agregar_lineas` (compartido por la vía directa y la de tarjeta). */
+function doAgregarLineas(
+  chapterId: string,
+  partidaId: string,
+  pos: string,
+  title: string,
+  lineas: OpLinea[],
+  res: { applied: OpReceipt[]; skipped: OpReceipt[] },
+): void {
+  const before = findPartidaById(useObraStore.getState().partidas, partidaId)?.partida.med.length ?? 0;
+  useObraStore.getState().addMedLines(chapterId, partidaId, lineas.map(toNewMedLine));
+  const after = findPartidaById(useObraStore.getState().partidas, partidaId)?.partida.med.length ?? before;
+  const label = partidaLabel(pos, title);
+  if (after > before) {
+    res.applied.push({ status: 'aplicada', label, detail: `+${after - before} línea(s) de medición` });
+  } else {
+    res.skipped.push({ status: 'omitida', label, detail: 'añadir mediciones', reason: 'no se añadió ninguna línea' });
   }
 }
 
@@ -349,10 +464,15 @@ function countChildren(containerId: string): number {
 
 /* ---- propuestas (fase 1: resolver refs a ids estables + diff) --------------- */
 
-function planProposal(op: Operation, res: PlanResult): void {
+type PartidaTarjetaOp = Extract<
+  Operation,
+  { op: 'editar_partida' | 'editar_linea' | 'borrar_linea' | 'set_precio' | 'set_cantidad' }
+>;
+
+function planProposal(op: PartidaTarjetaOp, res: PlanResult): void {
   const st = useObraStore.getState();
-  // Todas las de tarjeta llevan `ref` a una partida.
-  const ref = 'ref' in op ? op.ref : '';
+  // Todas estas ops llevan `ref` a una partida.
+  const ref = op.ref;
   const hit = resolvePartidaRef(st.partidas, ref);
   if (!hit) {
     res.notFound.push({ status: 'no-encontrada', label: `Partida ${ref}`, detail: describeOp(op), reason: `no encuentro la partida ${ref}` });
@@ -426,9 +546,145 @@ function describeOp(op: Operation): string {
       return 'fijar precio';
     case 'set_cantidad':
       return 'fijar cantidad';
+    case 'certificar':
+      return 'certificar';
     default:
       return op.op;
   }
+}
+
+/* ---- propuestas de CERTIFICACIÓN (F-A4, siempre tarjeta) -------------------- */
+
+/** Contenedor resuelto para un ámbito de cert: por `ref` (código) o, si no, por el
+ *  contenedor ACTIVO (id). null si nada resuelve. */
+function resolveScopeContainer(st: ObraState, ref?: string): ReturnType<typeof findNode> {
+  if (ref) return resolveContainerRef(st.chapters, ref);
+  return st.active !== ALL ? findNode(st.chapters, st.active) : null;
+}
+
+/** Partidas de un ámbito + su etiqueta. `found:false` = el contenedor no existe. */
+function scopePartidas(
+  st: ObraState,
+  ambito: 'obra' | 'capitulo' | 'subarbol' | 'visible',
+  ref?: string,
+): { ps: Partida[]; label: string; found: boolean } {
+  const all = (): Partida[] => st.chapters.flatMap((ch) => st.partidas[ch.id] ?? []);
+  if (ambito === 'obra') return { ps: all(), label: 'Toda la obra', found: true };
+
+  const hit = ambito === 'visible' ? resolveScopeContainer(st) : resolveScopeContainer(st, ref);
+  if (!hit) {
+    // 'visible' sin contenedor activo = toda la obra; los demás sin resolver = no encontrado.
+    if (ambito === 'visible') return { ps: all(), label: 'Toda la obra', found: true };
+    return { ps: [], label: '', found: false };
+  }
+  const ch = hit.chapter;
+  const chPs = st.partidas[ch.id] ?? [];
+  // Capítulo (whole bucket) si el ámbito es 'capitulo' o el contenedor ES el capítulo.
+  if (ambito === 'capitulo' || hit.node === ch) {
+    return { ps: chPs, label: `${ch.code} ${ch.title}`, found: true };
+  }
+  // subárbol / visible sobre un sub: sus partidas (subtree).
+  const ids = subtreeIds(hit.node as SubChapter);
+  return { ps: chPs.filter((p) => p.sub != null && ids.has(p.sub)), label: `${hit.node.code} ${hit.node.title}`, found: true };
+}
+
+/** Ids de las partidas de `ps` que CAMBIAN al completar al 100% (ofertada>0 y aún
+ *  no al 100%). Réplica de `completeScope.ids` sin importar la capa de features. */
+function completableIds(ps: Partida[], curData: Record<string, number>): string[] {
+  const ids: string[] = [];
+  for (const p of ps) {
+    const ofertada = partidaCantidad(p);
+    if (ofertada <= 0) continue;
+    if ((curData[p.id] ?? 0) >= ofertada) continue;
+    ids.push(p.id);
+  }
+  return ids;
+}
+
+/** Cantidad a-origen que dejaría `certificar` en la cert en curso. */
+function certResultOrigen(st: ObraState, op: Extract<Operation, { op: 'certificar' }>, partidaId: string): number {
+  if (op.modo === 'esta') {
+    const prev = prevDataOf(st.certs, st.curCert)[partidaId] ?? 0;
+    return estaCertToOrigen(prev, op.valor);
+  }
+  return round2(Math.max(0, op.valor));
+}
+
+function planCertificar(op: Extract<Operation, { op: 'certificar' }>, res: PlanResult): void {
+  const st = useObraStore.getState();
+  const hit = resolvePartidaRef(st.partidas, op.ref);
+  if (!hit) {
+    res.notFound.push({ status: 'no-encontrada', label: `Partida ${op.ref}`, detail: 'certificar', reason: `no encuentro la partida ${op.ref}` });
+    return;
+  }
+  const cur = st.certs[st.curCert];
+  if (!cur) {
+    res.skipped.push({ status: 'omitida', label: partidaLabel(hit.partida.pos, hit.partida.title), detail: 'certificar', reason: 'no hay ninguna certificación en curso' });
+    return;
+  }
+  const p = hit.partida;
+  const ofertada = partidaCantidad(p);
+  const pct = (q: number): string => (ofertada > 0 ? `${Math.round((q / ofertada) * 100)}%` : '—');
+  const antes = cur.data[p.id] ?? 0;
+  const despues = certResultOrigen(st, op, p.id);
+  res.proposals.push({
+    id: `prop-${++proposalSeq}`,
+    op,
+    target: partidaLabel(p.pos, p.title),
+    partidaId: p.id,
+    chapterId: hit.chapterId,
+    certDest: currentCertDest(),
+    diffs: [{ campo: `Certificado a origen (${p.ud})`, antes: `${fmtNum(antes)} (${pct(antes)})`, despues: `${fmtNum(despues)} (${pct(despues)})` }],
+  });
+}
+
+function planCertificar100(op: Extract<Operation, { op: 'certificar_100' }>, res: PlanResult): void {
+  const st = useObraStore.getState();
+  const cur = st.certs[st.curCert];
+  if (!cur) {
+    res.skipped.push({ status: 'omitida', label: 'Certificar al 100%', detail: 'certificar', reason: 'no hay ninguna certificación en curso' });
+    return;
+  }
+  const { ps, label, found } = scopePartidas(st, op.ambito, op.ref);
+  if (!found) {
+    res.notFound.push({ status: 'no-encontrada', label: 'Certificar al 100%', detail: 'certificar', reason: `no encuentro el contenedor «${op.ref ?? ''}»` });
+    return;
+  }
+  const ids = completableIds(ps, cur.data);
+  if (ids.length === 0) {
+    res.skipped.push({ status: 'omitida', label, detail: 'certificar al 100%', reason: 'ya está todo certificado al 100% (o sin partidas)' });
+    return;
+  }
+  const coefK = st.rates.coefK;
+  const idSet = new Set(ids);
+  const affected = ps.filter((p) => idSet.has(p.id));
+  const importe = affected.reduce((s, p) => s + partidaImporte(p, coefK), 0);
+  res.proposals.push({
+    id: `prop-${++proposalSeq}`,
+    op,
+    target: label,
+    partidaId: '',
+    chapterId: '',
+    diffs: [],
+    certDest: currentCertDest(),
+    scope: { ids, count: ids.length, importe: eur(importe), labels: affected.map((p) => partidaLabel(p.pos, p.title)) },
+  });
+}
+
+function planCrearCert(op: Extract<Operation, { op: 'crear_certificacion' }>, res: PlanResult): void {
+  const st = useObraStore.getState();
+  const cur = st.certs[st.curCert];
+  const nextNum = (st.certs.at(-1)?.num ?? 0) + 1;
+  res.proposals.push({
+    id: `prop-${++proposalSeq}`,
+    op,
+    target: 'Nueva certificación',
+    partidaId: '',
+    chapterId: '',
+    diffs: [
+      { campo: 'Certificación', antes: cur ? `nº ${cur.num}` : '—', despues: `nº ${nextNum}${op.periodo ? ` · ${op.periodo}` : ''} (nueva)` },
+    ],
+  });
 }
 
 /* ---- aplicación de propuestas (fase 2: id→índice + postcondición) ----------- */
@@ -454,6 +710,10 @@ export function applyProposals(proposals: Proposal[], seal: Seal): ApplyResult {
 
 function applyOne(prop: Proposal, res: ApplyResult): void {
   const op = prop.op;
+  // Ops de NIVEL CERT/ÁMBITO: no cuelgan de una partida concreta.
+  if (op.op === 'certificar_100') return applyCertificar100(prop, op, res);
+  if (op.op === 'crear_certificacion') return applyCrearCert(prop, op, res);
+
   const hit = findPartidaById(useObraStore.getState().partidas, prop.partidaId);
   if (!hit) {
     res.notFound.push({ status: 'no-encontrada', label: prop.target, detail: describeOp(op), reason: 'la partida ya no existe' });
@@ -463,6 +723,25 @@ function applyOne(prop: Proposal, res: ApplyResult): void {
   const p = hit.partida;
 
   switch (op.op) {
+    case 'agregar_lineas':
+      doAgregarLineas(hit.chapterId, p.id, p.pos, p.title, op.lineas, res);
+      return;
+    case 'certificar': {
+      const cur = st.certs[st.curCert];
+      if (!cur) {
+        res.skipped.push({ status: 'omitida', label: prop.target, detail: 'certificar', reason: 'no hay certificación en curso' });
+        return;
+      }
+      const esperado = certResultOrigen(st, op, p.id);
+      st.onCertEdit(p.id, op.valor, op.modo);
+      const after = st.certs[st.curCert]?.data[p.id] ?? 0;
+      if (Math.abs(after - esperado) < 0.005) {
+        res.applied.push({ status: 'aplicada', label: prop.target, detail: `certificado a origen → ${fmtNum(after)} ${p.ud}` });
+      } else {
+        res.skipped.push({ status: 'omitida', label: prop.target, detail: 'certificar', reason: 'no se registró la cantidad' });
+      }
+      return;
+    }
     case 'editar_partida': {
       const field = PARTIDA_FIELD[op.campo];
       st.editPartidaField(hit.chapterId, p.id, field, op.valor);
@@ -526,5 +805,42 @@ function applyOne(prop: Proposal, res: ApplyResult): void {
     }
     default:
       return;
+  }
+}
+
+/** Aplica `certificar_100`: completa el ámbito ya resuelto (ids de fase 1) en UN
+ *  solo `set` (`completePartidas`) y verifica cuántas quedaron registradas. */
+function applyCertificar100(prop: Proposal, _op: Extract<Operation, { op: 'certificar_100' }>, res: ApplyResult): void {
+  const scope = prop.scope;
+  if (!scope || scope.ids.length === 0) {
+    res.skipped.push({ status: 'omitida', label: prop.target, detail: 'certificar al 100%', reason: 'no había partidas que completar' });
+    return;
+  }
+  const st = useObraStore.getState();
+  if (!st.certs[st.curCert]) {
+    res.skipped.push({ status: 'omitida', label: prop.target, detail: 'certificar al 100%', reason: 'no hay certificación en curso' });
+    return;
+  }
+  st.completePartidas(scope.ids);
+  const after = useObraStore.getState().certs[st.curCert]?.data ?? {};
+  const done = scope.ids.filter((id) => (after[id] ?? 0) > 0).length;
+  if (done > 0) {
+    res.applied.push({ status: 'aplicada', label: prop.target, detail: `${done} partida(s) al 100% · ${scope.importe}` });
+  } else {
+    res.skipped.push({ status: 'omitida', label: prop.target, detail: 'certificar al 100%', reason: 'no se certificó ninguna' });
+  }
+}
+
+/** Aplica `crear_certificacion`: crea la cert (la deja en curso) y fija su periodo. */
+function applyCrearCert(_prop: Proposal, op: Extract<Operation, { op: 'crear_certificacion' }>, res: ApplyResult): void {
+  const before = useObraStore.getState().certs.length;
+  useObraStore.getState().addCert();
+  const st = useObraStore.getState();
+  if (st.certs.length > before) {
+    if (op.periodo) st.setCertField('period', op.periodo);
+    const nueva = st.certs.at(-1);
+    res.applied.push({ status: 'aplicada', label: 'Nueva certificación', detail: `certificación nº ${nueva?.num}${op.periodo ? ` · ${op.periodo}` : ''} creada` });
+  } else {
+    res.skipped.push({ status: 'omitida', label: 'Nueva certificación', detail: 'crear certificación', reason: 'no se pudo crear' });
   }
 }

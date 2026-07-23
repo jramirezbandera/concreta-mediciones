@@ -12,11 +12,11 @@
    executor, la lista de `op`s conocidas y la CLASIFICACIÓN directa/tarjeta (árbol
    de decisión del plan). schema.ts y prompt.ts se derivan de aquí.
 
-   Ámbito F-A3: ops de PRESUPUESTO. Las de certificación (`certificar`,
-   `certificar_100`, `crear_certificacion`) llegan en F-A4.
+   Ámbito: ops de PRESUPUESTO (F-A3) + ops de CERTIFICACIÓN (F-A4). Estas últimas
+   (`certificar`, `certificar_100`, `crear_certificacion`) son SIEMPRE tarjeta.
    =========================================================================== */
 
-/** Tipos de operación reconocidos en F-A3 (ops de presupuesto). */
+/** Tipos de operación reconocidos (F-A3 presupuesto + F-A4 certificación). */
 export const OP_KINDS = [
   'crear_capitulo',
   'crear_subcapitulo',
@@ -27,6 +27,10 @@ export const OP_KINDS = [
   'borrar_linea',
   'set_precio',
   'set_cantidad',
+  // F-A4 · certificación (siempre tarjeta):
+  'certificar',
+  'certificar_100',
+  'crear_certificacion',
 ] as const;
 
 export type OpKind = (typeof OP_KINDS)[number];
@@ -42,6 +46,16 @@ export type LineaField = 'comentario' | LineaDim;
 export const LINEA_FIELDS: readonly LineaField[] = ['comentario', 'uds', 'largo', 'ancho', 'alto'];
 /** Las dimensiones (todo menos el comentario) se coercionan a número. */
 export const LINEA_DIMS: readonly LineaDim[] = ['uds', 'largo', 'ancho', 'alto'];
+
+/** Modo de `certificar`: valor a ORIGEN (acumulado) o de ESTA certificación. */
+export type CertModo = 'origen' | 'esta';
+export const CERT_MODOS: readonly CertModo[] = ['origen', 'esta'];
+
+/** Ámbito de `certificar_100`: se DECLARA (no una lista de refs); el executor lo
+ *  expande a ids. `capitulo`/`subarbol` usan `ref` (código del contenedor);
+ *  `visible` = el contenedor activo; `obra` = todo. */
+export type CertAmbito = 'obra' | 'capitulo' | 'subarbol' | 'visible';
+export const CERT_AMBITOS: readonly CertAmbito[] = ['obra', 'capitulo', 'subarbol', 'visible'];
 
 /**
  * Línea de medición emitida por el modelo. `comentario` es texto; las dimensiones
@@ -82,7 +96,11 @@ export type Operation =
   | { op: 'editar_linea'; ref: string; indice: number; campo: LineaField; valor: string | number }
   | { op: 'borrar_linea'; ref: string; indice: number }
   | { op: 'set_precio'; ref: string; valor: number }
-  | { op: 'set_cantidad'; ref: string; valor: number };
+  | { op: 'set_cantidad'; ref: string; valor: number }
+  // F-A4 · certificación (siempre tarjeta):
+  | { op: 'certificar'; ref: string; valor: number; modo: CertModo }
+  | { op: 'certificar_100'; ambito: CertAmbito; ref?: string }
+  | { op: 'crear_certificacion'; periodo?: string };
 
 /**
  * Clasificación directa/tarjeta (árbol de decisión del plan). El criterio no es
@@ -90,9 +108,10 @@ export type Operation =
  *   · crear_* y agregar_lineas → DIRECTA (se aplican ya, con toast «Deshacer»).
  *   · editar_*, borrar_*, set_* → TARJETA (propuesta con diff antes de aplicar).
  *
- * En F-A3 `agregar_lineas` es SIEMPRE directa; su reclasificación a tarjeta cuando
- * la partida ya está CERTIFICADA (añadir medición baja el % certificado en
- * silencio) es F-A4, donde el snapshot volátil ya conoce la cert.
+ * `agregar_lineas` es directa SALVO que la partida ya esté certificada (añadir
+ * medición baja el % certificado en silencio, F-A4): esa reclasificación la decide
+ * el executor releyendo el estado, no esta función pura. Las ops de CERTIFICACIÓN
+ * (`certificar`, `certificar_100`, `crear_certificacion`) son SIEMPRE tarjeta.
  */
 export function isDirect(op: OpKind): boolean {
   return op === 'crear_capitulo' || op === 'crear_subcapitulo' || op === 'crear_partida' || op === 'agregar_lineas';

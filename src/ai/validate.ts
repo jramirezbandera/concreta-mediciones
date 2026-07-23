@@ -12,10 +12,14 @@
    executor releyendo el estado.
    =========================================================================== */
 import {
+  CERT_AMBITOS,
+  CERT_MODOS,
   LINEA_DIMS,
   LINEA_FIELDS,
   OP_KINDS,
   PARTIDA_FIELDS,
+  type CertAmbito,
+  type CertModo,
   type LineaField,
   type OpKind,
   type OpLinea,
@@ -171,6 +175,29 @@ function narrowOp(op: OpKind, o: Record<string, unknown>): Operation {
       if (!ref) throw 'falta la referencia (posición) de la partida';
       if (valor === undefined || valor < 0) throw 'la cantidad no es un número válido';
       return { op, ref, valor };
+    }
+    case 'certificar': {
+      const ref = str(o.ref);
+      const valor = num(o.valor); // negativo permitido (certificar menos en 'esta')
+      const modo = o.modo;
+      if (!ref) throw 'falta la referencia (posición) de la partida';
+      if (valor === undefined) throw 'falta la cantidad a certificar';
+      if (!(CERT_MODOS as readonly unknown[]).includes(modo)) throw 'modo debe ser "origen" o "esta"';
+      return { op, ref, valor, modo: modo as CertModo };
+    }
+    case 'certificar_100': {
+      const ambito = o.ambito;
+      if (!(CERT_AMBITOS as readonly unknown[]).includes(ambito)) throw 'ambito debe ser obra|capitulo|subarbol|visible';
+      const out: Extract<Operation, { op: 'certificar_100' }> = { op, ambito: ambito as CertAmbito };
+      const ref = str(o.ref);
+      if (ref) out.ref = ref;
+      return out;
+    }
+    case 'crear_certificacion': {
+      const out: Extract<Operation, { op: 'crear_certificacion' }> = { op };
+      const periodo = str(o.periodo);
+      if (periodo) out.periodo = periodo;
+      return out;
     }
   }
 }

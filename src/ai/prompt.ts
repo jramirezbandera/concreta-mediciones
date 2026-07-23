@@ -60,9 +60,21 @@ OPERACIONES (cada una es un objeto con "op" y sus campos):
 - borrar_linea:  { op, ref, indice }
 - set_precio:    { op, ref, valor }                  valor = precio unitario en euros
 - set_cantidad:  { op, ref, valor }                  SOLO si la partida NO tiene medición
+- certificar:    { op, ref, valor, modo }            modo ∈ origen|esta; valor = cantidad ejecutada
+- certificar_100:{ op, ambito, ref? }                ambito ∈ obra|capitulo|subarbol|visible; ref = código del contenedor
+- crear_certificacion: { op, periodo? }              crea una certificación nueva y la deja en curso
 
 REFERENCIAS: a una PARTIDA se apunta por su POSICIÓN (la "1.2.3" de la izquierda),
 NUNCA por su código. A un CAPÍTULO o SUBCAPÍTULO, por su código ("1", "1.2").
+
+CERTIFICACIÓN: todas las ops de certificar operan sobre la CERTIFICACIÓN EN CURSO
+(la que aparece en el contexto/datos); no se puede elegir otra. certificar con modo
+"origen" fija la cantidad ejecutada acumulada; con "esta", la de este periodo.
+certificar_100 DECLARA un ámbito (no enumeres partidas): "el capítulo 2" →
+{ ambito:"capitulo", ref:"2" }; "toda la obra" → { ambito:"obra" }; "lo que veo" →
+{ ambito:"visible" }. Con ambito "capitulo" o "subarbol" INCLUYE SIEMPRE "ref" con
+el código del contenedor (p.ej. "2" o "1.2"); si lo omites se usará el contenedor
+activo y podrías certificar el equivocado.
 
 MEDICIÓN: el parcial de una línea = uds × largo × ancho × alto. Una dimensión que
 OMITAS cuenta como 1; un 0 explícito ANULA la línea. Ej.: "3 huecos de 2×1,5" →

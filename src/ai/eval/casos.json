@@ -35,6 +35,27 @@
     "expect": { "op": "borrar_linea", "ref": "1.1", "indice": 1 }
   },
   {
+    "id": "certificar-100-capitulo",
+    "prompt": "Certifica al 100% el capítulo 2",
+    "note": "gemini-3.1-flash-lite acierta el ambito pero OMITE ref de forma fiable (2 refuerzos del prompt no bastaron). Mitigado: certificar_100 es SIEMPRE tarjeta y la tarjeta NOMBRA el contenedor destino, asi que el usuario ve si aterriza mal; con vista 'toda la obra' el executor devuelve 'no encontrado', no certifica todo. Subir a gemini-3.1-flash lo arreglaria (una constante en models.ts).",
+    "expect": { "op": "certificar_100", "ambito": "capitulo" }
+  },
+  {
+    "id": "certificar-100-obra",
+    "prompt": "Certifica toda la obra al 100%",
+    "expect": { "op": "certificar_100", "ambito": "obra" }
+  },
+  {
+    "id": "certificar-partida",
+    "prompt": "En la certificación, pon 4 m³ ejecutados a origen en la partida 1.1",
+    "expect": { "op": "certificar", "ref": "1.1", "valor": 4, "modo": "origen" }
+  },
+  {
+    "id": "crear-certificacion",
+    "prompt": "Crea una certificación nueva para el periodo de julio 2026",
+    "expect": { "op": "crear_certificacion" }
+  },
+  {
     "id": "consulta",
     "prompt": "¿Cuánto suma la obra en total?",
     "expect": { "op": "ninguna" }

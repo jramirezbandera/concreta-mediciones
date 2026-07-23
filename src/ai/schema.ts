@@ -47,11 +47,15 @@ const OP_SCHEMA: Record<string, unknown> = {
     ud: { type: ['string', 'null'], description: 'Unidad de medida, p.ej. "m³", "ud", "m²".' },
     descripcion: { type: ['string', 'null'] },
     campo: { type: ['string', 'null'], description: 'Campo a editar.' },
-    // Valor polimórfico: texto para editar_partida/editar_linea, número para set_*.
+    // Valor polimórfico: texto para editar_partida/editar_linea, número para set_*/certificar.
     valor: { type: ['string', 'number', 'null'] },
     precio: { type: ['number', 'null'], description: 'Precio unitario en euros.' },
     // Medición inline.
     lineas: { type: ['array', 'null'], items: LINEA_SCHEMA },
+    // Certificación (F-A4).
+    modo: { type: ['string', 'null'], enum: ['origen', 'esta', null], description: 'certificar: valor a origen o de esta cert.' },
+    ambito: { type: ['string', 'null'], enum: ['obra', 'capitulo', 'subarbol', 'visible', null], description: 'certificar_100: ámbito a completar.' },
+    periodo: { type: ['string', 'null'], description: 'crear_certificacion: periodo de la nueva cert.' },
   },
 };
 

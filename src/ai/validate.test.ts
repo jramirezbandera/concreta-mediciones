@@ -79,6 +79,41 @@ describe('parseChatEnvelope (F-A3, con ops)', () => {
     expect(env.discarded).toHaveLength(1);
   });
 
+  it('narrowea las ops de certificación (F-A4)', () => {
+    const env = parseChatEnvelope({
+      reply: 'ok',
+      ops: [
+        { op: 'certificar', ref: '1.1', valor: 6, modo: 'origen' },
+        { op: 'certificar_100', ambito: 'capitulo', ref: '2' },
+        { op: 'certificar_100', ambito: 'obra' },
+        { op: 'crear_certificacion', periodo: 'junio 2026' },
+      ],
+    });
+    expect(env.ops).toEqual([
+      { op: 'certificar', ref: '1.1', valor: 6, modo: 'origen' },
+      { op: 'certificar_100', ambito: 'capitulo', ref: '2' },
+      { op: 'certificar_100', ambito: 'obra' },
+      { op: 'crear_certificacion', periodo: 'junio 2026' },
+    ]);
+  });
+
+  it('certificar con modo inválido y certificar_100 con ámbito inválido → descartadas', () => {
+    const env = parseChatEnvelope({
+      reply: 'x',
+      ops: [
+        { op: 'certificar', ref: '1.1', valor: 6, modo: 'total' },
+        { op: 'certificar_100', ambito: 'todo' },
+      ],
+    });
+    expect(env.ops).toEqual([]);
+    expect(env.discarded).toHaveLength(2);
+  });
+
+  it('certificar admite valor negativo (certificar menos en «esta»)', () => {
+    const env = parseChatEnvelope({ reply: 'x', ops: [{ op: 'certificar', ref: '1.1', valor: -2, modo: 'esta' }] });
+    expect(env.ops).toEqual([{ op: 'certificar', ref: '1.1', valor: -2, modo: 'esta' }]);
+  });
+
   it('`ops` no-array → se ignora con motivo, no muta nada', () => {
     const env = parseChatEnvelope({ reply: 'x', ops: 'crear todo' });
     expect(env.ops).toBeNull();

@@ -60,7 +60,7 @@ const snapshotInput = (): ObraSnapshotInput => ({
   obra: { denominacion: 'Vivienda unifamiliar', localidad: 'Málaga' },
   chapters: structuredClone(CHAPTERS),
   partidas: partidas(),
-  certs: [],
+  certs: [{ id: 'ce1', num: 1, period: 'junio 2026', retencion: 0, data: {} }],
   rates: { coefK: 1, iva: 0.21, gg: 0.13, bi: 0.06 },
   view: 'presupuesto',
   active: 'c1',
@@ -80,6 +80,8 @@ interface Expect {
   indice?: number;
   valor?: number;
   precio?: number;
+  modo?: string;
+  ambito?: string;
   linea?: { uds?: number; largo?: number; ancho?: number; alto?: number };
   /** Producto de las dimensiones de la 1ª línea (invariante robusto al reparto de
    *  slots: "5 por 4" puede ir a largo·ancho o uds·largo, pero el parcial es 20). */
@@ -106,6 +108,8 @@ function check(ops: Operation[], exp: Expect): { ok: boolean; msg: string } {
   if (exp.indice !== undefined && op.indice !== exp.indice) return fail(`indice ${JSON.stringify(op.indice)} ≠ ${exp.indice}`);
   if (exp.valor !== undefined && !approx(op.valor, exp.valor)) return fail(`valor ${JSON.stringify(op.valor)} ≠ ${exp.valor}`);
   if (exp.precio !== undefined && !approx(op.precio, exp.precio)) return fail(`precio ${JSON.stringify(op.precio)} ≠ ${exp.precio}`);
+  if (exp.modo !== undefined && op.modo !== exp.modo) return fail(`modo ${JSON.stringify(op.modo)} ≠ ${exp.modo}`);
+  if (exp.ambito !== undefined && op.ambito !== exp.ambito) return fail(`ambito ${JSON.stringify(op.ambito)} ≠ ${exp.ambito}`);
   if (exp.linea) {
     const l = (op.lineas as Record<string, unknown>[] | undefined)?.[0];
     if (!l) return fail('sin línea inline');

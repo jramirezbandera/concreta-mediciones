@@ -9,6 +9,73 @@
   overflow: hidden;
 }
 
+/* --- banner de cert destino (D5: destino primero) --- */
+.certBanner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
+  padding: 7px 11px;
+  border-bottom: 1px solid var(--border-main);
+  background: var(--accent-soft);
+}
+.certLabel {
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+/* Aviso ÁMBAR (nunca rojo) si la cert ya se exportó (firmadoAt). */
+.certWarn {
+  background: color-mix(in srgb, var(--state-warn) 14%, transparent);
+}
+.certFirmado {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--state-warn);
+}
+
+/* --- resumen de ámbito (certificar_100) --- */
+.scopeSummary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: var(--fs-table);
+  color: var(--text-primary);
+  padding: 2px 0;
+}
+.scopeImporte {
+  color: var(--accent);
+  font-weight: 500;
+}
+.scopeMore {
+  border: 0;
+  background: none;
+  padding: 2px 0;
+  font: inherit;
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  color: var(--accent);
+  cursor: pointer;
+}
+.scopeList {
+  list-style: none;
+  margin: 3px 0 0;
+  padding: 0 0 0 2px;
+  max-height: 30vh;
+  overflow-y: auto;
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+}
+.scopeList li {
+  padding: 1px 0;
+}
+
 /* --- recuento (primero, D5) --- */
 .head {
   display: flex;

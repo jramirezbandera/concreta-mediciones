@@ -193,6 +193,91 @@ describe('applyProposals — dos fases (REGRESIÓN Issue 2)', () => {
   });
 });
 
+describe('certificación (F-A4)', () => {
+  beforeEach(() => {
+    useObraStore.setState({
+      ...blankObraData(),
+      chapters: structuredClone(CH),
+      partidas: {
+        c1: [partida({ id: 'p1', pos: '1.1', title: 'Excavación', ud: 'm³', precio: 10, med: [line({ uds: 6 })] })],
+        c2: [
+          partida({ id: 'p2', pos: '2.1', title: 'Muro', ud: 'm²', precio: 20, med: [line({ uds: 5 })] }),
+          partida({ id: 'p3', pos: '2.2', title: 'Enfoscado', ud: 'm²', precio: 8, med: [line({ uds: 10 })] }),
+        ],
+      },
+      certs: [{ id: 'c1', num: 1, period: 'junio 2026', retencion: 0, data: {} }],
+      active: 'c1',
+      curCert: 0,
+      openPartidaId: null,
+    });
+  });
+
+  it('certificar → propuesta con cert destino nombrada; aplica a-origen', () => {
+    const plan = planTurn([{ op: 'certificar', ref: '1.1', valor: 6, modo: 'origen' }], currentSeal());
+    expect(plan.applied).toHaveLength(0);
+    expect(plan.proposals).toHaveLength(1);
+    expect(plan.proposals[0]!.certDest).toEqual({ num: 1, period: 'junio 2026', firmado: false });
+    applyProposals(plan.proposals, currentSeal());
+    expect(useObraStore.getState().certs[0]!.data.p1).toBe(6);
+  });
+
+  it('certificar_100 ámbito capítulo → un scope; aplica al 100% en un solo set', () => {
+    const plan = planTurn([{ op: 'certificar_100', ambito: 'capitulo', ref: '2' }], currentSeal());
+    expect(plan.proposals).toHaveLength(1);
+    const sc = plan.proposals[0]!.scope!;
+    expect(sc.count).toBe(2);
+    expect([...sc.ids].sort()).toEqual(['p2', 'p3']);
+    applyProposals(plan.proposals, currentSeal());
+    const data = useObraStore.getState().certs[0]!.data;
+    expect(data.p2).toBe(5);
+    expect(data.p3).toBe(10);
+    expect(data.p1).toBeUndefined(); // el capítulo 1 no se toca
+  });
+
+  it('certificar_100 ámbito obra → todas las partidas', () => {
+    const plan = planTurn([{ op: 'certificar_100', ambito: 'obra' }], currentSeal());
+    expect(plan.proposals[0]!.scope!.count).toBe(3);
+  });
+
+  it('certificar_100 con todo ya al 100% → omitida con motivo', () => {
+    useObraStore.setState({ certs: [{ id: 'c1', num: 1, period: '', retencion: 0, data: { p2: 5, p3: 10 } }] });
+    const plan = planTurn([{ op: 'certificar_100', ambito: 'capitulo', ref: '2' }], currentSeal());
+    expect(plan.proposals).toHaveLength(0);
+    expect(plan.skipped).toHaveLength(1);
+  });
+
+  it('crear_certificacion → propuesta; aplica crea la cert nº2 con su periodo', () => {
+    const plan = planTurn([{ op: 'crear_certificacion', periodo: 'julio 2026' }], currentSeal());
+    expect(plan.proposals).toHaveLength(1);
+    applyProposals(plan.proposals, currentSeal());
+    const st = useObraStore.getState();
+    expect(st.certs).toHaveLength(2);
+    expect(st.certs[1]!.period).toBe('julio 2026');
+  });
+
+  it('agregar_lineas sobre partida CERTIFICADA → propuesta (baja el % en silencio), no directa', () => {
+    useObraStore.setState({ certs: [{ id: 'c1', num: 1, period: '', retencion: 0, data: { p1: 6 } }] });
+    const plan = planTurn([{ op: 'agregar_lineas', ref: '1.1', lineas: [{ uds: 4 }] }], currentSeal());
+    expect(plan.applied).toHaveLength(0);
+    expect(plan.proposals).toHaveLength(1);
+    expect(useObraStore.getState().partidas.c1![0]!.med).toHaveLength(1); // aún sin aplicar
+    applyProposals(plan.proposals, currentSeal());
+    expect(useObraStore.getState().partidas.c1![0]!.med).toHaveLength(2);
+  });
+
+  it('agregar_lineas sobre partida NO certificada → directa (como F-A3)', () => {
+    const plan = planTurn([{ op: 'agregar_lineas', ref: '2.1', lineas: [{ uds: 3 }] }], currentSeal());
+    expect(plan.applied).toHaveLength(1);
+    expect(plan.proposals).toHaveLength(0);
+  });
+
+  it('cert ya exportada (firmadoAt) → certDest.firmado avisa', () => {
+    useObraStore.setState({ certs: [{ id: 'c1', num: 1, period: 'junio', retencion: 0, data: {}, firmadoAt: '2026-06-30T00:00:00Z' }] });
+    const plan = planTurn([{ op: 'certificar', ref: '1.1', valor: 6, modo: 'origen' }], currentSeal());
+    expect(plan.proposals[0]!.certDest!.firmado).toBe(true);
+  });
+});
+
 describe('un turno = UNA entrada de undo', () => {
   afterEach(() => __resetHistoryForTests());
 
