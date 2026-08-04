@@ -185,6 +185,20 @@ describe('buildResumenXlsx', () => {
     expect(valores).toContain(23.31); // cap 3 = 3 × 7,77
   });
 
+  it('el pie legal es una FÓRMULA sobre el total: la hoja viva no se queda obsoleta', () => {
+    const legal = cells(doc.rows).find(
+      (c) => typeof c.value === 'string' && c.value.includes('Asciende'),
+    )!;
+    expect(legal.type).toBe('Formula');
+    expect(legal.value).toContain('TEXT(D14,'); // celda del presupuesto base
+  });
+
+  it('el total de licitación cierra con regla gruesa', () => {
+    const total = cells(doc.rows).find((c) => c.value === 'D12+D13')!;
+    expect(total.topBorderStyle).toBe('medium');
+    expect(total.fontWeight).toBe('bold');
+  });
+
   it('orientación vertical', () => {
     expect(doc.orientation).toBe('portrait');
   });

@@ -4,20 +4,18 @@ import { fmtCents, fmtNum, pctToRate } from '../../core/money';
 import type { Rates } from '../../core/types';
 import styles from './Resumen.module.css';
 
-/** Fila de porcentaje (GG/BI): % editable (o estático en solo-lectura) + importe. */
+/** Fila de porcentaje (GG/BI): % editable + importe. */
 function PctRow({
   label,
   rate,
   value,
   color,
-  readOnly,
   onRate,
 }: {
   label: string;
   rate: number;
   value: number; // céntimos
   color: string;
-  readOnly?: boolean;
   onRate?: (rate: number) => void;
 }) {
   return (
@@ -26,41 +24,36 @@ function PctRow({
         <span className={styles.swatch} style={{ background: color }} />
         <span className={styles.pctLabel}>{label}</span>
       </span>
-      {readOnly ? (
-        <span className={`mono ${styles.pctStatic}`}>{fmtNum(rate * 100, 1)} %</span>
-      ) : (
-        <span className={styles.pctEdit}>
-          <span className={styles.pctEditNum}>
-            <EditableNum
-              value={rate * 100}
-              dec={1}
-              accent
-              ariaLabel={label}
-              onCommit={(v) => onRate?.(pctToRate(v))}
-            />
-          </span>
-          <span className={`mono ${styles.pctUnit}`}>%</span>
+      <span className={styles.pctEdit}>
+        <span className={styles.pctEditNum}>
+          <EditableNum
+            value={rate * 100}
+            dec={1}
+            accent
+            ariaLabel={label}
+            onCommit={(v) => onRate?.(pctToRate(v))}
+          />
         </span>
-      )}
+        <span className={`mono ${styles.pctUnit}`}>%</span>
+      </span>
       <span className={`mono ${styles.pctVal}`}>{fmtCents(value)}</span>
     </div>
   );
 }
 
 /**
- * Hoja resumen (F7.1): desglose por capítulos + PEM → GG → BI → PEC → IVA →
- * Presupuesto base de licitación. La COMPARTEN la vista Resumen (editable:
- * GG/BI inline + selector de IVA — único hogar de edición de GG/BI) y el doc
- * de impresión (`readOnly`, mismos números del mismo selector).
+ * Hoja resumen (F7.1) EN PANTALLA: desglose por capítulos + PEM → GG → BI →
+ * PEC → IVA → Presupuesto base de licitación, editable (GG/BI inline + selector
+ * de IVA — único hogar de edición de GG/BI). Los documentos exportados NO
+ * reutilizan esta hoja: tienen su propia jerarquía de papel (`PrintResumen`,
+ * `resumenBloques` del DOCX, `buildResumenXlsx`) sobre el MISMO `ResumenListado`.
  */
 export function ResumenSheet({
   data,
-  readOnly,
   onRates,
 }: {
   data: ResumenListado;
-  readOnly?: boolean;
-  /** Edición de tasas (gg/bi/iva); ignorado en solo-lectura. */
+  /** Edición de tasas (gg/bi/iva). */
   onRates?: (patch: Partial<Rates>) => void;
 }) {
   const { rows, pem, gg, bi, pec, iva, total, rates } = data;
@@ -91,7 +84,6 @@ export function ResumenSheet({
           rate={rates.gg}
           value={gg}
           color="color-mix(in srgb, var(--accent) 45%, var(--bg-elevated))"
-          readOnly={readOnly}
           onRate={(r) => onRates?.({ gg: r })}
         />
         <PctRow
@@ -99,7 +91,6 @@ export function ResumenSheet({
           rate={rates.bi}
           value={bi}
           color="color-mix(in srgb, var(--accent) 25%, var(--bg-elevated))"
-          readOnly={readOnly}
           onRate={(r) => onRates?.({ bi: r })}
         />
         <div className={`${styles.totalRow} ${styles.strong}`}>
@@ -109,11 +100,7 @@ export function ResumenSheet({
         <div className={styles.pctRow}>
           <span className={styles.pctLeft}>
             <span className={styles.swatch} style={{ background: 'var(--text-disabled)' }} />
-            {readOnly ? (
-              <span className={styles.pctLabel}>IVA {Math.round(rates.iva * 100)}%</span>
-            ) : (
-              <IvaSelect rate={rates.iva} onChange={(r) => onRates?.({ iva: r })} />
-            )}
+            <IvaSelect rate={rates.iva} onChange={(r) => onRates?.({ iva: r })} />
           </span>
           <span className={`mono ${styles.pctVal}`}>{fmtCents(iva)}</span>
         </div>

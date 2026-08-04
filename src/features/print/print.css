@@ -12,6 +12,16 @@
 }
 
 @media print {
+  /* El LIENZO de la página, no solo el doc: con `color-scheme: dark` (tema
+     oscuro de la app) Chrome pinta de negro el fondo de la hoja —incluido el
+     margen de @page—, y el documento salía enmarcado en negro. Se fuerza el
+     esquema claro y el blanco en la raíz para que el papel sea papel. */
+  :root,
+  html,
+  body {
+    color-scheme: light;
+    background: #fff !important;
+  }
   body.printing #root {
     display: none !important;
   }
@@ -197,12 +207,28 @@
   break-inside: avoid;
 }
 
-/* resumen económico (cert) */
+/* resumen económico (cert y resumen) */
 .pd-summary {
   margin-top: 16px;
-  max-width: 360px;
+  width: 380px;
+  max-width: 100%;
   margin-left: auto;
   break-inside: avoid;
+}
+/* Con importes largos (obras de seis cifras) el flex crecía por encima del
+   bloque y el importe se salía del área imprimible: la etiqueta cede y parte
+   de línea, el importe nunca se encoge ni se parte. */
+.pd-summary-row > *:first-child,
+.pd-summary-big > *:first-child,
+.pd-summary-note > *:first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.pd-summary-row > *:last-child,
+.pd-summary-big > *:last-child,
+.pd-summary-note > *:last-child {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 .pd-summary-row {
   display: flex;
@@ -233,6 +259,22 @@
   padding: 5px 0 0;
   font-size: 9px;
   color: var(--text-secondary);
+}
+
+/* resumen de presupuesto: el % de capítulo es dato secundario (no compite con
+   el importe), y la fórmula legal cierra el documento bajo el bloque de cifras */
+.pd-res-pct {
+  color: var(--text-disabled);
+  font-size: 8.5px;
+}
+.pd-legal {
+  margin: 18px 0 0;
+  padding-top: 10px;
+  border-top: 0.5px solid var(--border-sub);
+  font-size: 9px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  break-inside: avoid;
 }
 
 /* pie de firma por rol */

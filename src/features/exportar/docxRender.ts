@@ -39,6 +39,7 @@ import {
   type ResumenListado,
 } from '../../core/listado';
 import { fmtCents, fmtNum, type Cents } from '../../core/money';
+import { asciendeLegal } from '../../core/numeroALetras';
 import type { Banco, Cert, Chapter, Firmante, Obra, PartidaBaja, PartidasMap, Rates } from '../../core/types';
 import type { PrintTarget } from '../print';
 import { docFileName } from './fileName';
@@ -102,20 +103,34 @@ function cellPars(children: Paragraph[], o: CellOpts): TableCell {
   });
 }
 
+const SIN_BORDES = {
+  top: { style: BorderStyle.NONE },
+  bottom: { style: BorderStyle.NONE },
+  left: { style: BorderStyle.NONE },
+  right: { style: BorderStyle.NONE },
+  insideVertical: { style: BorderStyle.NONE },
+  insideHorizontal: { style: BorderStyle.SINGLE, size: 2, color: BORDE },
+} as const;
+
 /** Tabla del listado: ancho fijo, sin verticales, horizontales finas. */
 function tabla(columnWidths: number[], rows: TableRow[]): Table {
   return new Table({
     width: { size: columnWidths.reduce((a, b) => a + b, 0), type: WidthType.DXA },
     columnWidths,
     margins: { top: 40, bottom: 40, left: 60, right: 60 },
-    borders: {
-      top: { style: BorderStyle.NONE },
-      bottom: { style: BorderStyle.NONE },
-      left: { style: BorderStyle.NONE },
-      right: { style: BorderStyle.NONE },
-      insideVertical: { style: BorderStyle.NONE },
-      insideHorizontal: { style: BorderStyle.SINGLE, size: 2, color: BORDE },
-    },
+    borders: SIN_BORDES,
+    rows,
+  });
+}
+
+/** Bloque económico estrecho pegado al margen derecho (resumen y cert). */
+function tablaDerecha(columnWidths: number[], rows: TableRow[]): Table {
+  return new Table({
+    alignment: AlignmentType.RIGHT,
+    width: { size: columnWidths.reduce((a, b) => a + b, 0), type: WidthType.DXA },
+    columnWidths,
+    margins: { top: 40, bottom: 40, left: 60, right: 60 },
+    borders: SIN_BORDES,
     rows,
   });
 }
@@ -337,14 +352,24 @@ function presupuestoBloques(data: PresupuestoListado): (Paragraph | Table)[] {
 
 /* ---- Resumen de presupuesto ------------------------------------------------ */
 
+// Nº · Capítulo · % s/ PEM · Importe = 10546 twips.
 const W_RES = [700, 6160, 1300, 2386];
+// Bloque económico (espeja el de la cert): etiqueta + importe, a la derecha.
+const W_RES_ECO = [2900, 1600];
 
+/**
+ * Resumen de presupuesto: tabla de capítulos cerrada por el PEM y, debajo a la
+ * derecha, la cadena GG → BI → PEC → IVA → base de licitación en el MISMO
+ * bloque estrecho que el resumen económico de la certificación. El total va a
+ * 11pt (no a 13): en un documento la cifra final se marca con la regla y la
+ * negrita, no con el tamaño. Cierra con la fórmula legal en letras.
+ */
 function resumenBloques(data: ResumenListado): (Paragraph | Table)[] {
   const rows: TableRow[] = [
     new TableRow({
       tableHeader: true,
       cantSplit: true,
-      children: ['Capítulo', '', '% PEM', 'Importe'].map((h, i) =>
+      children: ['Nº', 'Capítulo', '% s/ PEM', 'Importe'].map((h, i) =>
         cell(h, { width: W_RES[i]!, right: i >= 2, bold: true, color: GRIS, size: T_TINY, fill: BANDA }),
       ),
     }),
@@ -355,36 +380,45 @@ function resumenBloques(data: ResumenListado): (Paragraph | Table)[] {
           children: [
             cell(r.code, { width: W_RES[0]!, color: GRIS }),
             cell(r.title, { width: W_RES[1]! }),
-            cell(`${fmtNum(r.pct, 1)}%`, { width: W_RES[2]!, right: true, color: GRIS, size: T_SMALL }),
+            cell(`${fmtNum(r.pct, 1)}%`, { width: W_RES[2]!, right: true, color: GRIS, size: T_TINY }),
             cell(fmtNum(r.importe / 100), { width: W_RES[3]!, right: true }),
           ],
         }),
     ),
-  ];
-  const linea = (label: string, value: Cents, o: { rate?: number; strong?: boolean; size?: number } = {}) =>
     new TableRow({
       cantSplit: true,
       children: [
-        cell(label, { width: 0, span: 2, bold: o.strong, size: o.size, topBorder: o.strong }),
-        cell(o.rate != null ? `${fmtNum(o.rate * 100, 1)}%` : '', {
-          width: W_RES[2]!,
-          right: true,
-          color: GRIS,
-          size: T_SMALL,
-          topBorder: o.strong,
-        }),
-        cell(fmtCents(value), { width: W_RES[3]!, right: true, bold: o.strong, size: o.size, topBorder: o.strong }),
+        cell('Presupuesto de Ejecución Material (PEM)', { width: 0, span: 3, bold: true, topBorder: true }),
+        cell(fmtNum(data.pem / 100), { width: W_RES[3]!, right: true, bold: true, topBorder: true }),
+      ],
+    }),
+  ];
+  const linea = (label: string, value: Cents, o: { strong?: boolean; size?: number } = {}) =>
+    new TableRow({
+      cantSplit: true,
+      children: [
+        cell(label, { width: W_RES_ECO[0]!, bold: o.strong, size: o.size, topBorder: o.strong }),
+        cell(fmtCents(value), { width: W_RES_ECO[1]!, right: true, bold: o.strong, size: o.size, topBorder: o.strong }),
       ],
     });
-  rows.push(
-    linea('Presupuesto de Ejecución Material (PEM)', data.pem, { strong: true }),
-    linea('Gastos generales', data.gg, { rate: data.rates.gg }),
-    linea('Beneficio industrial', data.bi, { rate: data.rates.bi }),
-    linea('Presupuesto de Ejecución por Contrata (s/ IVA)', data.pec, { strong: true }),
-    linea('IVA', data.iva, { rate: data.rates.iva }),
-    linea('Presupuesto base de licitación', data.total, { strong: true, size: 26 }),
-  );
-  return [tabla(W_RES, rows)];
+  const pct = (r: number) => `${fmtNum(r * 100, 1)} %`;
+  return [
+    tabla(W_RES, rows),
+    vacio(200),
+    tablaDerecha(W_RES_ECO, [
+      linea('Ejecución material', data.pem),
+      linea(`Gastos generales (${pct(data.rates.gg)})`, data.gg),
+      linea(`Beneficio industrial (${pct(data.rates.bi)})`, data.bi),
+      linea('Presupuesto de Ejecución por Contrata (s/ IVA)', data.pec, { strong: true }),
+      linea(`IVA (${pct(data.rates.iva)})`, data.iva),
+      linea('Presupuesto base de licitación', data.total, { strong: true, size: 22 }),
+    ]),
+    new Paragraph({
+      spacing: { before: 320 },
+      border: { top: { style: BorderStyle.SINGLE, size: 2, color: BORDE, space: 6 } },
+      children: [run(asciendeLegal(data.total), { color: GRIS, size: T_SMALL })],
+    }),
+  ];
 }
 
 /* ---- Certificación ----------------------------------------------------------- */
@@ -499,20 +533,9 @@ function certBloques(data: CertListado): (Paragraph | Table)[] {
       ],
     });
   out.push(
-    new Table({
-      alignment: AlignmentType.RIGHT,
-      width: { size: 4400, type: WidthType.DXA },
-      columnWidths: [2800, 1600],
-      margins: { top: 40, bottom: 40, left: 60, right: 60 },
-      borders: {
-        top: { style: BorderStyle.NONE },
-        bottom: { style: BorderStyle.NONE },
-        left: { style: BorderStyle.NONE },
-        right: { style: BorderStyle.NONE },
-        insideVertical: { style: BorderStyle.NONE },
-        insideHorizontal: { style: BorderStyle.SINGLE, size: 2, color: BORDE },
-      },
-      rows: [
+    tablaDerecha(
+      [2800, 1600],
+      [
         fila('Ejecución material a origen', t.certPEM, true),
         fila('Gastos generales y B.I.', t.ggbiOrigen),
         fila('Ejecución por contrata a origen', t.pecOrigen),
@@ -533,7 +556,7 @@ function certBloques(data: CertListado): (Paragraph | Table)[] {
           ? [fila('Retenido acumulado (garantía)', data.retenidoAcumulado)]
           : []),
       ],
-    }),
+    ),
   );
   return out;
 }

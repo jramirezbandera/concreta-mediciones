@@ -154,10 +154,6 @@
   font-size: var(--fs-table);
   color: var(--text-disabled);
 }
-.pctStatic {
-  font-size: var(--fs-table);
-  color: var(--text-secondary);
-}
 .pctVal {
   margin-left: auto;
   font-size: var(--fs-body);

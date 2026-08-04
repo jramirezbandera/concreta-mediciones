@@ -274,9 +274,9 @@ export function buildPresupuestoXlsx(data: PresupuestoListado, meta: ObraMeta, f
 export function buildResumenXlsx(data: ResumenListado, meta: ObraMeta, firma: Firma): XlsxDoc {
   const rows: Row[] = metaRows('Resumen de presupuesto', meta);
   rows.push([
-    txt('Capítulo', { fontWeight: 'bold', backgroundColor: BANDA, columnSpan: 2 }),
-    null,
-    txt('% PEM', { fontWeight: 'bold', backgroundColor: BANDA, align: 'right' }),
+    txt('Nº', { fontWeight: 'bold', backgroundColor: BANDA }),
+    txt('Capítulo', { fontWeight: 'bold', backgroundColor: BANDA }),
+    txt('% s/ PEM', { fontWeight: 'bold', backgroundColor: BANDA, align: 'right' }),
     txt('Importe', { fontWeight: 'bold', backgroundColor: BANDA, align: 'right' }),
   ]);
   // Filas de capítulo (una por capítulo) y, tras una fila en blanco, la cadena
@@ -295,13 +295,21 @@ export function buildResumenXlsx(data: ResumenListado, meta: ObraMeta, firma: Fi
     ]);
   }
   rows.push([]);
-  const linea = (label: string, cell: CellObject, opts: { rate?: number; strong?: boolean } = {}): Row => [
+  const linea = (
+    label: string,
+    cell: CellObject,
+    opts: { rate?: number; strong?: boolean; cierre?: boolean } = {},
+  ): Row => [
     null,
     txt(label, { fontWeight: opts.strong ? 'bold' : undefined }),
     opts.rate != null
       ? { value: opts.rate * 100, type: Number, format: FMT_PCT, align: 'right', textColor: GRIS }
       : null,
-    opts.strong ? bold({ ...cell, topBorderStyle: 'thin' }) : cell,
+    // El total de licitación cierra con regla gruesa (es el fin del documento);
+    // los hitos intermedios (PEM, PEC), con regla fina.
+    opts.strong || opts.cierre
+      ? bold({ ...cell, topBorderStyle: opts.cierre ? 'medium' : 'thin' })
+      : cell,
   ];
   rows.push(
     linea(
@@ -320,7 +328,27 @@ export function buildResumenXlsx(data: ResumenListado, meta: ObraMeta, firma: Fi
     }),
   );
   rows.push(linea('IVA', fx(`ROUND(D${pecRow}*C${ivaRow}/100,2)`), { rate: data.rates.iva }));
-  rows.push(linea('Presupuesto base de licitación', fx(`D${pecRow}+D${ivaRow}`), { strong: true }));
+  const totalRow = rows.length + 1;
+  rows.push(
+    linea('Presupuesto base de licitación', fx(`D${pecRow}+D${ivaRow}`), { strong: true, cierre: true }),
+  );
+  // Fórmula legal de cierre (el PDF y el Word la escriben en letras). Aquí va
+  // como FÓRMULA de texto sobre la celda del total: la hoja es viva —si se
+  // retoca un %, el pie sigue diciendo la cantidad correcta— y por eso la cifra
+  // va en números, que sí se pueden recalcular.
+  rows.push([]);
+  rows.push([
+    {
+      value: `"Asciende el presupuesto base de licitación a la expresada cantidad de "&TEXT(D${totalRow},"${FMT_NUM}")&" euros."`,
+      type: 'Formula',
+      textColor: GRIS,
+      fontSize: 9,
+      columnSpan: 4,
+    },
+    null,
+    null,
+    null,
+  ]);
   rows.push(...firmaRows(firma));
   return {
     fileName: xlsxFileName('Resumen de presupuesto', meta.denominacion),

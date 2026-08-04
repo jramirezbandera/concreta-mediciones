@@ -6,8 +6,8 @@
 import { describe, expect, it } from 'vitest';
 import { unzipSync, strFromU8 } from 'fflate';
 import writeXlsxFile from 'write-excel-file/browser';
-import { buildCertListado, buildPresupuestoListado, obraMeta } from '../../core/listado';
-import { buildCertXlsx, buildPresupuestoXlsx } from './xlsxBuilders';
+import { buildCertListado, buildPresupuestoListado, buildResumen, obraMeta } from '../../core/listado';
+import { buildCertXlsx, buildPresupuestoXlsx, buildResumenXlsx } from './xlsxBuilders';
 import { printSetupFeature } from './xlsx';
 import type { Cert, Chapter, Partida, PartidasMap, Rates } from '../../core/types';
 
@@ -71,6 +71,16 @@ describe('E2E: xlsx real generado con fórmulas + impresión', () => {
     const idx = order.map((t) => xml.indexOf(t));
     expect([...idx].sort((a, b) => a - b)).toEqual(idx);
     expect(idx.every((i) => i > 0)).toBe(true);
+  });
+
+  it('resumen: el pie legal es una fórmula de texto y el XML sigue bien formado', async () => {
+    const doc = buildResumenXlsx(buildResumen(chapters, partidas, rates), meta, firma);
+    const xml = await sheetXmlOf(doc);
+    expectWellFormed(xml); // los & de la concatenación van escapados en el <f>
+    expect(xml).toContain(
+      '<f>"Asciende el presupuesto base de licitación a la expresada cantidad de "&amp;TEXT(D14,"#,##0.00")&amp;" euros."</f>',
+    );
+    expect(xml).toContain('<mergeCell ref="A16:D16"/>'); // el pie ocupa la fila entera
   });
 
   it('cert: apaisada y fórmulas del resumen económico', async () => {

@@ -10,9 +10,9 @@ import {
 } from '../../core/listado';
 import { fmtNum } from '../../core/money';
 import { selectResumen, useObraStore } from '../../store';
-import { ResumenSheet } from '../resumen';
 import { PrintCert } from './PrintCert';
 import { PrintPresupuesto } from './PrintPresupuesto';
+import { PrintResumen } from './PrintResumen';
 import './print.css';
 
 /** Qué documento se imprime (chooser del ExportModal). */
@@ -87,7 +87,7 @@ export function PrintDoc({ target, onDone }: { target: PrintTarget; onDone: () =
     body = <PrintPresupuesto data={buildPresupuestoListado(chapters, partidas, rates.coefK)} />;
   } else if (target.kind === 'resumen') {
     titulo = 'Resumen de presupuesto';
-    body = <ResumenSheet data={resumen} readOnly />;
+    body = <PrintResumen data={resumen} />;
   } else {
     const cl = buildCertListado(chapters, partidas, certs, target.index, rates, bajas);
     titulo = cl ? `Certificación de obra nº ${cl.num}` : 'Certificación de obra';

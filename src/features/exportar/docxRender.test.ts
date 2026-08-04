@@ -65,10 +65,20 @@ describe('docxFor — presupuesto (Word real, F7.3)', () => {
 describe('docxFor — resumen', () => {
   it('lleva la cadena hasta el presupuesto base de licitación', async () => {
     const xml = await xmlOf({ kind: 'resumen' }, seedState);
-    expect(xml).toContain('Gastos generales');
-    expect(xml).toContain('13,0%');
+    expect(xml).toContain('Gastos generales (13,0 %)'); // la tasa va en la etiqueta
     expect(xml).toContain('Presupuesto base de licitación');
     expect(xml).toContain('34.416,11 €');
+  });
+
+  it('cierra con la fórmula legal, en letras', async () => {
+    const xml = await xmlOf({ kind: 'resumen' }, seedState);
+    expect(xml).toContain('Asciende el presupuesto base de licitación');
+    expect(xml).toContain('TREINTA Y CUATRO MIL CUATROCIENTOS DIECISÉIS EUROS');
+  });
+
+  it('el total no es un titular: 11pt, como el líquido de la cert (no 13)', async () => {
+    const xml = await xmlOf({ kind: 'resumen' }, seedState);
+    expect(xml).not.toContain('w:sz w:val="26"');
   });
 });
 

@@ -49,6 +49,22 @@ describe('PrintDoc (F7.1) — doc de impresión bajo demanda', () => {
     await waitFor(() => expect(window.print).toHaveBeenCalled());
   });
 
+  it('el doc de resumen usa la maqueta de papel (tabla + bloque económico + pie legal)', async () => {
+    render(<PrintDoc target={{ kind: 'resumen' }} onDone={() => {}} />);
+    const doc = document.body.querySelector('.print-doc')!;
+    // Mismo vocabulario que presupuesto/cert: tabla del documento, no la
+    // tarjeta de pantalla; y el total en el bloque económico, no en titular.
+    expect(doc.querySelector('.pd-table')).toBeTruthy();
+    expect(doc.querySelector('.pd-summary-big')).toBeTruthy();
+    expect(screen.getByText('Presupuesto de Ejecución Material (PEM)')).toBeInTheDocument();
+    expect(screen.getByText('26.291,91 €')).toBeInTheDocument(); // PEM seed
+    expect(screen.getByText('34.416,11 €')).toBeInTheDocument(); // base de licitación
+    expect(
+      screen.getByText(/TREINTA Y CUATRO MIL CUATROCIENTOS DIECISÉIS EUROS con ONCE CÉNTIMOS/),
+    ).toBeInTheDocument();
+    await waitFor(() => expect(window.print).toHaveBeenCalled());
+  });
+
   it('el doc de certificación llega al líquido y estampa el periodo', async () => {
     render(<PrintDoc target={{ kind: 'cert', index: 2 }} onDone={() => {}} />);
     expect(screen.getByText('Certificación de obra nº 3')).toBeInTheDocument();
