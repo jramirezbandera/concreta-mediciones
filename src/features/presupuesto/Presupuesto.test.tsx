@@ -43,7 +43,8 @@ describe('PresupuestoView (F2.1 lectura + F2.2 detalle)', () => {
     // conceptos del banco visibles (mo001 lo comparten ≥4 partidas → SharedChip).
     expect(screen.getByText('mo001')).toBeInTheDocument();
     // p111 es override en el seed (precio 18,42 ≠ descompuesto 9,27) → señal.
-    expect(screen.getByText(/fijado a mano/)).toBeInTheDocument();
+    // (El pie del panel, no la etiqueta de lector de pantalla de la fila.)
+    expect(screen.getByText(/no se recalcula de estos descompuestos/)).toBeInTheDocument();
   });
 
   it('marca el precio override en la propia fila (señal sutil + tooltip con el descompuesto)', () => {
@@ -53,6 +54,26 @@ describe('PresupuestoView (F2.1 lectura + F2.2 detalle)', () => {
     const marks = screen.getAllByTitle(/fijado a mano/);
     expect(marks.length).toBeGreaterThan(0);
     expect(marks.some((el) => /9,27/.test(el.getAttribute('title') ?? ''))).toBe(true);
+  });
+
+  it('distingue los TRES orígenes del precio: descompuesto, a mano y directo', () => {
+    // p111 nace override en el seed (18,42 ≠ 9,27). Al ponerle su descompuesto,
+    // el precio pasa a ir LIGADO a la justificación (la señal es del dato, no de
+    // la marca `precioManual`) → la fila lo pinta en accent.
+    useObraStore.getState().setPrecio('01', 'p111', 9.27);
+    render(<PresupuestoView compact={false} />);
+    const row = (id: string) => document.getElementById(`partida-${id}`)!;
+    const priceTitle = (id: string) =>
+      Array.from(row(id).querySelectorAll('td'))
+        .map((td) => td.getAttribute('title') ?? '')
+        .find((t) => /Precio/.test(t)) ?? '';
+
+    expect(priceTitle('p111')).toMatch(/calculado desde su justificación/);
+    expect(priceTitle('p112')).toMatch(/fijado a mano/); // sigue override (24,18 ≠ 11,83…)
+    expect(priceTitle('p122')).toMatch(/no tiene justificación/); // sin descomposición
+    // El color no es la única señal: cada estado deja su etiqueta accesible.
+    expect(row('p111').textContent).toContain('precio calculado del descompuesto');
+    expect(row('p122').textContent).toContain('precio directo, sin justificación');
   });
 
   it('"Añadir partida" inserta una fila en el subcapítulo (F2.4)', () => {

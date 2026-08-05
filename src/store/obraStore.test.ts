@@ -713,6 +713,114 @@ describe('acciones F2.4 (CRUD estructural + renumeración)', () => {
   });
 });
 
+describe('reordenar partidas y contenedores (feedback de obra 2026-08)', () => {
+  const ch01 = () => state().partidas['01']!;
+  const ids = (chId: string) => state().partidas[chId]!.map((p) => p.id);
+  const findP = (id: string) => allPartidas().find((p) => p.id === id);
+  const chap = (id: string) => state().chapters.find((c) => c.id === id)!;
+
+  it('reorderPartida coloca la partida ANTES del destino y renumera el grupo', () => {
+    // Grupo 01.01 sembrado: p111 · p112 · p113.
+    state().reorderPartida('01', 'p113', 'p111');
+    expect(ids('01').slice(0, 3)).toEqual(['p113', 'p111', 'p112']);
+    expect(findP('p113')!.pos).toBe('1.1.1');
+    expect(findP('p111')!.pos).toBe('1.1.2');
+    expect(findP('p112')!.pos).toBe('1.1.3');
+  });
+
+  it('reorderPartida con beforeId nulo la manda al FINAL de su grupo, no de la lista', () => {
+    state().reorderPartida('01', 'p111', null);
+    // Detrás de p113 (última del 01.01) y DELANTE del grupo 01.02, que sigue entero.
+    expect(ids('01')).toEqual(['p112', 'p113', 'p111', 'p121', 'p122']);
+    expect(findP('p111')!.pos).toBe('1.1.3');
+    expect(findP('p121')!.pos).toBe('1.2.1');
+  });
+
+  it('reorderPartida con `toSubId` la cambia de grupo dentro del capítulo', () => {
+    state().reorderPartida('01', 'p111', 'p122', '01.02');
+    const p111 = findP('p111')!;
+    expect(p111.sub).toBe('01.02');
+    expect(p111.pos).toBe('1.2.2'); // tras p121, delante de p122
+    expect(findP('p122')!.pos).toBe('1.2.3');
+    expect(findP('p112')!.pos).toBe('1.1.1'); // el grupo de origen renumera
+  });
+
+  it('reorderPartida rechaza destinos fantasma sin dejar nada a medias', () => {
+    const antes = ids('01');
+    state().reorderPartida('01', 'p111', 'no-existe');
+    expect(ids('01')).toEqual(antes);
+    state().reorderPartida('01', 'p111', null, 'sub-fantasma');
+    expect(ids('01')).toEqual(antes);
+    expect(findP('p111')!.sub).toBe('01.01');
+  });
+
+  it('movePartidaBy sube/baja una posición dentro del grupo y no-op en los bordes', () => {
+    state().movePartidaBy('01', 'p111', 1);
+    expect(ids('01').slice(0, 3)).toEqual(['p112', 'p111', 'p113']);
+    state().movePartidaBy('01', 'p111', -1);
+    expect(ids('01').slice(0, 3)).toEqual(['p111', 'p112', 'p113']);
+    state().movePartidaBy('01', 'p111', -1); // ya es la primera del grupo
+    expect(ids('01').slice(0, 3)).toEqual(['p111', 'p112', 'p113']);
+    state().movePartidaBy('01', 'p122', 1); // última de su grupo: no salta al otro
+    expect(ids('01')).toEqual(['p111', 'p112', 'p113', 'p121', 'p122']);
+    expect(findP('p122')!.sub).toBe('01.02');
+  });
+
+  it('reorderContainer reordena capítulos, renumera a 1..N y arrastra subs y pos', () => {
+    const pem0 = selectPem(state());
+    state().reorderContainer('03', '01'); // «Saneamiento» al principio
+    const s = state();
+    expect(s.chapters.map((c) => c.id).slice(0, 3)).toEqual(['03', '01', '02']);
+    expect(chap('03').code).toBe('1');
+    expect(chap('01').code).toBe('2');
+    expect(chap('02').code).toBe('3');
+    expect(chap('04').code).toBe('4'); // los de abajo no se mueven
+    // La rama del capítulo movido de sitio se rebasa entera (código = ruta).
+    expect(chap('01').children!.map((sc) => sc.code)).toEqual(['2.1', '2.2', '2.3']);
+    expect(findP('p111')!.pos).toBe('2.1.1');
+    expect(findP('p311')!.pos).toBe('1.1');
+    // Reordenar no toca el dinero.
+    expect(selectPem(s)).toBe(pem0);
+  });
+
+  it('reorderContainer reordena subcapítulos entre hermanos y renumera su rama', () => {
+    state().reorderContainer('01.03', '01.01'); // «Transporte a vertedero» primero
+    const c1 = chap('01');
+    expect(c1.children!.map((sc) => sc.id)).toEqual(['01.03', '01.01', '01.02']);
+    expect(c1.children!.map((sc) => sc.code)).toEqual(['1.1', '1.2', '1.3']);
+    expect(findP('p111')!.pos).toBe('1.2.1'); // 01.01 pasa a ser 1.2
+    expect(findP('p121')!.pos).toBe('1.3.1');
+  });
+
+  it('reorderContainer NO reparenta: un destino que no es hermano es no-op', () => {
+    const antes = chap('01').children!.map((sc) => sc.id);
+    state().reorderContainer('01.01', '02'); // otro capítulo → «Mover a», no reordenar
+    expect(chap('01').children!.map((sc) => sc.id)).toEqual(antes);
+    state().reorderContainer('01.01', 'no-existe');
+    expect(chap('01').children!.map((sc) => sc.id)).toEqual(antes);
+  });
+
+  it('moveContainerBy sube/baja capítulos y subcapítulos; no-op en los bordes', () => {
+    state().moveContainerBy('02', -1);
+    expect(state().chapters.map((c) => c.id).slice(0, 2)).toEqual(['02', '01']);
+    expect(chap('02').code).toBe('1');
+    state().moveContainerBy('02', -1); // ya es el primero
+    expect(state().chapters.map((c) => c.id).slice(0, 2)).toEqual(['02', '01']);
+    state().moveContainerBy('01.01', 1);
+    expect(chap('01').children!.map((sc) => sc.id)).toEqual(['01.02', '01.01', '01.03']);
+    state().moveContainerBy('01.03', 1); // último hermano
+    expect(chap('01').children!.map((sc) => sc.id)).toEqual(['01.02', '01.01', '01.03']);
+  });
+
+  it('reordenar deja la obra exportable: pos únicas y ordenadas por grupo', () => {
+    state().reorderContainer('03', '01');
+    state().reorderPartida('01', 'p113', 'p111');
+    const pos = ch01().map((p) => p.pos);
+    expect(new Set(pos).size).toBe(pos.length);
+    expect(pos).toEqual(['2.1.1', '2.1.2', '2.1.3', '2.2.1', '2.2.2']);
+  });
+});
+
 describe('jerarquía N niveles — endurecimiento Fase 1 (eng-review 2026-06-12)', () => {
   const ch01 = () => state().partidas['01']!;
   const findP = (id: string) =>

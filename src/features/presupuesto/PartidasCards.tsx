@@ -49,8 +49,16 @@ export function PartidasCards({
               <span className={`mono ${styles.cardsSubImporte}`}>{fmtNum(toEur(rollups[gi] ?? 0))}</span>
             </div>
           )}
-          {g.items.map((p) => (
-            <PartidaCard key={p.id} p={p} chapterId={chapter.id} />
+          {/* En táctil no hay arrastre HTML5: reordenar va por «Subir/Bajar» del
+              menú ⋮, que necesita saber si hay vecino arriba/abajo en el grupo. */}
+          {g.items.map((p, i) => (
+            <PartidaCard
+              key={p.id}
+              p={p}
+              chapterId={chapter.id}
+              canUp={i > 0}
+              canDown={i < g.items.length - 1}
+            />
           ))}
           <div className={styles.cardsBtns}>
             <button

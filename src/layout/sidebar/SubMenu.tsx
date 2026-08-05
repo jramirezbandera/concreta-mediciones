@@ -4,6 +4,7 @@ import { Icon } from '../../components';
 import { flattenContainers, subtreeIds } from '../../core/tree';
 import type { Chapter, SubChapter } from '../../core/types';
 import { useObraStore } from '../../store';
+import type { SiblingNav } from './shared';
 import styles from '../Sidebar.module.css';
 
 export function SubMenu({
@@ -11,6 +12,7 @@ export function SubMenu({
   chId,
   parentId,
   chapters,
+  nav,
   onAddChild,
   onDelete,
   onClose,
@@ -20,11 +22,14 @@ export function SubMenu({
   /** Contenedor del que cuelga (el capítulo para depth 1): destino "actual". */
   parentId: string;
   chapters: Chapter[];
+  /** Hermanos: habilita «Subir/Bajar» (la vía no-ratón de reordenar). */
+  nav: SiblingNav;
   onAddChild: (chId: string, parentId: string) => void;
   onDelete: (chId: string, subId: string) => void;
   onClose: () => void;
 }) {
   const moveSubtree = useObraStore((s) => s.moveSubtree);
+  const moveContainerBy = useObraStore((s) => s.moveContainerBy);
   const [moving, setMoving] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -78,6 +83,29 @@ export function SubMenu({
         </>
       ) : (
         <>
+          <button
+            type="button"
+            disabled={!nav.prev}
+            className={`tcol ${styles.menuItem}`}
+            onClick={() => {
+              moveContainerBy(sub.id, -1);
+              onClose();
+            }}
+          >
+            <Icon name="arrowUp" size={13} /> Subir
+          </button>
+          <button
+            type="button"
+            disabled={!nav.next}
+            className={`tcol ${styles.menuItem}`}
+            onClick={() => {
+              moveContainerBy(sub.id, 1);
+              onClose();
+            }}
+          >
+            <Icon name="arrowDown" size={13} /> Bajar
+          </button>
+          <div className={styles.menuDivider} />
           <button
             type="button"
             className={`tcol ${styles.menuItem}`}

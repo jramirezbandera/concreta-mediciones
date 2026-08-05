@@ -162,7 +162,52 @@
   box-shadow: inset 2px 0 0 var(--accent);
 }
 
+/* ---- reordenar arrastrando (feedback de obra 2026-08) -------------------- */
+/* El asa vive en el CANALILLO de la columna Nº (los 14px de padding), así que
+   no roba ancho a la numeración; aparece al pasar por la fila. La fila sólo es
+   `draggable` mientras se agarra por aquí (ver hooks/useReorderDrag). */
+.grip {
+  position: absolute;
+  left: 2px;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 12px;
+  height: 22px;
+  transform: translateY(-50%);
+  color: var(--text-disabled);
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.row:hover .grip,
+.row.selected .grip {
+  opacity: 1;
+}
+.grip:active {
+  cursor: grabbing;
+}
+.row.dragging > td {
+  opacity: 0.45;
+}
+/* Guía de inserción: línea accent en el borde por el que entraría la fila. */
+.row.dropBefore > td {
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+.row.dropAfter > td {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+/* La fila seleccionada ya usa un inset a la izquierda: se combinan para no
+   perder ninguna de las dos señales. */
+.row.selected.dropBefore > td:first-child {
+  box-shadow: inset 2px 0 0 var(--accent), inset 0 2px 0 var(--accent);
+}
+.row.selected.dropAfter > td:first-child {
+  box-shadow: inset 2px 0 0 var(--accent), inset 0 -2px 0 var(--accent);
+}
+
 .cNum {
+  position: relative;
   padding-left: 14px;
   width: 124px;
 }
@@ -674,6 +719,30 @@
   background: var(--state-neutral);
   transform: translateY(-50%);
 }
+/* Mismo punto en la tarjeta móvil (el stat no es `position:relative`: va en
+   flujo, pegado a la cifra). */
+.overrideDotCard {
+  flex-shrink: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--state-neutral);
+}
+
+/* Etiqueta sólo para lector de pantalla: el `title` de una celda no se anuncia,
+   y el color (accent = precio ligado a su justificación) no puede ser la ÚNICA
+   señal (§6 a11y). */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
 
 /* ===========================================================================
    Justificación del precio (F2.3): banco de recursos compartido por código.
@@ -787,6 +856,24 @@
 }
 .jOverride .mono {
   color: var(--state-warn);
+  font-weight: 600;
+}
+
+/* Caso bueno: el precio de la partida SALE de estos descompuestos. Mismo pie
+   que `.jOverride` pero en accent (el color de la cifra ligada en la fila). */
+.jLinked {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  border-top: 1px solid var(--border-main);
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-elevated));
+  font-size: var(--fs-table);
+  line-height: 1.4;
+  color: var(--accent);
+}
+.jLinked .mono {
+  color: var(--accent);
   font-weight: 600;
 }
 
@@ -919,6 +1006,13 @@
 }
 .menuCopy:hover {
   background: var(--accent-soft);
+}
+/* Borde del grupo (primera/última partida): «Subir»/«Bajar» se ven pero no se
+   pueden pulsar — indican que ahí se acaba el movimiento, no desaparecen. */
+.menuCopy:disabled {
+  opacity: 0.4;
+  cursor: default;
+  background: transparent;
 }
 
 /* fila "Añadir partida" + "Pegar aquí" */
@@ -1160,6 +1254,14 @@
   font-size: var(--fs-table);
   font-weight: 500;
   color: var(--text-primary);
+}
+/* El punto de «precio a mano» pegado a la cifra, no suelto en el borde de la
+   caja (el valor va alineado a la derecha dentro del stat). */
+.pStat.last .pStatVal {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
 }
 
 /* ---- medición en tarjetas ---- */

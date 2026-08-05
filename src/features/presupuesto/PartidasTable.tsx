@@ -86,8 +86,17 @@ export function PartidasTable({
             {groups.map((g, gi) => (
               <Fragment key={g.sub?.id ?? `orphan-${gi}`}>
                 {g.sub && <SubHeaderRow sub={g.sub} depth={g.depth} importe={rollups[gi] ?? 0} />}
-                {g.items.map((p) => (
-                  <PartidaRow key={p.id} p={p} chapterId={chapter.id} />
+                {/* `prevId`/`nextId`: vecinos DENTRO del grupo. La fila los usa
+                    para «soltar debajo» y para habilitar Subir/Bajar del menú ⋮
+                    sin suscribirse a la lista (memoización, T1.1). */}
+                {g.items.map((p, i) => (
+                  <PartidaRow
+                    key={p.id}
+                    p={p}
+                    chapterId={chapter.id}
+                    prevId={g.items[i - 1]?.id ?? null}
+                    nextId={g.items[i + 1]?.id ?? null}
+                  />
                 ))}
                 <tr className={styles.addRow}>
                   <td colSpan={7}>

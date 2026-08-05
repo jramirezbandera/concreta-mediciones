@@ -147,6 +147,15 @@ export function PriceJustifCards({ p, chapterId }: { p: Partida; chapterId: stri
           </span>
         </div>
       )}
+      {!isOverride && items.length > 0 && (
+        <div className={`${styles.jLinked} ${styles.jOverrideCard}`}>
+          <Icon name="check" size={12} />
+          <span>
+            El precio de la partida (<span className="mono">{fmtNum(p.precio)} €</span>) SALE de estos
+            descompuestos.
+          </span>
+        </div>
+      )}
     </div>
     {dialogEl}
     </>

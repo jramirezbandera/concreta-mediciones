@@ -1,6 +1,8 @@
 import {
   AlertTriangle,
+  ArrowDown,
   ArrowLeft,
+  ArrowUp,
   Building2,
   Check,
   ChevronDown,
@@ -68,6 +70,8 @@ export const ICONS = {
   copy: Copy,
   paste: ClipboardPaste,
   arrowLeft: ArrowLeft,
+  arrowUp: ArrowUp,
+  arrowDown: ArrowDown,
   split: Columns2,
   expand: Maximize2,
   shrink: Minimize2,

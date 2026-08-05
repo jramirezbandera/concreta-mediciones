@@ -154,6 +154,17 @@ describe.skipIf(!existsSync(BCCA))('bc3ToObra — banco de precios (BCCA 2023, s
   });
 });
 
+describe('bc3ToObra — datos de obra (feedback de obra 2026-08)', () => {
+  it('la obra importada NO hereda emplazamiento ni localidad de la obra DEMO', () => {
+    const r = bc3ToObra(bc3(...OBRA_MIN, '~M|R##\\C1#|1|1|'));
+    expect(r.data.obra.denominacion).toBe('Obra'); // sí: viene del ~C raíz
+    // Antes se partía de DEFAULT_OBRA y toda obra nacía en «Calle Mayor 14,
+    // Madrid» — datos ajenos que acababan impresos si nadie los borraba.
+    expect(r.data.obra.direccion).toBe('');
+    expect(r.data.obra.localidad).toBe('');
+  });
+});
+
 describe('bc3ToObra — errores', () => {
   it('lanza Bc3ImportError ante un archivo no .bc3', () => {
     const bytes = new TextEncoder().encode('esto no es un fichero FIEBDC');

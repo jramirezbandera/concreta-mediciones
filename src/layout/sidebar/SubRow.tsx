@@ -1,9 +1,10 @@
 /* ---------- Fila de subcapítulo (a cualquier profundidad) ------------------ */
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Icon } from '../../components';
 import type { Chapter, SubChapter } from '../../core/types';
+import { useReorderSource, useReorderTarget, type ReorderDrag } from '../../hooks/useReorderDrag';
 import { SubMenu } from './SubMenu';
-import type { DropHandlers } from './shared';
+import type { DropHandlers, SiblingNav } from './shared';
 import styles from '../Sidebar.module.css';
 
 export function SubRow({
@@ -15,10 +16,12 @@ export function SubRow({
   active,
   empty,
   open,
+  nav,
   onSelect,
   onDelete,
   onAddChild,
   onToggle,
+  onReorder,
   drop,
 }: {
   sub: SubChapter;
@@ -33,26 +36,52 @@ export function SubRow({
   empty?: boolean;
   /** Desplegado (solo aplica si tiene hijos). */
   open?: boolean;
+  /** Hermanos (mismo padre): destino de «soltar debajo» y Subir/Bajar. */
+  nav: SiblingNav;
   onSelect: (id: string) => void;
   onDelete: (chId: string, subId: string) => void;
   onAddChild: (chId: string, parentId: string) => void;
   onToggle: (id: string) => void;
+  onReorder: (nodeId: string, beforeId: string | null) => void;
   drop?: DropHandlers;
 }) {
   const on = active === sub.id;
   const [menuOpen, setMenuOpen] = useState(false);
   const dropProps = drop?.bind(sub.id, chId, sub.id);
   const hasChildren = !!sub.children?.length;
+
+  // Reordenar entre HERMANOS (mismo padre). Colgar de otro contenedor sigue
+  // siendo «Mover a» del menú ⋮: un arrastre no debería reestructurar el árbol.
+  const dragSrc = useReorderSource(
+    useCallback(
+      (): ReorderDrag => ({ kind: 'contenedor', id: sub.id, scope: parentId }),
+      [sub.id, parentId],
+    ),
+  );
+  const reorder = useReorderTarget(
+    useCallback(
+      (d: ReorderDrag) => d.kind === 'contenedor' && d.scope === parentId && d.id !== sub.id,
+      [parentId, sub.id],
+    ),
+    useCallback(
+      (d: ReorderDrag, place: 'before' | 'after') =>
+        onReorder(d.id, place === 'before' ? sub.id : nav.next),
+      [sub.id, nav.next, onReorder],
+    ),
+  );
+
   return (
     <div className={styles.subRowWrap}>
       <button
         type="button"
-        className={`tcol ${styles.subRow} ${on ? styles.on : ''} ${empty && !on ? styles.dim : ''} ${dropProps?.isOver ? styles.dropOver : ''}`}
+        className={`tcol ${styles.subRow} ${on ? styles.on : ''} ${empty && !on ? styles.dim : ''} ${dropProps?.isOver ? styles.dropOver : ''} ${dragSrc.dragging ? styles.dragging : ''} ${reorder.place === 'before' ? styles.dropBefore : ''} ${reorder.place === 'after' ? styles.dropAfter : ''}`}
         // 8px de respiro base (es el padding del row, que el inline pisa) +
         // sangría por nivel.
         style={{ paddingLeft: 8 + (depth - 1) * 14 }}
         onClick={() => onSelect(sub.id)}
-        {...dropProps?.events}
+        {...(dropProps ? dropProps.events : reorder.events)}
+        {...dragSrc.source}
+        {...dragSrc.handle}
       >
         {hasChildren ? (
           <span
@@ -91,6 +120,7 @@ export function SubRow({
           chId={chId}
           parentId={parentId}
           chapters={chapters}
+          nav={nav}
           onAddChild={onAddChild}
           onDelete={onDelete}
           onClose={() => setMenuOpen(false)}

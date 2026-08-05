@@ -112,6 +112,10 @@
 }
 
 /* ---------- tarjeta de capítulo ------------------------------------------ */
+/* Ancla del menú ⋮ del capítulo (espejo de `.subRowWrap`). */
+.chapWrap {
+  position: relative;
+}
 .chap {
   position: relative;
   width: 100%;
@@ -135,6 +139,22 @@
   background: var(--accent-soft);
   border-color: var(--accent);
   box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+/* ---- reordenar el árbol arrastrando (feedback de obra 2026-08) ----------- */
+/* La fila entera es el asa (no hay texto editable que seleccionar). La guía de
+   inserción es una línea accent en el borde por el que entraría la fila. */
+.chap.dragging,
+.subRow.dragging {
+  opacity: 0.45;
+}
+.chap.dropBefore,
+.subRow.dropBefore {
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+.chap.dropAfter,
+.subRow.dropAfter {
+  box-shadow: inset 0 -2px 0 var(--accent);
 }
 .chap.on::before {
   content: '';
@@ -333,6 +353,10 @@
 }
 
 /* ---------- menú ⋮ de subcapítulo (T-17: edición a profundidad) ----------- */
+/* el capítulo es más alto que una fila de sub: su menú cuelga más abajo */
+.chapMenuPop {
+  top: 38px;
+}
 .subMenuPop {
   position: absolute;
   top: 28px;
@@ -362,6 +386,12 @@
 }
 .menuItem:hover {
   background: var(--bg-elevated);
+}
+/* Borde de la lista (primer/último hermano): la acción se ve pero no se puede. */
+.menuItem:disabled {
+  opacity: 0.4;
+  cursor: default;
+  background: transparent;
 }
 .menuDanger {
   color: var(--state-warn);

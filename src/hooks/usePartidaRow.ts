@@ -10,7 +10,7 @@
    función PURA (testeable sin React); `usePartidaRow` la envuelve leyendo del
    store las dos entradas compartidas por todas las filas: `coefK` y el banco.
    =========================================================================== */
-import { descompUnit, precioCuadraDescompuesto } from '../core/banco';
+import { descompUnit, precioCuadraDescompuesto, precioOrigen, type PrecioOrigen } from '../core/banco';
 import { partidaCantidad, partidaImporte } from '../core/medicion';
 import type { Cents } from '../core/money';
 import type { Banco, Partida } from '../core/types';
@@ -31,6 +31,8 @@ export interface PartidaEconomics {
    * (precio fijado a mano o autoridad de la fuente). Data-driven (§0 decisión 6).
    */
   isOverride: boolean;
+  /** De dónde sale el precio: descompuesto / a mano / directo (ver `PrecioOrigen`). */
+  origen: PrecioOrigen;
 }
 
 /** Derivados de la fila CON el peso %. Se conserva para los tests del núcleo y
@@ -47,6 +49,7 @@ export function partidaEconomics(p: Partida, coefK: number, banco: Banco): Parti
     importe: partidaImporte(p, coefK),
     descompUnit: descompUnit(p.items, banco),
     isOverride: !precioCuadraDescompuesto(p, banco),
+    origen: precioOrigen(p, banco),
   };
 }
 

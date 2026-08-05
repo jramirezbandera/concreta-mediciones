@@ -6,6 +6,7 @@ import {
   itemImporteRec,
   precioCuadraDescompuesto,
   precioDescompuesto,
+  precioOrigen,
   precioSegunModo,
   recPrecio,
   recursoBase,
@@ -143,6 +144,25 @@ describe('precio descompuesto vs override manual (§0 decisión 6)', () => {
     const ruidoso = 9.27 + 1e-12; // sub-céntimo: mismo céntimo, distinto binario
     expect(ruidoso).not.toBe(9.27); // de verdad difiere como float (=== daría override)…
     expect(precioCuadraDescompuesto(partida({ items: items111, precio: ruidoso }), banco)).toBe(true); // …pero cuadra
+  });
+
+  it('precioOrigen clasifica los 3 casos que la UI pinta distinto', () => {
+    // Ligado: el precio ES la suma de su justificación.
+    expect(precioOrigen(partida({ items: items111, precio: 9.27 }), banco)).toBe('descompuesto');
+    // A mano: hay justificación pero el precio no la sigue (override/autoridad).
+    expect(precioOrigen(partida({ items: items111, precio: 18.42 }), banco)).toBe('manual');
+    // Directo: sin justificación no hay descompuesto que seguir ni que romper —
+    // y NO es «manual» (antes se confundía con el caso ligado: ambos sin señal).
+    expect(precioOrigen(partida({ items: [], precio: 18.42 }), banco)).toBe('directo');
+    expect(precioOrigen(partida({ items: [], precio: 18.42, precioManual: true }), banco)).toBe('directo');
+  });
+
+  it('precioOrigen es DATA-DRIVEN: `precioManual` fósil que ya cuadra no miente', () => {
+    // Marcar override y luego dejar el precio en su descompuesto (p.ej. editando
+    // recursos hasta cuadrarlo) → la señal se apaga: lo que manda es el dato.
+    expect(precioOrigen(partida({ items: items111, precio: 9.27, precioManual: true }), banco)).toBe(
+      'descompuesto',
+    );
   });
 
   it('precioSegunModo: descompuesto si no hay override, fijo si lo hay', () => {

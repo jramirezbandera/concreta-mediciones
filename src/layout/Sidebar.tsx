@@ -8,12 +8,12 @@ import {
   type FlatContainer,
 } from '../core/tree';
 import { BuscarPartidas } from '../features/presupuesto/BuscarPartidas';
-import type { Chapter } from '../core/types';
+import type { Chapter, SubChapter } from '../core/types';
 import { ALL, selectChapterTotals, selectPem, useObraStore } from '../store';
 import { ChapterCard } from './sidebar/ChapterCard';
 import { ResumenCard } from './sidebar/ResumenCard';
 import { SubRow } from './sidebar/SubRow';
-import { k, type DropHandlers } from './sidebar/shared';
+import { k, type DropHandlers, type SiblingNav } from './sidebar/shared';
 import styles from './Sidebar.module.css';
 
 // El modal «Ajusta» vive ahora en ./sidebar/AjustaModal; se re-exporta para no
@@ -65,6 +65,7 @@ export function Sidebar({ drawer = false, onAfterSelect }: SidebarProps) {
   const addSubchapter = useObraStore((s) => s.addSubchapter);
   const deleteChapter = useObraStore((s) => s.deleteChapter);
   const deleteSubchapter = useObraStore((s) => s.deleteSubchapter);
+  const reorderContainer = useObraStore((s) => s.reorderContainer);
   const refDrag = useObraStore((s) => s.refDrag);
   const setRefDrag = useObraStore((s) => s.setRefDrag);
   const requestCopyRefPartidas = useObraStore((s) => s.requestCopyRefPartidas);
@@ -83,6 +84,25 @@ export function Sidebar({ drawer = false, onAfterSelect }: SidebarProps) {
       for (const id of emptyContainers(ch, partidas[ch.id] ?? [])) out.add(id);
     return out;
   }, [chapters, partidas]);
+
+  // Vecinos ENTRE HERMANOS de cada contenedor (capítulos entre sí; subs entre
+  // los hijos de su padre). Lo consumen el arrastre («soltar debajo» = colocar
+  // antes del siguiente) y «Subir/Bajar» de los menús ⋮.
+  const siblingNav = useMemo(() => {
+    const m = new Map<string, SiblingNav>();
+    const walk = (subs: SubChapter[] | undefined): void => {
+      (subs ?? []).forEach((sub, i, arr) => {
+        m.set(sub.id, { prev: arr[i - 1]?.id ?? null, next: arr[i + 1]?.id ?? null });
+        walk(sub.children);
+      });
+    };
+    chapters.forEach((ch, i) => {
+      m.set(ch.id, { prev: chapters[i - 1]?.id ?? null, next: chapters[i + 1]?.id ?? null });
+      walk(ch.children);
+    });
+    return m;
+  }, [chapters]);
+  const navOf = (id: string): SiblingNav => siblingNav.get(id) ?? { prev: null, next: null };
 
   // Drop de partidas de Referencia (F5.2): sólo activo mientras se arrastra.
   const drop: DropHandlers | undefined = refDrag
@@ -183,10 +203,12 @@ export function Sidebar({ drawer = false, onAfterSelect }: SidebarProps) {
               active={active}
               expanded={!!expanded[ch.id]}
               importe={chapterTotals[ch.id] ?? 0}
+              nav={navOf(ch.id)}
               onSelect={select}
               onToggle={toggleExpanded}
               onAddSub={(id) => onAddSub(id)}
               onDelete={onDeleteChapter}
+              onReorder={reorderContainer}
               drop={drop}
             />
             {ch.children && expanded[ch.id] && (
@@ -202,10 +224,12 @@ export function Sidebar({ drawer = false, onAfterSelect }: SidebarProps) {
                       active={active}
                       empty={emptySubs.has(f.sub.id)}
                       open={!!expanded[f.sub.id]}
+                      nav={navOf(f.sub.id)}
                       onSelect={select}
                       onDelete={onDeleteSub}
                       onAddChild={onAddSub}
                       onToggle={toggleExpanded}
+                      onReorder={reorderContainer}
                       drop={drop}
                     />
                     {/* Alta de un HIJO de este sub (T-17), sangrada a su nivel. */}

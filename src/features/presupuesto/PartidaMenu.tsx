@@ -7,10 +7,27 @@ import { deletePartidaWithUndo } from '../../hooks/usePartidaDelete';
 import { useObraStore } from '../../store';
 import styles from './Presupuesto.module.css';
 
-/** Menú ⋮ de una partida (F2.4): copiar, mover a otro capítulo/subcapítulo o eliminar. */
-export function PartidaMenu({ p, chapterId }: { p: Partida; chapterId: string }) {
+/**
+ * Menú ⋮ de una partida (F2.4): subir/bajar, copiar, mover a otro
+ * capítulo/subcapítulo o eliminar. «Subir/Bajar» es la vía de reordenar en
+ * táctil y con teclado (el arrastre de la fila es sólo de ratón); `canUp`/
+ * `canDown` los da la tabla, que ya conoce el grupo, en vez de suscribir cada
+ * menú a la lista de partidas (rompería la memoización de la fila, T1.1).
+ */
+export function PartidaMenu({
+  p,
+  chapterId,
+  canUp = false,
+  canDown = false,
+}: {
+  p: Partida;
+  chapterId: string;
+  canUp?: boolean;
+  canDown?: boolean;
+}) {
   const chapters = useObraStore((s) => s.chapters);
   const movePartida = useObraStore((s) => s.movePartida);
+  const movePartidaBy = useObraStore((s) => s.movePartidaBy);
   const { copy } = usePartidaClipboard();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -65,6 +82,31 @@ export function PartidaMenu({ p, chapterId }: { p: Partida; chapterId: string })
       </button>
       {open && (
         <div className={styles.menuPop} onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            disabled={!canUp}
+            title="Subir la partida una posición"
+            className={`tcol ${styles.menuCopy}`}
+            onClick={() => {
+              movePartidaBy(chapterId, p.id, -1);
+              setOpen(false);
+            }}
+          >
+            <Icon name="arrowUp" size={15} /> Subir
+          </button>
+          <button
+            type="button"
+            disabled={!canDown}
+            title="Bajar la partida una posición"
+            className={`tcol ${styles.menuCopy}`}
+            onClick={() => {
+              movePartidaBy(chapterId, p.id, 1);
+              setOpen(false);
+            }}
+          >
+            <Icon name="arrowDown" size={15} /> Bajar
+          </button>
+          <div className={styles.menuDivider} />
           <button
             type="button"
             title="Copiar partida (Ctrl+C)"

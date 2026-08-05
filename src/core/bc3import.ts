@@ -27,7 +27,7 @@ import { lineParcial } from './medicion';
 import { round2, toCents, type Cents } from './money';
 import { nextPos } from './numbering';
 import { pem as pemOf } from './totales';
-import { DEFAULT_OBRA, DEFAULT_RATES } from './seed';
+import { DEFAULT_RATES } from './seed';
 import type { Banco, Cert, Chapter, Item, MedLine, Obra, PartidasMap, Rates, ResourceType, SubChapter } from './types';
 
 /**
@@ -563,7 +563,12 @@ export function bc3ToObra(bytes: Uint8Array): Bc3ImportResult {
     recursos,
     certs,
     rates,
-    obra: { ...DEFAULT_OBRA, denominacion: root?.concept.summary || 'Obra importada' },
+    // Datos de obra EN BLANCO salvo la denominación, que sí viene del archivo
+    // (resumen de la raíz). Antes se partía de `DEFAULT_OBRA` y toda obra
+    // importada nacía con el emplazamiento de la obra DEMO («Calle Mayor 14,
+    // Madrid») — datos ajenos que acababan impresos en los documentos si nadie
+    // los borraba a mano (feedback de obra 2026-08).
+    obra: { denominacion: root?.concept.summary || 'Obra importada', direccion: '', localidad: '' },
   };
 
   const pemCents = pemOf(partidas, coefK);

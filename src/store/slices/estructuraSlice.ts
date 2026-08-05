@@ -48,6 +48,46 @@ function recodeSubtree(node: SubChapter, code: string): void {
 }
 
 /**
+ * Reescribe el PREFIJO de capítulo en toda la rama: el código de un sub es su
+ * RUTA («2.1.3»), así que renumerar el capítulo obliga a rebasar a sus
+ * descendientes. A diferencia de `recodeSubtree` NO resecuencia a los hermanos
+ * (mover un capítulo no debe recodificar la numeración interna de otro), sólo
+ * cambia el tramo del capítulo. Un código que no cuelgue del viejo (dato
+ * importado raro) se deja intacto.
+ */
+function rebaseChapterCode(ch: Chapter, code: string): void {
+  const old = ch.code;
+  if (old === code) return;
+  ch.code = code;
+  const seen = new Set<SubChapter>();
+  const walk = (subs: SubChapter[] | undefined): void => {
+    for (const sub of subs ?? []) {
+      if (seen.has(sub)) continue; // ciclo (dato corrupto)
+      seen.add(sub);
+      if (sub.code === old || sub.code.startsWith(`${old}.`))
+        sub.code = `${code}${sub.code.slice(old.length)}`;
+      walk(sub.children);
+    }
+  };
+  walk(ch.children);
+}
+
+/**
+ * Renumera los capítulos a 1..N según su ORDEN actual y arrastra la
+ * renumeración a subs (prefijo de la ruta) y a las `pos` de sus partidas.
+ * Reordenar SÍ cierra los huecos de códigos que deja borrar (política de
+ * huecos): un orden 3·1·2 sin recodificar sería ilegible.
+ */
+function renumberChapters(s: ObraState): void {
+  s.chapters.forEach((ch, i) => {
+    const code = String(i + 1);
+    if (ch.code === code) return; // su numeración no cambia → nada que reescribir
+    rebaseChapterCode(ch, code);
+    renumberInPlace(ch, s.partidas[ch.id] ?? []);
+  });
+}
+
+/**
  * Contenedor PADRE de un sub dentro de su capítulo (el propio capítulo para
  * los de primer nivel), o `null` si el sub no existe en él.
  */
@@ -108,6 +148,101 @@ function insertPartida(s: ObraState, chapterId: string, subId: string | null, id
   return true;
 }
 
+/**
+ * Reordena una partida DENTRO de su capítulo: la coloca justo ANTES de
+ * `beforeId` o, con `beforeId` nulo, al FINAL de su grupo. Las partidas de un
+ * capítulo viven en UNA lista plana etiquetada por `sub`, así que «final del
+ * grupo» = detrás de la última hermana del mismo contenedor (no de la lista).
+ * `toSubId` ausente conserva el contenedor; presente lo cambia (soltar sobre
+ * otro grupo del mismo capítulo), validado como en `movePartida`. Cuerpo
+ * compartido por `reorderPartida` (arrastre) y `movePartidaBy` (menú ⋮).
+ */
+function reorderPartidaIn(
+  s: ObraState,
+  chapterId: string,
+  partidaId: string,
+  beforeId: string | null,
+  toSubId?: string | null,
+): void {
+  const ch = s.chapters.find((c) => c.id === chapterId);
+  const list = s.partidas[chapterId];
+  const idx = list?.findIndex((p) => p.id === partidaId) ?? -1;
+  if (!ch || !list || idx < 0) return;
+  if (beforeId === partidaId) return; // soltarla sobre sí misma
+  const cur = list[idx]!;
+  const destSub = toSubId === undefined ? (cur.sub ?? null) : toSubId || null;
+  // Un sub inexistente en el capítulo se RECHAZA (nunca deja `sub` huérfano).
+  if (destSub && !subIn(ch, destSub)) return;
+  const subChanged = (cur.sub ?? null) !== destSub;
+  const [moving] = list.splice(idx, 1);
+  if (!moving) return;
+  let at: number;
+  if (beforeId) {
+    const bi = list.findIndex((p) => p.id === beforeId);
+    if (bi < 0) {
+      list.splice(idx, 0, moving); // destino fantasma: deja todo como estaba
+      return;
+    }
+    at = bi;
+  } else {
+    // Final del grupo destino: tras la última hermana; si no hay ninguna, al
+    // final de la lista (el grupo aún no existe en ella).
+    let last = -1;
+    list.forEach((p, i) => {
+      if ((p.sub ?? null) === destSub) last = i;
+    });
+    at = last >= 0 ? last + 1 : list.length;
+  }
+  if (subChanged) {
+    moving.sub = destSub || undefined;
+    moving.fromBase = false; // cambiar de contenedor confirma la partida (como `movePartida`)
+  }
+  list.splice(at, 0, moving);
+  renumberInPlace(ch, list);
+}
+
+/** Hermanas de una partida (mismo contenedor) EN ORDEN de lista. */
+function groupSiblings(list: Partida[], p: Partida): Partida[] {
+  const sub = p.sub ?? null;
+  return list.filter((x) => (x.sub ?? null) === sub);
+}
+
+/**
+ * Reordena un contenedor ENTRE SUS HERMANOS: capítulo entre capítulos, sub
+ * entre los hijos de su mismo padre. Colocar bajo OTRO padre no es reordenar
+ * sino `moveSubtree` (menú «Mover a»), así que un `beforeId` que no sea hermano
+ * se rechaza. `beforeId` nulo = al final de la lista de hermanos. Renumera lo
+ * que toque (códigos de capítulo 1..N o de la rama, y las `pos` de las partidas).
+ */
+function reorderContainerIn(s: ObraState, nodeId: string, beforeId: string | null): void {
+  if (beforeId === nodeId) return;
+  const ci = s.chapters.findIndex((c) => c.id === nodeId);
+  if (ci >= 0) {
+    const bi = beforeId ? s.chapters.findIndex((c) => c.id === beforeId) : s.chapters.length;
+    if (bi < 0) return; // capítulo destino inexistente
+    const [node] = s.chapters.splice(ci, 1);
+    if (!node) return;
+    s.chapters.splice(bi > ci ? bi - 1 : bi, 0, node);
+    renumberChapters(s);
+    return;
+  }
+  const hit = findNode(s.chapters, nodeId);
+  if (!hit || hit.depth === 0) return; // id desconocido
+  const ch = hit.chapter;
+  const parent = parentOf(ch, nodeId);
+  const sibs = parent?.children;
+  const si = sibs?.findIndex((x) => x.id === nodeId) ?? -1;
+  if (!parent || !sibs || si < 0) return;
+  const bi = beforeId ? sibs.findIndex((x) => x.id === beforeId) : sibs.length;
+  if (bi < 0) return; // no es hermano: reparentar es `moveSubtree`, no reordenar
+  const [node] = sibs.splice(si, 1);
+  if (!node) return;
+  sibs.splice(bi > si ? bi - 1 : bi, 0, node);
+  // La rama se recodifica por posición (misma regla que promover/mover).
+  sibs.forEach((sib, i) => recodeSubtree(sib, `${parent.code}.${i + 1}`));
+  renumberInPlace(ch, s.partidas[ch.id] ?? []);
+}
+
 type EstructuraSlice = Pick<
   ObraState,
   | 'editPartidaField'
@@ -136,6 +271,10 @@ type EstructuraSlice = Pick<
   | 'deletePartida'
   | 'restorePartida'
   | 'movePartida'
+  | 'reorderPartida'
+  | 'movePartidaBy'
+  | 'reorderContainer'
+  | 'moveContainerBy'
 >;
 
 export const createEstructuraSlice: ObraSlice<EstructuraSlice> = (set) => ({
@@ -534,5 +673,49 @@ export const createEstructuraSlice: ObraSlice<EstructuraSlice> = (set) => ({
       );
       s.expanded[toChapterId] = true;
       if (s.openPartidaId === partidaId) s.openPartidaId = null; // se movió: deselecciona
+    }),
+
+  reorderPartida: (chapterId, partidaId, beforeId, toSubId) =>
+    set((s) => {
+      reorderPartidaIn(s, chapterId, partidaId, beforeId, toSubId);
+    }),
+
+  movePartidaBy: (chapterId, partidaId, delta) =>
+    set((s) => {
+      const list = s.partidas[chapterId];
+      const p = list?.find((x) => x.id === partidaId);
+      if (!list || !p) return;
+      // Sube/baja UNA posición DENTRO de su grupo (no salta de subcapítulo: eso
+      // es «Mover a»). En los bordes del grupo, no-op.
+      const sibs = groupSiblings(list, p);
+      const i = sibs.findIndex((x) => x.id === partidaId);
+      const j = i + delta;
+      if (i < 0 || j < 0 || j >= sibs.length) return;
+      // Subir = colocarse ANTES de la hermana de arriba; bajar = antes de la
+      // que sigue a la de abajo (o al final del grupo si no hay más).
+      const beforeId = delta < 0 ? sibs[j]!.id : (sibs[j + 1]?.id ?? null);
+      reorderPartidaIn(s, chapterId, partidaId, beforeId);
+    }),
+
+  reorderContainer: (nodeId, beforeId) =>
+    set((s) => {
+      reorderContainerIn(s, nodeId, beforeId);
+    }),
+
+  moveContainerBy: (nodeId, delta) =>
+    set((s) => {
+      let sibs: { id: string }[] | undefined;
+      if (s.chapters.some((c) => c.id === nodeId)) {
+        sibs = s.chapters; // hermanos de un capítulo = los capítulos
+      } else {
+        const hit = findNode(s.chapters, nodeId);
+        if (!hit || hit.depth === 0) return;
+        sibs = parentOf(hit.chapter, nodeId)?.children;
+      }
+      if (!sibs) return;
+      const i = sibs.findIndex((x) => x.id === nodeId);
+      const j = i + delta;
+      if (i < 0 || j < 0 || j >= sibs.length) return;
+      reorderContainerIn(s, nodeId, delta < 0 ? sibs[j]!.id : (sibs[j + 1]?.id ?? null));
     }),
 });

@@ -132,6 +132,27 @@ export function precioCuadraDescompuesto(p: Partida, banco: Banco): boolean {
 }
 
 /**
+ * DE DÓNDE viene el precio efectivo de la partida (señal de la UI, estilo
+ * Arquímedes: el precio ligado a su justificación se pinta distinto del puesto
+ * a mano). Derivado del DATO, no de una marca (`precioManual` puede quedar
+ * fósil tras una edición que vuelva a cuadrar):
+ *
+ *   · `descompuesto` — hay justificación y el precio ES su suma: recalcularlo
+ *      al editar un recurso lo mantiene cuadrado (`precioSegunModo`).
+ *   · `manual`       — hay justificación pero el precio NO la sigue (override,
+ *      autoridad de la fuente o tecleado): la edición del banco no lo mueve.
+ *   · `directo`      — la partida no tiene justificación: el precio es un dato
+ *      suelto, sin descompuesto que contrastar (ni override que señalar).
+ */
+export type PrecioOrigen = 'descompuesto' | 'manual' | 'directo';
+
+/** Clasifica el origen del precio efectivo (ver `PrecioOrigen`). */
+export function precioOrigen(p: Partida, banco: Banco): PrecioOrigen {
+  if (!p.items || !p.items.length) return 'directo';
+  return precioCuadraDescompuesto(p, banco) ? 'descompuesto' : 'manual';
+}
+
+/**
  * Precio que DEBERÍA tener la partida según su modo: si está override manual,
  * el guardado; si no, el descompuesto (cuando hay items). Lo usa el store para
  * sincronizar `precio` al editar recursos en partidas no-override.

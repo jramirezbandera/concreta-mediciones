@@ -186,6 +186,18 @@ export function PriceJustif({ p, chapterId }: { p: Partida; chapterId: string })
           </span>
         </div>
       )}
+      {/* Confirmación del caso bueno: el precio SÍ sale de aquí (la cifra de la
+          fila se pinta en accent). Sin ella, "sin aviso" era ambiguo entre
+          «ligado» y «sin descomposición». */}
+      {!isOverride && items.length > 0 && (
+        <div className={styles.jLinked}>
+          <Icon name="check" size={12} />
+          <span>
+            El precio de la partida (<span className="mono">{fmtNum(p.precio)} €</span>) SALE de estos
+            descompuestos: al editar un concepto se recalcula solo.
+          </span>
+        </div>
+      )}
     </div>
     {dialogEl}
     </>

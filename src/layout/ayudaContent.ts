@@ -75,6 +75,11 @@ export const FEATURES: Feature[] = [
     desc: 'Abre una base de precios u otra obra en paralelo y copia partidas (o capítulos enteros) a la tuya.',
   },
   {
+    icon: 'grip',
+    title: 'Ordenar a mano',
+    desc: 'Arrastra una partida por su asa (o un capítulo/subcapítulo del árbol) para cambiar el orden; en el menú ⋮ tienes Subir y Bajar. La numeración se rehace sola.',
+  },
+  {
     icon: 'clipboardCheck',
     title: 'Certificaciones',
     desc: 'Certifica por periodos y por líneas, con retención y precios contradictorios; documento reproducible.',

@@ -421,6 +421,35 @@ export interface ObraState extends ObraData {
   /** Mueve una partida a otro capítulo/subcapítulo y renumera origen y destino. */
   movePartida: (fromChapterId: string, partidaId: string, toChapterId: string, toSubId: string | null) => void;
 
+  /* ---- reordenación fina (arrastre + «Subir/Bajar» de los menús ⋮) ---- */
+  /**
+   * Coloca una partida justo ANTES de `beforeId` dentro de SU capítulo, o al
+   * final de su grupo si `beforeId` es nulo, y renumera las `pos`. `toSubId`
+   * (opcional) la cambia de contenedor a la vez —soltarla sobre otro grupo del
+   * mismo capítulo—; ausente conserva el suyo. Un sub inexistente en el
+   * capítulo o un `beforeId` fantasma son no-op (nada se mueve a medias).
+   */
+  reorderPartida: (
+    chapterId: string,
+    partidaId: string,
+    beforeId: string | null,
+    toSubId?: string | null,
+  ) => void;
+  /** Sube (-1) o baja (+1) una partida UNA posición dentro de su grupo. En los
+   *  bordes del grupo, no-op (cambiar de contenedor es `movePartida`). */
+  movePartidaBy: (chapterId: string, partidaId: string, delta: -1 | 1) => void;
+  /**
+   * Reordena un contenedor entre SUS HERMANOS: un capítulo entre capítulos, un
+   * sub entre los hijos de su mismo padre. Lo coloca antes de `beforeId` (nulo
+   * = al final) y renumera: los capítulos pasan a 1..N —reordenar SÍ cierra los
+   * huecos que deja borrar— y la rama de subs se recodifica bajo su padre, con
+   * las `pos` de las partidas afectadas. Reparentar NO es esto: es `moveSubtree`.
+   */
+  reorderContainer: (nodeId: string, beforeId: string | null) => void;
+  /** Sube (-1) o baja (+1) un capítulo o subcapítulo una posición entre sus
+   *  hermanos. En los bordes, no-op. */
+  moveContainerBy: (nodeId: string, delta: -1 | 1) => void;
+
   /* ---- acciones F6.2 (datos de obra) ---- */
   /**
    * Edita un campo de los datos de obra por RUTA anidada (`'promotor.nif'`,
