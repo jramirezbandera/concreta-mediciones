@@ -45,19 +45,16 @@ describe('Sidebar — coeficiente K (Fase B)', () => {
     expect(Math.abs(pemEur() - 30000)).toBeLessThan(1);
   });
 
-  /* Feedback de obra 2026-08: el K y su objetivo son cifras de mucho peso
-     (reescalan TODA la obra), así que un clic fuera no puede aplicarlas ni
-     descartarlas: sólo Enter/«Aplicar» confirman y sólo Esc/«Cancelar» cierran. */
-  it('el K espera a Enter: pinchar fuera ni lo aplica ni descarta lo tecleado', () => {
+  /* Feedback de obra 2026-08: teclear el K y pinchar fuera APLICA lo tecleado
+     (sin obligar a pulsar Enter). El modal del PEM objetivo va aparte: ahí el
+     clic fuera no puede descartar la cifra a medio escribir. */
+  it('el K se aplica al pinchar fuera, sin pulsar Enter', () => {
     render(<Sidebar />);
     fireEvent.click(screen.getByLabelText('Coeficiente K')); // entra en edición
     fireEvent.change(screen.getByLabelText('Coeficiente K'), { target: { value: '1,1' } });
     fireEvent.blur(screen.getByLabelText('Coeficiente K')); // clic fuera
-    expect(useObraStore.getState().rates.coefK).toBe(1); // no se aplicó
-    const abierto = screen.getByLabelText('Coeficiente K');
-    expect(abierto).toHaveValue('1,1'); // sigue abierto con lo tecleado
-    fireEvent.keyDown(abierto, { key: 'Enter' });
     expect(useObraStore.getState().rates.coefK).toBe(1.1);
+    expect(screen.getByLabelText('Coeficiente K')).toHaveTextContent('1,1000'); // cerrado, ya aplicado
   });
 
   it('el modal «Ajusta» no se cierra al pinchar en el fondo; Esc sí lo cierra', () => {

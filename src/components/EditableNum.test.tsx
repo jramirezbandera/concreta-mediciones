@@ -138,55 +138,6 @@ describe('EditableNum', () => {
   });
 });
 
-/* Confirmación EXPLÍCITA (`commitOnBlur={false}`, feedback de obra 2026-08):
-   campos sueltos de mucho peso —el coeficiente K reescala TODA la obra— donde
-   pinchar fuera no puede aplicar ni descartar lo tecleado. */
-describe('EditableNum — confirmación explícita (commitOnBlur=false)', () => {
-  const render1 = (onCommit = vi.fn(), value = 1) => {
-    const r = render(
-      <EditableNum value={value} dec={4} onCommit={onCommit} ariaLabel="K" commitOnBlur={false} />,
-    );
-    fireEvent.click(screen.getByRole('button', { name: 'K' }));
-    return { onCommit, input: screen.getByRole('textbox', { name: 'K' }), rerender: r.rerender };
-  };
-
-  it('pinchar fuera NO aplica ni cierra: el borrador sigue ahí esperando Enter', () => {
-    const { onCommit, input } = render1();
-    fireEvent.change(input, { target: { value: '1,15' } });
-    fireEvent.blur(input);
-    expect(onCommit).not.toHaveBeenCalled();
-    const abierto = screen.getByRole('textbox', { name: 'K' });
-    expect(abierto).toHaveValue('1,15'); // lo tecleado sobrevive al clic fuera
-    fireEvent.keyDown(abierto, { key: 'Enter' });
-    expect(onCommit).toHaveBeenCalledWith(1.15);
-  });
-
-  it('Esc sigue cancelando y cerrando', () => {
-    const { onCommit } = render1();
-    const input = screen.getByRole('textbox', { name: 'K' });
-    fireEvent.change(input, { target: { value: '2' } });
-    fireEvent.keyDown(input, { key: 'Escape' });
-    expect(onCommit).not.toHaveBeenCalled();
-    expect(screen.getByRole('button', { name: 'K' })).toHaveTextContent('1,0000');
-  });
-
-  it('si el valor cambia por otra vía mientras está abierto y sin foco, resincroniza', () => {
-    // El modal «Ajusta» escribe el K con el editor inline abierto detrás: volver
-    // y pulsar Enter no debe reescribir el K nuevo con el borrador viejo.
-    const onCommit = vi.fn();
-    const { rerender } = render(
-      <EditableNum value={1} dec={4} onCommit={onCommit} ariaLabel="K" commitOnBlur={false} />,
-    );
-    fireEvent.click(screen.getByRole('button', { name: 'K' }));
-    fireEvent.change(screen.getByRole('textbox', { name: 'K' }), { target: { value: '1,15' } });
-    fireEvent.blur(screen.getByRole('textbox', { name: 'K' }));
-    rerender(
-      <EditableNum value={1.3} dec={4} onCommit={onCommit} ariaLabel="K" commitOnBlur={false} />,
-    );
-    expect(screen.getByRole('textbox', { name: 'K' })).toHaveValue('1,3000');
-  });
-});
-
 // Apertura al foco ARMADO (navegación tipo hoja de cálculo, useMedGridTab): la
 // celda vecina se abre sola SOLO cuando un Tab/Enter la armó. Sin armar (foco a
 // secas, p. ej. flechas o tabulación fuera de un grid) NO abre.
