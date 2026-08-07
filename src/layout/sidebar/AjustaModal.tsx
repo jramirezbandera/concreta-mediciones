@@ -65,6 +65,9 @@ export function AjustaModal({
       subtitle="Calcula el coeficiente K que cuadra el presupuesto con la cifra que indiques"
       icon="target"
       compact={compact}
+      // Diálogo de ENTRADA: un clic fuera no puede descartar la cifra tecleada
+      // (feedback de obra). Cierran Esc, «Cancelar» y la ✕.
+      closeOnOverlay={false}
       footer={
         <>
           <button type="button" className={styles.ajustaCancel} onClick={onClose}>

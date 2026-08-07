@@ -40,10 +40,14 @@ export function ResumenCard({ compact }: { compact: boolean }) {
         <div className={styles.kBox} title="Coeficiente K global de la obra (1 = sin ajuste)">
           <span className={`caps ${styles.kCap}`}>K</span>
           <span className={styles.kNum}>
+            {/* Confirmación EXPLÍCITA (feedback de obra): el K reescala toda la
+                obra, así que pinchar fuera no lo aplica ni descarta lo tecleado
+                —el editor espera a Enter (aplica) o Esc (cancela)—. */}
             <EditableNum
               value={coefK}
               dec={4}
               ariaLabel="Coeficiente K"
+              commitOnBlur={false}
               onCommit={(v) => setRates({ coefK: v })}
             />
           </span>
