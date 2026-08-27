@@ -329,10 +329,21 @@ export function bc3ToObra(bytes: Uint8Array): Bc3ImportResult {
     if (t != null) typeByCode.set(code, t);
   }
 
-  // Contenedor: tiene mediciones de hijos (obras) o lleva el marcador FIEBDC
-  // de capítulo/raíz «#»/«##» en el código original (bancos de precios sin ~M).
-  const isContainer = (node: ConceptNode): boolean =>
-    node.measurements.length > 0 || node.concept.code.endsWith('#');
+  // Contenedor: lleva el marcador FIEBDC de capítulo/raíz «#»/«##» en el código
+  // original (bancos de precios sin ~M), o tiene mediciones de hijos (obras).
+  // «Tener mediciones» NO basta por sí solo: hay exportadores que emiten un ~M
+  // para las líneas del DESCOMPUESTO de una partida, y esa partida se ascendía a
+  // subcapítulo — perdía su justificación y colaba sus recursos (peón, hormigón…)
+  // en el presupuesto como partidas. Un contenedor tiene al menos un hijo
+  // ESTRUCTURAL; una partida sólo tiene recursos (tipo ~C 1/2/3, o un «%»).
+  const isResourceLike = (code: string): boolean =>
+    code.startsWith('%') || (typeByCode.get(code) ?? 0) >= 1;
+  const isContainer = (node: ConceptNode): boolean => {
+    if (node.concept.code.endsWith('#')) return true;
+    if (node.measurements.length === 0) return false;
+    const kids = node.decompositions ?? [];
+    return kids.length === 0 || !kids.every((d) => isResourceLike(d.childCode));
+  };
   const isSectionLine = (d: { units?: number; length?: number; latitude?: number; height?: number }): boolean =>
     d.units == null && d.length == null && d.latitude == null && d.height == null;
   // Líneas auxiliares del ~M que no son medición: 1/2 = subtotales, 3 = fórmula

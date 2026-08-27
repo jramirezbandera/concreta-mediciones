@@ -444,3 +444,54 @@ describe('bc3ToObra — semántica FIEBDC (fixtures sintéticos)', () => {
     expect(r.report.warnings.some((w) => w.includes('baja del 10%'))).toBe(true);
   });
 });
+
+describe('bc3ToObra — partida con el descompuesto MEDIDO (~M propio)', () => {
+  // Algunos exportadores emiten un ~M para las líneas del DESCOMPUESTO de una
+  // partida, no sólo para la partida dentro de su capítulo. `isContainer` sólo
+  // miraba «¿tiene mediciones?», así que ascendía esa partida a SUBCAPÍTULO: su
+  // justificación desaparecía y sus recursos (peón, hormigón…) se colaban en el
+  // presupuesto COMO PARTIDAS. Un contenedor de verdad tiene hijos
+  // estructurales; una partida sólo tiene recursos.
+  const CON_DESCOMP_MEDIDO = [
+    ...OBRA_MIN,
+    '~C|P1|m2|Demolicion de tabique|3.47|010101|0|',
+    '~D|C1#|P1\\1\\10|',
+    '~M|C1#\\P1|1\\1\\|10|\\\\10\\\\\\\\|',
+    '~C|MO01|h|Peon ordinario|17|010101|1|',
+    '~D|P1|MO01\\1\\0.2|',
+    '~M|P1\\MO01|1\\1\\|0.2|\\\\0.2\\\\\\\\|', // ~M del DESCOMPUESTO
+  ];
+
+  it('sigue siendo una partida con su justificación (no un subcapítulo)', () => {
+    const r = bc3ToObra(bc3(...CON_DESCOMP_MEDIDO));
+    expect(r.data.chapters[0]!.children ?? []).toHaveLength(0); // no se inventa sub
+    const ps = allPartidas(r);
+    expect(ps).toHaveLength(1);
+    expect(ps[0]!.code).toBe('P1');
+    expect(ps[0]!.items.map((i) => i.code)).toEqual(['MO01']);
+  });
+
+  it('el recurso del descompuesto va al banco, no al presupuesto', () => {
+    const r = bc3ToObra(bc3(...CON_DESCOMP_MEDIDO));
+    expect(allPartidas(r).map((p) => p.code)).not.toContain('MO01');
+    expect(r.data.recursos.MO01).toMatchObject({ type: 'MO', desc: 'Peon ordinario', precio: 17 });
+  });
+
+  it('un capítulo con hijos estructurales SÍ sigue siendo contenedor', () => {
+    const r = bc3ToObra(
+      bc3(
+        '~C|R##||Obra|100|010101|0|',
+        '~C|C1#||Cap|100|010101|0|',
+        '~D|R##|C1\\1\\1|',
+        '~C|S1||Subcapitulo|100|010101|0|', // tipo 0, sin '#': estructural
+        '~D|C1#|S1\\1\\1|',
+        '~M|C1#\\S1|1\\1\\|1|\\\\1\\\\\\\\|',
+        '~C|P1|m2|Part|5|010101|0|',
+        '~D|S1|P1\\1\\2|',
+        '~M|S1\\P1|1\\1\\|2|\\\\2\\\\\\\\|',
+      ),
+    );
+    expect(r.data.chapters[0]!.children ?? []).toHaveLength(1); // S1 es sub
+    expect(allPartidas(r).map((p) => p.code)).toEqual(['P1']);
+  });
+});
