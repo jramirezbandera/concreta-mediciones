@@ -561,6 +561,32 @@
   background: var(--bg-surface);
 }
 
+/* «Mostrar más» de un contenedor con más partidas que el tope de render. */
+.moreBtn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--fs-table);
+  font-weight: 600;
+  color: var(--accent);
+  text-align: left;
+}
+.moreBtn:hover {
+  background: var(--bg-elevated);
+}
+.moreCount {
+  margin-left: auto;
+  font-weight: 400;
+  color: var(--text-disabled);
+}
+
 /* Estado de carga/error de una obra propia como fuente (PR3, multi-obra). */
 .state {
   display: flex;

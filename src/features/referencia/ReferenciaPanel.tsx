@@ -12,6 +12,32 @@ import styles from './Referencia.module.css';
 /** Auto-abrir el primer capítulo solo si tiene ≤ este nº de partidas (bases enormes → colapsado, 2A). */
 const REF_AUTOOPEN_MAX = 200;
 
+/** Filas de partida renderizadas por contenedor abierto; «Mostrar más» sube el tope
+ *  de ESE contenedor (PLAN_REFERENCIA_LAZY §3). Solo limita el DOM: copiar o
+ *  arrastrar el contenedor opera sobre `bySub`, no sobre lo pintado. */
+const REF_BROWSE_CAP = 200;
+
+/** Fuentes-obra retenidas en `obraCache` (LRU): la actual + la anterior
+ *  (PLAN_REFERENCIA_LAZY §4). Una base grande hidratada retiene ~50 MB (medido);
+ *  sin tope, cada fuente visitada se quedaba en memoria hasta recargar la app. */
+const REF_CACHE_MAX = 2;
+
+/** Re-inserta `key` como la MÁS reciente (el orden de inserción de las claves es el
+ *  orden de recencia) y desaloja por la cabeza lo que exceda `REF_CACHE_MAX`.
+ *  Exportada para test. */
+export function lruPut(
+  c: Record<string, RefSource>,
+  key: string,
+  value: RefSource,
+): Record<string, RefSource> {
+  const next: Record<string, RefSource> = {};
+  for (const k of Object.keys(c)) if (k !== key) next[k] = c[k]!;
+  next[key] = value;
+  const keys = Object.keys(next);
+  for (const k of keys.slice(0, Math.max(0, keys.length - REF_CACHE_MAX))) delete next[k];
+  return next;
+}
+
 /** Item de copia desde una partida de referencia. */
 function copyItem(source: RefSource, p: RefPartida): RefCopyItem {
   return { sourceName: source.name, partida: p };
@@ -79,6 +105,14 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
     // error/loading sobre la fuente ya seleccionada).
     const myReq = ++reqRef.current;
     if (!isObraSrc || obraCache[refSourceId]) {
+      // LRU: volver a una fuente ya cacheada refresca su recencia (un A→B→A→C
+      // debe desalojar B, no A). Si ya es la última clave, devuelve el MISMO
+      // objeto → React descarta el set y el efecto no cicla.
+      if (isObraSrc && obraCache[refSourceId]) {
+        setObraCache((c) =>
+          Object.keys(c).at(-1) === refSourceId ? c : lruPut(c, refSourceId, c[refSourceId]!),
+        );
+      }
       setLoading(false);
       setError(null);
       return;
@@ -91,7 +125,7 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
       .then((rs) => {
         if (myReq !== reqRef.current) return; // el usuario cambió de fuente: descarta
         setLoading(false);
-        if (rs) setObraCache((c) => ({ ...c, [refSourceId]: rs }));
+        if (rs) setObraCache((c) => lruPut(c, refSourceId, rs));
         else setError('No se pudo cargar la obra (datos dañados).');
       })
       // E-06: un rechazo de IndexedDB dejaba el spinner girando para siempre
@@ -106,11 +140,14 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
   const [sel, setSel] = useState<Record<string, RefCopyItem>>({});
   const [q, setQ] = useState('');
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  // Tope de filas renderizadas por contenedor (id → tope subido con «Mostrar más»).
+  const [rowCap, setRowCap] = useState<Record<string, number>>({});
 
-  // Al cambiar de fuente, limpia selección/búsqueda.
+  // Al cambiar de fuente, limpia selección/búsqueda/topes de render.
   useEffect(() => {
     setSel({});
     setQ('');
+    setRowCap({});
   }, [refSourceId]);
 
   // Índice/búsqueda de la fuente (derivaciones puras, F-06): agrupado por
@@ -214,6 +251,11 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
     const open = !!expanded[node.id];
     const directPs = bySub.get(node.id) ?? [];
     const kids = node.children ?? [];
+    // Tope de render: abrir un contenedor de miles de partidas (BCCA, Precio
+    // Centro) no monta miles de filas — pinta las primeras REF_BROWSE_CAP y
+    // «Mostrar más» sube el tope de ESE contenedor. Copiar/arrastrar no cambia.
+    const cap = rowCap[node.id] ?? REF_BROWSE_CAP;
+    const visiblePs = directPs.length > cap ? directPs.slice(0, cap) : directPs;
     return (
       <div key={node.id} className={styles.chap}>
         <div
@@ -245,7 +287,7 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
         </div>
         {open && (kids.length > 0 || directPs.length > 0) && (
           <div className={styles.partList}>
-            {directPs.map((p) => (
+            {visiblePs.map((p) => (
               <RefPartidaRow
                 key={p.id}
                 p={p}
@@ -256,6 +298,19 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
                 onDragEnd={endDrag}
               />
             ))}
+            {directPs.length > cap && (
+              <button
+                type="button"
+                className={`tcol ${styles.moreBtn}`}
+                onClick={() => setRowCap((m) => ({ ...m, [node.id]: cap + REF_BROWSE_CAP }))}
+              >
+                <Icon name="chevronDown" size={13} />
+                Mostrar {Math.min(REF_BROWSE_CAP, directPs.length - cap).toLocaleString('es-ES')} más
+                <span className={styles.moreCount}>
+                  {(directPs.length - cap).toLocaleString('es-ES')} ocultas
+                </span>
+              </button>
+            )}
             {kids.map((c) => renderNode(c, depth + 1))}
           </div>
         )}
