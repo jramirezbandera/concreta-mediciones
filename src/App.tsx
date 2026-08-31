@@ -283,11 +283,12 @@ export default function App() {
             e.preventDefault();
             setFileOver(false);
             // Captura SÍNCRONA antes del import dinámico (el evento se recicla). El
-            // parser FIEBDC se carga aquí, no en el bundle inicial.
-            const file = dt.files?.[0];
+            // parser FIEBDC se carga aquí, no en el bundle inicial. Se copian TODOS
+            // los ficheros: soltar las 12 partidas de un capítulo va en un solo gesto.
+            const files = Array.from(dt.files ?? []);
             // .catch (E-05): un chunk que no carga convertía el drop en no-op mudo.
             void import('./features/importar/importPartida')
-              .then((m) => m.processBudgetDrop(file, types, null))
+              .then((m) => m.processBudgetDrop(files, types, null))
               .catch(() =>
                 useToastStore.getState().show('No se pudo cargar el importador. Recarga la página.'),
               );

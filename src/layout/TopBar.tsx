@@ -23,7 +23,7 @@ export interface TopBarProps {
   onHelp?: () => void;
   /** Selector de obra (multi-obra, PR2). Si se pasa, sustituye al nombre de obra inline. */
   obraSwitcher?: React.ReactNode;
-  /** Acción contextual «Importar partida» (.bc3). Solo en la vista presupuesto. */
+  /** Acción contextual «Importar partidas» (.bc3). Solo en la vista presupuesto. */
   importAction?: React.ReactNode;
 }
 

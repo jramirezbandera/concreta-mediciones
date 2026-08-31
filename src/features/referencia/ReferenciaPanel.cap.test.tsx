@@ -28,7 +28,8 @@ vi.mock('../../core/refdata', async (importOriginal) => {
 });
 
 import { useObraStore } from '../../store';
-import { lruPut, ReferenciaPanel } from './ReferenciaPanel';
+import { ReferenciaPanel } from './ReferenciaPanel';
+import { lruPut } from './obraSource';
 
 beforeEach(() => {
   useObraStore.getState().reset();

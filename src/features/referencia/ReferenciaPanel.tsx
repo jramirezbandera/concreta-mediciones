@@ -3,7 +3,7 @@ import { Icon } from '../../components';
 import { REF_SOURCES, type RefCopyItem, type RefPartida, type RefSource } from '../../core/refdata';
 import { deleteObraById, useSessionStore } from '../../persist';
 import { selectCopyContra, selectCopyTarget, useObraStore } from '../../store';
-import { loadObraRefSource } from './obraSource';
+import { loadObraRefSource, lruPut } from './obraSource';
 import { SourceSelect, type SourceDesc } from './components/SourceSelect';
 import { RefPartidaRow } from './components/RefPartidaRow';
 import { REF_SEARCH_CAP, useRefIndex, type RefContainer } from './useRefIndex';
@@ -16,27 +16,6 @@ const REF_AUTOOPEN_MAX = 200;
  *  de ESE contenedor (PLAN_REFERENCIA_LAZY §3). Solo limita el DOM: copiar o
  *  arrastrar el contenedor opera sobre `bySub`, no sobre lo pintado. */
 const REF_BROWSE_CAP = 200;
-
-/** Fuentes-obra retenidas en `obraCache` (LRU): la actual + la anterior
- *  (PLAN_REFERENCIA_LAZY §4). Una base grande hidratada retiene ~50 MB (medido);
- *  sin tope, cada fuente visitada se quedaba en memoria hasta recargar la app. */
-const REF_CACHE_MAX = 2;
-
-/** Re-inserta `key` como la MÁS reciente (el orden de inserción de las claves es el
- *  orden de recencia) y desaloja por la cabeza lo que exceda `REF_CACHE_MAX`.
- *  Exportada para test. */
-export function lruPut(
-  c: Record<string, RefSource>,
-  key: string,
-  value: RefSource,
-): Record<string, RefSource> {
-  const next: Record<string, RefSource> = {};
-  for (const k of Object.keys(c)) if (k !== key) next[k] = c[k]!;
-  next[key] = value;
-  const keys = Object.keys(next);
-  for (const k of keys.slice(0, Math.max(0, keys.length - REF_CACHE_MAX))) delete next[k];
-  return next;
-}
 
 /** Item de copia desde una partida de referencia. */
 function copyItem(source: RefSource, p: RefPartida): RefCopyItem {

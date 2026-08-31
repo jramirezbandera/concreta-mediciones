@@ -22,7 +22,9 @@ navegador (IndexedDB); no hay servidor.
 - Partida: código, título, unidad, precio y descripción; su cantidad sale de las
   LÍNEAS DE MEDICIÓN. Regla de la línea: parcial = uds × largo × ancho × alto;
   una dimensión vacía cuenta como 1; un 0 explícito anula la línea.
-- Importar .bc3: arrastrando el fichero al presupuesto o con «Importar partida».
+- Importar .bc3: arrastrando los ficheros al presupuesto o con «Importar
+  partidas». Admite VARIOS a la vez (el Generador de Precios de CYPE descarga
+  una partida por archivo).
 - Exportar: PDF, Excel (con fórmulas vivas) y Word.
 - Coeficiente K: escala global de precios (la baja de adjudicación) para cuadrar
   el PEM a una cifra objetivo.

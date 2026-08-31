@@ -7,6 +7,29 @@
 import { obraToRefSource, type RefSource } from '../../core/refdata';
 import { loadObraData } from '../../persist';
 
+/** Fuentes-obra retenidas en el caché del panel (LRU): la actual + la anterior
+ *  (PLAN_REFERENCIA_LAZY §4). Una base grande hidratada retiene ~50 MB (medido);
+ *  sin tope, cada fuente visitada se quedaba en memoria hasta recargar la app. */
+export const REF_CACHE_MAX = 2;
+
+/**
+ * Re-inserta `key` como la MÁS reciente (el orden de inserción de las claves es
+ * el orden de recencia) y desaloja por la cabeza lo que exceda `REF_CACHE_MAX`.
+ * Vive aquí y no en el panel para no romper el fast-refresh del componente.
+ */
+export function lruPut(
+  c: Record<string, RefSource>,
+  key: string,
+  value: RefSource,
+): Record<string, RefSource> {
+  const next: Record<string, RefSource> = {};
+  for (const k of Object.keys(c)) if (k !== key) next[k] = c[k]!;
+  next[key] = value;
+  const keys = Object.keys(next);
+  for (const k of keys.slice(0, Math.max(0, keys.length - REF_CACHE_MAX))) delete next[k];
+  return next;
+}
+
 /**
  * Carga la obra `id` y la adapta a `RefSource`. `null` si falta o no es válida
  * (la UI muestra error). El llamador descarta respuestas obsoletas si el usuario
