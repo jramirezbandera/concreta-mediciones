@@ -22,7 +22,15 @@ import {
 import { buildResumen, type ResumenListado } from '../core/listado';
 import type { Cents } from '../core/money';
 import type { Ajuste, Cert, CertExtra, Chapter, PartidasMap, Rates } from '../core/types';
-import { chapterTotals as chapterTotalsCore, pec as pecCore, pem as pemCore, totalConIva as totalConIvaCore } from '../core/totales';
+import {
+  chapterTotals as chapterTotalsCore,
+  ciMayoritario,
+  costesDirectos as cdCore,
+  costesIndirectos as ciCore,
+  pec as pecCore,
+  pem as pemCore,
+  totalConIva as totalConIvaCore,
+} from '../core/totales';
 import { copyTargetOf, type CopyTarget, type ObraState } from './obraStore';
 
 /** Memoiza la última llamada por identidad de argumentos (memoize-one). */
@@ -51,7 +59,8 @@ export interface Counts {
 const _chapterTotals = memo1((partidas: PartidasMap, coefK: number) =>
   chapterTotalsCore(partidas, coefK),
 );
-const _pem = memo1((partidas: PartidasMap, coefK: number) => pemCore(partidas, coefK));
+const _cd = memo1((partidas: PartidasMap, coefK: number) => cdCore(partidas, coefK));
+const _ciProp = memo1((partidas: PartidasMap) => ciMayoritario(partidas));
 const _pec = memo1((pemCents: Cents, rates: Rates) => pecCore(pemCents, rates));
 const _total = memo1((pemCents: Cents, rates: Rates) => totalConIvaCore(pemCents, rates));
 const _counts = memo1((partidas: PartidasMap, chapters: Chapter[]): Counts => {
@@ -69,8 +78,21 @@ const _counts = memo1((partidas: PartidasMap, chapters: Chapter[]): Counts => {
 export const selectChapterTotals = (s: ObraState): Record<string, Cents> =>
   _chapterTotals(s.partidas, s.rates.coefK);
 
-/** PEM = Σ importes de todas las partidas (céntimos), ya ajustado por K. */
-export const selectPem = (s: ObraState): Cents => _pem(s.partidas, s.rates.coefK);
+/** Costes directos = Σ importes de las partidas (céntimos), ya ajustado por K.
+ *  Es lo que suman los capítulos; el PEM le añade los indirectos. */
+export const selectCostesDirectos = (s: ObraState): Cents => _cd(s.partidas, s.rates.coefK);
+
+/** % de CI que declaran mayoritariamente las partidas importadas de un banco
+ *  (chip «CI x%»); `undefined` si ninguna lo trae. La hoja Resumen lo OFRECE
+ *  cuando la obra aún no tiene indirectos — aplicarlo lo decide el usuario. */
+export const selectCiPropuesto = (s: ObraState): number | undefined => _ciProp(s.partidas);
+
+/** Costes indirectos de la obra (céntimos) = round2(costes directos · ci). */
+export const selectCostesIndirectos = (s: ObraState): Cents =>
+  ciCore(selectCostesDirectos(s), s.rates);
+
+/** PEM = costes directos + indirectos (céntimos). Con `ci = 0` es la Σ de capítulos. */
+export const selectPem = (s: ObraState): Cents => pemCore(selectCostesDirectos(s), s.rates);
 
 /** PEC s/IVA = round2(PEM · (1 + gg + bi)) (céntimos). */
 export const selectPec = (s: ObraState): Cents => _pec(selectPem(s), s.rates);

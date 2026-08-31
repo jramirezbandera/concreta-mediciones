@@ -23,7 +23,7 @@ import {
 } from './certificacion';
 import { groupBySub } from './grouping';
 import { lineParcial, partidaCantidad, partidaImporte } from './medicion';
-import { chapterTotals } from './totales';
+import { chapterTotals, costesIndirectos } from './totales';
 import { rollupByDepth } from './tree';
 import { round2, scaleCents, sumCents, type Cents } from './money';
 
@@ -304,12 +304,17 @@ export interface ResumenRow {
   code: string;
   title: string;
   importe: Cents;
-  /** Peso sobre el PEM (0–100). */
+  /** Peso sobre los costes directos, que es lo que suman los capítulos (0–100). */
   pct: number;
 }
 
 export interface ResumenListado {
   rows: ResumenRow[];
+  /** Σ capítulos = costes directos. Con `ci = 0` coincide con el PEM. */
+  cd: Cents;
+  /** Costes indirectos de la obra (0 si la obra no los lleva aparte). */
+  ci: Cents;
+  /** PEM = cd + ci. */
   pem: Cents;
   gg: Cents;
   bi: Cents;
@@ -321,12 +326,17 @@ export interface ResumenListado {
 }
 
 /**
- * Hoja resumen (port de resumen.jsx): desglose por capítulos + PEM → GG → BI →
- * PEC → IVA → total. GG y BI se redondean POR LÍNEA (como el prototipo): la
+ * Hoja resumen (port de resumen.jsx): desglose por capítulos → CI → PEM → GG →
+ * BI → PEC → IVA → total. GG y BI se redondean POR LÍNEA (como el prototipo): la
  * suma de las líneas mostradas ES el PEC mostrado (coherencia del documento).
  * Puede diferir ±1 cént. de `totales.pec` (que redondea gg+bi juntos).
  * A diferencia del presupuesto, lista TODOS los capítulos (es la estructura
  * de la obra, también los aún vacíos).
+ *
+ * Los capítulos suman los COSTES DIRECTOS (`cd`); el PEM les añade los costes
+ * indirectos de obra (`ci`, RGLCAP art. 130). Con `rates.ci = 0` —el defecto—
+ * `ci` es 0 y `cd === pem`: la hoja sale exactamente como antes, y quien la
+ * pinta omite las dos líneas de más (ver `ResumenSheet` / `PrintResumen`).
  */
 export function buildResumen(
   chapters: Chapter[],
@@ -334,7 +344,7 @@ export function buildResumen(
   rates: Rates,
 ): ResumenListado {
   const totals = chapterTotals(partidas, rates.coefK);
-  const pem = sumCents(chapters.map((ch) => totals[ch.id] ?? 0));
+  const cd = sumCents(chapters.map((ch) => totals[ch.id] ?? 0));
   const rows = chapters.map((ch) => {
     const importe = totals[ch.id] ?? 0;
     return {
@@ -342,14 +352,18 @@ export function buildResumen(
       code: ch.code,
       title: ch.title,
       importe,
-      pct: pem > 0 ? (importe / pem) * 100 : 0,
+      // % sobre los costes directos: es lo que suman las filas, así la columna
+      // cierra en 100 % también cuando la obra lleva CI aparte.
+      pct: cd > 0 ? (importe / cd) * 100 : 0,
     };
   });
+  const ci = costesIndirectos(cd, rates);
+  const pem = cd + ci;
   const gg = scaleCents(pem, rates.gg);
   const bi = scaleCents(pem, rates.bi);
   const pec = pem + gg + bi;
   const iva = scaleCents(pec, rates.iva);
-  return { rows, pem, gg, bi, pec, iva, total: pec + iva, rates };
+  return { rows, cd, ci, pem, gg, bi, pec, iva, total: pec + iva, rates };
 }
 
 /* ---- Certificación (con snapshot de precios F7.0 + contradictorios) ------- */

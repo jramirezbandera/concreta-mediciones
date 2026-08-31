@@ -26,7 +26,7 @@ import { descompUnit } from './banco';
 import { lineParcial } from './medicion';
 import { round2, toCents, type Cents } from './money';
 import { nextPos } from './numbering';
-import { pem as pemOf } from './totales';
+import { costesDirectos as cdOf } from './totales';
 import { DEFAULT_RATES } from './seed';
 import type { Banco, Cert, Chapter, Item, MedLine, Obra, PartidasMap, Rates, ResourceType, SubChapter } from './types';
 
@@ -582,7 +582,7 @@ export function bc3ToObra(bytes: Uint8Array): Bc3ImportResult {
     obra: { denominacion: root?.concept.summary || 'Obra importada', direccion: '', localidad: '' },
   };
 
-  const pemCents = pemOf(partidas, coefK);
+  const pemCents = cdOf(partidas, coefK);
   const rootPriceCents = rootPrice != null ? toCents(rootPrice) : null;
   const summary = doc.getSummary();
 

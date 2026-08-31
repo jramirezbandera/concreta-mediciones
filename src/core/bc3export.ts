@@ -66,7 +66,7 @@ import { precioCuadraDescompuesto } from './banco';
 import { buildChapterTree, type TreeNode } from './tree';
 import { toEur } from './money';
 import { partidaCantidad } from './medicion';
-import { pem } from './totales';
+import { costesDirectos, pem } from './totales';
 
 /** Payload de dominio a exportar (espeja `ImportedObra` sin certs — T-12). */
 export interface Bc3ExportObra {
@@ -186,6 +186,12 @@ const ROOT_CODE = 'OBRA';
 export function obraToBc3(input: Bc3ExportObra): Uint8Array {
   const { chapters, partidas, recursos, rates, obra } = input;
   const k = rates.coefK || 1;
+  // El `~K` tiene UN solo hueco de porcentaje (campo CI) y al reimportar se
+  // hornea en los precios como línea «Costes indirectos». Ahí viaja el efecto
+  // COMBINADO de las dos palancas que multiplican a los precios de esta obra: el
+  // coeficiente K y los costes indirectos (`rates.ci`). El fichero no puede
+  // distinguirlas —FIEBDC no tiene sitio para las dos—, pero el PEM sobrevive
+  // exacto al round-trip, que es el invariante que se firma.
 
   /* ---- asignación determinista de códigos (D2) ----
      Homónimos divergentes → sufijo `.2`/`.3`…; idénticos (misma identidad) →
@@ -247,17 +253,19 @@ export function obraToBc3(input: Bc3ExportObra): Uint8Array {
   // campo 2 es CI\GG\BI\BAJA\IVA. En CI viaja el pct del K (como antes); GG/BI/
   // IVA en % para que el destinatario reconstruya el mismo PEC (antes solo se
   // emitía con K≠1 y sin tasas → el otro extremo recuperaba los defaults).
-  const pct = coefKPct(k);
+  const pct = coefKPct(k * (1 + rates.ci));
   recs.push(
     `~K|\\2\\2\\3\\2\\2\\2\\2\\EUR\\|${num(pct, 4)}\\${num(rates.gg * 100, 2)}\\${num(rates.bi * 100, 2)}\\\\${num(rates.iva * 100, 2)}\\|`,
   );
 
-  // Raíz: precio = PEM CON K (como Presto). Sus hijos en la ~D van sin `#`.
+  // Raíz: precio = PEM CON K y CI (como Presto). Sus hijos en la ~D van sin `#`.
   const rootCode = assign(sanCode(ROOT_CODE), 'ROOT');
   const chCodes = chapters.map((ch, ci) =>
     assign(sanCode(ch.code) || `C${String(ci + 1).padStart(2, '0')}`, `CH|${ch.id}`),
   );
-  recs.push(`~C|${rootCode}##||${field(obra.denominacion)}|${num(toEur(pem(partidas, k)), 2)}||0|`);
+  recs.push(
+    `~C|${rootCode}##||${field(obra.denominacion)}|${num(toEur(pem(costesDirectos(partidas, k), rates)), 2)}||0|`,
+  );
   recs.push(`~D|${rootCode}##|${chCodes.map((c) => `${c}\\1\\1\\`).join('')}|`);
 
   /** ~C/~T/~D de un concepto de partida, una sola vez por código final. */
@@ -318,7 +326,9 @@ export function obraToBc3(input: Bc3ExportObra): Uint8Array {
     // la raíz (`posPath` + su entrada 1-based en la ~D del contenedor).
     (function emitContainer(node: TreeNode, code: string, title: string, posPath: string): void {
       const kids = kidsOf(node);
-      recs.push(`~C|${code}#||${field(title)}|${num(toEur(node.total), 2)}||0|`);
+      // Precio del contenedor CON el CI de obra, como la raíz: si el ~K declara
+      // indirectos, los importes del fichero son PEM, no costes directos.
+      recs.push(`~C|${code}#||${field(title)}|${num(toEur(pem(node.total, rates)), 2)}||0|`);
       const entries = [
         ...node.partidas.map((p) => `${pCode.get(p)}\\1\\${num(partidaCantidad(p), 2)}\\`),
         ...kids.map((c) => `${contCode.get(c)}\\1\\1\\`),

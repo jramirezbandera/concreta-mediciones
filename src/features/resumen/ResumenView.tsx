@@ -1,16 +1,17 @@
 import { Icon } from '../../components';
-import { selectResumen, useObraStore } from '../../store';
+import { selectCiPropuesto, selectResumen, useObraStore } from '../../store';
 import { ResumenSheet } from './ResumenSheet';
 import styles from './Resumen.module.css';
 
 /**
  * Vista Resumen (F7.1, front-runea el núcleo de F3): hoja resumen EDITABLE
- * (GG/BI inline + selector de IVA, vía `setRates` — único hogar de edición de
- * GG/BI) + observaciones persistidas en `obra.notes`. El doc de impresión
+ * (CI/GG/BI inline + selector de IVA, vía `setRates` — único hogar de edición de
+ * esas tasas) + observaciones persistidas en `obra.notes`. El doc de impresión
  * renderiza la misma hoja en solo-lectura desde el mismo selector.
  */
 export function ResumenView({ compact }: { compact: boolean }) {
   const data = useObraStore(selectResumen);
+  const ciPropuesto = useObraStore(selectCiPropuesto);
   const obraName = useObraStore((s) => s.obra.denominacion);
   const notes = useObraStore((s) => s.obra.notes ?? '');
   const setRates = useObraStore((s) => s.setRates);
@@ -45,7 +46,7 @@ export function ResumenView({ compact }: { compact: boolean }) {
           <h1 className={styles.title}>{obraName}</h1>
         </div>
 
-        <ResumenSheet data={data} onRates={setRates} />
+        <ResumenSheet data={data} onRates={setRates} ciPropuesto={ciPropuesto} />
 
         <div className={styles.notesCard}>
           <div className="sec-head" style={{ marginBottom: 10 }}>

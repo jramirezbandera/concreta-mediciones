@@ -276,21 +276,32 @@ export function buildResumenXlsx(data: ResumenListado, meta: ObraMeta, firma: Fi
   rows.push([
     txt('Nº', { fontWeight: 'bold', backgroundColor: BANDA }),
     txt('Capítulo', { fontWeight: 'bold', backgroundColor: BANDA }),
-    txt('% s/ PEM', { fontWeight: 'bold', backgroundColor: BANDA, align: 'right' }),
+    txt(data.ci > 0 ? '% s/ C.D.' : '% s/ PEM', {
+      fontWeight: 'bold',
+      backgroundColor: BANDA,
+      align: 'right',
+    }),
     txt('Importe', { fontWeight: 'bold', backgroundColor: BANDA, align: 'right' }),
   ]);
   // Filas de capítulo (una por capítulo) y, tras una fila en blanco, la cadena
-  // PEM → GG → BI → PEC → IVA → total: posiciones deterministas, se calculan
-  // aquí para que los % y la cadena se refieran entre sí por fórmula.
+  // [CD → CI →] PEM → GG → BI → PEC → IVA → total: posiciones deterministas, se
+  // calculan aquí para que los % y la cadena se refieran entre sí por fórmula.
+  // Con CI de obra la Σ de capítulos son los costes DIRECTOS y el PEM los suma
+  // con los indirectos, así que la cadena estrena dos filas por delante.
   const inicio = rows.length + 1;
   const n = data.rows.length;
-  const pemRow = inicio + n + 1;
+  const conCI = data.ci > 0;
+  const cdRow = inicio + n + 1; // Σ capítulos (el PEM mismo si no hay CI)
+  const ciRow = cdRow + 1;
+  const pemRow = conCI ? cdRow + 2 : cdRow;
   const [ggRow, biRow, pecRow, ivaRow] = [pemRow + 1, pemRow + 2, pemRow + 3, pemRow + 4];
   for (const [i, r] of data.rows.entries()) {
     rows.push([
       txt(r.code),
       txt(r.title, { wrap: true }),
-      fx(`IF(D${pemRow}=0,0,D${inicio + i}/D${pemRow}*100)`, { format: FMT_PCT, textColor: GRIS }),
+      // El peso del capítulo es sobre la Σ de capítulos: así la columna cierra
+      // en 100 % también cuando la obra lleva indirectos aparte.
+      fx(`IF(D${cdRow}=0,0,D${inicio + i}/D${cdRow}*100)`, { format: FMT_PCT, textColor: GRIS }),
       eur(r.importe),
     ]);
   }
@@ -311,13 +322,18 @@ export function buildResumenXlsx(data: ResumenListado, meta: ObraMeta, firma: Fi
       ? bold({ ...cell, topBorderStyle: opts.cierre ? 'medium' : 'thin' })
       : cell,
   ];
-  rows.push(
-    linea(
-      'Presupuesto de Ejecución Material (PEM)',
-      n ? fx(`SUM(D${inicio}:D${inicio + n - 1})`) : eur(data.pem),
-      { strong: true },
-    ),
-  );
+  const sumaCaps = n ? fx(`SUM(D${inicio}:D${inicio + n - 1})`) : eur(data.cd);
+  if (conCI) {
+    rows.push(linea('Costes directos (suma de capítulos)', sumaCaps, { strong: true }));
+    // El CI lee su % de la celda de al lado, como GG/BI: cambiarlo en la hoja
+    // recalcula el PEM y toda la cadena.
+    rows.push(linea('Costes indirectos', fx(`ROUND(D${cdRow}*C${ciRow}/100,2)`), { rate: data.rates.ci }));
+    rows.push(
+      linea('Presupuesto de Ejecución Material (PEM)', fx(`D${cdRow}+D${ciRow}`), { strong: true }),
+    );
+  } else {
+    rows.push(linea('Presupuesto de Ejecución Material (PEM)', sumaCaps, { strong: true }));
+  }
   // GG/BI/IVA leen su % de la celda de al lado (col C, expresado 0–100):
   // cambiarlo en la hoja recalcula la cadena entera.
   rows.push(linea('Gastos generales', fx(`ROUND(D${pemRow}*C${ggRow}/100,2)`), { rate: data.rates.gg }));
@@ -479,17 +495,37 @@ export function buildCertXlsx(data: CertListado, meta: ObraMeta, firma: Firma): 
     null,
     strong ? bold({ ...cell, topBorderStyle: 'thin' }) : cell,
   ];
+  // Con CI de obra, la Σ de capítulos son los costes DIRECTOS certificados y el
+  // PEM los suma con los indirectos (mismo % que el presupuesto): dos filas más
+  // por delante, encadenadas por fórmula como el resto de la hoja.
+  const conCI = t.ciOrigen > 0;
+  const ciLit = rateLit(data.rates.ci);
+  const cdRow = rows.length + 1;
+  if (conCI) {
+    rows.push(fila('Costes directos a origen', hayCaps ? fx(sumI) : eur(t.certCD)));
+    rows.push(fila('Costes indirectos', fx(`ROUND(K${cdRow}*${ciLit},2)`)));
+  }
   const pemRow = rows.length + 1;
-  rows.push(fila('Ejecución material a origen', hayCaps ? fx(sumI) : eur(t.certPEM), true));
+  rows.push(
+    fila(
+      'Ejecución material a origen',
+      conCI ? fx(`K${cdRow}+K${cdRow + 1}`) : hayCaps ? fx(sumI) : eur(t.certPEM),
+      true,
+    ),
+  );
   const ggbiRow = rows.length + 1;
   rows.push(fila('Gastos generales y B.I.', fx(`ROUND(K${pemRow}*${ggbi},2)`)));
   const pecRow = rows.length + 1;
   rows.push(fila('Ejecución por contrata a origen', fx(`K${pemRow}+K${ggbiRow}`)));
   const prevRow = rows.length + 1;
+  // MISMA cadena que el PEC a origen (auditoría B-03): CI sobre la Σ anterior y
+  // GG+BI sobre ese PEM, cada redondeo aparte — si no, la línea «Certificado
+  // anterior» no reproduce el PEC que se facturó en la cert N−1.
+  const prevPem = conCI ? `((${sumJ})+ROUND((${sumJ})*${ciLit},2))` : `(${sumJ})`;
   rows.push(
     fila(
       'Certificado anterior',
-      hayCaps ? fx(`-((${sumJ})+ROUND((${sumJ})*${ggbi},2))`) : eur(-t.pecPrev),
+      hayCaps ? fx(`-(${prevPem}+ROUND(${prevPem}*${ggbi},2))`) : eur(-t.pecPrev),
     ),
   );
   const estaRow = rows.length + 1;

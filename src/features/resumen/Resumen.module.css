@@ -103,6 +103,8 @@
   border-top: 2px solid var(--border-main);
 }
 .pemLabel {
+  display: inline-flex;
+  align-items: center;
   font-size: var(--fs-body);
   font-weight: 600;
   color: var(--text-primary);
@@ -174,6 +176,8 @@
   border-top: 1px solid var(--border-main);
 }
 .totalLabel {
+  display: inline-flex;
+  align-items: center;
   font-size: var(--fs-body);
   color: var(--text-secondary);
 }
@@ -201,6 +205,8 @@
   border-top: 1px solid var(--border-main);
 }
 .bigLabel {
+  display: inline-flex;
+  align-items: center;
   font-size: var(--fs-title);
   font-weight: 600;
   color: var(--text-primary);
@@ -298,4 +304,58 @@
 }
 .emptyBtn:hover {
   background: var(--accent-hover);
+}
+
+/* Propuesta de CI de las partidas importadas (chip «CI x%» del banco de origen):
+   se ofrece bajo la fila de indirectos, no se aplica sola — mover el PEM es
+   decisión del usuario, y aquí es donde la puede tomar con el número delante. */
+.ciHint {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  margin: 0 0 var(--sp-4);
+  padding: var(--sp-8) var(--sp-10);
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border-main));
+  background: color-mix(in srgb, var(--accent) 7%, var(--bg-surface));
+  color: var(--accent);
+}
+.ciHintText {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.ciApply {
+  flex-shrink: 0;
+  height: 24px;
+  padding: 0 var(--sp-10);
+  border-radius: 6px;
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--on-accent);
+  background: var(--accent);
+}
+.ciApply:hover {
+  background: var(--accent-hover);
+}
+.ciDismiss {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  border: 0;
+  cursor: pointer;
+  background: none;
+  color: var(--text-disabled);
+}
+.ciDismiss:hover {
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
 }

@@ -58,7 +58,7 @@ const partida = (over: Partial<Partida>): Partida => ({
   ...over,
 });
 
-const rates: Rates = { iva: 0.1, gg: 0.13, bi: 0.06, coefK: 1 };
+const rates: Rates = { iva: 0.1, gg: 0.13, bi: 0.06, ci: 0, coefK: 1 };
 
 describe('certCalc por partida', () => {
   const p = partida({ id: 'p1', cantidad: 100, precio: 10 });
@@ -132,6 +132,50 @@ describe('partidas eliminadas del presupuesto (auditoría D-01/D-02, preservar d
     const p1 = partida({ id: 'p1', cantidad: 10, precio: 10 });
     const rows = certChapterRows(chapters, { '01': [p1] }, { p1: 4 }, {}, 1, []);
     expect(rows.find((r) => r.id === DELETED_ROW_ID)).toBeUndefined();
+  });
+});
+
+describe('costes indirectos de obra en la certificación', () => {
+  const conCI: Rates = { ...rates, ci: 0.03 };
+  const p1 = partida({ id: 'p1', cantidad: 10, precio: 100 }); // presupuesto 1.000 €
+
+  it('sin CI la cadena es la de siempre: PEM certificado = Σ capítulos', () => {
+    const t = certTotals([p1], { p1: 4 }, {}, rates, 0);
+    expect(t.ciOrigen).toBe(0);
+    expect(t.certPEM).toBe(t.certCD);
+    expect(t.budgetPEM).toBe(toCents(1000));
+  });
+
+  it('la cert aplica el MISMO % que el presupuesto sobre lo ejecutado', () => {
+    const t = certTotals([p1], { p1: 4 }, {}, conCI, 0);
+    expect(t.certCD).toBe(toCents(400)); // 4 × 100
+    expect(t.ciOrigen).toBe(toCents(12)); // 3 % de lo ejecutado
+    expect(t.certPEM).toBe(toCents(412));
+    expect(t.budgetPEM).toBe(toCents(1030)); // el presupuesto también lo lleva
+    // …así el % a origen NO se mueve por el CI: sube el numerador y el denominador.
+    expect(t.pctGlobal).toBeCloseTo(40, 6);
+  });
+
+  it('GG+BI van sobre el PEM certificado (CI incluido), no sobre los directos', () => {
+    const t = certTotals([p1], { p1: 4 }, {}, conCI, 0);
+    expect(t.ggbiOrigen).toBe(toCents(78.28)); // round2(412 × 0,19)
+    expect(t.pecOrigen).toBe(t.certPEM + t.ggbiOrigen);
+  });
+
+  it('«certificación anterior» reproduce EXACTO el PEC de la cert previa (B-03)', () => {
+    // Lo facturado en la N−1 (4 uds) tiene que salir idéntico como «anterior» en
+    // la N (7 uds), o Σ de las certificaciones ≠ PEC a origen.
+    const prev = certTotals([p1], { p1: 4 }, {}, conCI, 0);
+    const cur = certTotals([p1], { p1: 7 }, { p1: 4 }, conCI, 0);
+    expect(cur.pecPrev).toBe(prev.pecOrigen);
+    expect(cur.pecEsta).toBe(cur.pecOrigen - prev.pecOrigen);
+  });
+
+  it('los capítulos de la hoja suman los DIRECTOS certificados, no el PEM', () => {
+    const chapters: Chapter[] = [{ id: '01', code: '1', title: 'Uno' }];
+    const rows = certChapterRows(chapters, { '01': [p1] }, { p1: 4 }, {}, 1, []);
+    const t = certTotals([p1], { p1: 4 }, {}, conCI, 0);
+    expect(rows.reduce((a, r) => a + r.cert, 0)).toBe(t.certCD);
   });
 });
 

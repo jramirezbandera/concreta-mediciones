@@ -12,7 +12,7 @@ import { buildRecursos, precioCuadraDescompuesto } from './banco';
 import { partidaCantidad } from './medicion';
 import { toCents } from './money';
 import { CHAPTERS, DEFAULT_OBRA, DEFAULT_RATES, PARTIDAS } from './seed';
-import { pem } from './totales';
+import { costesDirectos, pem as pemCore } from './totales';
 import type { Partida } from './types';
 
 const decode = (b: Uint8Array) => new TextDecoder('windows-1252').decode(b);
@@ -132,7 +132,7 @@ describe('round-trip N niveles: exportar → reimportar conserva el árbol', () 
     const c1 = ps.find((x) => x.code === 'C1')!;
     expect(c1.med.map((m) => [m.comment, m.uds, m.largo])).toEqual([['Zona', 2, 3]]);
     // PEM exacto (round-trip propio sin tolerancia, D8).
-    expect(re.report.pemCents).toBe(pem(obra.partidas, 1));
+    expect(re.report.pemCents).toBe(costesDirectos(obra.partidas, 1));
     expect(re.report.deltaCents).toBe(0);
   });
 
@@ -233,7 +233,7 @@ describe('obraToBc3 — cabecera y ~K', () => {
   });
 
   it('C-04: GG/BI/IVA sobreviven el round-trip exportar → reimportar', () => {
-    const o = mini({}, { rates: { iva: 0.21, gg: 0.17, bi: 0.06, coefK: 1 } });
+    const o = mini({}, { rates: { iva: 0.21, gg: 0.17, bi: 0.06, ci: 0, coefK: 1 } });
     const back = bc3ToObra(obraToBc3(o));
     expect(back.data.rates.gg).toBe(0.17);
     expect(back.data.rates.bi).toBe(0.06);
@@ -251,7 +251,7 @@ describe('obraToBc3 — cabecera y ~K', () => {
 describe('obraToBc3 — conceptos y precios', () => {
   it('raíz `##` con precio = PEM CON K; ~D de la raíz sin marcador `#`', () => {
     const o = mini({}, { rates: { ...DEFAULT_RATES, coefK: 1.13 } });
-    const pemEur = (pem(o.partidas, 1.13) / 100).toFixed(2).replace(/\.?0+$/, '');
+    const pemEur = (costesDirectos(o.partidas, 1.13) / 100).toFixed(2).replace(/\.?0+$/, '');
     expect(rec(o, '~C|OBRA##')).toBe(`~C|OBRA##||Obra de prueba|${pemEur}||0|`);
     expect(rec(o, '~D|OBRA##')).toBe('~D|OBRA##|1\\1\\1\\|');
   });
@@ -261,7 +261,7 @@ describe('obraToBc3 — conceptos y precios', () => {
     const chPrice = parseFloat(rec(o, '~C|1#')!.split('|')[4]!);
     const rootPrice = parseFloat(rec(o, '~C|OBRA##')!.split('|')[4]!);
     expect(toCents(chPrice)).toBe(toCents(rootPrice));
-    expect(toCents(chPrice)).toBe(pem(o.partidas, 1.13));
+    expect(toCents(chPrice)).toBe(costesDirectos(o.partidas, 1.13));
   });
 
   it('partida: precio en BASE (sin K) y cantidad 2 dec en la ~D del capítulo', () => {
@@ -520,7 +520,7 @@ describe('obraToBc3 — subcapítulos anidados (D3)', () => {
     expect(ch.children!.map((s) => s.title)).toEqual(['Tabiquería', 'Sub vacío']);
     const sub1 = ch.children![0]!;
     expect(Object.values(data.partidas).flat().filter((p) => p.sub === sub1.id)).toHaveLength(2);
-    expect(pem(data.partidas, 1)).toBe(pem(o.partidas, 1));
+    expect(costesDirectos(data.partidas, 1)).toBe(costesDirectos(o.partidas, 1));
     expect(report.deltaCents).toBe(0);
   });
 });
@@ -529,11 +529,11 @@ describe('obraToBc3 — subcapítulos anidados (D3)', () => {
    Gate de fidelidad capa 2 (D5+D8): round-trip PROPIO exacto al céntimo.
    =========================================================================== */
 describe('round-trip del seed: obraToBc3 → bc3ToObra EXACTO', () => {
-  const seedObra = (coefK = 1): Bc3ExportObra => ({
+  const seedObra = (coefK = 1, ci = 0): Bc3ExportObra => ({
     chapters: CHAPTERS,
     partidas: PARTIDAS,
     recursos: buildRecursos(PARTIDAS),
-    rates: { ...DEFAULT_RATES, coefK },
+    rates: { ...DEFAULT_RATES, coefK, ci },
     obra: { ...DEFAULT_OBRA },
   });
 
@@ -559,8 +559,8 @@ describe('round-trip del seed: obraToBc3 → bc3ToObra EXACTO', () => {
 
   it('PEM exacto al céntimo (26.291,91 € del seed) y raíz = PEM (delta 0)', () => {
     const { data, report } = bc3ToObra(obraToBc3(seedObra()));
-    expect(pem(data.partidas, data.rates.coefK)).toBe(pem(PARTIDAS, 1));
-    expect(pem(PARTIDAS, 1)).toBe(2629191); // ancla del seed
+    expect(costesDirectos(data.partidas, data.rates.coefK)).toBe(costesDirectos(PARTIDAS, 1));
+    expect(costesDirectos(PARTIDAS, 1)).toBe(2629191); // ancla del seed
     expect(report.deltaCents).toBe(0); // raíz escrita = PEM recalculado, sin tolerancia
   });
 
@@ -586,14 +586,35 @@ describe('round-trip del seed: obraToBc3 → bc3ToObra EXACTO', () => {
   });
 
   it('con K=1,13: el export escribe el K como CI del ~K; al reimportar se hornea (K→1) y el PEM se conserva', () => {
-    const before = pem(PARTIDAS, 1.13);
+    const before = costesDirectos(PARTIDAS, 1.13);
     const { data, report } = bc3ToObra(obraToBc3(seedObra(1.13)));
     // coefK ya no round-trippea como multiplicador: viaja como CI del ~K y al
     // reimportar se hornea en los precios (línea %CI), dejando coefK=1.
     expect(data.rates.coefK).toBe(1);
     expect(report.ciPct).toBe(13);
     // El PEM se conserva salvo el redondeo del unitario a 2 decimales al hornear.
-    expect(Math.abs(pem(data.partidas, 1) - before)).toBeLessThan(50); // < 0,50 €
+    expect(Math.abs(costesDirectos(data.partidas, 1) - before)).toBeLessThan(50); // < 0,50 €
+  });
+
+  it('el CI de obra viaja en el ~K y el PEM (directos + indirectos) sobrevive el viaje', () => {
+    const before = pemCore(costesDirectos(PARTIDAS, 1), { ...DEFAULT_RATES, ci: 0.03 });
+    const { data, report } = bc3ToObra(obraToBc3(seedObra(1, 0.03)));
+    expect(report.ciPct).toBe(3);
+    // Al reimportar, el CI se hornea en los precios como línea «Costes
+    // indirectos» (convención Presto/Arquímedes): el PEM de destino ya lo lleva
+    // dentro de los directos, y por eso se compara contra el PEM de origen.
+    // La desviación es el redondeo del unitario a 2 decimales EN CADA partida
+    // (aquí el CI se reparte; en origen se aplica una vez sobre el total).
+    expect(Math.abs(costesDirectos(data.partidas, 1) - before)).toBeLessThan(before * 0.0001);
+  });
+
+  it('K y CI juntos viajan COMBINADOS en el ~K (el fichero solo tiene un hueco)', () => {
+    const before = pemCore(costesDirectos(PARTIDAS, 1.13), { ...DEFAULT_RATES, ci: 0.03 });
+    const { data, report } = bc3ToObra(obraToBc3(seedObra(1.13, 0.03)));
+    // 1,13 × 1,03 = 1,1639 → 16,39 % en el campo CI del ~K.
+    expect(report.ciPct).toBeCloseTo(16.39, 4);
+    expect(data.rates.coefK).toBe(1);
+    expect(Math.abs(costesDirectos(data.partidas, 1) - before)).toBeLessThan(before * 0.0001);
   });
 
   it('regresión dims=0 (D4): el import descarta la línea pero la cantidad y el PEM quedan', () => {
@@ -612,7 +633,7 @@ describe('round-trip del seed: obraToBc3 → bc3ToObra EXACTO', () => {
     const gp = Object.values(data.partidas).flat()[0]!;
     expect(gp.med).toHaveLength(0);
     expect(partidaCantidad(gp)).toBe(qty);
-    expect(pem(data.partidas, 1)).toBe(pem(o.partidas, 1));
+    expect(costesDirectos(data.partidas, 1)).toBe(costesDirectos(o.partidas, 1));
   });
 });
 
@@ -649,7 +670,7 @@ describe('gate capa 3: fixture Presto anonimizado', () => {
     const b = bc3ToObra(obraToBc3(a.data));
     // El CI ya viaja horneado (líneas %CI), así que el re-import no añade más
     // (su ~K no trae CI → coefK=1, ciPct=0): el árbol queda ESTABLE.
-    expect(pem(b.data.partidas, b.data.rates.coefK)).toBe(pem(a.data.partidas, a.data.rates.coefK));
+    expect(costesDirectos(b.data.partidas, b.data.rates.coefK)).toBe(costesDirectos(a.data.partidas, a.data.rates.coefK));
     expect(b.report.chapters).toBe(a.report.chapters);
     expect(b.report.partidas).toBe(a.report.partidas);
     expect(b.report.medVisible).toBe(a.report.medVisible);
@@ -672,7 +693,7 @@ describe.skipIf(!existsSync(REAL))('gate capa 4: round-trip del .bc3 real (local
   it('import → export → import: PEM exacto, estructura y mediciones estables', () => {
     const a = bc3ToObra(new Uint8Array(readFileSync(REAL)));
     const b = bc3ToObra(obraToBc3(a.data));
-    expect(pem(b.data.partidas, b.data.rates.coefK)).toBe(pem(a.data.partidas, a.data.rates.coefK));
+    expect(costesDirectos(b.data.partidas, b.data.rates.coefK)).toBe(costesDirectos(a.data.partidas, a.data.rates.coefK));
     expect(b.report.chapters).toBe(a.report.chapters); // 19
     expect(b.report.partidas).toBe(a.report.partidas); // 167
     expect(b.report.medVisible).toBe(a.report.medVisible);

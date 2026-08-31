@@ -212,7 +212,7 @@ const RAW_PARTIDAS: Record<string, SeedPartida[]> = {
 export const PARTIDAS: PartidasMap = withMedIds(RAW_PARTIDAS);
 
 /** Tasas por defecto (reforma 10% IVA; GG 13% + BI 6%; sin coeficiente K). */
-export const DEFAULT_RATES: Rates = { iva: 0.1, gg: 0.13, bi: 0.06, coefK: 1 };
+export const DEFAULT_RATES: Rates = { iva: 0.1, gg: 0.13, bi: 0.06, ci: 0, coefK: 1 };
 
 /** Datos de obra por defecto (port de app.jsx; F6 amplía promotor/constructor/DF). */
 export const DEFAULT_OBRA: Obra = {

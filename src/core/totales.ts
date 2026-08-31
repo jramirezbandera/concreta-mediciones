@@ -1,8 +1,19 @@
 /* ===========================================================================
    core/totales — totales de presupuesto, en CÉNTIMOS (acumulación exacta).
-   Portado de data.js. §0 decisión 3: PEM = Σ partidas (sin BASE_PEM).
-   El coeficiente K (§4) se aplica en `partidaImporte`, así que el PEM ya viene
-   ajustado por K.
+   Portado de data.js. §0 decisión 3: sin BASE_PEM, todo sale de las partidas.
+   El coeficiente K (§4) se aplica en `partidaImporte`, así que los importes ya
+   vienen ajustados por K.
+
+   La cadena, en el orden del RGLCAP (arts. 130-131):
+
+     Σ partidas ............ costes DIRECTOS  (`costesDirectos`, = Σ capítulos)
+       + CI (·ci) .......... costes INDIRECTOS de la obra (`costesIndirectos`)
+       = PEM ............... ejecución material (`pem`)
+       + GG + BI ........... = PEC s/ IVA (`pec`)
+       + IVA ............... = presupuesto base de licitación (`totalConIva`)
+
+   Con `rates.ci = 0` (el defecto, y todas las obras anteriores a la v5 del
+   esquema) el PEM ES la suma de capítulos: la cadena queda igual que siempre.
    =========================================================================== */
 import type { Partida, PartidasMap, Rates } from './types';
 import { type Cents, scaleCents, sumCents } from './money';
@@ -20,9 +31,34 @@ export function chapterTotals(map: PartidasMap, coefK = 1): Record<string, Cents
   return out;
 }
 
-/** PEM = Σ importes de todas las partidas (céntimos). Sin cubos ocultos. */
-export function pem(map: PartidasMap, coefK = 1): Cents {
+/**
+ * Costes DIRECTOS de la obra = Σ importes de todas las partidas (céntimos). Sin
+ * cubos ocultos: es exactamente lo que suman los capítulos del desglose.
+ * OJO: no es el PEM salvo que `rates.ci` sea 0 — el PEM añade los indirectos.
+ */
+export function costesDirectos(map: PartidasMap, coefK = 1): Cents {
   return sumCents(Object.values(map).map((ps) => chapterTotal(ps, coefK)));
+}
+
+/**
+ * Costes INDIRECTOS de la obra (€) = round2(costes directos · ci). Son los
+ * gastos de la OBRA que no se imputan a una unidad concreta (instalaciones a pie
+ * de obra, personal técnico adscrito, imprevistos): RGLCAP art. 130 los reparte
+ * como un % sobre los directos, DENTRO del PEM. Distinto de los gastos generales
+ * (art. 131), que son de la EMPRESA y van sobre el PEM ya cerrado.
+ */
+export function costesIndirectos(cdCents: Cents, rates: Rates): Cents {
+  return scaleCents(cdCents, rates.ci);
+}
+
+/**
+ * PEM = costes directos + costes indirectos (céntimos). Toma el CD ya calculado
+ * (`costesDirectos`) en vez del mapa: la firma —céntimos + tasas— es la misma
+ * que la de `pec` y `totalConIva`, así los tres eslabones de la cadena se
+ * encadenan sin que nadie se salte uno por error.
+ */
+export function pem(cdCents: Cents, rates: Rates): Cents {
+  return cdCents + costesIndirectos(cdCents, rates);
 }
 
 /** PEC s/IVA = PEM + GG + BI, cada tasa redondeada POR LÍNEA — la MISMA
@@ -36,8 +72,9 @@ export function pec(pemCents: Cents, rates: Rates): Cents {
 
 /**
  * Coeficiente K que lleva el PEM lo más cerca posible de un objetivo: la razón
- * directa objetivo/base, donde `baseCents` es el PEM calculado a K=1 (el que ve
- * `pem(map, 1)`). Como K multiplica cada precio ANTES del redondeo por partida
+ * directa objetivo/base, donde `baseCents` es el PEM calculado a K=1. El CI no
+ * estorba: multiplica base y objetivo por igual, así que se va en la razón.
+ * Como K multiplica cada precio ANTES del redondeo por partida
  * (`partidaImporte`), el PEM no es exactamente lineal en K: aplicar el K
  * resultante puede dejar una desviación de pocos céntimos respecto al objetivo
  * —la misma tolerancia con la que el resto del motor cuadra contra el .bc3—.
@@ -56,4 +93,27 @@ export function coefKParaObjetivo(baseCents: Cents, targetCents: Cents): number 
 export function totalConIva(pemCents: Cents, rates: Rates): Cents {
   const p = pec(pemCents, rates);
   return sumCents([p, scaleCents(p, rates.iva)]);
+}
+
+/**
+ * % de costes indirectos MAYORITARIO entre las partidas que traen uno declarado
+ * (`ciPct`, el chip de las importadas de un banco). Es la propuesta que la hoja
+ * Resumen ofrece cuando la obra aún no tiene CI: el valor que más partidas
+ * declaran, y a igualdad de partidas el mayor (prudente: no infra-presupuesta).
+ * `undefined` si ninguna partida declara CI. NO se aplica solo — quien decide el
+ * CI de la obra es el usuario (el chip dice de dónde viene el número).
+ */
+export function ciMayoritario(map: PartidasMap): number | undefined {
+  const votos = new Map<number, number>();
+  for (const ps of Object.values(map))
+    for (const p of ps ?? [])
+      if (p.ciPct != null && p.ciPct > 0) votos.set(p.ciPct, (votos.get(p.ciPct) ?? 0) + 1);
+  let mejor: number | undefined;
+  let max = 0;
+  for (const [pct, n] of votos)
+    if (n > max || (n === max && mejor != null && pct > mejor)) {
+      mejor = pct;
+      max = n;
+    }
+  return mejor;
 }

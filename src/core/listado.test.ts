@@ -12,7 +12,7 @@ import {
 } from './listado';
 import { toCents } from './money';
 import { CHAPTERS, DEFAULT_RATES, PARTIDAS } from './seed';
-import { pem } from './totales';
+import { costesDirectos } from './totales';
 import type { Cert, Chapter, Obra, Partida, PartidasMap, Rates } from './types';
 
 const partida = (over: Partial<Partida>): Partida => ({
@@ -28,7 +28,7 @@ const partida = (over: Partial<Partida>): Partida => ({
   ...over,
 });
 
-const rates: Rates = { iva: 0.1, gg: 0.13, bi: 0.06, coefK: 1 };
+const rates: Rates = { iva: 0.1, gg: 0.13, bi: 0.06, ci: 0, coefK: 1 };
 
 /* Fixture: cap 1 con subcapítulo (y una huérfana), cap 2 vacío, cap 3 plano. */
 const chapters: Chapter[] = [
@@ -101,7 +101,7 @@ describe('buildPresupuestoListado (doc combinado, F7.1)', () => {
 
   it('sobre el seed real: PEM del listado = PEM del motor, al céntimo', () => {
     const seed = buildPresupuestoListado(CHAPTERS, PARTIDAS, DEFAULT_RATES.coefK);
-    expect(seed.pem).toBe(pem(PARTIDAS, DEFAULT_RATES.coefK));
+    expect(seed.pem).toBe(costesDirectos(PARTIDAS, DEFAULT_RATES.coefK));
   });
 
   it('jerarquía de N niveles: pre-orden, depth, rollup en cabecera y total sin doble cuenta', () => {
@@ -157,6 +157,22 @@ describe('buildResumen (hoja resumen, F7.1)', () => {
     expect(r.pec).toBe(r.pem + r.gg + r.bi);
     expect(r.iva).toBe(toCents(11.1)); // round2(111,04 × 0,10)
     expect(r.total).toBe(r.pec + r.iva);
+  });
+
+  it('sin CI de obra, el PEM ES la Σ de capítulos (documento idéntico al de siempre)', () => {
+    expect(r.ci).toBe(0);
+    expect(r.cd).toBe(r.pem);
+  });
+
+  it('con CI: capítulos = directos, PEM = directos + CI, y GG/BI ya sobre el PEM', () => {
+    const c = buildResumen(chapters, partidas, { ...rates, ci: 0.03 });
+    expect(c.cd).toBe(toCents(93.31)); // la Σ de capítulos NO se mueve
+    expect(c.ci).toBe(toCents(2.8)); // round2(93,31 × 0,03)
+    expect(c.pem).toBe(c.cd + c.ci);
+    expect(c.gg).toBe(toCents(12.49)); // round2(96,11 × 0,13), ya con el CI dentro
+    expect(c.pec).toBe(c.pem + c.gg + c.bi);
+    // El % del capítulo pesa sobre los directos: la columna sigue cerrando en 100.
+    expect(c.rows.reduce((a, x) => a + x.pct, 0)).toBeCloseTo(100, 6);
   });
 
   it('obra sin capítulos → filas vacías y todo a 0 (sin NaN)', () => {

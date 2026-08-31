@@ -24,7 +24,7 @@ const partida = (over: Partial<Partida>): Partida => ({
   ...over,
 });
 
-const rates: Rates = { iva: 0.1, gg: 0.13, bi: 0.06, coefK: 1 };
+const rates: Rates = { iva: 0.1, gg: 0.13, bi: 0.06, ci: 0, coefK: 1 };
 const chapters: Chapter[] = [
   { id: '01', code: '1', title: 'Demoliciones', children: [{ id: '01.01', code: '1.1', title: 'Interiores' }] },
   { id: '03', code: '3', title: 'Albañilería' },
@@ -201,6 +201,38 @@ describe('buildResumenXlsx', () => {
 
   it('orientación vertical', () => {
     expect(doc.orientation).toBe('portrait');
+  });
+
+  describe('con costes indirectos de obra', () => {
+    const conCI = buildResumenXlsx(buildResumen(chapters, partidas, { ...rates, ci: 0.03 }), meta, {
+      firmantes: [],
+      lugar: '',
+      fecha: '',
+    });
+    // Mismo layout + 2 filas: directos 9 · CI 10 · PEM 11 · GG 12 · BI 13 ·
+    // PEC 14 · IVA 15 · licitación 16.
+
+    it('la hoja encadena directos → CI → PEM y sigue recalculando sola', () => {
+      const fx = formulas(conCI.rows);
+      expect(fx).toContain('SUM(D6:D7)'); // costes directos = Σ capítulos
+      expect(fx).toContain('ROUND(D9*C10/100,2)'); // CI lee su % de la col C
+      expect(fx).toContain('D9+D10'); // PEM = directos + indirectos
+      expect(fx).toContain('ROUND(D11*C12/100,2)'); // GG YA sobre el PEM
+      expect(fx).toContain('D11+D12+D13'); // PEC
+    });
+
+    it('el % del capítulo pesa sobre los DIRECTOS: la columna cierra en 100 %', () => {
+      expect(formulas(conCI.rows)).toContain('IF(D9=0,0,D6/D9*100)');
+    });
+
+    it('el % de CI viaja como número editable, igual que GG/BI/IVA', () => {
+      const pcts = cells(conCI.rows).filter((c) => c.format === FMT_PCT && c.type === Number);
+      expect(pcts.map((c) => c.value)).toEqual(expect.arrayContaining([3, 13, 6, 10]));
+    });
+
+    it('sin CI la hoja no estrena ninguna fila (documento idéntico al de siempre)', () => {
+      expect(cells(doc.rows).some((c) => c.value === 'Costes indirectos')).toBe(false);
+    });
   });
 });
 

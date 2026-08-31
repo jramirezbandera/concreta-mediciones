@@ -33,8 +33,13 @@ import { nextAgenteId } from './base';
  *   `obra.direccionFacultativa: Agente[]`. Migración: siembra un «Director de
  *   obra» desde el `redactor` si tenía nombre y BORRA los campos viejos (limpia,
  *   no datos muertos).
+ *
+ *   v4 → v5 (2026-08-31, costes indirectos de obra): `rates.ci` (fracción de CI
+ *   sobre los costes directos, DENTRO del PEM). Migración: `ci: 0` — la obra
+ *   guardada se presupuestó sin esa línea, así que su PEM no puede moverse al
+ *   abrirla; quien quiera el CI lo pone en la hoja Resumen.
  */
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 /** Estado de dominio de la obra (lo que persistiría en F6). Serializable. */
 export interface ObraData {
@@ -186,6 +191,9 @@ const MIGRATIONS: Record<number, (d: ObraData) => ObraData> = {
     }
     return { ...d, obra: obra as unknown as Obra, schemaVersion: 4 };
   },
+  // v4 → v5 (costes indirectos de obra): estrena `rates.ci` en 0 — el PEM de una
+  // obra ya guardada no se mueve al abrirla (ver SCHEMA_VERSION).
+  4: (d) => ({ ...d, rates: { ...d.rates, ci: 0 }, schemaVersion: 5 }),
 };
 
 /**

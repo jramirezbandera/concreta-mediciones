@@ -369,7 +369,7 @@ function resumenBloques(data: ResumenListado): (Paragraph | Table)[] {
     new TableRow({
       tableHeader: true,
       cantSplit: true,
-      children: ['Nº', 'Capítulo', '% s/ PEM', 'Importe'].map((h, i) =>
+      children: ['Nº', 'Capítulo', data.ci > 0 ? '% s/ C.D.' : '% s/ PEM', 'Importe'].map((h, i) =>
         cell(h, { width: W_RES[i]!, right: i >= 2, bold: true, color: GRIS, size: T_TINY, fill: BANDA }),
       ),
     }),
@@ -385,6 +385,26 @@ function resumenBloques(data: ResumenListado): (Paragraph | Table)[] {
           ],
         }),
     ),
+    // Con CI de obra la tabla cierra en tres pasos (directos → indirectos → PEM);
+    // sin él, en el PEM directamente, como siempre.
+    ...(data.ci > 0
+      ? [
+          new TableRow({
+            cantSplit: true,
+            children: [
+              cell('Costes directos (suma de capítulos)', { width: 0, span: 3, topBorder: true }),
+              cell(fmtNum(data.cd / 100), { width: W_RES[3]!, right: true, topBorder: true }),
+            ],
+          }),
+          new TableRow({
+            cantSplit: true,
+            children: [
+              cell(`Costes indirectos (${fmtNum(data.rates.ci * 100, 1)} %)`, { width: 0, span: 3 }),
+              cell(fmtNum(data.ci / 100), { width: W_RES[3]!, right: true }),
+            ],
+          }),
+        ]
+      : []),
     new TableRow({
       cantSplit: true,
       children: [
@@ -406,6 +426,10 @@ function resumenBloques(data: ResumenListado): (Paragraph | Table)[] {
     tabla(W_RES, rows),
     vacio(200),
     tablaDerecha(W_RES_ECO, [
+      // El CI solo imprime si la obra lo lleva aparte (ver `PrintResumen`).
+      ...(data.ci > 0
+        ? [linea('Costes directos', data.cd), linea(`Costes indirectos (${pct(data.rates.ci)})`, data.ci)]
+        : []),
       linea('Ejecución material', data.pem),
       linea(`Gastos generales (${pct(data.rates.gg)})`, data.gg),
       linea(`Beneficio industrial (${pct(data.rates.bi)})`, data.bi),
@@ -536,6 +560,9 @@ function certBloques(data: CertListado): (Paragraph | Table)[] {
     tablaDerecha(
       [2800, 1600],
       [
+        ...(t.ciOrigen > 0
+          ? [fila('Costes directos a origen', t.certCD), fila('Costes indirectos', t.ciOrigen)]
+          : []),
         fila('Ejecución material a origen', t.certPEM, true),
         fila('Gastos generales y B.I.', t.ggbiOrigen),
         fila('Ejecución por contrata a origen', t.pecOrigen),

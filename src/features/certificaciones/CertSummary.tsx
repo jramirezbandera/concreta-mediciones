@@ -7,6 +7,7 @@ import { certPctState } from './certPctState';
 import styles from './Certificaciones.module.css';
 
 const GGBI_COLOR = 'color-mix(in srgb, var(--accent) 45%, var(--bg-elevated))';
+const CI_COLOR = 'color-mix(in srgb, var(--accent) 70%, var(--bg-elevated))';
 
 function Row({
   label,
@@ -46,6 +47,7 @@ export function CertSummary({
   retenidoAcumulado: Cents | null;
 }) {
   const iva = useObraStore((s) => s.rates.iva);
+  const ci = useObraStore((s) => s.rates.ci);
   const gg = useObraStore((s) => s.rates.gg);
   const bi = useObraStore((s) => s.rates.bi);
   const setCertField = useObraStore((s) => s.setCertField);
@@ -107,6 +109,20 @@ export function CertSummary({
 
       <div className={styles.sumGroup}>
         <Row label="PEM presupuesto" value={totals.budgetPEM} />
+        {/* Con CI de obra, lo que suman los capítulos son los costes DIRECTOS
+            certificados; el PEM certificado les añade el mismo % que el
+            presupuesto (si el contrato lo lleva dentro, lo ejecutado también).
+            Sin CI la cadena es la de siempre: una sola fila. */}
+        {totals.ciOrigen > 0 && (
+          <Row label="Costes directos a origen" value={totals.certCD} />
+        )}
+        {totals.ciOrigen > 0 && (
+          <Row
+            label={`Costes indirectos (${fmtNum(ci * 100, 1)}%)`}
+            value={totals.ciOrigen}
+            color={CI_COLOR}
+          />
+        )}
         <Row label="PEM certificado a origen" value={totals.certPEM} accent />
         {(() => {
           const gSt = certPctState(totals.pctGlobal);

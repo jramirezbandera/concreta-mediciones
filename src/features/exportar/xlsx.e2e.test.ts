@@ -14,7 +14,7 @@ import type { Cert, Chapter, Partida, PartidasMap, Rates } from '../../core/type
 const partida = (over: Partial<Partida>): Partida => ({
   id: 'p', pos: '1.1', code: 'X', title: '', ud: 'ud', precio: 0, desc: '', med: [], items: [], ...over,
 });
-const rates: Rates = { iva: 0.1, gg: 0.13, bi: 0.06, coefK: 1 };
+const rates: Rates = { iva: 0.1, gg: 0.13, bi: 0.06, ci: 0, coefK: 1 };
 const chapters: Chapter[] = [
   { id: '01', code: '1', title: 'Demoliciones', children: [{ id: '01.01', code: '1.1', title: 'Interiores' }] },
   { id: '03', code: '3', title: 'Albañilería' },

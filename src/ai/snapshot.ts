@@ -12,7 +12,7 @@
    el recorte solo aparece cuando estorba. Función PURA y testeable: recibe un
    subconjunto estructural del estado, no el store.
    =========================================================================== */
-import { fmtEur, fmtNum, toEur, type Cents } from '../core/money';
+import { fmtEur, fmtNum, scaleCents, toEur, type Cents } from '../core/money';
 import { partidaCantidad, partidaImporte } from '../core/medicion';
 import { findNode } from '../core/tree';
 import type { Chapter, Partida, Cert, SubChapter } from '../core/types';
@@ -23,7 +23,7 @@ export interface ObraSnapshotInput {
   chapters: Chapter[];
   partidas: Record<string, Partida[]>;
   certs: Cert[];
-  rates: { coefK?: number; iva?: number; gg?: number; bi?: number };
+  rates: { coefK?: number; iva?: number; gg?: number; bi?: number; ci?: number };
   view: string;
   active: string; // id de capítulo/sub activo (o sentinel "toda la obra")
   openPartidaId: string | null;
@@ -114,11 +114,13 @@ export function buildObraSnapshot(input: ObraSnapshotInput, totalCents?: Cents):
   const cur = input.certs[input.curCert];
   const certData = cur ? cur.data : null;
 
-  // PEM global = Σ subtotales de capítulo.
-  const pem = input.chapters.reduce(
+  // PEM global = Σ subtotales de capítulo (costes directos) + los indirectos de
+  // obra, si los hay: el asistente tiene que ver el MISMO PEM que la hoja Resumen.
+  const cd = input.chapters.reduce(
     (s, ch) => s + chapterPem(input.partidas[ch.id] ?? [], coefK),
     0,
   );
+  const pem = cd + scaleCents(cd, input.rates.ci ?? 0);
 
   // --- cabecera + contexto (siempre) ---
   const head: string[] = [];
@@ -133,6 +135,7 @@ export function buildObraSnapshot(input: ObraSnapshotInput, totalCents?: Cents):
   if (input.rates.iva !== undefined) rateBits.push(`IVA ${Math.round(input.rates.iva * 100)}%`);
   if (input.rates.gg !== undefined) rateBits.push(`GG ${Math.round(input.rates.gg * 100)}%`);
   if (input.rates.bi !== undefined) rateBits.push(`BI ${Math.round(input.rates.bi * 100)}%`);
+  if (input.rates.ci) rateBits.push(`CI ${fmtNum(input.rates.ci * 100, 1)}%`);
   if (coefK !== 1) rateBits.push(`coef. K ${fmtNum(coefK, 4)}`);
   if (rateBits.length) head.push(`TASAS: ${rateBits.join(' · ')}`);
 

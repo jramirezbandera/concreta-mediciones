@@ -16,11 +16,13 @@ import {
   retenidoAcumulado,
 } from '../core/certificacion';
 import { buildResumen } from '../core/listado';
-import { pec, pem, totalConIva } from '../core/totales';
+import { costesDirectos, pec, pem, totalConIva } from '../core/totales';
 import {
   selectCertChapterRows,
   selectCertTotals,
   selectChapterTotals,
+  selectCostesDirectos,
+  selectCostesIndirectos,
   selectPec,
   selectPem,
   selectResumen,
@@ -50,12 +52,25 @@ function withTwoCerts() {
 describe('selectors — humo contra el core (B-08)', () => {
   it('selectPem/selectPec/selectTotalConIva/selectChapterTotals == core', () => {
     const s = state();
-    const pemC = pem(s.partidas, s.rates.coefK);
-    expect(selectPem(s)).toBe(pemC);
-    expect(selectPec(s)).toBe(pec(pemC, s.rates));
-    expect(selectTotalConIva(s)).toBe(totalConIva(pemC, s.rates));
-    // Σ por capítulo == PEM (coherencia interna)
-    expect(Object.values(selectChapterTotals(s)).reduce((a, b) => a + b, 0)).toBe(pemC);
+    const cd = costesDirectos(s.partidas, s.rates.coefK);
+    expect(selectCostesDirectos(s)).toBe(cd);
+    expect(selectPem(s)).toBe(pem(cd, s.rates));
+    expect(selectPec(s)).toBe(pec(selectPem(s), s.rates));
+    expect(selectTotalConIva(s)).toBe(totalConIva(selectPem(s), s.rates));
+    // Σ por capítulo == costes directos (coherencia interna)
+    expect(Object.values(selectChapterTotals(s)).reduce((a, b) => a + b, 0)).toBe(cd);
+  });
+
+  it('con CI de obra el PEM sube sobre los capítulos y arrastra GG/BI/IVA', () => {
+    state().setRates({ ci: 0.03 });
+    const s = state();
+    const cd = selectCostesDirectos(s);
+    expect(selectCostesIndirectos(s)).toBe(pem(cd, s.rates) - cd);
+    expect(selectPem(s)).toBeGreaterThan(cd);
+    expect(selectPec(s)).toBe(pec(selectPem(s), s.rates));
+    // La Σ de capítulos NO se mueve: el CI es una línea de obra, no un precio.
+    expect(Object.values(selectChapterTotals(s)).reduce((a, b) => a + b, 0)).toBe(cd);
+    state().setRates({ ci: 0 });
   });
 
   it('selectCertTotals cablea cur/prev/extras/snapshot/ajustes en el orden correcto', () => {

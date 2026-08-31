@@ -226,6 +226,14 @@ export interface Rates {
   gg: number; // gastos generales, p.ej. 0.13
   bi: number; // beneficio industrial, p.ej. 0.06
   /**
+   * Costes indirectos de la OBRA (RGLCAP art. 130): fracción sobre los costes
+   * directos que entra DENTRO del PEM (PEM = CD + CI), antes de GG/BI. 0 = los
+   * precios ya los llevan plegados (lo normal si el banco los mete en cada
+   * descompuesto); los bancos que los declaran aparte —CYPE— dejan su % en el
+   * chip `Partida.ciPct`, y la hoja Resumen lo propone. Ver `core/totales`.
+   */
+  ci: number;
+  /**
    * Coeficiente K global de obra (FIEBDC `~K`): escala los precios unitarios
    * para cuadrar el PEM a una cifra objetivo (alza o baja). 1 = sin ajuste.
    * Requisito de dominio del spike §0.5 / `TODOS.md` T-8.

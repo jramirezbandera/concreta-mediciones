@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { toSerializable, useObraStore } from '../store';
+import { SCHEMA_VERSION, toSerializable, useObraStore } from '../store';
 import {
   ImportError,
   buildExportText,
@@ -60,12 +60,15 @@ describe('parseObraJson (F6.3)', () => {
     }
   });
 
-  it('una obra v1 (2 niveles) MIGRA en cadena (v1→v2→v3→v4) en el import .json', () => {
+  it('una obra v1 (2 niveles) MIGRA en cadena hasta la última versión en el import .json', () => {
     // Backup real anterior a la jerarquía N niveles: schemaVersion 1, subs planos.
     const v1 = { ...toSerializable(state()), schemaVersion: 1 };
     const data = parseObraJson(JSON.stringify(v1));
-    expect(data.schemaVersion).toBe(4);
+    expect(data.schemaVersion).toBe(SCHEMA_VERSION);
     expect(data.bajas).toEqual({}); // v2→v3 estrena los tombstones vacíos
+    // v4→v5: el CI estrena en 0 — el PEM de un backup viejo no puede moverse al
+    // abrirlo (se presupuestó sin esa línea).
+    expect(data.rates.ci).toBe(0);
     expect(data.chapters.length).toBeGreaterThan(0);
     // El árbol degenerado (2 niveles) sobrevive intacto.
     expect(data.chapters[0]!.children?.length).toBeGreaterThan(0);

@@ -26,7 +26,7 @@ import { describe, expect, it } from 'vitest';
 import { obraToBc3, type Bc3ExportObra } from './bc3export';
 import { bc3ToObra } from './bc3import';
 import { partidaCantidad } from './medicion';
-import { pem } from './totales';
+import { costesDirectos } from './totales';
 
 const ARTIFACT = resolve(process.cwd(), 'docs', 'trazadora-presto.bc3');
 
@@ -82,7 +82,7 @@ const TRAZADORA: Bc3ExportObra = {
     // huérfano deliberado: NO debe viajar (el export es el árbol de la obra)
     mq999: { type: 'MQ', desc: 'Maquinaria sin uso', ud: 'h', precio: 99 },
   },
-  rates: { iva: 0.1, gg: 0.13, bi: 0.06, coefK: 1.13 },
+  rates: { iva: 0.1, gg: 0.13, bi: 0.06, ci: 0, coefK: 1.13 },
   obra: {
     denominacion: 'Obra trazadora Concreta — Demolición y transporte',
     direccion: 'Calle del Ensayo 1',
@@ -95,7 +95,7 @@ const text = new TextDecoder('windows-1252').decode(bytes);
 
 describe('trazadora — el archivo mínimo para el gate manual en Presto', () => {
   it('PEM con K = 4.074,13 € (30,04·114,54·1,13 + 18,5·8,9·1,13, redondeo por partida)', () => {
-    expect(pem(TRAZADORA.partidas, 1.13)).toBe(407413);
+    expect(costesDirectos(TRAZADORA.partidas, 1.13)).toBe(407413);
   });
 
   it('ejercita ~V/~K/~C/~D/~M/~T con ANSI, K=13 % y la raíz al PEM', () => {

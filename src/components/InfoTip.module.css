@@ -1,0 +1,64 @@
+/* Ayuda contextual de un concepto económico: ⓘ discreto + burbuja al hover. */
+
+.wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--text-disabled);
+  cursor: help;
+  /* Botón sin cromo: el icono ES el control (foco por teclado incluido). */
+  background: none;
+  border: 0;
+  padding: 0;
+  margin-left: var(--sp-4);
+  font: inherit;
+  line-height: 0;
+}
+.wrap:hover,
+.wrap:focus-visible {
+  color: var(--accent);
+}
+.wrap:focus-visible {
+  outline: none;
+}
+
+.bubble {
+  position: absolute;
+  z-index: 40;
+  bottom: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 280px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--border-main);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-panel);
+  color: var(--text-secondary);
+  font-size: var(--fs-caption);
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0;
+  text-align: left;
+  white-space: normal;
+  /* Invisible hasta el hover/foco, pero SIN display:none: así la lee un lector
+     de pantalla desde el `aria-describedby` sin depender del puntero. */
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s ease;
+  pointer-events: none;
+}
+.wrap:hover .bubble,
+.wrap:focus-visible .bubble {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Cerca del borde del papel la burbuja se ancla a la derecha para no salirse. */
+.end .bubble {
+  left: auto;
+  right: -6px;
+  transform: none;
+}

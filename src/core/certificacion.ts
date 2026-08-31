@@ -303,9 +303,15 @@ export function retenidoAcumulado(
 }
 
 export interface CertTotals {
-  budgetPEM: Cents; // PEM del presupuesto (para el % global)
-  certPEM: Cents; // PEM certificado a origen (Σ aOrigen)
-  prevPEM: Cents; // PEM certificado anterior (Σ anterior)
+  budgetPEM: Cents; // PEM del presupuesto, CI incluido (para el % global)
+  /** Σ aOrigen: los COSTES DIRECTOS certificados a origen — lo que suman los
+   *  capítulos de la hoja. El PEM certificado les añade el CI. */
+  certCD: Cents;
+  /** Costes indirectos sobre lo certificado a origen (0 si la obra no lleva CI). */
+  ciOrigen: Cents;
+  certPEM: Cents; // PEM certificado a origen = certCD + ciOrigen
+  prevCD: Cents; // Σ anterior (costes directos)
+  prevPEM: Cents; // PEM certificado anterior = prevCD + su CI
   pctGlobal: number; // certPEM / budgetPEM · 100
   ggbiOrigen: Cents;
   pecOrigen: Cents;
@@ -332,32 +338,40 @@ export function certTotals(
   snap?: CertSnapshot,
   ajustes: Ajuste[] = [],
 ): CertTotals {
-  let budgetPEM = 0;
-  let certPEM = 0;
-  let prevPEM = 0;
+  let budgetCD = 0;
+  let certCD = 0;
+  let prevCD = 0;
   for (const p of partidas) {
-    // budgetPEM es la referencia del % global → SIEMPRE el presupuesto vivo
+    // budgetCD es la referencia del % global → SIEMPRE el presupuesto vivo
     // (el snapshot congela lo certificado, no el presupuesto).
-    budgetPEM += partidaImporte(p, coefK);
+    budgetCD += partidaImporte(p, coefK);
     const k = certCalc(p, curData, prevData, coefK, snap);
-    certPEM += k.aOrigen;
-    prevPEM += k.anterior;
+    certCD += k.aOrigen;
+    prevCD += k.anterior;
   }
   // Contradictorios: suman al certificado/anterior pero NO al PEM de presupuesto
   // (no están en el contrato base → el % global puede pasar de 100%).
   const prevExtraCant = extrasCantidad(prevExtras);
   for (const e of extras) {
     const k = extraCalc(e, prevExtraCant[e.id] ?? 0);
-    certPEM += k.aOrigen;
-    prevPEM += k.anterior;
+    certCD += k.aOrigen;
+    prevCD += k.anterior;
   }
   // Partidas borradas del presupuesto con importe certificado (D-01): valen su
-  // snapshot — el histórico no se reescribe. No tocan budgetPEM (ya no están en
+  // snapshot — el histórico no se reescribe. No tocan budgetCD (ya no están en
   // el contrato vivo, como los contradictorios).
   const alive = new Set(partidas.map((p) => p.id));
   const del = certDeletedTotals(alive, curData, prevData, snap);
-  certPEM += del.aOrigen;
-  prevPEM += del.anterior;
+  certCD += del.aOrigen;
+  prevCD += del.anterior;
+  // Costes indirectos de obra (RGLCAP art. 130): la cert los aplica sobre lo
+  // EJECUTADO, con el mismo % que el presupuesto — si el contrato se firmó con
+  // CI dentro del PEM, lo certificado tiene que llevarlo o el % a origen no
+  // cuadraría con el presupuesto. Con `rates.ci = 0` es un no-op exacto.
+  const ciOrigen = scaleCents(certCD, rates.ci);
+  const certPEM = certCD + ciOrigen;
+  const prevPEM = prevCD + scaleCents(prevCD, rates.ci);
+  const budgetPEM = budgetCD + scaleCents(budgetCD, rates.ci);
   const pctGlobal = budgetPEM > 0 ? (certPEM / budgetPEM) * 100 : 0;
   const ggbi = rates.gg + rates.bi;
   const ggbiOrigen = scaleCents(certPEM, ggbi);
@@ -385,7 +399,10 @@ export function certTotals(
   const liquido = base + iva;
   return {
     budgetPEM,
+    certCD,
+    ciOrigen,
     certPEM,
+    prevCD,
     prevPEM,
     pctGlobal,
     ggbiOrigen,

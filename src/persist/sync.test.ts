@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { clear, get, set } from 'idb-keyval';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { toSerializable, useObraStore, type ObraData } from '../store';
+import { SCHEMA_VERSION, toSerializable, useObraStore, type ObraData } from '../store';
 import { OBRA_KEY, loadObraEnvelope, obraKey } from './persist';
 import { createObra, getActiveId, listObras, loadIndex, setActiveId } from './registry';
 import { usePersistStore } from './persistStore';
@@ -61,7 +61,7 @@ describe('hydrate (multi-obra)', () => {
     await set(OBRA_KEY, { schemaVersion: 1, savedAt: 'x', appVersion: '0.5', data: v1 });
     await hydrate();
     expect(state().obra.denominacion).toBe('Obra v1 antigua');
-    expect(state().schemaVersion).toBe(4); // migrada en cadena (v1→v2→v3→v4)
+    expect(state().schemaVersion).toBe(SCHEMA_VERSION); // migrada en cadena desde la v1
     expect(usePersistStore.getState().recovery).toBeNull();
     expect(await get(OBRA_KEY)).toBeUndefined(); // legacy borrada
     expect((await listObras()).length).toBe(1);

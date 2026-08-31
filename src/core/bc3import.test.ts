@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { bc3ToObra, Bc3ImportError, summarizeParserWarnings } from './bc3import';
 import { toEur } from './money';
-import { pem as pemOf } from './totales';
+import { costesDirectos as cdOf } from './totales';
 
 /** Lee un .bc3 de muestra del spike como bytes (ruta absoluta -> fs de Node, no
  *  pasa por la resolución de assets de Vite). Vitest corre desde la raíz. */
@@ -42,7 +42,7 @@ describe.skipIf(!existsSync(OBRA_REAL))('bc3ToObra — import de obra real (Pres
     expect(report.rootPriceCents).not.toBeNull();
     expect(Math.abs(report.deltaCents!)).toBeLessThan(300); // < 3 €
     // y el motor recalcula el mismo PEM que el report.
-    expect(pemOf(data.partidas, data.rates.coefK)).toBe(report.pemCents);
+    expect(cdOf(data.partidas, data.rates.coefK)).toBe(report.pemCents);
     // sanity: ~491.298 €
     expect(toEur(report.pemCents)).toBeGreaterThan(490_000);
     expect(toEur(report.pemCents)).toBeLessThan(492_000);

@@ -2,33 +2,46 @@
 import { useMemo, useState } from 'react';
 import { EditableNum, Icon, IvaSelect } from '../../components';
 import { fmtCents, fmtNum, type Cents } from '../../core/money';
-import { pem as pemCore } from '../../core/totales';
-import { selectPec, selectPem, selectTotalConIva, useObraStore } from '../../store';
+import { costesDirectos as cdCore, pem as pemCore } from '../../core/totales';
+import {
+  selectCostesDirectos,
+  selectCostesIndirectos,
+  selectPec,
+  selectPem,
+  selectTotalConIva,
+  useObraStore,
+} from '../../store';
 import { AjustaModal } from './AjustaModal';
 import styles from '../Sidebar.module.css';
 
 export function ResumenCard({ compact }: { compact: boolean }) {
+  const cd = useObraStore(selectCostesDirectos);
+  const ci = useObraStore(selectCostesIndirectos);
   const pem = useObraStore(selectPem);
   const pec = useObraStore(selectPec);
   const total = useObraStore(selectTotalConIva);
-  const gg = useObraStore((s) => s.rates.gg);
-  const bi = useObraStore((s) => s.rates.bi);
-  const iva = useObraStore((s) => s.rates.iva);
-  const coefK = useObraStore((s) => s.rates.coefK);
+  const rates = useObraStore((s) => s.rates);
+  const { gg, bi, iva, coefK } = rates;
   const setRates = useObraStore((s) => s.setRates);
   const partidas = useObraStore((s) => s.partidas);
 
-  // PEM a K=1: base del ajuste por objetivo, independiente del K vigente.
-  const baseCents = useMemo(() => pemCore(partidas, 1), [partidas]);
+  // PEM a K=1: base del ajuste por objetivo, independiente del K vigente. Lleva
+  // el CI, como el PEM que se teclea como objetivo (el K sale igual: multiplica
+  // arriba y abajo de la razón).
+  const baseCents = useMemo(() => pemCore(cdCore(partidas, 1), rates), [partidas, rates]);
   const [targeting, setTargeting] = useState(false);
 
   const ggbi: Cents = pec - pem;
   const ivaCents: Cents = total - pec;
   const pemColor = 'var(--accent)';
+  const ciColor = 'color-mix(in srgb, var(--accent) 70%, var(--bg-elevated))';
   const ggbiColor = 'color-mix(in srgb, var(--accent) 45%, var(--bg-elevated))';
   const ivaColor = 'var(--text-disabled)';
+  // Con CI la barra separa directos e indirectos (los dos son PEM, pero el
+  // usuario acaba de decidir el segundo y quiere verlo pesar).
   const segs: [Cents, string][] = [
-    [pem, pemColor],
+    [ci > 0 ? cd : pem, pemColor],
+    ...(ci > 0 ? ([[ci, ciColor]] as [Cents, string][]) : []),
     [ggbi, ggbiColor],
     [ivaCents, ivaColor],
   ];
@@ -68,12 +81,33 @@ export function ResumenCard({ compact }: { compact: boolean }) {
         ))}
       </div>
       <div className={styles.resRows}>
+        {ci > 0 && (
+          <div className={styles.resRow}>
+            <span className={styles.resLabel}>
+              <span className={styles.resDot} style={{ background: pemColor }} />
+              Costes directos
+            </span>
+            <span className={`mono ${styles.resVal}`}>{fmtCents(cd)}</span>
+          </div>
+        )}
+        {ci > 0 && (
+          <div className={styles.resRow}>
+            <span className={styles.resLabel}>
+              <span className={styles.resDot} style={{ background: ciColor }} />
+              {/* 1 dec, como GG+BI: un «3%» que en realidad es 2,5 % engaña. */}
+              Costes indir. ({fmtNum(rates.ci * 100, 1)}%)
+            </span>
+            <span className={`mono ${styles.resVal}`}>{fmtCents(ci)}</span>
+          </div>
+        )}
         <div className={styles.resRow}>
           <span className={styles.resLabel}>
-            <span className={styles.resDot} style={{ background: pemColor }} />
+            {ci === 0 && <span className={styles.resDot} style={{ background: pemColor }} />}
             PEM
           </span>
-          <span className={`mono ${styles.resVal}`}>{fmtCents(pem)}</span>
+          <span className={`mono ${styles.resVal} ${ci > 0 ? styles.strong : ''}`}>
+            {fmtCents(pem)}
+          </span>
         </div>
         <div className={styles.resRow}>
           <span className={styles.resLabel}>
@@ -105,7 +139,7 @@ export function ResumenCard({ compact }: { compact: boolean }) {
         onClose={() => setTargeting(false)}
         baseCents={baseCents}
         currentPem={pem}
-        pemAt={(k) => pemCore(partidas, k)}
+        pemAt={(k) => pemCore(cdCore(partidas, k), rates)}
         onApply={(k) => setRates({ coefK: k })}
         compact={compact}
       />

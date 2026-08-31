@@ -39,6 +39,69 @@ describe('ResumenView (F7.1) — hoja editable', () => {
     expect(useObraStore.getState().rates.gg).toBe(0.135);
   });
 
+  it('la fila de costes indirectos se ve SIEMPRE (a 0 % es donde se ponen)', () => {
+    render(<ResumenView compact={false} />);
+    expect(screen.getByRole('button', { name: 'Costes indirectos' })).toBeInTheDocument();
+    // A 0 % el PEM sigue siendo la Σ de capítulos y no sobra ninguna fila.
+    expect(screen.queryByText('Costes directos (suma de capítulos)')).not.toBeInTheDocument();
+  });
+
+  it('editar el CI mueve el PEM y estrena la fila de costes directos', () => {
+    render(<ResumenView compact={false} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Costes indirectos' }));
+    const input = screen.getByLabelText('Costes indirectos');
+    fireEvent.change(input, { target: { value: '3' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(useObraStore.getState().rates.ci).toBe(0.03);
+    // 26.291,91 (directos, Σ capítulos) + 788,76 (3%) = 27.080,67 de PEM.
+    expect(screen.getByText('Costes directos (suma de capítulos)')).toBeInTheDocument();
+    expect(screen.getByText('26.291,91 €')).toBeInTheDocument();
+    expect(screen.getByText('788,76 €')).toBeInTheDocument();
+    expect(screen.getByText('27.080,67 €')).toBeInTheDocument();
+    // Y arrastra a GG/BI, que van sobre el PEM: 27.080,67 · 13 % = 3.520,49.
+    expect(screen.getByText('3.520,49 €')).toBeInTheDocument();
+  });
+
+  it('ofrece el CI que declaran las partidas importadas, y solo lo aplica al pulsar', () => {
+    useObraStore.setState((s) => {
+      for (const p of s.partidas['01'] ?? []) p.ciPct = 3;
+    });
+    render(<ResumenView compact={false} />);
+    expect(screen.getByText(/declaran un CI del/)).toBeInTheDocument();
+    expect(useObraStore.getState().rates.ci).toBe(0); // aún no se ha tocado nada
+    fireEvent.click(screen.getByRole('button', { name: /Aplicar 3,0%/ }));
+    expect(useObraStore.getState().rates.ci).toBe(0.03);
+    // Aplicado, el ofrecimiento desaparece (ya no hay nada que ofrecer).
+    expect(screen.queryByText(/declaran un CI del/)).not.toBeInTheDocument();
+  });
+
+  it('la propuesta de CI se puede descartar sin tocar el presupuesto', () => {
+    useObraStore.setState((s) => {
+      for (const p of s.partidas['01'] ?? []) p.ciPct = 2;
+    });
+    render(<ResumenView compact={false} />);
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Descartar la propuesta de costes indirectos' }),
+    );
+    expect(screen.queryByText(/declaran un CI del/)).not.toBeInTheDocument();
+    expect(useObraStore.getState().rates.ci).toBe(0);
+  });
+
+  it('cada concepto editable lleva su ayuda (qué es y sobre qué se calcula)', () => {
+    render(<ResumenView compact={false} />);
+    expect(screen.getByRole('button', { name: 'Qué es Gastos generales' })).toHaveAttribute(
+      'title',
+      expect.stringContaining('EMPRESA'),
+    );
+    expect(screen.getByRole('button', { name: 'Qué es Costes indirectos' })).toHaveAttribute(
+      'title',
+      expect.stringContaining('OBRA'),
+    );
+    expect(screen.getByRole('button', { name: 'Qué es PEM' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Qué es PEC' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Qué es IVA' })).toBeInTheDocument();
+  });
+
   it('las observaciones persisten en obra.notes (dominio, F6 las guarda)', () => {
     render(<ResumenView compact={false} />);
     fireEvent.change(screen.getByLabelText('Observaciones y notas'), {

@@ -111,6 +111,20 @@ export function PrintCert({ data }: { data: CertListado }) {
       ))}
 
       <div className="pd-summary">
+        {/* Los costes indirectos solo imprimen si la obra los lleva aparte: la
+            cert los aplica sobre lo ejecutado, con el % del presupuesto. */}
+        {t.ciOrigen > 0 && (
+          <>
+            <div className="pd-summary-row">
+              <span>Costes directos a origen</span>
+              <span className="mono">{fmtCents(t.certCD)}</span>
+            </div>
+            <div className="pd-summary-row">
+              <span>Costes indirectos</span>
+              <span className="mono">{fmtCents(t.ciOrigen)}</span>
+            </div>
+          </>
+        )}
         <div className="pd-summary-row">
           <span>Ejecución material a origen</span>
           <b className="mono">{fmtCents(t.certPEM)}</b>
