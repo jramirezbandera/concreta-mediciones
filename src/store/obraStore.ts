@@ -298,7 +298,8 @@ export interface ObraState extends ObraData {
    * Σ de la medición si la hay y esta cantidad si no. Ignora no finitos/negativos.
    */
   setCantidad: (chapterId: string, partidaId: string, value: number) => void;
-  /** Añade una línea de medición vacía (dimensiones en blanco = factor 1). */
+  /** Añade una línea de medición vacía. Mientras no se escriba ninguna dimensión
+   *  su parcial es 0: añadirla no mueve la cantidad de la partida. */
   addMedLine: (chapterId: string, partidaId: string) => void;
   /** Edita un campo de una línea de medición (comentario o dimensión). */
   editMedLine: <K extends keyof MedLine>(

@@ -60,7 +60,8 @@ function idx(v: unknown): number | undefined {
 /**
  * Normaliza una línea cruda a `OpLinea` limpia: `comentario` string (o ausente),
  * dimensiones numéricas (no finitas/ausentes → ausente = factor 1). Un objeto sin
- * ningún campo útil devuelve `{}` (línea de factor 1, válida). No-objeto → null.
+ * ningún campo útil devuelve `{}`: línea válida, pero SIN ninguna dimensión
+ * escrita, así que su parcial es 0 (ver `lineParcial`). No-objeto → null.
  */
 function normalizeLinea(raw: unknown): OpLinea | null {
   if (typeof raw !== 'object' || raw === null) return null;

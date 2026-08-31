@@ -7,7 +7,8 @@
 
 export type ResourceType = 'MO' | 'MQ' | 'MAT' | '%CI';
 
-/** Línea de medición: uds × largo × ancho × alto. Dimensión vacía = factor 1. */
+/** Línea de medición: uds × largo × ancho × alto. Dimensión vacía = factor 1;
+ *  las CUATRO vacías = línea de comentario, parcial 0 (ver `lineParcial`). */
 export interface MedLine {
   /**
    * Id estable de la línea (F4): la certificación por líneas guarda un SNAPSHOT

@@ -152,14 +152,15 @@ const TYPE_NUM: Record<ResourceType, number> = { MO: 1, MQ: 2, MAT: 3, '%CI': 0 
 /* ---- líneas de medición del ~M ---------------------------------------------
    Cada línea son 6 subcampos `TIPO\COMENTARIO\UDS\LARGO\ANCHO\ALTO\` (TIPO
    vacío = línea normal). Dims hasta 3 dec; dimensión vacía viaja vacía
-   (factor 1 en ambos motores). Si las CUATRO están vacías se explicita
-   uds=1: el import descartaría la línea como "de sección" (todas null) y el
-   Σ de parciales dejaría de cuadrar con la cantidad → perdería la medición. */
+   (factor 1 en ambos motores). Una línea con las CUATRO vacías viaja vacía
+   TAMBIÉN: es una línea de SECCIÓN (un comentario que no mide) y su parcial
+   aquí es 0 — el import la descarta y el Σ sigue cuadrando con la cantidad.
+   (Antes se le forzaba `uds=1` para cuadrar con el `lineParcial` de entonces,
+   que contaba 1 la línea en blanco; corregido eso, forzarlo INVENTABA una
+   unidad en el fichero exportado.) */
 function medLine(l: MedLine): string {
   const d = (v: number | '') => (v === '' ? '' : num(v, 3));
-  const allEmpty = l.uds === '' && l.largo === '' && l.ancho === '' && l.alto === '';
-  const uds = allEmpty ? '1' : d(l.uds);
-  return `\\${field(l.comment)}\\${uds}\\${d(l.largo)}\\${d(l.ancho)}\\${d(l.alto)}\\`;
+  return `\\${field(l.comment)}\\${d(l.uds)}\\${d(l.largo)}\\${d(l.ancho)}\\${d(l.alto)}\\`;
 }
 
 /* ---- códigos de concepto (D2) ----------------------------------------------

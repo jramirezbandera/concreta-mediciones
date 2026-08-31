@@ -31,8 +31,14 @@ describe('lineParcial', () => {
 
   it('una dimensión vacía cuenta como factor 1', () => {
     expect(lineParcial(ml(1, 14.2, '', ''))).toBe(14.2); // arena 0/5
-    expect(lineParcial(ml('', '', '', ''))).toBe(1);
     expect(lineParcial(ml(1, 18, 12, ''))).toBe(216);
+    expect(lineParcial(ml(2, '', '', ''))).toBe(2); // solo uds: sigue midiendo 2
+  });
+
+  it('una línea SIN NINGUNA dimensión escrita mide 0, no 1', () => {
+    // El «vacío = factor 1» completa una línea que ya mide; aplicado a las
+    // cuatro convertía cada línea recién añadida en una unidad fantasma.
+    expect(lineParcial(ml('', '', '', ''))).toBe(0);
   });
 
   it('un 0 explícito SÍ anula la línea (a diferencia del vacío)', () => {
@@ -49,6 +55,15 @@ describe('medTotal', () => {
 
   it('devuelve 0 sin líneas', () => {
     expect(medTotal([])).toBe(0);
+  });
+
+  it('una línea recién añadida (en blanco) NO sube el total', () => {
+    // El caso que reportó obra: «Añadir línea» dejaba la partida midiendo 1 más
+    // aunque no se escribiera nada, y la unidad fantasma se colaba en el PEM.
+    const real = ml(2, 32.8, '', 30.7);
+    expect(medTotal([real])).toBe(2013.92);
+    expect(medTotal([real, ml('', '', '', '')])).toBe(2013.92);
+    expect(medTotal([ml('', '', '', '')])).toBe(0);
   });
 });
 

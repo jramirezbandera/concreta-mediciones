@@ -337,15 +337,16 @@ describe('obraToBc3 — ~M', () => {
     ]);
   });
 
-  it('línea con TODAS las dims vacías → uds=1 explícito (no es línea de sección)', () => {
+  it('línea con TODAS las dims vacías viaja vacía (línea de sección, parcial 0)', () => {
     const o = mini({
       med: [
-        { id: 'm1', comment: 'Unidad completa', uds: '', largo: '', ancho: '', alto: '' },
+        { id: 'm1', comment: 'Solo un rótulo', uds: '', largo: '', ancho: '', alto: '' },
         { id: 'm2', comment: '', uds: 2, largo: 3, ancho: '', alto: '' },
       ],
     });
-    // línea 1: \Unidad completa\1\\\\  ·  línea 2: \\2\3\\\
-    expect(rec(o, '~M|1#')).toBe(String.raw`~M|1#\D01|1\1\|7|\Unidad completa\1\\\\\\2\3\\\|`);
+    // La cantidad es 6 (solo la línea que mide): antes se forzaba uds=1 en la
+    // línea en blanco y salían 7, inventando una unidad en el fichero.
+    expect(rec(o, '~M|1#')).toBe(String.raw`~M|1#\D01|1\1\|6|\Solo un rótulo\\\\\\\2\3\\\|`);
   });
 });
 
