@@ -1,4 +1,5 @@
-/* Ayuda contextual de un concepto económico: ⓘ discreto + burbuja al hover. */
+/* Ayuda contextual de un concepto económico: ⓘ discreto + burbuja al hover, al
+   foco o al toque (táctil). */
 
 .wrap {
   position: relative;
@@ -16,7 +17,8 @@
   line-height: 0;
 }
 .wrap:hover,
-.wrap:focus-visible {
+.wrap:focus-visible,
+.wrap.open {
   color: var(--accent);
 }
 .wrap:focus-visible {
@@ -28,9 +30,11 @@
   z-index: 40;
   bottom: calc(100% + 7px);
   left: 50%;
-  transform: translateX(-50%);
+  /* --tip-dx: desplazamiento que calcula InfoTip.place() para no salirse de la
+     pantalla (en móvil el ⓘ puede ir pegado a un borde). */
+  transform: translateX(calc(-50% + var(--tip-dx, 0px)));
   width: max-content;
-  max-width: 280px;
+  max-width: min(280px, calc(100vw - 16px));
   padding: 9px 11px;
   border-radius: 8px;
   border: 1px solid var(--border-main);
@@ -51,7 +55,8 @@
   pointer-events: none;
 }
 .wrap:hover .bubble,
-.wrap:focus-visible .bubble {
+.wrap:focus-visible .bubble,
+.wrap.open .bubble {
   opacity: 1;
   visibility: visible;
 }
@@ -60,5 +65,11 @@
 .end .bubble {
   left: auto;
   right: -6px;
-  transform: none;
+  transform: translateX(var(--tip-dx, 0px));
+}
+
+/* Sin sitio arriba (primera fila bajo una cabecera fija): se abre hacia abajo. */
+.bubble[data-below] {
+  bottom: auto;
+  top: calc(100% + 7px);
 }
