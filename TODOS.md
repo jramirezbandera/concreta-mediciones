@@ -51,29 +51,23 @@ externa (Codex) en la revisión de ingeniería de undo/redo (2026-07-05).
 
 ---
 
-## Pase de diseño móvil — pendientes (design-review 2026-09-24)
+## ~~Pase de diseño móvil~~ — HECHO (design-review 2026-09-24)
 
-Hecho (commits `style(design): FINDING-001…018`): cabecera móvil y de tablet con
-menú «Más», menú ⋮ recortado, Resumen, Certificaciones, Exportar, contraste
-(`--text-disabled` fuera del texto legible y acento claro a #0369a1), deshacer en
-móvil, pistas de teclado fuera del táctil (`isTouchOnly()`), ⓘ al tacto, botón
-accesible para desplegar partida, cabecera compacta al hacer scroll
+Commits `style(design): FINDING-001…018` y tres pulidos: cabecera móvil y de
+tablet con menú «Más», menú ⋮ recortado, Resumen, Certificaciones, Exportar,
+contraste (`--text-disabled` fuera del texto legible, acento claro #0369a1),
+deshacer en móvil, pistas de teclado fuera del táctil (`isTouchOnly()`), ⓘ al
+tacto, botón accesible para desplegar partida, cabecera compacta al hacer scroll
 (`CompactHeaderBar`), nombre de obra visible en tablet y escritorio estrecho,
-árbol de capítulos usable al tacto/teclado y borrar en rojo. Quedan pulidos:
+árbol de capítulos usable al tacto/teclado, borrar en rojo, pestaña
+«Justificación» corta en móvil, margen lateral único (`--gutter-compact`) y
+barras que animan transform en vez de width.
 
-- **Pestaña «Justificación del precio» en dos líneas en móvil.** Acortarla a
-  «Justificación» en compacto rompe `Presupuesto.test.tsx` («la unidad del
-  RECURSO admite una unidad libre»), que la busca por el texto completo en modo
-  tarjetas: cambiar etiqueta y test a la vez.
-- **Márgenes laterales en móvil con cuatro valores** (TopBar 10, listas de
-  tarjetas 12, cabecera de Certificaciones/Importar/barra PEM 14, cabeceras y
-  Resumen 16px): unificar a uno.
-- **`transition: width`** en las barras de peso/avance: animar `transform: scaleX`.
-- La franja PEM/TOTAL abre el cajón de capítulos (con la tarjeta Resumen al pie):
-  se deja así, es donde viven el coeficiente K y «Ajusta».
+Decisión que se queda así: la franja PEM/TOTAL abre el cajón de capítulos (con
+la tarjeta Resumen al pie), porque ahí viven el coeficiente K y «Ajusta».
 
 Informe completo: `~/.gstack/projects/jramirezbandera-concreta-mediciones/designs/design-audit-20260924/`.
 
 ---
 
-_Backlog: 1 TODO (mutaciones en pestaña readonly) + pendientes del pase de diseño móvil. Los de navegación de teclado en certificaciones están hechos._
+_Backlog: 1 TODO (mutaciones en pestaña readonly). El pase de diseño móvil y la navegación de teclado en certificaciones están hechos._
