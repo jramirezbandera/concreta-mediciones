@@ -50,11 +50,24 @@ export const PartidaCard = memo(function PartidaCard({
     >
       <div className={styles.pCardHead} onClick={() => togglePartida(p.id)}>
         <div className={styles.pCardTop}>
-          <Icon
-            name={open ? 'chevronDown' : 'chevron'}
-            size={15}
-            className={`${styles.chevIcon} ${open ? styles.open : ''}`}
-          />
+          {/* Botón real (no solo el clic en la tarjeta): foco de teclado, estado
+              para lectores de pantalla y 44px de área táctil. Igual que CertCard. */}
+          <button
+            type="button"
+            className={`tap-target ${styles.chevBtn}`}
+            aria-expanded={open}
+            aria-label={`${open ? 'Contraer' : 'Desplegar'} partida ${p.pos}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              togglePartida(p.id);
+            }}
+          >
+            <Icon
+              name={open ? 'chevronDown' : 'chevron'}
+              size={15}
+              className={`${styles.chevIcon} ${open ? styles.open : ''}`}
+            />
+          </button>
           <div className={styles.pCardId}>
             <span className={`mono ${styles.pCardPos}`}>{p.pos}</span>
             <span className={`mono ${styles.pCardCode}`}>{p.code}</span>

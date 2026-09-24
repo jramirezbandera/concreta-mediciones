@@ -220,6 +220,23 @@
   flex-shrink: 0;
   color: var(--text-disabled);
 }
+/* Botón que envuelve el chevron (desplegar partida): sin cromo, solo el foco. */
+.chevBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.chevBtn:focus-visible {
+  outline: none;
+  border-radius: 4px;
+  box-shadow: var(--ring-accent);
+}
 .chevIcon.open {
   color: var(--accent);
 }

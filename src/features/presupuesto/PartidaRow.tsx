@@ -124,11 +124,24 @@ export const PartidaRow = memo(function PartidaRow({
             >
               <Icon name="grip" size={12} />
             </span>
-            <Icon
-              name={open ? 'chevronDown' : 'chevron'}
-              size={13}
-              className={`${styles.chevIcon} ${open ? styles.open : ''}`}
-            />
+            {/* Botón real para desplegar: la fila entera sigue siendo clicable,
+                pero con teclado y lector de pantalla solo se llegaba por aquí. */}
+            <button
+              type="button"
+              className={`tap-target ${styles.chevBtn}`}
+              aria-expanded={open}
+              aria-label={`${open ? 'Contraer' : 'Desplegar'} partida ${p.pos}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                togglePartida(p.id);
+              }}
+            >
+              <Icon
+                name={open ? 'chevronDown' : 'chevron'}
+                size={13}
+                className={`${styles.chevIcon} ${open ? styles.open : ''}`}
+              />
+            </button>
             <div className={styles.numInner}>
               <div className={`mono ${styles.pos}`}>{p.pos}</div>
               <div className={`mono ${styles.code}`}>{p.code}</div>
