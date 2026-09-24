@@ -221,7 +221,7 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .med-row:hover { background:color-mix(in srgb, var(--accent) 4%, transparent); }
 .med-row .med-del { opacity:0; }
 .med-row:hover .med-del { opacity:1; }
-.med-del:hover { background:color-mix(in srgb, var(--state-warn) 16%, transparent) !important; color:var(--state-warn) !important; }
+.med-del:hover { background:color-mix(in srgb, var(--state-danger) 16%, transparent) !important; color:var(--state-danger) !important; }
 .export-item:hover { background:var(--accent-soft); }
 .export-item:hover .mono { color:var(--accent) !important; }
 
@@ -233,7 +233,7 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .ref-row:hover { background:var(--bg-elevated) !important; }
 .ref-chap:hover { background:var(--bg-elevated); }
 .ref-copy:hover { background:var(--accent) !important; color:var(--on-accent) !important; }
-.sb-del:hover { background:color-mix(in srgb, var(--state-warn) 16%, transparent) !important; color:var(--state-warn) !important; }
+.sb-del:hover { background:color-mix(in srgb, var(--state-danger) 16%, transparent) !important; color:var(--state-danger) !important; }
 .part-menu-btn:hover { background:var(--bg-elevated) !important; color:var(--text-primary) !important; }
 .fmt-chip:hover { border-color:var(--chip) !important; color:var(--chip) !important; background:color-mix(in srgb, var(--chip) 10%, transparent) !important; }
 .listado-card:hover { border-color:color-mix(in srgb, var(--accent) 45%, var(--border-main)) !important;

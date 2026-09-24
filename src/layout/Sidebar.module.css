@@ -270,8 +270,8 @@
   background: var(--bg-elevated);
 }
 .chapDel:hover {
-  background: color-mix(in srgb, var(--state-warn) 16%, transparent);
-  color: var(--state-warn);
+  background: color-mix(in srgb, var(--state-danger) 16%, transparent);
+  color: var(--state-danger);
 }
 .chapK {
   font-size: var(--fs-caption);
@@ -427,11 +427,12 @@
   cursor: default;
   background: transparent;
 }
+/* Borrar = destructivo → rojo (DESIGN.md: danger), como «Eliminar partida». */
 .menuDanger {
-  color: var(--state-warn);
+  color: var(--state-danger);
 }
 .menuDanger:hover {
-  background: color-mix(in srgb, var(--state-warn) 16%, transparent);
+  background: color-mix(in srgb, var(--state-danger) 16%, transparent);
 }
 .menuDivider {
   height: 1px;
