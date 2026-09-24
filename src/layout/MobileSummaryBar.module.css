@@ -25,7 +25,7 @@
 }
 .label {
   font-size: var(--fs-micro);
-  color: var(--text-disabled);
+  color: var(--text-secondary);
 }
 .sep {
   color: var(--text-disabled);

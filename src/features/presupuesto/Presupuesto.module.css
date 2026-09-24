@@ -47,7 +47,7 @@
 .chCount,
 .chPct {
   font-size: var(--fs-table);
-  color: var(--text-disabled);
+  color: var(--text-secondary); /* texto informativo → AA (no --disabled) */
 }
 .chDot {
   color: var(--border-main);
@@ -68,7 +68,7 @@
 .chImpLabel {
   font-size: var(--fs-badge);
   font-weight: 600;
-  color: var(--text-disabled);
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 .chImporte {
@@ -1258,7 +1258,7 @@
 }
 .pCardCode {
   font-size: var(--fs-caption);
-  color: var(--text-disabled);
+  color: var(--text-secondary); /* legible (AA), igual que .cardCode de Certificaciones */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1304,7 +1304,7 @@
 .pStatLabel {
   font-size: var(--fs-micro);
   font-weight: 600;
-  color: var(--text-disabled);
+  color: var(--text-secondary);
   margin-bottom: var(--sp-2);
 }
 .pStatVal {

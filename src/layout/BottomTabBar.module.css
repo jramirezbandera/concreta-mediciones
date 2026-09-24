@@ -18,7 +18,8 @@
   cursor: pointer;
   background: transparent;
   font-family: inherit;
-  color: var(--text-disabled);
+  /* secondary, no disabled: una pestaña inactiva sigue siendo navegable (AA). */
+  color: var(--text-secondary);
 }
 .tab.active {
   color: var(--accent);
