@@ -70,50 +70,52 @@ export function SubRow({
     ),
   );
 
+  // Mismo patrón que ChapterCard: fila <div> + botón principal que la cubre;
+  // chevron y ⋮ son botones reales hermanos (no anidados en otro <button>).
   return (
     <div className={styles.subRowWrap}>
-      <button
-        type="button"
+      <div
         className={`tcol ${styles.subRow} ${on ? styles.on : ''} ${empty && !on ? styles.dim : ''} ${dropProps?.isOver ? styles.dropOver : ''} ${dragSrc.dragging ? styles.dragging : ''} ${reorder.place === 'before' ? styles.dropBefore : ''} ${reorder.place === 'after' ? styles.dropAfter : ''}`}
         // 8px de respiro base (es el padding del row, que el inline pisa) +
         // sangría por nivel.
         style={{ paddingLeft: 8 + (depth - 1) * 14 }}
-        onClick={() => onSelect(sub.id)}
         {...(dropProps ? dropProps.events : reorder.events)}
         {...dragSrc.source}
         {...dragSrc.handle}
       >
         {hasChildren ? (
-          <span
-            role="button"
-            tabIndex={-1}
+          <button
+            type="button"
+            aria-expanded={!!open}
             aria-label={open ? 'Colapsar' : 'Desplegar'}
-            className={`tcol ${styles.subChev}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggle(sub.id);
-            }}
+            className={`tcol ${styles.subChev} ${styles.overRow}`}
+            onClick={() => onToggle(sub.id)}
           >
             <Icon name={open ? 'chevronDown' : 'chevron'} size={12} />
-          </span>
+          </button>
         ) : (
           <span className={styles.subChevSpacer} />
         )}
-        <span className={`mono ${styles.subCode}`}>{sub.code}</span>
-        <span className={styles.subTitle}>{sub.title}</span>
-        <span
-          role="button"
-          tabIndex={-1}
+        <button
+          type="button"
+          className={styles.rowMain}
+          aria-current={on ? 'true' : undefined}
+          onClick={() => onSelect(sub.id)}
+        >
+          <span className={`mono ${styles.subCode}`}>{sub.code}</span>
+          <span className={styles.subTitle}>{sub.title}</span>
+        </button>
+        <button
+          type="button"
           aria-label="Acciones del subcapítulo"
-          className={`tcol ${styles.subAct} ${menuOpen ? styles.open : ''}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            setMenuOpen((o) => !o);
-          }}
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          className={`tcol ${styles.subAct} ${styles.overRow} ${menuOpen ? styles.open : ''}`}
+          onClick={() => setMenuOpen((o) => !o)}
         >
           <Icon name="dots" size={13} />
-        </span>
-      </button>
+        </button>
+      </div>
       {menuOpen && (
         <SubMenu
           sub={sub}

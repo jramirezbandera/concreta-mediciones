@@ -232,6 +232,39 @@
 .chap.on .chapAction {
   opacity: 1;
 }
+/* Botón principal de la fila (código + título): su ::after cubre la fila entera,
+   así que clicar en cualquier hueco (o en el importe) selecciona. Los controles
+   `.overRow` quedan por encima. Patrón «botón extendido». */
+.rowMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.rowMain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+}
+.rowMain:focus-visible {
+  outline: none;
+}
+.rowMain:focus-visible::after {
+  box-shadow: var(--ring-accent);
+}
+.overRow {
+  position: relative;
+  z-index: 1;
+}
 .chapAction:hover {
   color: var(--text-primary);
   background: var(--bg-elevated);
@@ -260,6 +293,7 @@
   gap: 1px;
 }
 .subRow {
+  position: relative; /* ancla del ::after de .rowMain */
   width: 100%;
   display: flex;
   align-items: center;
@@ -692,4 +726,37 @@
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--text-primary);
+}
+
+/* ---------- táctil y teclado (al final: pisa las reglas base de arriba) ---- */
+.chapAction:focus-visible,
+.subAct:focus-visible {
+  opacity: 1;
+}
+/* Sin hover: las acciones siempre visibles, no solo en la fila activa. */
+@media (hover: none) {
+  .chapAction,
+  .subAct {
+    opacity: 1;
+  }
+}
+/* Puntero táctil: chevrons y acciones con 32px de área (eran 15–18px). */
+@media (pointer: coarse) {
+  .chev,
+  .chapAction,
+  .subChev,
+  .subAct,
+  .headAdd {
+    width: 32px;
+    height: 32px;
+  }
+  .chevSpacer {
+    width: 30px; /* = .chev (32) + su margin-left (-2) */
+  }
+  .subChevSpacer {
+    width: 29px; /* = .subChev (32) + su margin-left (-3) */
+  }
+  .subRow {
+    height: 36px;
+  }
 }

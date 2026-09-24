@@ -58,12 +58,15 @@ export function ChapterCard({
     ),
   );
 
+  // La fila es un <div> (arrastre + estados) y el botón principal (código +
+  // título) la cubre entera con un ::after: toda la fila selecciona, pero el
+  // chevron, «+» y ⋮ son botones REALES hermanos (antes eran span role=button
+  // DENTRO de otro <button>: HTML inválido, fuera del alcance del teclado y de
+  // los lectores de pantalla).
   return (
     <div className={styles.chapWrap}>
-      <button
-        type="button"
+      <div
         className={`tcol ${styles.chap} ${isActive ? styles.on : ''} ${dropProps?.isOver ? styles.dropOver : ''} ${dragSrc.dragging ? styles.dragging : ''} ${reorder.place === 'before' ? styles.dropBefore : ''} ${reorder.place === 'after' ? styles.dropAfter : ''}`}
-        onClick={() => onSelect(ch.id)}
         // Copiar desde Referencia (F5.2) y reordenar el árbol son arrastres
         // distintos y nunca simultáneos: mientras se arrastra una partida de
         // Referencia manda su drop; el resto del tiempo, el de reordenación.
@@ -73,52 +76,50 @@ export function ChapterCard({
       >
         <div className={styles.chapTop}>
           {hasChildren ? (
-            <span
-              role="button"
-              tabIndex={-1}
+            <button
+              type="button"
+              aria-expanded={expanded}
               aria-label={expanded ? 'Colapsar' : 'Desplegar'}
-              className={`tcol ${styles.chev}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggle(ch.id);
-              }}
+              className={`tcol ${styles.chev} ${styles.overRow}`}
+              onClick={() => onToggle(ch.id)}
             >
               <Icon name={expanded ? 'chevronDown' : 'chevron'} size={13} />
-            </span>
+            </button>
           ) : (
             <span className={styles.chevSpacer} />
           )}
-          <span className={`mono ${styles.chapCode}`}>{ch.code}</span>
-          <span className={styles.chapTitle}>{ch.title}</span>
+          <button
+            type="button"
+            className={styles.rowMain}
+            aria-current={isActive ? 'true' : undefined}
+            onClick={() => onSelect(ch.id)}
+          >
+            <span className={`mono ${styles.chapCode}`}>{ch.code}</span>
+            <span className={styles.chapTitle}>{ch.title}</span>
+          </button>
           <span className={styles.chapActions}>
-            <span
-              role="button"
-              tabIndex={-1}
+            <button
+              type="button"
               aria-label="Añadir subcapítulo"
-              className={`tcol ${styles.chapAction}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onAddSub(ch.id);
-              }}
+              className={`tcol ${styles.chapAction} ${styles.overRow}`}
+              onClick={() => onAddSub(ch.id)}
             >
               <Icon name="plus" size={13} />
-            </span>
-            <span
-              role="button"
-              tabIndex={-1}
+            </button>
+            <button
+              type="button"
               aria-label="Acciones del capítulo"
-              className={`tcol ${styles.chapAction} ${menuOpen ? styles.open : ''}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                setMenuOpen((o) => !o);
-              }}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              className={`tcol ${styles.chapAction} ${styles.overRow} ${menuOpen ? styles.open : ''}`}
+              onClick={() => setMenuOpen((o) => !o)}
             >
               <Icon name="dots" size={13} />
-            </span>
+            </button>
           </span>
           {importe > 0 && <span className={`mono ${styles.chapK}`}>{k(importe)}</span>}
         </div>
-      </button>
+      </div>
       {menuOpen && (
         <ChapterMenu
           chId={ch.id}
