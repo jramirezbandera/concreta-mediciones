@@ -8,7 +8,10 @@
   flex-direction: column;
   background: var(--bg-primary);
   color: var(--text-primary);
-  overflow: hidden;
+  /* clip, no hidden: un hijo posicionado que sobresale hacía el shell desplazable
+     por programa (focus/scrollIntoView) y en móvil toda la app subía unos px,
+     cortando el TopBar y dejando una franja vacía bajo la barra de pestañas. */
+  overflow: clip;
 }
 
 .body {
