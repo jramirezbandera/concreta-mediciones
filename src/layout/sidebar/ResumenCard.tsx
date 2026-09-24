@@ -45,6 +45,11 @@ export function ResumenCard({ compact }: { compact: boolean }) {
     [ggbi, ggbiColor],
     [ivaCents, ivaColor],
   ];
+  // Inicio de cada tramo en % de la pista (suma de los anteriores). Sin total,
+  // todos empiezan al 100 % (fuera de la vista): barra vacía.
+  const segStarts = segs.map((_, i) =>
+    total ? (segs.slice(0, i).reduce((a, [v]) => a + v, 0) / total) * 100 : 100,
+  );
 
   return (
     <div className={styles.resumen}>
@@ -71,12 +76,14 @@ export function ResumenCard({ compact }: { compact: boolean }) {
           </button>
         </div>
       </div>
+      {/* Cada tramo mide la pista entera y se DESPLAZA hasta su inicio (transform,
+          sin recalcular layout al animar); el siguiente tapa su cola. */}
       <div className={styles.compBar}>
-        {segs.map(([value, color], i) => (
+        {segs.map(([, color], i) => (
           <div
             key={i}
             className={styles.compSeg}
-            style={{ width: `${total ? (value / total) * 100 : 0}%`, background: color }}
+            style={{ transform: `translateX(${segStarts[i]}%)`, background: color }}
           />
         ))}
       </div>

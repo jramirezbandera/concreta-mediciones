@@ -18,12 +18,15 @@ export function Bar({ pct, active = false, height = 4 }: BarProps) {
         background: 'var(--border-main)',
       }}
     >
+      {/* Relleno a ancho completo DESPLAZADO (translateX, no width): anima sin
+          recalcular layout y conserva el extremo redondeado (scaleX lo deformaría). */}
       <div
         style={{
           height: '100%',
+          width: '100%',
           borderRadius: 999,
-          transition: 'width .5s cubic-bezier(.22,1,.36,1)',
-          width: `${Math.max(2, Math.min(100, pct))}%`,
+          transition: 'transform .5s cubic-bezier(.22,1,.36,1)',
+          transform: `translateX(${Math.max(2, Math.min(100, pct)) - 100}%)`,
           background: active ? 'var(--accent)' : 'var(--text-disabled)',
         }}
       />
