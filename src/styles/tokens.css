@@ -83,8 +83,10 @@
   --text-primary: #0f172a;
   --text-secondary:#475569;
   --text-disabled:#94a3b8;
-  --accent:       #0284c7;
-  --accent-hover: #0369a1;
+  /* sky-700/800, no 600: #0284c7 daba 4,1:1 con blanco y sobre blanco (suspende
+     AA en botones rellenos, enlaces y cifras en azul). #0369a1 = 5,9:1. */
+  --accent:       #0369a1;
+  --accent-hover: #075985;
   --on-accent:    #ffffff;
   --state-ok:     #16a34a;
   --state-warn:   #d97706;

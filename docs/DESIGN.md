@@ -9,7 +9,9 @@ Marca **Concreta** (mismo sistema que "Concreta FEM3D"). Tema **oscuro por defec
 `--bg-primary #0b1220` · `--bg-surface #111a2d` · `--bg-elevated #1a2540` · `--border-main #22304d` · `--border-sub #1a2540` · `--text-primary #f8fafc` · `--text-secondary #94a3b8` · `--text-disabled #475569` · `--accent #38bdf8` · `--accent-hover #0ea5e9` · `--on-accent #04121f` · `--state-ok #22c55e` · `--state-warn #f59e0b` (retención, P.C.) · `--state-danger #ef4444` (error/destructivo: fallo de guardado, error de import, confirmaciones de borrado) · `--state-mat #2dd4bf` (MAT) · `--state-mq #a78bfa` (MQ, BC3, BASE) · `--state-neutral #64748b` · `--dot #22304d`.
 
 ## Tokens — LIGHT
-`--bg-primary #f8fafc` · `--bg-surface #ffffff` · `--bg-elevated #f1f5f9` · `--border-main #cbd5e1` · `--border-sub #e2e8f0` · `--text-primary #0f172a` · `--text-secondary #475569` · `--text-disabled #94a3b8` · `--accent #0284c7` · `--accent-hover #0369a1` · `--on-accent #ffffff` · `--state-ok #16a34a` · `--state-warn #d97706` · `--state-danger #dc2626` · `--state-mat #0d9488` · `--state-mq #7c3aed`.
+`--bg-primary #f8fafc` · `--bg-surface #ffffff` · `--bg-elevated #f1f5f9` · `--border-main #cbd5e1` · `--border-sub #e2e8f0` · `--text-primary #0f172a` · `--text-secondary #475569` · `--text-disabled #94a3b8` · `--accent #0369a1` · `--accent-hover #075985` · `--on-accent #ffffff` · `--state-ok #16a34a` · `--state-warn #d97706` · `--state-danger #dc2626` · `--state-mat #0d9488` · `--state-mq #7c3aed`.
+
+> **Acento claro** (2026-09-24): era `#0284c7` (sky-600), que da 4,1:1 con blanco y sobre blanco y suspende AA en botones rellenos, enlaces y cifras en azul. Pasa a sky-700 `#0369a1` (5,9:1). El tema oscuro no cambia.
 
 > **Ramo de estados** = escala Tailwind 500/600 (dark/light): ok=green, warn=amber, danger=red. `warn` (ámbar) es informativo/atención (retención, P.C.); `danger` (rojo) es error/destructivo. No mezclar.
 
