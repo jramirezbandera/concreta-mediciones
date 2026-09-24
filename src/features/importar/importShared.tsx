@@ -9,6 +9,7 @@ import { useRef, useState, type ReactNode } from 'react';
 import { Icon } from '../../components';
 import { type Bc3ImportResult } from '../../core/bc3import';
 import { fmtCents, fmtNum, toEur } from '../../core/money';
+import { isTouchOnly } from '../../hooks/touchOnly';
 import styles from './Importar.module.css';
 
 /** Zona de soltar/elegir un .bc3 (con input file accesible). */
@@ -21,6 +22,8 @@ export function Bc3Dropzone({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
+  // En táctil no hay nada que soltar: el gesto es tocar y elegir el fichero.
+  const touch = isTouchOnly();
   return (
     <div
       className={`${styles.drop} ${over ? styles.over : ''}`}
@@ -51,8 +54,12 @@ export function Bc3Dropzone({
         onChange={(e) => onFile(e.target.files?.[0] ?? undefined)}
       />
       <Icon name={busy ? 'loader' : 'upload'} size={28} className={busy ? styles.spin : ''} />
-      <div className={styles.dropTitle}>{busy ? 'Procesando…' : 'Suelta el .bc3 aquí'}</div>
-      <div className={styles.dropHint}>o haz clic para elegir un archivo</div>
+      <div className={styles.dropTitle}>
+        {busy ? 'Procesando…' : touch ? 'Elige un archivo .bc3' : 'Suelta el .bc3 aquí'}
+      </div>
+      <div className={styles.dropHint}>
+        {touch ? 'Toca para buscarlo en el dispositivo' : 'o haz clic para elegir un archivo'}
+      </div>
     </div>
   );
 }

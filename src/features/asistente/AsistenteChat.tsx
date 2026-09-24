@@ -18,6 +18,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Icon } from '../../components';
 import { findNode } from '../../core/tree';
+import { isTouchOnly } from '../../hooks/touchOnly';
 import { useSpeechDictation } from '../../hooks/useSpeechDictation';
 import { useSessionStore } from '../../persist';
 import {
@@ -690,7 +691,11 @@ export function AsistenteChat() {
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={onComposerKey}
             onPaste={handlePaste}
-            placeholder="Pide algo o adjunta una foto…  (Ctrl+Enter = enviar)"
+            placeholder={
+              isTouchOnly()
+                ? 'Pide algo o adjunta una foto…'
+                : 'Pide algo o adjunta una foto…  (Ctrl+Enter = enviar)'
+            }
             rows={2}
             aria-label="Escribe tu consulta o una orden"
           />

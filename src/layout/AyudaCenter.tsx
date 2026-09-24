@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useState } from 'react';
 import { Icon, Modal } from '../components';
+import { isTouchOnly } from '../hooks/touchOnly';
 import { selectCounts, useObraStore } from '../store';
 import {
   FEATURES,
@@ -150,7 +151,8 @@ export function AyudaCenter({
       {compact ? (
         // Móvil: secciones apiladas con cabecera (sin pestañas horizontales).
         <div className={styles.stacked}>
-          {TABS.map((t) => (
+          {/* Sin teclado (móvil táctil) la chuleta de atajos es ruido: se omite. */}
+          {TABS.filter((t) => t.k !== 'atajos' || !isTouchOnly()).map((t) => (
             <Fragment key={t.k}>
               <div className={`sec-head ${styles.stackHead}`}>{t.label}</div>
               {PANELS[t.k]({ onGo })}

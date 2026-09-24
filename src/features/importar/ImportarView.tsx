@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Icon, Modal } from '../../components';
 import { fmtCents, fmtNum } from '../../core/money';
+import { isTouchOnly } from '../../hooks/touchOnly';
 import { selectPem, useObraStore } from '../../store';
 import { Bc3Dropzone, Bc3ErrorCard, Bc3ResultSummary } from './importShared';
 import { useBc3Parse } from './useBc3Parse';
@@ -42,8 +43,8 @@ export function ImportarView({ compact }: { compact: boolean }) {
           </div>
           <h1 className={styles.title}>Importar obra</h1>
           <p className={styles.desc}>
-            Arrastra un archivo <strong>.bc3</strong> (FIEBDC-3) de Presto, Arquímedes o CYPE para
-            cargar capítulos, partidas, mediciones y banco de recursos.
+            {isTouchOnly() ? 'Elige' : 'Arrastra'} un archivo <strong>.bc3</strong> (FIEBDC-3) de Presto,
+            Arquímedes o CYPE para cargar capítulos, partidas, mediciones y banco de recursos.
           </p>
         </header>
 

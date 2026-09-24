@@ -10,6 +10,7 @@ import {
 import { createPortal } from 'react-dom';
 import { Icon } from '../../components';
 import { buildSearchIndex, searchPartidas, type HitPartida } from '../../core/buscar';
+import { isTouchOnly } from '../../hooks/touchOnly';
 import { useObraStore } from '../../store';
 import styles from './BuscarPartidas.module.css';
 
@@ -218,7 +219,9 @@ export function BuscarPartidas({ onAfterSelect }: { onAfterSelect?: () => void }
             if (q.trim().length >= 2) setOpen(true);
           }}
           onKeyDown={onKeyDown}
-          placeholder="Buscar partida en la obra… (Ctrl K)"
+          placeholder={
+            isTouchOnly() ? 'Buscar partida en la obra…' : 'Buscar partida en la obra… (Ctrl K)'
+          }
           aria-label="Buscar partida en la obra"
           className={styles.input}
         />
