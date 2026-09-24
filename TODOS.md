@@ -53,22 +53,24 @@ externa (Codex) en la revisión de ingeniería de undo/redo (2026-07-05).
 
 ## Pase de diseño móvil — pendientes (design-review 2026-09-24)
 
-El pase arregló la cabecera móvil (menú «Más»), el menú ⋮ recortado, Resumen,
-Certificaciones, Exportar, contraste y deshacer en móvil (commits `style(design):
-FINDING-001…009`), y en una segunda tanda las pistas de teclado en táctil
-(`isTouchOnly()`, FINDING-010), las ⓘ al tacto (FINDING-011) y el botón accesible
-para desplegar partida (FINDING-014). Quedan, por impacto:
+Hecho (commits `style(design): FINDING-001…018`): cabecera móvil y de tablet con
+menú «Más», menú ⋮ recortado, Resumen, Certificaciones, Exportar, contraste
+(`--text-disabled` fuera del texto legible y acento claro a #0369a1), deshacer en
+móvil, pistas de teclado fuera del táctil (`isTouchOnly()`), ⓘ al tacto, botón
+accesible para desplegar partida, cabecera compacta al hacer scroll
+(`CompactHeaderBar`), nombre de obra visible en tablet y escritorio estrecho,
+árbol de capítulos usable al tacto/teclado y borrar en rojo. Quedan pulidos:
 
-- **[Medio · color] Blanco sobre `--accent` claro (#0284c7) = 4,1:1** (Exportar, «Ajusta»,
-  «Aplicar»). Token de DESIGN.md: decidir si los rellenos primarios usan `--accent-hover`
-  (#0369a1, 5,9:1) en tema claro.
-- **[Medio · jerarquía] Cromo fijo ≈31% de un 375×667** (TopBar + cabecera de página +
-  barra PEM/TOTAL + pestañas). La barra de resumen repite el total de la cabecera.
-- **[Medio · responsive] Tablet 768:** el selector de obra queda en un icono sin nombre.
-- **[Medio · interacción] Cajón de capítulos en táctil:** acciones de 18px con `opacity:0`
-  hasta hover; `span role=button` anidado en `<button>` (`ChapterCard`, `SubRow`).
-- **[Pulido]** tocar PEM/TOTAL abre el cajón de capítulos, no un resumen; pestaña
-  «Justificación del precio» en dos líneas; márgenes laterales móviles 10/12/14/16px.
+- **Pestaña «Justificación del precio» en dos líneas en móvil.** Acortarla a
+  «Justificación» en compacto rompe `Presupuesto.test.tsx` («la unidad del
+  RECURSO admite una unidad libre»), que la busca por el texto completo en modo
+  tarjetas: cambiar etiqueta y test a la vez.
+- **Márgenes laterales en móvil con cuatro valores** (TopBar 10, listas de
+  tarjetas 12, cabecera de Certificaciones/Importar/barra PEM 14, cabeceras y
+  Resumen 16px): unificar a uno.
+- **`transition: width`** en las barras de peso/avance: animar `transform: scaleX`.
+- La franja PEM/TOTAL abre el cajón de capítulos (con la tarjeta Resumen al pie):
+  se deja así, es donde viven el coeficiente K y «Ajusta».
 
 Informe completo: `~/.gstack/projects/jramirezbandera-concreta-mediciones/designs/design-audit-20260924/`.
 
