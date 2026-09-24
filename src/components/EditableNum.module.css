@@ -24,6 +24,20 @@
   text-decoration-color: var(--accent);
 }
 
+/* Variante «campo»: la entrada PRINCIPAL de una vista (la cantidad ejecutada en
+   certificaciones) se dibuja como un input en reposo —mismo lenguaje que el
+   buscador: fondo elevated + borde— y no con el punteado: al llegar a la
+   pantalla tiene que leerse qué se rellena. Borde de 1px como `.input` → abrir
+   la edición no mueve la fila. */
+.display.field {
+  border: 1px solid var(--border-main);
+  background: var(--bg-elevated);
+  text-decoration-line: none;
+}
+.display.field:hover {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border-main));
+}
+
 .input {
   width: 100%;
   text-align: right;

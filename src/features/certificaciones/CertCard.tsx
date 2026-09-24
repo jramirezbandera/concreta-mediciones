@@ -113,6 +113,7 @@ export function CertCard({
                 value={execValue}
                 dec={2}
                 accent
+                field
                 ariaLabel="Cantidad ejecutada"
                 onCommit={(v) => onCertEdit(p.id, v, mode)}
               />
@@ -220,6 +221,7 @@ export function CertExtraCard({
                 value={e.cantidad}
                 dec={2}
                 accent
+                field
                 ariaLabel="Cantidad ejecutada"
                 onCommit={(v) => editContradictorio(e.id, 'cantidad', v)}
               />

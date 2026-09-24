@@ -214,6 +214,7 @@ function CertRow({
             value={execValue}
             dec={2}
             accent
+            field
             ariaLabel="Cantidad ejecutada"
             onCommit={(v) => onCertEdit(p.id, v, mode)}
           />
@@ -317,6 +318,7 @@ function CertExtraRow({
           value={e.cantidad}
           dec={2}
           accent
+          field
           ariaLabel="Cantidad ejecutada"
           onCommit={(v) => editContradictorio(e.id, 'cantidad', v)}
         />

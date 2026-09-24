@@ -1403,6 +1403,7 @@
 }
 .cExecField {
   flex-shrink: 0;
+  min-width: 96px; /* el campo (EditableNum field) no encoge al ancho de la cifra */
 }
 .cardExec .pctBar {
   flex: 1;

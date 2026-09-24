@@ -9,6 +9,9 @@ export interface EditableNumProps {
   onCommit: (value: number) => void;
   bold?: boolean;
   accent?: boolean;
+  /** Aspecto de campo de formulario en reposo (borde + fondo), para la entrada
+   *  PRINCIPAL de una vista; el punteado sutil queda para el resto. */
+  field?: boolean;
   /** Etiqueta accesible para la celda editable. */
   ariaLabel?: string;
 }
@@ -24,6 +27,7 @@ export function EditableNum({
   onCommit,
   bold = false,
   accent = false,
+  field = false,
   ariaLabel,
 }: EditableNumProps) {
   const [invalid, setInvalid] = useState(false);
@@ -120,7 +124,7 @@ export function EditableNum({
       onFocus={armOpenOnFocus(start)}
       aria-label={ariaLabel}
       data-editcell=""
-      className={`mono tcol ${styles.display}`}
+      className={`mono tcol ${styles.display} ${field ? styles.field : ''}`}
       style={{
         fontWeight: bold ? 600 : 400,
         color: accent
