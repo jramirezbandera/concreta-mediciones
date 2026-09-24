@@ -7,6 +7,7 @@ import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { hydrate } from './persist/sync';
 import { useObraStore } from './store';
 import { initHistory } from './store/temporal';
+import { UpdatePrompt, startUpdateWatcher } from './update';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('No se encontró el elemento #root');
@@ -25,6 +26,11 @@ void hydrate().finally(() => {
       <AppErrorBoundary>
         <App />
       </AppErrorBoundary>
+      {/* FUERA del boundary: un chunk purgado por un deploy tumba la App entera
+          (lazy sin cargar), y justo entonces el aviso tiene que seguir ahí. */}
+      <UpdatePrompt />
     </StrictMode>,
   );
+  // Aviso de versión nueva: solo en el build publicado (en dev no hay version.json).
+  if (import.meta.env.PROD) startUpdateWatcher();
 });

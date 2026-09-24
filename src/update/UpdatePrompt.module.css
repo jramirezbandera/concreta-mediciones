@@ -1,0 +1,122 @@
+/* Aviso de versión nueva: tarjeta flotante abajo a la derecha, por encima de la
+   StatusBar y del chip de guardado. z-index sobre los modales (500): si un chunk
+   falla con un modal abierto, el aviso tiene que seguir siendo pulsable. */
+.card {
+  position: fixed;
+  right: var(--sp-16);
+  bottom: 52px;
+  z-index: 520;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-12);
+  width: 340px;
+  max-width: calc(100vw - 2 * var(--sp-16));
+  padding: 14px var(--sp-16);
+  border-radius: 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-main);
+  box-shadow: var(--shadow-float);
+  color: var(--text-primary);
+}
+/* Compacto: todo el ancho, sobre MobileSummaryBar (30) + BottomTabBar (54). */
+.compact {
+  left: var(--sp-12);
+  right: var(--sp-12);
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  width: auto;
+  max-width: none;
+}
+
+.iconChip {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.content {
+  flex: 1;
+  min-width: 0;
+}
+.title {
+  font-size: var(--fs-title);
+  font-weight: 600;
+  line-height: 32px;
+}
+.text {
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-body);
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-8);
+  margin-top: var(--sp-12);
+}
+.later,
+.update {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-6);
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: var(--fs-body);
+  font-weight: 500;
+  cursor: pointer;
+}
+.later {
+  border: 1px solid var(--border-main);
+  background: transparent;
+  color: var(--text-secondary);
+}
+.later:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+}
+.update {
+  border: 0;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+.update:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+.later:disabled,
+.update:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.spin {
+  animation: updatespin 0.9s linear infinite;
+}
+@keyframes updatespin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .card {
+    animation: updateIn 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+@keyframes updateIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
