@@ -1368,6 +1368,10 @@
 .cStat.last {
   border-right: 0;
 }
+/* Celdas numéricas (Ofertada, Precio) a la derecha, como en Presupuesto. */
+.cStat:not(:first-child) {
+  text-align: right;
+}
 .cStatLabel {
   font-size: var(--fs-micro);
   font-weight: 600;

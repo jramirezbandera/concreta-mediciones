@@ -1295,6 +1295,12 @@
 .pStat.last {
   border-right: 0;
 }
+/* Celdas numéricas (Cantidad, Precio) a la derecha, etiqueta incluida, como las
+   columnas de la tabla: la cantidad calculada salía a la izquierda y la editable
+   (EditableNum) a la derecha, y la cifra cambiaba de lado según hubiera medición. */
+.pStat:not(:first-child) {
+  text-align: right;
+}
 .pStatLabel {
   font-size: var(--fs-micro);
   font-weight: 600;
