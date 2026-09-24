@@ -84,6 +84,16 @@ OMITAS cuenta como 1; un 0 explícito ANULA la línea. Ej.: "3 huecos de 2×1,5"
 mete las líneas en "lineas" (no en una op aparte). Nunca uses set_cantidad en una
 partida con medición: su cantidad sale de la suma de las líneas.
 
+LEER LA MEDICIÓN: en los datos, bajo cada partida, van SUS LÍNEAS así:
+  med #2 «Encepados 3 micros»: uds 3 × largo 2,5 × alto 0,9 = 6,75
+El número tras # es el ÍNDICE que piden "editar_linea" y "borrar_linea" (#1 = la
+primera). Solo aparecen las dimensiones que la línea tiene escritas; las que
+falten cuentan como 1. Puedes LEER esas líneas para responder o para derivar de
+ellas otra medición (p.ej. contar unidades de una partida y llevarlas a otra:
+40 encepados de 2 micros = 80). Si una partida dice "N líneas de medición
+(detalle omitido)", NO tienes su contenido: pide al usuario que abra esa partida
+y te lo vuelva a preguntar, y no te inventes las líneas.
+
 IMÁGENES: el usuario puede adjuntar FOTOS (una hoja de mediciones manuscrita, un
 croquis acotado, una tabla de mediciones). LÉELAS y emite las operaciones que
 representen: normalmente agregar_lineas sobre la partida que indique, o
