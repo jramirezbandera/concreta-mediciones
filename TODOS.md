@@ -51,4 +51,34 @@ externa (Codex) en la revisión de ingeniería de undo/redo (2026-07-05).
 
 ---
 
-_Backlog: 1 TODO (mutaciones en pestaña readonly). Los de navegación de teclado en certificaciones están hechos._
+## Pase de diseño móvil — pendientes (design-review 2026-09-24)
+
+El pase arregló la cabecera móvil (menú «Más»), el menú ⋮ recortado, Resumen,
+Certificaciones, Exportar, contraste y deshacer en móvil (commits `style(design):
+FINDING-001…009`). Quedan, por impacto:
+
+- **[Medio · contenido] Pistas de teclado en táctil.** «(Ctrl K)» en la búsqueda del
+  cajón ([BuscarPartidas.tsx](src/features/presupuesto/BuscarPartidas.tsx)), «(Ctrl+Enter =
+  enviar)» en el asistente ([AsistenteChat.tsx](src/features/asistente/AsistenteChat.tsx)),
+  «Suelta el .bc3 aquí / haz clic» en Importar ([importShared.tsx](src/features/importar/importShared.tsx)).
+  Un `isTouchOnly()` con `matchMedia('(hover: none) and (pointer: coarse)')` basta.
+- **[Medio · interacción] Las ⓘ no se abren al tacto.** `InfoTip` abre solo en
+  `:hover`/`:focus-visible` y cancela el clic; en el Resumen móvil son decoración muerta.
+- **[Medio · color] Blanco sobre `--accent` claro (#0284c7) = 4,1:1** (Exportar, «Ajusta»,
+  «Aplicar»). Token de DESIGN.md: decidir si los rellenos primarios usan `--accent-hover`
+  (#0369a1, 5,9:1) en tema claro.
+- **[Medio · jerarquía] Cromo fijo ≈31% de un 375×667** (TopBar + cabecera de página +
+  barra PEM/TOTAL + pestañas). La barra de resumen repite el total de la cabecera.
+- **[Medio · a11y] Desplegar partida = `div onClick`** sin botón ni `aria-expanded`
+  (`PartidaCard`/`PartidaRow`); Certificaciones ya usa `chevBtn` + `aria-expanded`.
+- **[Medio · responsive] Tablet 768:** el selector de obra queda en un icono sin nombre.
+- **[Medio · interacción] Cajón de capítulos en táctil:** acciones de 18px con `opacity:0`
+  hasta hover; `span role=button` anidado en `<button>` (`ChapterCard`, `SubRow`).
+- **[Pulido]** tocar PEM/TOTAL abre el cajón de capítulos, no un resumen; pestaña
+  «Justificación del precio» en dos líneas; márgenes laterales móviles 10/12/14/16px.
+
+Informe completo: `~/.gstack/projects/jramirezbandera-concreta-mediciones/designs/design-audit-20260924/`.
+
+---
+
+_Backlog: 1 TODO (mutaciones en pestaña readonly) + pendientes del pase de diseño móvil. Los de navegación de teclado en certificaciones están hechos._
