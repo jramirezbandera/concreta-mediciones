@@ -19,6 +19,7 @@ import { useTheme } from './hooks/useTheme';
 import { AyudaCenter } from './layout/AyudaCenter';
 import type { HelpTab } from './layout/ayudaContent';
 import { BottomTabBar, Drawer, MobileSummaryBar, ObraSwitcher, Sidebar, StatusBar, TopBar, type View } from './layout';
+import { ROOMY_W } from './layout/TopBar';
 import { selectCounts, selectPec, selectPem, selectTotalConIva, useObraStore, useToastStore } from './store';
 import styles from './App.module.css';
 
@@ -234,8 +235,12 @@ export default function App() {
         onHelp={() => openHelp('inicio')}
         obraSwitcher={<ObraSwitcher />}
         importAction={
-          // En móvil va dentro del menú «Más» del TopBar: fila con texto, no icono suelto.
-          view === 'presupuesto' ? <ImportPartidaButton compact={bp.isCompact && !bp.isMobile} /> : undefined
+          // En compacto (móvil/tablet) va dentro del menú «Más» del TopBar: fila con
+          // texto. En escritorio, en la barra: solo icono por debajo de ROOMY_W para
+          // no dejar sin sitio el nombre de la obra.
+          view === 'presupuesto' ? (
+            <ImportPartidaButton compact={bp.isDesktop && bp.w < ROOMY_W} />
+          ) : undefined
         }
       />
 

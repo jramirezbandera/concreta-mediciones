@@ -37,8 +37,8 @@
   white-space: nowrap;
   min-width: 0;
 }
-/* Teléfono: el icono de carpeta cede su sitio al nombre de la obra. */
-@media (max-width: 480px) {
+/* Teléfono y tablet: el icono de carpeta cede su sitio al nombre de la obra. */
+@media (max-width: 1023px) {
   .trigger > svg:first-child {
     display: none;
   }

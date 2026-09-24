@@ -80,6 +80,26 @@ describe('TopBar — menú «Más» en móvil (la fila de acciones pisaba la mar
     expect(within(menu).getByRole('button', { name: 'Rehacer' })).toBeInTheDocument();
   });
 
+  it('en tablet también hay menú (sin Ayuda ni Deshacer: siguen en sus barras) y pestañas cortas', () => {
+    const tablet: Breakpoint = { w: 768, isMobile: false, isTablet: true, isDesktop: false, isCompact: true };
+    renderBar(tablet);
+    // Pestañas con la etiqueta corta, pero nombre accesible completo.
+    expect(screen.getByRole('button', { name: 'Certificaciones' })).toHaveTextContent('Certif.');
+    expect(screen.getByRole('button', { name: 'Deshacer' })).toBeInTheDocument(); // en la barra
+    fireEvent.click(screen.getByRole('button', { name: 'Más acciones' }));
+    const menu = screen.getByRole('menu');
+    expect(within(menu).getByRole('menuitem', { name: 'Datos de la obra' })).toBeInTheDocument();
+    expect(within(menu).queryByRole('menuitem', { name: 'Ayuda' })).toBeNull();
+    expect(within(menu).queryByRole('button', { name: 'Deshacer' })).toBeNull();
+  });
+
+  it('en escritorio estrecho (<1400) Referencia va como icono para dejar sitio a la obra', () => {
+    const narrow: Breakpoint = { w: 1100, isMobile: false, isTablet: false, isDesktop: true, isCompact: false };
+    renderBar(narrow);
+    expect(screen.getByRole('button', { name: 'Referencia' })).not.toHaveTextContent('Referencia');
+    expect(screen.queryByRole('button', { name: 'Más acciones' })).toBeNull();
+  });
+
   it('en escritorio no hay menú «Más»: las acciones van en la barra', () => {
     renderBar(desktop);
     expect(screen.queryByRole('button', { name: 'Más acciones' })).toBeNull();
