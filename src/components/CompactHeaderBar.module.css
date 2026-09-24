@@ -1,0 +1,76 @@
+/* Barra compacta al hacer scroll (móvil). El ancla mide 0px y es sticky: la barra
+   se superpone al contenido en vez de empujarlo (sin saltos de scroll). */
+.anchor {
+  position: sticky;
+  top: 0;
+  height: 0;
+  z-index: 25; /* sobre las tarjetas; por debajo de popovers/menús (300) */
+}
+
+.bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  padding: 0 var(--sp-16);
+  border: 0;
+  border-bottom: 1px solid var(--border-main);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-panel);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text-primary);
+  /* Oculta por defecto; visible con .shown. */
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.bar.shown {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .bar {
+    transform: translateY(-6px);
+    transition:
+      opacity 150ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 150ms cubic-bezier(0.22, 1, 0.36, 1),
+      visibility 150ms;
+  }
+  .bar.shown {
+    transform: none;
+  }
+}
+
+.title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+/* Código de capítulo dentro del título: secundario, como en la cabecera grande. */
+.title :global(.mono) {
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.sub {
+  flex-shrink: 0;
+  font-size: var(--fs-table);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.value {
+  flex-shrink: 0;
+  margin-left: auto;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  white-space: nowrap;
+}

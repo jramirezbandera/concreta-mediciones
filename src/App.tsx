@@ -379,7 +379,10 @@ export default function App() {
 
       {bp.isMobile ? (
         <>
-          <MobileSummaryBar pem={pem} total={total} onOpen={() => setDrawerOpen(true)} />
+          {/* En la pestaña Resumen la franja PEM/TOTAL repetía la página entera. */}
+          {view !== 'resumen' && (
+            <MobileSummaryBar pem={pem} total={total} onOpen={() => setDrawerOpen(true)} />
+          )}
           <BottomTabBar view={view} onView={changeView} />
         </>
       ) : (

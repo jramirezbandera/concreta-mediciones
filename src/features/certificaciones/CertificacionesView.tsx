@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { EditableText, EmptyAction, EmptyState, Icon } from '../../components';
+import { CompactHeaderBar, EditableText, EmptyAction, EmptyState, Icon } from '../../components';
 import {
   certCalc,
   certDeletedRows,
@@ -176,6 +176,16 @@ export function CertificacionesView({
           </div>
         </div>
       </div>
+      {/* Compacto: la cabecera (≈200px en móvil) deja de ser fija; al salir por
+          arriba queda esta barra con la cert, el modo y el líquido. */}
+      {compact && (
+        <CompactHeaderBar
+          watch={curCert}
+          title={`Certificación nº ${cur.num}`}
+          sub={mode === 'origen' ? 'A origen' : 'Esta cert.'}
+          value={fmtCents(totals.liquido)}
+        />
+      )}
 
       {!compact && <CertHead mode={mode} />}
 

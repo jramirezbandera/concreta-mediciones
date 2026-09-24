@@ -81,6 +81,10 @@
 }
 
 /* compacto (móvil/tablet) */
+/* Sin cabecera fija: la sustituye CompactHeaderBar al hacer scroll. */
+.compact .allHeader {
+  position: static;
+}
 .compact .chHeader {
   padding: 13px var(--sp-16) var(--sp-12);
 }

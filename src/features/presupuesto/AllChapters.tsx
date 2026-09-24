@@ -1,4 +1,4 @@
-import { EditableText, Icon } from '../../components';
+import { CompactHeaderBar, EditableText, Icon } from '../../components';
 import { fmtCents, fmtNum, type Cents } from '../../core/money';
 import { selectChapterTotals, selectPem, selectTotalConIva, useObraStore } from '../../store';
 import { Partidas } from './Partidas';
@@ -36,6 +36,11 @@ export function AllChapters({ compact }: { compact: boolean }) {
           <div className={`mono ${styles.chImporte}`}>{fmtCents(total)}</div>
         </div>
       </div>
+      {/* Móvil: la cabecera deja de ser fija (≈74px menos de cromo) y, al salir
+          por arriba, queda esta barra de una línea con el total. */}
+      {compact && (
+        <CompactHeaderBar watch="all" title="Toda la obra" sub="Total c/ IVA" value={fmtCents(total)} />
+      )}
 
       {chapters.map((ch) => {
         const ps = partidas[ch.id] ?? [];

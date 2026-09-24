@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { EmptyAction, EmptyState, Icon } from '../../components';
+import { CompactHeaderBar, EmptyAction, EmptyState, Icon } from '../../components';
 import type { Chapter, SubChapter } from '../../core/types';
 import { partidaImporte } from '../../core/medicion';
-import { sumCents } from '../../core/money';
+import { fmtCents, sumCents } from '../../core/money';
 import { ancestorIds, findNode, subtreeIds } from '../../core/tree';
 import { useElementWidth } from '../../hooks/useElementWidth';
 import { ALL, selectChapterTotals, selectPem, useObraStore } from '../../store';
@@ -165,10 +165,11 @@ export function PresupuestoView({
       ? sumCents(focused.ps.map((p) => partidaImporte(p, coefK)))
       : (chapterTotals[activeChapter.id] ?? 0);
     fill = shown.length === 0;
+    const node = focused ? focused.sub : activeChapter;
     content = (
       <>
         <ChapterHeader
-          chapter={focused ? focused.sub : activeChapter}
+          chapter={node}
           importe={importe}
           count={shown.length}
           pem={pem}
@@ -177,6 +178,19 @@ export function PresupuestoView({
           onRename={(t) => editChapterTitle(focused ? focused.sub.id : activeChapter.id, t)}
           compact={compact}
         />
+        {/* Móvil: la cabecera del capítulo se va con el scroll; esta barra
+            mantiene capítulo e importe a la vista sin ocupar sitio arriba. */}
+        {compact && (
+          <CompactHeaderBar
+            watch={node.id}
+            title={
+              <>
+                <span className="mono">{node.code}</span> {node.title}
+              </>
+            }
+            value={fmtCents(importe)}
+          />
+        )}
         {shown.length > 0 ? (
           <Partidas
             compact={compact}

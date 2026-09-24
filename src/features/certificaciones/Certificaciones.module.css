@@ -1234,6 +1234,10 @@
 .compact .header {
   padding-left: 14px;
   padding-right: 14px;
+  position: static; /* sin cabecera fija: la sustituye CompactHeaderBar */
+}
+.view.compact {
+  scroll-padding-top: 48px; /* la barra compacta (40px), no la cabecera entera */
 }
 .compact .summaryGrid {
   grid-template-columns: 1fr;

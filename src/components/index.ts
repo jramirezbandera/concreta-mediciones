@@ -9,6 +9,7 @@ export { IvaSelect } from './IvaSelect';
 export { ContraChip } from './ContraChip';
 export { CiChip } from './CiChip';
 export { InfoTip } from './InfoTip';
+export { CompactHeaderBar } from './CompactHeaderBar';
 export { GhostBtn } from './GhostBtn';
 export { EmptyState, EmptyAction } from './EmptyState';
 export { UdSelect } from './UdSelect';
