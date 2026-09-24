@@ -562,6 +562,22 @@
   text-align: left;
   padding-left: 14px;
 }
+/* Anchos fijos para uds/dimensiones/parcial: el comentario se queda el resto,
+   así que con una forma de pocas columnas (Uds · Superficie) no se estiran. */
+.medThUds {
+  width: 9%;
+}
+.medThDim {
+  width: 14%;
+}
+.medThParcial {
+  width: 13%;
+}
+/* Columna con datos que la forma de medir no usa (ver `medColumnas`). */
+.medThFuera {
+  color: var(--state-warn);
+  cursor: help;
+}
 .medTd {
   padding: var(--sp-8) var(--sp-10);
   border-top: 1px solid var(--border-sub);
@@ -628,6 +644,13 @@
   font-family: inherit;
 }
 
+/* selector de forma de medir en compacto (en escritorio va en la detailBar) */
+.medFormaRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--sp-10);
+}
+
 /* ---- descripción ---- */
 .descBox {
   border-radius: 9px;
@@ -651,6 +674,14 @@
 }
 .medCellBtn.blank {
   color: var(--text-disabled);
+}
+/* «ƒ»: el valor sale de una operación ("5,57+3"); el title enseña cuál. */
+.medExprMark {
+  margin-right: var(--sp-4);
+  font-size: var(--fs-badge);
+  font-style: italic;
+  color: var(--accent);
+  opacity: 0.8;
 }
 .medCellBtn:hover {
   background: var(--bg-surface);
@@ -683,6 +714,12 @@
 }
 .medComment:hover {
   background: var(--accent-soft);
+}
+/* Enter con algo que no se puede leer: aviso, la celda sigue abierta
+   (mismo tratamiento que `EditableNum`). */
+.medCellInput.invalid {
+  border-color: var(--state-warn);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--state-warn) 30%, transparent);
 }
 .medCommentInput {
   width: 100%;

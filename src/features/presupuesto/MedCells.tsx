@@ -1,4 +1,6 @@
-import { fmtNum, parseEsNumber, toDecimalComma } from '../../core/money';
+import { useRef, useState } from 'react';
+import { leerCelda } from '../../core/expresion';
+import { fmtNum, toDecimalComma } from '../../core/money';
 import { useInlineEdit } from '../../hooks/useInlineEdit';
 import styles from './Presupuesto.module.css';
 
@@ -6,43 +8,81 @@ type Align = 'left' | 'center' | 'right';
 
 /**
  * Celda numérica de medición. Admite VACÍO (= factor 1, se pinta "·"), a
- * diferencia de `EditableNum`. Enter confirma, Esc cancela. El valor vacío se
+ * diferencia de `EditableNum`, y OPERACIONES ("5,57+3", "2×4,5", "(12-0,3)/2",
+ * `core/expresion`): se guarda el resultado y, aparte, la operación (`expr`),
+ * que es lo que se vuelve a ver al editar; en reposo la marca «ƒ» y el title
+ * dicen de dónde sale el número. Enter confirma, Esc cancela. El valor vacío se
  * propaga como `''` (la dimensión no anula la línea).
  *
+ * Como `EditableNum`: Enter con algo que no se puede leer NO cierra ni descarta
+ * en silencio (aviso + sigue abierta); salir del campo (blur/Tab) revierte. Si
+ * el borrador no cambió no se confirma nada: recorrer la fila con Tab no debe
+ * redondear a 2 decimales un 316,3978 pegado de CAD ni quitar el chip BASE.
+ *
  * El ciclo de vida (foco+select al editar, refoco en Esc, apertura ARMADA por
- * Tab/Enter del grid vía `useMedGridTab`) vive en `useInlineEdit`; aquí solo el
- * parse/formato específico de medición (admite vacío, sin aviso de inválido).
+ * Tab/Enter del grid vía `useMedGridTab`) vive en `useInlineEdit`.
  */
 export function MedNum({
   value,
+  expr,
   dec = 2,
   align = 'right',
   onCommit,
   ariaLabel,
 }: {
   value: number | '';
+  /** Operación de la que sale `value`, si se tecleó una. */
+  expr?: string;
   dec?: number;
   align?: Align;
-  onCommit: (value: number | '') => void;
+  onCommit: (value: number | '', expr?: string) => void;
   ariaLabel?: string;
 }) {
   const { editing, draft, setDraft, inputRef, displayRef, begin, cancel, finish, armOpenOnFocus } =
     useInlineEdit<HTMLButtonElement>();
+  const [invalid, setInvalid] = useState(false);
+  const inicial = useRef('');
 
   const isBlank = value === '' || value == null || Number.isNaN(Number(value));
 
   function start() {
-    begin(isBlank ? '' : fmtNum(Number(value), dec).replace(/\./g, ''));
+    setInvalid(false);
+    inicial.current = expr ?? (isBlank ? '' : fmtNum(Number(value), dec).replace(/\./g, ''));
+    begin(inicial.current);
   }
-  function commit() {
+  function close() {
     finish();
+    setInvalid(false);
+  }
+  /** Lee el borrador: `undefined` si no hay nada que confirmar, `null` si no
+   *  se puede leer. */
+  function leer(): { value: number | ''; expr?: string } | null | undefined {
     const s = draft.trim();
-    if (s === '') {
-      onCommit(''); // vaciar propaga "" (la dimensión no anula la línea)
-      return;
+    if (s === inicial.current.trim()) return undefined;
+    if (s === '') return { value: '' }; // vaciar propaga "" (la dimensión no anula la línea)
+    return leerCelda(s);
+  }
+  function emit(r: { value: number | ''; expr?: string }) {
+    if (r.expr) onCommit(r.value, r.expr);
+    else onCommit(r.value);
+  }
+  // Enter: devuelve false si sigue abierta por inválida (el caller corta la
+  // propagación para que el grid no baje de fila).
+  function confirm(): boolean {
+    const r = leer();
+    if (r === null) {
+      setInvalid(true);
+      inputRef.current?.select();
+      return false;
     }
-    const n = parseEsNumber(s);
-    if (n !== null) onCommit(n);
+    if (r) emit(r);
+    close();
+    return true;
+  }
+  function leave() {
+    const r = leer();
+    if (r) emit(r);
+    close();
   }
 
   if (editing) {
@@ -52,14 +92,22 @@ export function MedNum({
         value={draft}
         inputMode="decimal"
         aria-label={ariaLabel}
+        aria-invalid={invalid || undefined}
+        title={invalid ? 'No se puede calcular. Usa números y + − × / ( )' : undefined}
         size={1} // sin esto el ancho intrínseco (~20ch) revienta la columna al editar
-        className={`mono ${styles.medCellInput}`}
+        className={`mono ${styles.medCellInput} ${invalid ? styles.invalid : ''}`}
         style={{ textAlign: align }}
-        onChange={(e) => setDraft(toDecimalComma(e.target.value))} // punto del numpad → coma
-        onBlur={commit}
+        onChange={(e) => {
+          setDraft(toDecimalComma(e.target.value)); // punto del numpad → coma
+          if (invalid) setInvalid(false); // está corrigiendo: quita el aviso
+        }}
+        onBlur={leave}
         onKeyDown={(e) => {
-          if (e.key === 'Enter') commit();
-          if (e.key === 'Escape') cancel();
+          if (e.key === 'Enter' && !confirm()) e.stopPropagation();
+          if (e.key === 'Escape') {
+            setInvalid(false);
+            cancel();
+          }
         }}
       />
     );
@@ -70,11 +118,17 @@ export function MedNum({
       type="button"
       aria-label={ariaLabel}
       data-editcell=""
+      title={expr && !isBlank ? `${expr} = ${fmtNum(Number(value), dec)}` : undefined}
       className={`mono tcol ${styles.medCellBtn} ${isBlank ? styles.blank : ''}`}
       style={{ textAlign: align }}
       onClick={start}
       onFocus={armOpenOnFocus(start)}
     >
+      {expr && !isBlank && (
+        <span className={styles.medExprMark} aria-hidden="true">
+          ƒ
+        </span>
+      )}
       {isBlank ? '·' : fmtNum(Number(value), dec)}
     </button>
   );

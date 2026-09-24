@@ -9,7 +9,7 @@ import { round2, importeCents, type Cents } from './money';
 
 /** ¿La dimensión está SIN ESCRIBIR? (vacía / null / no numérica). Un `0` NO lo
  *  está: es una anulación deliberada de la línea. */
-function blank(v: number | '' | null | undefined): boolean {
+export function blank(v: number | '' | null | undefined): boolean {
   return v == null || v === '' || Number.isNaN(Number(v));
 }
 

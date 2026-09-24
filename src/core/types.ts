@@ -7,6 +7,9 @@
 
 export type ResourceType = 'MO' | 'MQ' | 'MAT' | '%CI';
 
+/** Casillas de una línea de medición, en el orden del ~M de FIEBDC. */
+export type MedDim = 'uds' | 'largo' | 'ancho' | 'alto';
+
 /** Línea de medición: uds × largo × ancho × alto. Dimensión vacía = factor 1;
  *  las CUATRO vacías = línea de comentario, parcial 0 (ver `lineParcial`). */
 export interface MedLine {
@@ -21,7 +24,21 @@ export interface MedLine {
   largo: number | '';
   ancho: number | '';
   alto: number | '';
+  /**
+   * Operación tecleada en una casilla ("5,57+3"), por casilla. Lo que cuenta es
+   * el NÚMERO de la casilla (su resultado): esto solo deja ver y retocar de
+   * dónde sale. Escribir un número suelto en la casilla la borra
+   * (`editMedLine`), así que nunca contradice al valor.
+   */
+  expr?: Partial<Record<MedDim, string>>;
 }
+
+/**
+ * Forma de medir de una partida: qué columnas enseña su tabla de medición y
+ * cómo se llaman (ver `core/medForma`). Es solo PRESENTACIÓN: el dato vive
+ * siempre en las cuatro casillas de `MedLine`.
+ */
+export type MedForma = 'ud' | 'lin' | 'sup' | 'area' | 'vol' | 'areaEsp' | 'peso';
 
 /**
  * Línea de justificación de precio dentro de una partida. En runtime sólo
@@ -67,6 +84,9 @@ export interface Partida {
   cantidad?: number; // cantidad fija si no hay medición
   desc: string;
   med: MedLine[];
+  /** Forma de medir elegida a mano. undefined = la que toca por la unidad
+   *  (`formaDeUd`): cambiar la ud de m a m² cambia también las columnas. */
+  medForma?: MedForma;
   items: Item[];
   mainType?: ResourceType; // badge de tipo dominante
   fromBase?: boolean; // chip "BASE" hasta que se edita

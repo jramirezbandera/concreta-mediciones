@@ -1,20 +1,36 @@
 import type { ReactNode } from 'react';
 import { Icon } from '../../components';
 import { lineParcial } from '../../core/medicion';
+import { medColumnas, medFormaDe } from '../../core/medForma';
 import { fmtNum } from '../../core/money';
 import type { Partida } from '../../core/types';
 import { useMedGridTab } from '../../hooks/useMedGridTab';
 import { useObraStore } from '../../store';
-import { decOf } from './format';
+import { FUERA_TITLE, decOf } from './format';
 import { MedComment, MedNum } from './MedCells';
 import styles from './Presupuesto.module.css';
 
 /** Campo etiquetado (Uds/Longitud/…) para la medición en tarjeta. `col` marca la
  *  columna para la navegación de teclado (Tab/Enter). */
-function MedField({ label, col, children }: { label: string; col: number; children: ReactNode }) {
+function MedField({
+  label,
+  col,
+  fuera = false,
+  children,
+}: {
+  label: string;
+  col: number;
+  fuera?: boolean;
+  children: ReactNode;
+}) {
   return (
     <div className={styles.medField}>
-      <span className={`caps ${styles.medFieldLabel}`}>{label}</span>
+      <span
+        className={`caps ${styles.medFieldLabel} ${fuera ? styles.medThFuera : ''}`}
+        title={fuera ? FUERA_TITLE : undefined}
+      >
+        {label}
+      </span>
       <div className={styles.medFieldBox} data-editfield="" data-col={col}>
         {children}
       </div>
@@ -28,6 +44,7 @@ export function MedCards({ p, chapterId }: { p: Partida; chapterId: string }) {
   const deleteMedLine = useObraStore((s) => s.deleteMedLine);
   const addMedLine = useObraStore((s) => s.addMedLine);
   const med = p.med ?? [];
+  const cols = medColumnas(medFormaDe(p), med);
   const medTab = useMedGridTab(() => addMedLine(chapterId, p.id), med.length);
 
   if (med.length === 0) {
@@ -60,40 +77,22 @@ export function MedCards({ p, chapterId }: { p: Partida; chapterId: string }) {
               <Icon name="x" size={15} />
             </button>
           </div>
-          <div className={styles.medGrid}>
-            <MedField label="Uds" col={1}>
-              <MedNum
-                value={l.uds}
-                dec={decOf(l.uds)}
-                align="center"
-                ariaLabel="Unidades"
-                onCommit={(v) => editMedLine(chapterId, p.id, i, 'uds', v)}
-              />
-            </MedField>
-            <MedField label="Longitud" col={2}>
-              <MedNum
-                value={l.largo}
-                align="center"
-                ariaLabel="Longitud"
-                onCommit={(v) => editMedLine(chapterId, p.id, i, 'largo', v)}
-              />
-            </MedField>
-            <MedField label="Anchura" col={3}>
-              <MedNum
-                value={l.ancho}
-                align="center"
-                ariaLabel="Anchura"
-                onCommit={(v) => editMedLine(chapterId, p.id, i, 'ancho', v)}
-              />
-            </MedField>
-            <MedField label="Altura" col={4}>
-              <MedNum
-                value={l.alto}
-                align="center"
-                ariaLabel="Altura"
-                onCommit={(v) => editMedLine(chapterId, p.id, i, 'alto', v)}
-              />
-            </MedField>
+          <div
+            className={styles.medGrid}
+            style={{ gridTemplateColumns: `repeat(${Math.max(cols.length, 2)}, 1fr)` }}
+          >
+            {cols.map((c, ci) => (
+              <MedField key={c.slot} label={c.label} col={ci + 1} fuera={c.fuera}>
+                <MedNum
+                  value={l[c.slot]}
+                  expr={l.expr?.[c.slot]}
+                  dec={c.slot === 'uds' ? decOf(l.uds) : undefined}
+                  align="center"
+                  ariaLabel={c.slot === 'uds' ? 'Unidades' : c.label}
+                  onCommit={(v, ex) => editMedLine(chapterId, p.id, i, c.slot, v, ex)}
+                />
+              </MedField>
+            ))}
           </div>
           <div className={styles.medCardFoot}>
             <span className={`caps ${styles.medCardParcLabel}`}>Parcial</span>

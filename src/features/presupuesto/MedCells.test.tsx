@@ -42,6 +42,48 @@ describe('MedNum', () => {
     expect(onCommit).toHaveBeenCalledWith(0.7);
   });
 
+  it('calcula una operación y la entrega junto con el resultado', () => {
+    const onCommit = vi.fn();
+    render(<MedNum value="" onCommit={onCommit} ariaLabel="Largo" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Largo' }));
+    const input = screen.getByRole('textbox', { name: 'Largo' });
+    fireEvent.change(input, { target: { value: '5,57+3' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onCommit).toHaveBeenCalledWith(8.57, '5,57+3');
+  });
+
+  it('en reposo marca el valor calculado y al editar enseña la operación', () => {
+    render(<MedNum value={8.57} expr="5,57+3" onCommit={() => {}} ariaLabel="Largo" />);
+    const btn = screen.getByRole('button', { name: 'Largo' });
+    expect(btn).toHaveTextContent('ƒ8,57');
+    expect(btn).toHaveAttribute('title', '5,57+3 = 8,57');
+    fireEvent.click(btn);
+    expect(screen.getByRole('textbox', { name: 'Largo' })).toHaveValue('5,57+3');
+  });
+
+  it('Enter con algo que no se puede calcular avisa y NO cierra ni confirma', () => {
+    const onCommit = vi.fn();
+    render(<MedNum value={2} onCommit={onCommit} ariaLabel="Largo" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Largo' }));
+    const input = screen.getByRole('textbox', { name: 'Largo' });
+    fireEvent.change(input, { target: { value: '5,57+' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(screen.getByRole('textbox', { name: 'Largo' })).toHaveAttribute('aria-invalid', 'true');
+    // Salir del campo revierte sin confirmar (no se atrapa el foco).
+    fireEvent.blur(screen.getByRole('textbox', { name: 'Largo' }));
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Largo' })).toHaveTextContent('2,00');
+  });
+
+  it('sin cambios no confirma (no redondea un valor con más de 2 decimales)', () => {
+    const onCommit = vi.fn();
+    render(<MedNum value={316.3978} onCommit={onCommit} ariaLabel="Largo" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Largo' }));
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'Largo' }), { key: 'Enter' });
+    expect(onCommit).not.toHaveBeenCalled();
+  });
+
   it('vaciar la celda propaga "" (la dimensión no anula la línea)', () => {
     const onCommit = vi.fn();
     render(<MedNum value={2} onCommit={onCommit} ariaLabel="Largo" />);

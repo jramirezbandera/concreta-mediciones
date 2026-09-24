@@ -6,7 +6,7 @@
    capítulos/subcapítulos/partidas con su renumeración. Lógica idéntica al store
    monolítico; solo cambia de fichero.
    =========================================================================== */
-import type { Cert, Chapter, Partida, PartidaBaja, SubChapter } from '../../core/types';
+import type { Cert, Chapter, MedDim, Partida, PartidaBaja, SubChapter } from '../../core/types';
 import { round2 } from '../../core/money';
 import { mainTypeOf, precioSegunModo } from '../../core/banco';
 import { findNode, flattenContainers, subtreeIds } from '../../core/tree';
@@ -251,6 +251,7 @@ type EstructuraSlice = Pick<
   | 'addMedLine'
   | 'editMedLine'
   | 'deleteMedLine'
+  | 'setMedForma'
   | 'editRecurso'
   | 'editItemCantidad'
   | 'addItem'
@@ -316,12 +317,20 @@ export const createEstructuraSlice: ObraSlice<EstructuraSlice> = (set) => ({
       p.fromBase = false;
     }),
 
-  editMedLine: (chapterId, partidaId, index, field, value) =>
+  editMedLine: (chapterId, partidaId, index, field, value, expr) =>
     set((s) => {
       const p = s.partidas[chapterId]?.find((x) => x.id === partidaId);
       const line = p?.med[index];
       if (!p || !line) return;
       line[field] = value;
+      if (field === 'uds' || field === 'largo' || field === 'ancho' || field === 'alto') {
+        const dim = field as MedDim;
+        if (expr) (line.expr ??= {})[dim] = expr;
+        else if (line.expr) {
+          delete line.expr[dim];
+          if (Object.keys(line.expr).length === 0) delete line.expr;
+        }
+      }
       p.fromBase = false;
     }),
 
@@ -331,6 +340,15 @@ export const createEstructuraSlice: ObraSlice<EstructuraSlice> = (set) => ({
       if (!p || index < 0 || index >= p.med.length) return;
       p.med.splice(index, 1);
       p.fromBase = false;
+    }),
+
+  // No quita el chip BASE: cambiar las columnas no es revisar la partida.
+  setMedForma: (chapterId, partidaId, forma) =>
+    set((s) => {
+      const p = s.partidas[chapterId]?.find((x) => x.id === partidaId);
+      if (!p) return;
+      if (forma) p.medForma = forma;
+      else delete p.medForma;
     }),
 
   editRecurso: (code, field, value) =>

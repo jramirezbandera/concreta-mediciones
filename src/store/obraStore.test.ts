@@ -535,6 +535,22 @@ describe('acciones F2 (edición in-situ)', () => {
     expect(partidaCantidad(p111())).toBe(124.65);
   });
 
+  it('editMedLine guarda la operación de una casilla y un número suelto la borra', () => {
+    state().editMedLine('01', 'p111', 0, 'largo', 8.57, '5,57+3');
+    state().editMedLine('01', 'p111', 0, 'alto', 2.4, '1,2*2');
+    expect(p111().med[0]!.largo).toBe(8.57);
+    expect(p111().med[0]!.expr).toEqual({ largo: '5,57+3', alto: '1,2*2' });
+    // Sin operación (número tecleado, o una edición del asistente) → fuera la de esa casilla.
+    state().editMedLine('01', 'p111', 0, 'largo', 9);
+    expect(p111().med[0]!.expr).toEqual({ alto: '1,2*2' });
+    state().editMedLine('01', 'p111', 0, 'alto', '');
+    expect(p111().med[0]!.expr).toBeUndefined();
+    // El comentario no toca las operaciones.
+    state().editMedLine('01', 'p111', 1, 'largo', 4, '2+2');
+    state().editMedLine('01', 'p111', 1, 'comment', 'x');
+    expect(p111().med[1]!.expr).toEqual({ largo: '2+2' });
+  });
+
   it('las acciones no rompen si la partida o el índice no existen', () => {
     expect(() => state().editPartidaField('99', 'nope', 'title', 'x')).not.toThrow();
     expect(() => state().deleteMedLine('01', 'p111', 99)).not.toThrow();

@@ -21,7 +21,7 @@
 import { create, type StateCreator } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import type { Agente, Cert, MedLine, Partida, Rates, ResourceType } from '../core/types';
+import type { Agente, Cert, MedForma, MedLine, Partida, Rates, ResourceType } from '../core/types';
 import { composeCertFirmantes, firmaCertDefinitiva } from '../core/listado';
 import { ancestorIds, findNode } from '../core/tree';
 import type { ImportedObra } from '../core/bc3import';
@@ -301,16 +301,22 @@ export interface ObraState extends ObraData {
   /** Añade una línea de medición vacía. Mientras no se escriba ninguna dimensión
    *  su parcial es 0: añadirla no mueve la cantidad de la partida. */
   addMedLine: (chapterId: string, partidaId: string) => void;
-  /** Edita un campo de una línea de medición (comentario o dimensión). */
+  /** Edita un campo de una línea de medición (comentario o dimensión). En una
+   *  dimensión, `expr` es la operación de la que sale `value` ("5,57+3"); sin
+   *  ella se borra la que hubiera, así que la fórmula nunca contradice al valor. */
   editMedLine: <K extends keyof MedLine>(
     chapterId: string,
     partidaId: string,
     index: number,
     field: K,
     value: MedLine[K],
+    expr?: string,
   ) => void;
   /** Elimina una línea de medición. */
   deleteMedLine: (chapterId: string, partidaId: string, index: number) => void;
+  /** Fija la forma de medir (columnas de la tabla de medición); undefined la
+   *  devuelve a la de la unidad. Solo presentación: no toca líneas ni cantidad. */
+  setMedForma: (chapterId: string, partidaId: string, forma: MedForma | undefined) => void;
 
   /* ---- acciones F2.3 (justificación del precio / banco compartido, T9) ---- */
   /**

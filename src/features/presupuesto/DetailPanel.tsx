@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { EditableText, Icon } from '../../components';
 import { lineParcial, medTotal } from '../../core/medicion';
+import { medColumnas, medFormaDe } from '../../core/medForma';
 import { fmtNum } from '../../core/money';
 import type { Partida } from '../../core/types';
 import { useGridNav } from '../../hooks/useGridNav';
 import { useMedGridTab } from '../../hooks/useMedGridTab';
 import { useObraStore } from '../../store';
-import { decOf } from './format';
+import { FUERA_TITLE, decOf } from './format';
 import { MedCards } from './MedCards';
 import { MedComment, MedNum } from './MedCells';
+import { MedFormaSelect } from './MedFormaSelect';
 import { PriceJustif } from './PriceJustif';
 import { PriceJustifCards } from './PriceJustifCards';
 import styles from './Presupuesto.module.css';
@@ -18,7 +20,8 @@ type Tab = 'medicion' | 'descripcion' | 'justif';
 /**
  * Panel de detalle de una partida: toggle segmentado Medición / Descripción /
  * Justificación del precio. La Medición edita líneas (uds·largo·ancho·alto →
- * parcial) y el total alimenta la cantidad de la partida en vivo. En modo
+ * parcial) y el total alimenta la cantidad de la partida en vivo; la forma de
+ * medir decide qué columnas se ven y cómo se llaman (`core/medForma`). En modo
  * `compact` (<780, F2.5) la medición y la justificación pasan a tarjetas.
  */
 export function DetailPanel({
@@ -36,9 +39,14 @@ export function DetailPanel({
   const addMedLine = useObraStore((s) => s.addMedLine);
   const editMedLine = useObraStore((s) => s.editMedLine);
   const deleteMedLine = useObraStore((s) => s.deleteMedLine);
+  const setMedForma = useObraStore((s) => s.setMedForma);
 
   const med = p.med ?? [];
   const total = medTotal(med);
+  const cols = medColumnas(medFormaDe(p), med);
+  const formaSelect = (
+    <MedFormaSelect forma={p.medForma} ud={p.ud} onChange={(f) => setMedForma(chapterId, p.id, f)} />
+  );
   // Tab/Enter encadenan edición y crean fila al final (hoja de cálculo).
   const medTab = useMedGridTab(() => addMedLine(chapterId, p.id), med.length);
 
@@ -70,22 +78,25 @@ export function DetailPanel({
             {p.items.length > 0 && <span className={`mono ${styles.segCount}`}>{p.items.length}</span>}
           </button>
         </div>
-        {!compact && (
-          <div
-            className={styles.detailQty}
-            style={{ visibility: tab === 'medicion' ? 'hidden' : 'visible' }}
-          >
-            <span className={`caps ${styles.detailQtyLabel}`}>Cantidad total</span>
-            <span className={`mono ${styles.detailQtyVal}`}>{fmtNum(total)}</span>
-            <span className={styles.detailQtyUd}>{p.ud}</span>
-          </div>
-        )}
+        {!compact &&
+          (tab === 'medicion' ? (
+            formaSelect
+          ) : (
+            <div className={styles.detailQty}>
+              <span className={`caps ${styles.detailQtyLabel}`}>Cantidad total</span>
+              <span className={`mono ${styles.detailQtyVal}`}>{fmtNum(total)}</span>
+              <span className={styles.detailQtyUd}>{p.ud}</span>
+            </div>
+          ))}
       </div>
 
       {tab === 'medicion' && (
         <div>
           {compact ? (
-            <MedCards p={p} chapterId={chapterId} />
+            <>
+              <div className={styles.medFormaRow}>{formaSelect}</div>
+              <MedCards p={p} chapterId={chapterId} />
+            </>
           ) : (
             <div
               ref={medTab.ref}
@@ -100,11 +111,16 @@ export function DetailPanel({
               <thead>
                 <tr>
                   <th className={`${styles.medTh} ${styles.medThComment}`}>Comentario</th>
-                  <th className={styles.medTh}>Uds</th>
-                  <th className={styles.medTh}>Longitud</th>
-                  <th className={styles.medTh}>Anchura</th>
-                  <th className={styles.medTh}>Altura</th>
-                  <th className={styles.medTh}>Parcial</th>
+                  {cols.map((c) => (
+                    <th
+                      key={c.slot}
+                      className={`${styles.medTh} ${c.slot === 'uds' ? styles.medThUds : styles.medThDim} ${c.fuera ? styles.medThFuera : ''}`}
+                      title={c.fuera ? FUERA_TITLE : undefined}
+                    >
+                      {c.label}
+                    </th>
+                  ))}
+                  <th className={`${styles.medTh} ${styles.medThParcial}`}>Parcial</th>
                   <th className={styles.medTh} />
                 </tr>
               </thead>
@@ -118,35 +134,17 @@ export function DetailPanel({
                         onCommit={(v) => editMedLine(chapterId, p.id, i, 'comment', v)}
                       />
                     </td>
-                    <td className={styles.medTd} data-editfield="" data-col="1">
-                      <MedNum
-                        value={l.uds}
-                        dec={decOf(l.uds)}
-                        ariaLabel="Unidades"
-                        onCommit={(v) => editMedLine(chapterId, p.id, i, 'uds', v)}
-                      />
-                    </td>
-                    <td className={styles.medTd} data-editfield="" data-col="2">
-                      <MedNum
-                        value={l.largo}
-                        ariaLabel="Longitud"
-                        onCommit={(v) => editMedLine(chapterId, p.id, i, 'largo', v)}
-                      />
-                    </td>
-                    <td className={styles.medTd} data-editfield="" data-col="3">
-                      <MedNum
-                        value={l.ancho}
-                        ariaLabel="Anchura"
-                        onCommit={(v) => editMedLine(chapterId, p.id, i, 'ancho', v)}
-                      />
-                    </td>
-                    <td className={styles.medTd} data-editfield="" data-col="4">
-                      <MedNum
-                        value={l.alto}
-                        ariaLabel="Altura"
-                        onCommit={(v) => editMedLine(chapterId, p.id, i, 'alto', v)}
-                      />
-                    </td>
+                    {cols.map((c, ci) => (
+                      <td key={c.slot} className={styles.medTd} data-editfield="" data-col={ci + 1}>
+                        <MedNum
+                          value={l[c.slot]}
+                          expr={l.expr?.[c.slot]}
+                          dec={c.slot === 'uds' ? decOf(l.uds) : undefined}
+                          ariaLabel={c.slot === 'uds' ? 'Unidades' : c.label}
+                          onCommit={(v, ex) => editMedLine(chapterId, p.id, i, c.slot, v, ex)}
+                        />
+                      </td>
+                    ))}
                     <td className={`mono ${styles.medTd} ${styles.medParcial}`}>{fmtNum(lineParcial(l))}</td>
                     <td className={`${styles.medTd} ${styles.medDelTd}`}>
                       <button
@@ -162,7 +160,7 @@ export function DetailPanel({
                 ))}
                 {med.length === 0 && (
                   <tr>
-                    <td colSpan={7} className={styles.medEmpty}>
+                    <td colSpan={cols.length + 3} className={styles.medEmpty}>
                       Sin líneas de medición. Añade la primera para calcular la cantidad; luego
                       encadena celdas con Tab y baja con Enter.
                     </td>
