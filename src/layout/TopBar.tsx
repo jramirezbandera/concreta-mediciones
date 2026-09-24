@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { Icon } from '../components/Icon';
 import type { Breakpoint } from '../hooks/useBreakpoint';
 import type { Theme } from '../hooks/useTheme';
@@ -47,6 +48,33 @@ export function TopBar({
   importAction,
 }: TopBarProps) {
   const { isMobile, isCompact } = bp;
+  // Menú «Más» (solo móvil): las acciones secundarias no caben en 360–390px (con
+  // puntero táctil cada .icon-btn crece a 44px) y la fila desbordaba hacia la
+  // izquierda pisando la marca y aplastando el selector de obra.
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
+  const moreBtnRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onDown = (e: PointerEvent) => {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) setMoreOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setMoreOpen(false);
+      moreBtnRef.current?.focus();
+    };
+    document.addEventListener('pointerdown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [moreOpen]);
+
+  // Cualquier elección dentro del menú lo cierra (burbujea tras el onClick del ítem).
+  const closeMore = () => setMoreOpen(false);
 
   return (
     <header className={styles.bar} style={{ padding: isMobile ? '0 10px' : '0 14px' }}>
@@ -74,12 +102,16 @@ export function TopBar({
           alt=""
         />
         {/* Cuándo mostrar el wordmark (no es monótono con el ancho):
-            · móvil (<760): SÍ — las pestañas van a la barra inferior y sobra sitio;
+            · móvil (<760): SÍ — las pestañas van a la barra inferior; pero en
+              teléfono (<480, `hide-xs`) cede el sitio al selector de obra: saber
+              en qué obra estás pesa más que el nombre de la app (el logo ya la firma);
             · tablet (760–1023): NO — las pestañas viven aquí, solo cabe el logo;
             · escritorio 1024–1180: NO — selector de obra + pestañas + acciones van
               justos y el wordmark pisaría las pestañas;
             · escritorio holgado (>1180): SÍ, junto al kicker «Mediciones» (mismo umbral). */}
-        {(isMobile || bp.w > 1180) && <span className={styles.name}>Concreta</span>}
+        {(isMobile || bp.w > 1180) && (
+          <span className={`${isMobile ? 'hide-xs ' : ''}${styles.name}`}>Concreta</span>
+        )}
         <span className={`hide-sm ${styles.sep}`} />
         <span className={`mono caps hide-md ${styles.kicker}`}>Mediciones</span>
         {obraSwitcher ? (
@@ -131,21 +163,8 @@ export function TopBar({
             pendiente de un pase de UX móvil (¿Drawer?). Los atajos Ctrl+Z/Ctrl+Y
             viven en useAppHotkeys. */}
         {!isMobile && <UndoRedoButtons />}
-        {importAction}
-        {/* La ayuda vive en la barra de estado inferior (desktop). En móvil no hay
-            StatusBar, así que se mantiene aquí como único punto de entrada. */}
-        {onHelp && isMobile && (
-          <button
-            type="button"
-            title="Ayuda y atajos"
-            aria-label="Ayuda"
-            onClick={onHelp}
-            className="tcol icon-btn"
-          >
-            <Icon name="help" size={16} />
-          </button>
-        )}
-        {onObra && (
+        {!isMobile && importAction}
+        {!isMobile && onObra && (
           <button
             type="button"
             title="Datos de la obra"
@@ -156,15 +175,17 @@ export function TopBar({
             <Icon name="building" size={16} />
           </button>
         )}
-        <button
-          type="button"
-          title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
-          aria-label={theme === 'dark' ? 'Activar modo claro' : 'Activar modo oscuro'}
-          onClick={onToggleTheme}
-          className="tcol icon-btn"
-        >
-          <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={15} />
-        </button>
+        {!isMobile && (
+          <button
+            type="button"
+            title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+            aria-label={theme === 'dark' ? 'Activar modo claro' : 'Activar modo oscuro'}
+            onClick={onToggleTheme}
+            className="tcol icon-btn"
+          >
+            <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={15} />
+          </button>
+        )}
         {onToggleAsistente && (
           <button
             type="button"
@@ -181,7 +202,76 @@ export function TopBar({
             <Icon name="assistant" size={16} />
           </button>
         )}
-        {onToggleRef &&
+        {isMobile && (
+          <div ref={moreRef} className={styles.more}>
+            <button
+              ref={moreBtnRef}
+              type="button"
+              onClick={() => setMoreOpen((o) => !o)}
+              title="Más acciones"
+              aria-label="Más acciones"
+              aria-haspopup="menu"
+              aria-expanded={moreOpen}
+              className="tcol icon-btn"
+              style={{
+                background: moreOpen ? 'var(--bg-elevated)' : undefined,
+                color: moreOpen ? 'var(--text-primary)' : undefined,
+              }}
+            >
+              <Icon name="dots" size={17} />
+            </button>
+            {/* Montado siempre (oculto con `hidden`): el input de fichero de
+                «Importar partidas» vive dentro y su onChange llega DESPUÉS de cerrar
+                el menú. El role solo mientras está abierto: las guardas de atajos
+                (hotkeyGuards) tratan cualquier [role="menu"] como UI abierta. */}
+            <div
+              role={moreOpen ? 'menu' : undefined}
+              aria-label="Más acciones"
+              hidden={!moreOpen}
+              onClick={closeMore}
+              className={styles.menu}
+            >
+              {onToggleRef && (
+                <button
+                  type="button"
+                  role="menuitemcheckbox"
+                  aria-checked={refOpen}
+                  onClick={onToggleRef}
+                  className={`tcol ${styles.menuItem} ${refOpen ? styles.menuItemOn : ''}`}
+                >
+                  <Icon name="split" size={16} />
+                  Referencia · copiar partidas
+                </button>
+              )}
+              {importAction && <div className={styles.menuSlot}>{importAction}</div>}
+              {onObra && (
+                <button type="button" role="menuitem" onClick={onObra} className={`tcol ${styles.menuItem}`}>
+                  <Icon name="building" size={16} />
+                  Datos de la obra
+                </button>
+              )}
+              <div className={styles.menuDivider} />
+              <button
+                type="button"
+                role="menuitem"
+                onClick={onToggleTheme}
+                className={`tcol ${styles.menuItem}`}
+              >
+                <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={16} />
+                {theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+              </button>
+              {/* En móvil no hay StatusBar: este es el punto de entrada a la ayuda. */}
+              {onHelp && (
+                <button type="button" role="menuitem" onClick={onHelp} className={`tcol ${styles.menuItem}`}>
+                  <Icon name="help" size={16} />
+                  Ayuda
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+        {!isMobile &&
+          onToggleRef &&
           (isCompact ? (
             <button
               type="button"

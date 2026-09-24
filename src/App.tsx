@@ -233,7 +233,10 @@ export default function App() {
         onObra={() => setObraOpen(true)}
         onHelp={() => openHelp('inicio')}
         obraSwitcher={<ObraSwitcher />}
-        importAction={view === 'presupuesto' ? <ImportPartidaButton compact={bp.isCompact} /> : undefined}
+        importAction={
+          // En móvil va dentro del menú «Más» del TopBar: fila con texto, no icono suelto.
+          view === 'presupuesto' ? <ImportPartidaButton compact={bp.isCompact && !bp.isMobile} /> : undefined
+        }
       />
 
       <div className={styles.body}>
