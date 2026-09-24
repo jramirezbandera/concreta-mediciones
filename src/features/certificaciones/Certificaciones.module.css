@@ -70,11 +70,27 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--sp-12);
+  flex-wrap: wrap;
+  gap: var(--sp-10) var(--sp-12);
 }
 .globalPct {
   font-size: var(--fs-table);
   color: var(--text-secondary);
+  white-space: nowrap;
+}
+/* Teléfono: el conmutador ocupa todo el ancho (cada opción en una línea, sin
+   partir «A origen» en dos) y debajo van «Completar» y la ejecución global. */
+@media (max-width: 759px) {
+  .headerBottom .seg {
+    flex: 1 1 100%;
+  }
+  .headerBottom .segBtn {
+    flex: 1;
+  }
+  .headerBottomRight {
+    flex: 1 1 100%;
+    justify-content: space-between;
+  }
 }
 .globalPct .mono {
   color: var(--accent);
@@ -100,6 +116,7 @@
   font-family: inherit;
   font-size: var(--fs-table);
   font-weight: 500;
+  white-space: nowrap;
   background: transparent;
   color: var(--text-secondary);
 }
@@ -686,6 +703,7 @@
   font-family: inherit;
   font-size: var(--fs-table);
   font-weight: 500;
+  white-space: nowrap;
   cursor: pointer;
 }
 .massBtn:hover:not(:disabled) {
