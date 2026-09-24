@@ -66,6 +66,29 @@ export function useInlineEdit<
       if (consumeArmNextEdit(e.currentTarget)) open();
     };
   }
+  /** `onBlur` del editor que IGNORA el blur por cambio de ventana o pestaña
+   *  (Alt+Tab a AutoCAD para leer una cota): el foco no se ha ido a otra parte
+   *  de la app, el navegador lo devuelve al input al volver y el borrador —aunque
+   *  sea una operación a medias, "9+14+11,44+"— debe seguir ahí, como en Excel.
+   *  Durante ese blur `document.hasFocus()` ya es false; en un blur normal (click
+   *  fuera, Tab) sigue siendo true y se ejecuta `leave`. */
+  function leaveUnlessWindowBlur(leave: () => void) {
+    return () => {
+      if (!document.hasFocus()) return;
+      leave();
+    };
+  }
 
-  return { editing, draft, setDraft, inputRef, displayRef, begin, cancel, finish, armOpenOnFocus };
+  return {
+    editing,
+    draft,
+    setDraft,
+    inputRef,
+    displayRef,
+    begin,
+    cancel,
+    finish,
+    armOpenOnFocus,
+    leaveUnlessWindowBlur,
+  };
 }

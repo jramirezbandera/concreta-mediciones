@@ -27,8 +27,18 @@ export function EditableNum({
   ariaLabel,
 }: EditableNumProps) {
   const [invalid, setInvalid] = useState(false);
-  const { editing, draft, setDraft, inputRef, displayRef, begin, cancel: cancelEdit, finish, armOpenOnFocus } =
-    useInlineEdit<HTMLButtonElement>();
+  const {
+    editing,
+    draft,
+    setDraft,
+    inputRef,
+    displayRef,
+    begin,
+    cancel: cancelEdit,
+    finish,
+    armOpenOnFocus,
+    leaveUnlessWindowBlur,
+  } = useInlineEdit<HTMLButtonElement>();
 
   function start() {
     setInvalid(false);
@@ -68,6 +78,7 @@ export function EditableNum({
 
   // Salir del campo (blur/Tab): el usuario se va; no se le atrapa el foco. Si el
   // borrador es válido se confirma; si no, se cancela revirtiendo (sin commit).
+  // Cambiar de ventana no cuenta como salir (`leaveUnlessWindowBlur`).
   function leave() {
     const n = parseEsNumber(draft);
     if (n !== null) onCommit(n);
@@ -87,7 +98,7 @@ export function EditableNum({
           setDraft(toDecimalComma(e.target.value)); // punto del numpad → coma decimal
           if (invalid) setInvalid(false); // está corrigiendo: quita el aviso
         }}
-        onBlur={leave}
+        onBlur={leaveUnlessWindowBlur(leave)}
         onKeyDown={(e) => {
           // Enter válido → burbujea a useMedGridTab (baja una fila). Enter inválido
           // → la celda se queda abierta con el aviso y NO se propaga (el grid no mueve).

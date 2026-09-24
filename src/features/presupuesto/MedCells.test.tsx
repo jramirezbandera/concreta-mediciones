@@ -90,6 +90,25 @@ describe('MedNum', () => {
     expect(screen.getByRole('button', { name: 'Largo' })).toHaveTextContent('2,00');
   });
 
+  it('cambiar de ventana (Alt+Tab a CAD) NO descarta una operación a medias', () => {
+    const onCommit = vi.fn();
+    render(<MedNum value={2} onCommit={onCommit} ariaLabel="Largo" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Largo' }));
+    const input = screen.getByRole('textbox', { name: 'Largo' });
+    fireEvent.change(input, { target: { value: '9+14+' } });
+    // Blur por perder la ventana: el documento ya no tiene el foco.
+    const hasFocus = vi.spyOn(document, 'hasFocus').mockReturnValue(false);
+    fireEvent.blur(input);
+    hasFocus.mockRestore();
+    expect(onCommit).not.toHaveBeenCalled();
+    // Al volver, la celda sigue abierta con lo tecleado y se puede completar.
+    const back = screen.getByRole('textbox', { name: 'Largo' });
+    expect(back).toHaveValue('9+14+');
+    fireEvent.change(back, { target: { value: '9+14+11,44' } });
+    fireEvent.keyDown(back, { key: 'Enter' });
+    expect(onCommit).toHaveBeenCalledWith(34.44, '9+14+11,44');
+  });
+
   it('sin cambios no confirma (no redondea un valor con más de 2 decimales)', () => {
     const onCommit = vi.fn();
     render(<MedNum value={316.3978} onCommit={onCommit} ariaLabel="Largo" />);

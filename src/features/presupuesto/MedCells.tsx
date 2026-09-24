@@ -18,7 +18,8 @@ type Align = 'left' | 'center' | 'right';
  * propaga como `''` (la dimensión no anula la línea).
  *
  * Como `EditableNum`: Enter con algo que no se puede leer NO cierra ni descarta
- * en silencio (aviso + sigue abierta); salir del campo (blur/Tab) revierte. Si
+ * en silencio (aviso + sigue abierta); salir del campo (blur/Tab) revierte, pero
+ * cambiar de ventana (Alt+Tab a CAD a medir) NO es salir: el borrador sigue. Si
  * el borrador no cambió no se confirma nada: recorrer la fila con Tab no debe
  * redondear a 2 decimales un 316,3978 pegado de CAD ni quitar el chip BASE.
  *
@@ -41,8 +42,18 @@ export function MedNum({
   onCommit: (value: number | '', expr?: string) => void;
   ariaLabel?: string;
 }) {
-  const { editing, draft, setDraft, inputRef, displayRef, begin, cancel, finish, armOpenOnFocus } =
-    useInlineEdit<HTMLButtonElement>();
+  const {
+    editing,
+    draft,
+    setDraft,
+    inputRef,
+    displayRef,
+    begin,
+    cancel,
+    finish,
+    armOpenOnFocus,
+    leaveUnlessWindowBlur,
+  } = useInlineEdit<HTMLButtonElement>();
   const [invalid, setInvalid] = useState(false);
   const inicial = useRef('');
 
@@ -109,7 +120,7 @@ export function MedNum({
           setDraft(toDecimalComma(e.target.value)); // punto del numpad → coma
           if (invalid) setInvalid(false); // está corrigiendo: quita el aviso
         }}
-        onBlur={leave}
+        onBlur={leaveUnlessWindowBlur(leave)}
         onKeyDown={(e) => {
           if (e.key === 'Enter' && !confirm()) e.stopPropagation();
           if (e.key === 'Escape') {

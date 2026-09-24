@@ -136,6 +136,19 @@ describe('EditableNum', () => {
     expect(onCommit).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Cantidad' })).toHaveTextContent('10,00');
   });
+
+  it('blur por cambio de ventana no cierra ni confirma: el borrador sigue', () => {
+    const onCommit = vi.fn();
+    render(<EditableNum value={10} onCommit={onCommit} ariaLabel="Cantidad" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Cantidad' }));
+    const input = screen.getByRole('textbox', { name: 'Cantidad' });
+    fireEvent.change(input, { target: { value: '12,' } });
+    const hasFocus = vi.spyOn(document, 'hasFocus').mockReturnValue(false);
+    fireEvent.blur(input);
+    hasFocus.mockRestore();
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(screen.getByRole('textbox', { name: 'Cantidad' })).toHaveValue('12,');
+  });
 });
 
 // Apertura al foco ARMADO (navegación tipo hoja de cálculo, useMedGridTab): la
