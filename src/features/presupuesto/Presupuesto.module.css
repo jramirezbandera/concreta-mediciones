@@ -717,6 +717,15 @@
 }
 /* Enter con algo que no se puede leer: aviso, la celda sigue abierta
    (mismo tratamiento que `EditableNum`). */
+/* Perfil del catálogo ("IPE 300") delante de su kg/m. */
+.medPerfil {
+  margin-right: var(--sp-6);
+  font-size: var(--fs-badge);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--accent);
+  white-space: nowrap;
+}
 .medCellInput.invalid {
   border-color: var(--state-warn);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--state-warn) 30%, transparent);

@@ -61,6 +61,20 @@ describe('MedNum', () => {
     expect(screen.getByRole('textbox', { name: 'Largo' })).toHaveValue('5,57+3');
   });
 
+  it('un perfil se convierte en su kg/m y se enseña su nombre', () => {
+    const onCommit = vi.fn();
+    const { rerender } = render(<MedNum value="" onCommit={onCommit} ariaLabel="kg/m" />);
+    fireEvent.click(screen.getByRole('button', { name: 'kg/m' }));
+    const input = screen.getByRole('textbox', { name: 'kg/m' });
+    fireEvent.change(input, { target: { value: 'ipe300' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onCommit).toHaveBeenCalledWith(42.2, 'IPE 300');
+    rerender(<MedNum value={42.2} expr="IPE 300" onCommit={onCommit} ariaLabel="kg/m" />);
+    const btn = screen.getByRole('button', { name: 'kg/m' });
+    expect(btn).toHaveTextContent('IPE 30042,20');
+    expect(btn).not.toHaveTextContent('ƒ');
+  });
+
   it('Enter con algo que no se puede calcular avisa y NO cierra ni confirma', () => {
     const onCommit = vi.fn();
     render(<MedNum value={2} onCommit={onCommit} ariaLabel="Largo" />);

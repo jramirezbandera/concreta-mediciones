@@ -36,6 +36,13 @@ describe('evalEsExpr', () => {
     expect(evalEsExpr('10/3')).toBe(3.333333);
   });
 
+  it('un perfil vale su peso por metro dentro de una operación', () => {
+    expect(evalEsExpr('IPE300*1,05')).toBe(44.31);
+    expect(evalEsExpr('2 x HEB 200')).toBe(122.6); // la x sigue siendo multiplicar
+    expect(evalEsExpr('ipe300+upn100')).toBe(52.8);
+    expect(evalEsExpr('IPE 310*2')).toBeNull(); // talla fuera de catálogo
+  });
+
   it('rechaza lo que no se puede calcular', () => {
     for (const s of ['', '5+', '*2', '(2+3', '2+3)', '2/0', '5,57+3a', '1,2,3+1', '2 3', '()']) {
       expect(evalEsExpr(s), s).toBeNull();
@@ -51,6 +58,11 @@ describe('leerCelda', () => {
 
   it('una operación devuelve el resultado y la operación tal cual', () => {
     expect(leerCelda(' 5,57+3 ')).toEqual({ value: 8.57, expr: '5,57+3' });
+  });
+
+  it('un perfil solo se guarda con su nombre canónico', () => {
+    expect(leerCelda('ipe300')).toEqual({ value: 42.2, expr: 'IPE 300' });
+    expect(leerCelda('Ø12')).toEqual({ value: 0.888, expr: 'Ø12' });
   });
 
   it('null si no se puede leer', () => {

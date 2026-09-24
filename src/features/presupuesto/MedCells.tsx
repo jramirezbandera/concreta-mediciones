@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { leerCelda } from '../../core/expresion';
+import { nombrePerfil } from '../../core/perfiles';
 import { fmtNum, toDecimalComma } from '../../core/money';
 import { useInlineEdit } from '../../hooks/useInlineEdit';
 import styles from './Presupuesto.module.css';
@@ -9,9 +10,11 @@ type Align = 'left' | 'center' | 'right';
 /**
  * Celda numérica de medición. Admite VACÍO (= factor 1, se pinta "·"), a
  * diferencia de `EditableNum`, y OPERACIONES ("5,57+3", "2×4,5", "(12-0,3)/2",
- * `core/expresion`): se guarda el resultado y, aparte, la operación (`expr`),
- * que es lo que se vuelve a ver al editar; en reposo la marca «ƒ» y el title
- * dicen de dónde sale el número. Enter confirma, Esc cancela. El valor vacío se
+ * `core/expresion`) y PERFILES ("IPE 300", "Ø12" → su kg/m, `core/perfiles`):
+ * se guarda el resultado y, aparte, lo tecleado (`expr`), que es lo que se
+ * vuelve a ver al editar. En reposo, un perfil enseña su nombre junto al peso
+ * y una operación la marca «ƒ»; el title da el detalle. Enter confirma, Esc
+ * cancela. El valor vacío se
  * propaga como `''` (la dimensión no anula la línea).
  *
  * Como `EditableNum`: Enter con algo que no se puede leer NO cierra ni descarta
@@ -44,6 +47,7 @@ export function MedNum({
   const inicial = useRef('');
 
   const isBlank = value === '' || value == null || Number.isNaN(Number(value));
+  const perfil = expr ? nombrePerfil(expr) : null;
 
   function start() {
     setInvalid(false);
@@ -93,7 +97,11 @@ export function MedNum({
         inputMode="decimal"
         aria-label={ariaLabel}
         aria-invalid={invalid || undefined}
-        title={invalid ? 'No se puede calcular. Usa números y + − × / ( )' : undefined}
+        title={
+          invalid
+            ? 'No se puede calcular. Usa números, + − × / ( ) o un perfil del catálogo (IPE 300, HEB 200, UPN 120, Ø12…)'
+            : undefined
+        }
         size={1} // sin esto el ancho intrínseco (~20ch) revienta la columna al editar
         className={`mono ${styles.medCellInput} ${invalid ? styles.invalid : ''}`}
         style={{ textAlign: align }}
@@ -124,10 +132,15 @@ export function MedNum({
       onClick={start}
       onFocus={armOpenOnFocus(start)}
     >
-      {expr && !isBlank && (
-        <span className={styles.medExprMark} aria-hidden="true">
-          ƒ
-        </span>
+      {perfil && !isBlank ? (
+        <span className={styles.medPerfil}>{perfil}</span>
+      ) : (
+        expr &&
+        !isBlank && (
+          <span className={styles.medExprMark} aria-hidden="true">
+            ƒ
+          </span>
+        )
       )}
       {isBlank ? '·' : fmtNum(Number(value), dec)}
     </button>

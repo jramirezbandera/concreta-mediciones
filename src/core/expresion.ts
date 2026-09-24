@@ -8,6 +8,9 @@
      term   := factor (('*' | '/') factor)*
      factor := ('+' | '-') factor | número | '(' expr ')'
    Multiplicar: * x X × ·    Dividir: / ÷    Restar: - −
+   Un perfil o una barra vale su peso por metro («IPE 300» = 42,2 kg/m,
+   «Ø12» = 0,888), así que «IPE300*1,05» suma un 5 % de uniones
+   (`core/perfiles`).
 
    Los números siguen la regla de `parseEsNumber` token a token: con coma, la
    coma es el decimal y los puntos son miles ("1.234,5"); sin coma, UN punto es
@@ -15,6 +18,7 @@
    la cadena ya tenga una coma y `toDecimalComma` haya dejado el punto.
    =========================================================================== */
 import { parseEsNumber } from './money';
+import { leerPerfil, nombrePerfil } from './perfiles';
 
 type Tok = { t: 'num'; v: number } | { t: 'op'; v: '+' | '-' | '*' | '/' | '(' | ')' };
 
@@ -55,6 +59,10 @@ function tokenize(input: string): Tok[] | null {
       if (v === null) return null;
       out.push({ t: 'num', v });
       i = j;
+    } else if (/[A-Za-zØø∅φΦ]/.test(c) && leerPerfil(input.slice(i))) {
+      const r = leerPerfil(input.slice(i))!;
+      out.push({ t: 'num', v: r.kgm });
+      i += r.len;
     } else if (c in OPS) {
       out.push({ t: 'op', v: OPS[c]! });
       i++;
@@ -131,13 +139,16 @@ export function evalEsExpr(input: string): number | null {
 
 /**
  * Lee lo tecleado en una celda de medición: un número suelto (tal cual, con
- * `parseEsNumber`) o una operación. `expr` solo viene si era una OPERACIÓN —es
- * lo que merece guardarse para ver luego de dónde sale el número—.
+ * `parseEsNumber`), un perfil o una operación. `expr` solo viene si NO era un
+ * número suelto —es lo que merece guardarse para ver luego de dónde sale el
+ * número—; un perfil solo se guarda con su nombre canónico ("ipe300" → "IPE 300").
  */
 export function leerCelda(input: string): { value: number; expr?: string } | null {
   const s = input.trim();
   const n = parseEsNumber(s);
   if (n !== null) return { value: n };
+  const perfil = nombrePerfil(s);
+  if (perfil) return { value: leerPerfil(perfil)!.kgm, expr: perfil };
   const v = evalEsExpr(s);
   return v === null ? null : { value: v, expr: s };
 }

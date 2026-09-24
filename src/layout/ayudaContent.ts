@@ -67,7 +67,7 @@ export const FEATURES: Feature[] = [
   {
     icon: 'ruler',
     title: 'Medición por líneas',
-    desc: 'Líneas uds × largo × ancho × alto con parciales; el total alimenta la cantidad de la partida en vivo. «Medir por» cambia las columnas de cada partida (superficie directa, superficie × espesor, peso…). Las celdas admiten operaciones (5,57+3, 2×4,5, (12−0,3)/2): se ve el resultado y se guarda la operación.',
+    desc: 'Líneas uds × largo × ancho × alto con parciales; el total alimenta la cantidad de la partida en vivo. «Medir por» cambia las columnas de cada partida (superficie directa, superficie × espesor, peso…). Las celdas admiten operaciones (5,57+3, 2×4,5, (12−0,3)/2) y perfiles, que valen su kg/m (IPE 300, HEB 200, UPN 120, Ø12; también IPE300*1,05): se ve el resultado y se guarda lo escrito.',
   },
   {
     icon: 'split',
