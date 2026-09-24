@@ -74,7 +74,8 @@ export function DetailPanel({
             className={`tcol ${styles.segBtn} ${tab === 'justif' ? styles.on : ''}`}
             onClick={() => setTab('justif')}
           >
-            Justificación del precio
+            {/* En móvil, «del precio» partía la pestaña en dos líneas. */}
+            {compact ? 'Justificación' : 'Justificación del precio'}
             {p.items.length > 0 && <span className={`mono ${styles.segCount}`}>{p.items.length}</span>}
           </button>
         </div>

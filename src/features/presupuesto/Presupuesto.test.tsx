@@ -112,7 +112,7 @@ describe('PresupuestoView (F2.1 lectura + F2.2 detalle)', () => {
   it('la unidad del RECURSO admite una unidad libre («Otra…», banco compartido)', () => {
     render(<PresupuestoView compact={true} />);
     fireEvent.click(screen.getByText('E02EM030')); // despliega p111 (tarjeta)
-    fireEvent.click(screen.getByText('Justificación del precio'));
+    fireEvent.click(screen.getByText('Justificación')); // en tarjetas, etiqueta corta
     fireEvent.click(screen.getAllByRole('button', { name: 'Unidad del recurso' })[0]!); // mo001
     const otra = screen.getByRole('textbox', { name: 'Otra unidad' });
     fireEvent.change(otra, { target: { value: 'jornada' } });
