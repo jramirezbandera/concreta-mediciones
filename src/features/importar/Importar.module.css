@@ -6,7 +6,7 @@
   justify-content: center;
 }
 .view.compact {
-  padding: var(--sp-20) 14px 32px;
+  padding: var(--sp-20) var(--gutter-compact) 32px;
 }
 .inner {
   width: 100%;

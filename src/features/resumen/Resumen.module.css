@@ -10,7 +10,7 @@
   padding: var(--sp-24) 32px;
 }
 .compact .page {
-  padding: var(--sp-16);
+  padding: var(--sp-16) var(--gutter-compact);
 }
 
 .kicker {

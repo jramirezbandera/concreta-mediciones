@@ -86,7 +86,7 @@
   position: static;
 }
 .compact .chHeader {
-  padding: 13px var(--sp-16) var(--sp-12);
+  padding: 13px var(--gutter-compact) var(--sp-12);
 }
 .compact .chTitle {
   font-size: var(--fs-lg);
@@ -398,7 +398,7 @@
   gap: var(--sp-24);
 }
 .compact .allHeader {
-  padding: 13px var(--sp-16) var(--sp-12);
+  padding: 13px var(--gutter-compact) var(--sp-12);
 }
 .allChip {
   font-size: var(--fs-caption);
@@ -423,7 +423,7 @@
   gap: var(--sp-12);
 }
 .compact .chapterBand {
-  padding: 9px var(--sp-16);
+  padding: 9px var(--gutter-compact);
 }
 .bandCode {
   font-size: var(--fs-caption);
@@ -1165,7 +1165,7 @@
 
 /* ---- lista de tarjetas de partida ---- */
 .cards {
-  padding: var(--sp-12);
+  padding: var(--sp-12) var(--gutter-compact);
   display: flex;
   flex-direction: column;
   gap: var(--sp-10);

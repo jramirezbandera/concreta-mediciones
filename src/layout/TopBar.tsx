@@ -85,7 +85,10 @@ export function TopBar({
   const closeMore = () => setMoreOpen(false);
 
   return (
-    <header className={styles.bar} style={{ padding: isMobile ? '0 10px' : '0 14px' }}>
+    // Móvil: 16px a la derecha (borde del botón Exportar = --gutter-compact) y 14px
+    // a la izquierda: el ☰ lleva margin -4 y 6px de aire propio, así que su dibujo
+    // cae en la misma línea de 16px que el contenido.
+    <header className={styles.bar} style={{ padding: isMobile ? '0 16px 0 14px' : '0 14px' }}>
       {/* Marca */}
       <div className={styles.brand} style={{ flex: isMobile ? 1 : '0 1 auto' }}>
         {isCompact && (

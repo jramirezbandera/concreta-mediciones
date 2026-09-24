@@ -26,6 +26,7 @@ Marca **Concreta** (mismo sistema que "Concreta FEM3D"). Tema **oscuro por defec
 - Tipografía: H1 23–25/600 (−0.02em) · `.sec-head` 10/600 caps (ls .11em) · cuerpo 12.5–13 · tabla 12–13 · badges 9.5–11 · barra estado 11 mono. `.caps` = uppercase + ls .09em.
 - Radios: botones/inputs 6 · chips 4–5 · tarjetas/paneles 9–12 · píldoras 20 · iconos 6–8.
 - Sombras: `--shadow-panel` (sutil) · `--shadow-float` (popovers/modales/drawer).
+- Margen lateral en compacto (móvil / tarjetas): `--gutter-compact` = 16px, único para cabeceras, bandas, listas de tarjetas, franjas y hojas. El TopBar móvil usa 14px a la izquierda porque el dibujo del ☰ (con su aire) ya cae en la línea de 16.
 - Alturas fijas: TopBar 48 · StatusBar 24 · BottomTabBar 54 · botones 30–34 · inputs 34 · icon-btn 30 · Sidebar 286 · panel Referencia 320–640.
 - Transiciones: `.t150` 150ms ease-in-out · `.tcol` 150ms. Entrada `cubic-bezier(.22,1,.36,1)`.
 - `.dot-grid`: `radial-gradient(circle, var(--dot) 1px, transparent 1px)` size 24px. Firma visual de Concreta.

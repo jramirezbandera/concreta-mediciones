@@ -70,6 +70,11 @@
   --sp-16: 16px;
   --sp-20: 20px;
   --sp-24: 24px;
+
+  /* Margen lateral único del modo compacto (móvil / tarjetas): cabeceras, bandas
+     de capítulo, listas de tarjetas, franjas y hojas. Antes convivían 10/12/14/16
+     y los bordes no casaban entre bloques. */
+  --gutter-compact: var(--sp-16);
 }
 
 /* ── LIGHT (toggle) ── */

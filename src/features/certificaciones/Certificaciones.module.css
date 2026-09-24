@@ -1232,8 +1232,8 @@
 /* Tarjetas móvil (compacto, <780) — F4.5                                 */
 /* ====================================================================== */
 .compact .header {
-  padding-left: 14px;
-  padding-right: 14px;
+  padding-left: var(--gutter-compact);
+  padding-right: var(--gutter-compact);
   position: static; /* sin cabecera fija: la sustituye CompactHeaderBar */
 }
 .view.compact {
@@ -1241,9 +1241,16 @@
 }
 .compact .summaryGrid {
   grid-template-columns: 1fr;
+  padding-left: var(--gutter-compact);
+  padding-right: var(--gutter-compact);
+}
+/* La banda de capítulo conservaba el padding de escritorio (24px) en móvil. */
+.compact .chapBand {
+  padding-left: var(--gutter-compact);
+  padding-right: var(--gutter-compact);
 }
 .cards {
-  padding: var(--sp-12);
+  padding: var(--sp-12) var(--gutter-compact);
   display: flex;
   flex-direction: column;
   gap: var(--sp-10);
