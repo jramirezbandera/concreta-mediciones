@@ -92,3 +92,25 @@ export function nombrePerfil(s: string): string | null {
   const r = leerPerfil(t);
   return r && r.len === t.length ? r.nombre : null;
 }
+
+// Dentro de un texto libre (el comentario de una línea): la serie no puede ir
+// pegada a otra letra y la talla termina donde acaba el número. Se admite el
+// guion de Presto ("IPE-300"). Las barras, solo con Ø (u ø ∅ φ Φ): una «d12»
+// suelta en un comentario puede ser cualquier cosa.
+const RE_PERFIL_TEXTO = /(?<![A-Za-z])(IPE|IPN|HEA|HEB|UPN)\s*-?\s*(\d+)(?!\d)/gi;
+const RE_BARRA_TEXTO = /[Øø∅φΦ]\s*(\d+)(?!\d)/g;
+
+/**
+ * El perfil que nombra un texto libre ("Vigas planta 1 IPE300", "Zapata Ø16").
+ * `null` si no nombra ninguno, si nombra VARIOS distintos ("IPE 300 + UPN 100":
+ * no hay forma de saber cuál manda) o si la talla no está en el catálogo.
+ */
+export function perfilEnTexto(texto: string): { kgm: number; nombre: string } | null {
+  const nombres = new Set<string>();
+  for (const m of texto.matchAll(RE_PERFIL_TEXTO)) nombres.add(`${m[1]!.toUpperCase()} ${Number(m[2])}`);
+  for (const m of texto.matchAll(RE_BARRA_TEXTO)) nombres.add(`Ø${Number(m[1])}`);
+  if (nombres.size !== 1) return null;
+  const nombre = [...nombres][0]!;
+  const kgm = PESO.get(nombre);
+  return kgm === undefined ? null : { kgm, nombre };
+}

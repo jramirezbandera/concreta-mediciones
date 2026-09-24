@@ -551,6 +551,23 @@ describe('acciones F2 (edición in-situ)', () => {
     expect(p111().med[1]!.expr).toEqual({ largo: '2+2' });
   });
 
+  it('en una partida medida por Peso, el perfil del comentario rellena el kg/m', () => {
+    state().setMedForma('01', 'p111', 'peso');
+    state().editMedLine('01', 'p111', 0, 'ancho', '');
+    state().editMedLine('01', 'p111', 0, 'comment', 'Vigas IPE300');
+    expect(p111().med[0]!.ancho).toBe(42.2);
+    expect(p111().med[0]!.expr).toEqual({ ancho: 'IPE 300' });
+    // Un kg/m tecleado a mano manda sobre el comentario.
+    state().editMedLine('01', 'p111', 0, 'ancho', 45);
+    state().editMedLine('01', 'p111', 0, 'comment', 'Vigas IPE330');
+    expect(p111().med[0]!.ancho).toBe(45);
+    // En otra forma (m³ → Volumen) el comentario no toca las casillas.
+    state().setMedForma('01', 'p111', undefined);
+    const antes = p111().med[1]!.ancho;
+    state().editMedLine('01', 'p111', 1, 'comment', 'IPE300');
+    expect(p111().med[1]!.ancho).toBe(antes);
+  });
+
   it('las acciones no rompen si la partida o el índice no existen', () => {
     expect(() => state().editPartidaField('99', 'nope', 'title', 'x')).not.toThrow();
     expect(() => state().deleteMedLine('01', 'p111', 99)).not.toThrow();

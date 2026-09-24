@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BARRAS, PERFILES, leerPerfil, nombrePerfil } from './perfiles';
+import { BARRAS, PERFILES, leerPerfil, nombrePerfil, perfilEnTexto } from './perfiles';
 
 describe('catálogo de perfiles', () => {
   // Dos fuentes que tienen que coincidir: el peso del prontuario y el área del
@@ -53,5 +53,24 @@ describe('nombrePerfil', () => {
     expect(nombrePerfil(' ipe300 ')).toBe('IPE 300');
     expect(nombrePerfil('IPE 300*1,05')).toBeNull();
     expect(nombrePerfil('42,2')).toBeNull();
+  });
+});
+
+describe('perfilEnTexto', () => {
+  it('encuentra el perfil dentro de un comentario', () => {
+    expect(perfilEnTexto('IPE300')).toEqual({ kgm: 42.2, nombre: 'IPE 300' });
+    expect(perfilEnTexto('Vigas planta 1 IPE-330 pórtico')?.nombre).toBe('IPE 330');
+    expect(perfilEnTexto('zunchos heb 200')?.nombre).toBe('HEB 200');
+    expect(perfilEnTexto('Zapata Z1 Ø16')?.nombre).toBe('Ø16');
+    expect(perfilEnTexto('IPE 300 y otra IPE300 igual')?.nombre).toBe('IPE 300'); // el mismo, dos veces
+  });
+
+  it('no adivina: nada, varios distintos o fuera de catálogo → null', () => {
+    expect(perfilEnTexto('Vigas planta 1')).toBeNull();
+    expect(perfilEnTexto('IPE 300 + UPN 100')).toBeNull();
+    expect(perfilEnTexto('IPE 310')).toBeNull();
+    expect(perfilEnTexto('TIPE300')).toBeNull(); // pegado a otra letra
+    expect(perfilEnTexto('IPE 3000')).toBeNull();
+    expect(perfilEnTexto('muro d12')).toBeNull(); // la «d» suelta no es una barra en texto
   });
 });

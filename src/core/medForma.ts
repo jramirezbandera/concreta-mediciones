@@ -9,6 +9,7 @@
    el .bc3 y lo que ya se hacía a mano, pero ahora la cabecera lo dice.
    =========================================================================== */
 import { blank } from './medicion';
+import { nombrePerfil, perfilEnTexto } from './perfiles';
 import type { MedDim, MedForma, MedLine, Partida } from './types';
 
 /** Casillas de una línea, en el orden del ~M de FIEBDC. */
@@ -87,4 +88,30 @@ export function medColumnas(forma: MedForma, med: readonly MedLine[]): MedCol[] 
     label: cols[i] ?? GENERICOS[i]!,
     fuera: i >= cols.length,
   }));
+}
+
+/**
+ * En una forma con columna kg/m («Peso»), el perfil que nombra el COMENTARIO
+ * de la línea ("Vigas planta 1 IPE300") rellena el kg/m: es donde se escribe
+ * de siempre, y así no hay que repetirlo en la celda. Devuelve lo que hay que
+ * escribir en la línea, o null si no toca nada:
+ *  - la forma no tiene kg/m, o el comentario no nombra un perfil (o nombra varios);
+ *  - el kg/m lo tecleó el usuario (un número o una operación): manda lo suyo;
+ *  - ya está puesto.
+ * Si el kg/m salió de un perfil, sigue al comentario: cambiar IPE 300 por
+ * IPE 330 en el texto cambia el peso. Quitar el perfil del texto no lo borra.
+ */
+export function pesoDesdeComentario(
+  forma: MedForma,
+  line: MedLine,
+): { slot: MedDim; value: number; expr: string } | null {
+  const i = medFormaDef(forma).cols.indexOf('kg/m');
+  if (i < 0) return null;
+  const slot = MED_SLOTS[i]!;
+  const perfil = perfilEnTexto(line.comment);
+  if (!perfil) return null;
+  const expr = line.expr?.[slot];
+  const aMano = !blank(line[slot]) && !(expr && nombrePerfil(expr));
+  if (aMano || (line[slot] === perfil.kgm && expr === perfil.nombre)) return null;
+  return { slot, value: perfil.kgm, expr: perfil.nombre };
 }

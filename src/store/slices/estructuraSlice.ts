@@ -6,8 +6,9 @@
    capítulos/subcapítulos/partidas con su renumeración. Lógica idéntica al store
    monolítico; solo cambia de fichero.
    =========================================================================== */
-import type { Cert, Chapter, MedDim, Partida, PartidaBaja, SubChapter } from '../../core/types';
+import type { Cert, Chapter, MedDim, MedForma, MedLine, Partida, PartidaBaja, SubChapter } from '../../core/types';
 import { round2 } from '../../core/money';
+import { medFormaDe, pesoDesdeComentario } from '../../core/medForma';
 import { mainTypeOf, precioSegunModo } from '../../core/banco';
 import { findNode, flattenContainers, subtreeIds } from '../../core/tree';
 import { nextPos, renumberChapter } from '../../core/numbering';
@@ -201,6 +202,15 @@ function reorderPartidaIn(
   renumberInPlace(ch, list);
 }
 
+/** Aplica a la línea el kg/m del perfil que nombra su comentario, si toca
+ *  (regla en `pesoDesdeComentario`). */
+function pesoDelComentario(forma: MedForma, line: MedLine): void {
+  const cambio = pesoDesdeComentario(forma, line);
+  if (!cambio) return;
+  line[cambio.slot] = cambio.value;
+  (line.expr ??= {})[cambio.slot] = cambio.expr;
+}
+
 /** Hermanas de una partida (mismo contenedor) EN ORDEN de lista. */
 function groupSiblings(list: Partida[], p: Partida): Partida[] {
   const sub = p.sub ?? null;
@@ -323,6 +333,7 @@ export const createEstructuraSlice: ObraSlice<EstructuraSlice> = (set) => ({
       const line = p?.med[index];
       if (!p || !line) return;
       line[field] = value;
+      if (field === 'comment') pesoDelComentario(medFormaDe(p), line);
       if (field === 'uds' || field === 'largo' || field === 'ancho' || field === 'alto') {
         const dim = field as MedDim;
         if (expr) (line.expr ??= {})[dim] = expr;
@@ -614,15 +625,18 @@ export const createEstructuraSlice: ObraSlice<EstructuraSlice> = (set) => ({
     set((s) => {
       const p = s.partidas[chapterId]?.find((x) => x.id === partidaId);
       if (!p || lines.length === 0) return;
+      const forma = medFormaDe(p);
       for (const l of lines) {
-        p.med.push({
+        const line: MedLine = {
           id: nextMedLineId(),
           comment: l.comment ?? '',
           uds: l.uds ?? '',
           largo: l.largo ?? '',
           ancho: l.ancho ?? '',
           alto: l.alto ?? '',
-        });
+        };
+        pesoDelComentario(forma, line);
+        p.med.push(line);
       }
       p.fromBase = false;
     }),

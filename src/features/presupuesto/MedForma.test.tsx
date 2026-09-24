@@ -67,6 +67,19 @@ describe('forma de medir en la tabla de medición', () => {
     expect(screen.getByRole('button', { name: 'Forma de medir: Volumen' })).toBeInTheDocument();
   });
 
+  it('en «Peso», escribir el perfil en el comentario rellena el kg/m', () => {
+    useObraStore.getState().setMedForma('01', 'p111', 'peso');
+    useObraStore.getState().addMedLine('01', 'p111');
+    const n = partida().med.length;
+    render(<Harness />);
+    const comentario = screen.getAllByLabelText('Comentario de la línea')[n - 1]!;
+    fireEvent.click(comentario);
+    const input = screen.getAllByLabelText('Comentario de la línea')[n - 1]!;
+    fireEvent.change(input, { target: { value: 'IPE300' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(screen.getAllByLabelText('kg/m')[n - 1]).toHaveTextContent('IPE 30042,20');
+  });
+
   it('en compacto las tarjetas usan los mismos rótulos', () => {
     useObraStore.getState().setMedForma('01', 'p111', 'areaEsp');
     render(<Harness compact />);
