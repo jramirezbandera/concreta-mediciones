@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { Breakpoint } from '../hooks/useBreakpoint';
 import { TopBar } from './TopBar';
@@ -70,6 +70,14 @@ describe('TopBar — menú «Más» en móvil (la fila de acciones pisaba la mar
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByRole('menu')).toBeNull();
     expect(trigger).toHaveFocus();
+  });
+
+  it('Deshacer/Rehacer viven en el menú (en el teléfono no hay Ctrl+Z)', () => {
+    renderBar(phone);
+    fireEvent.click(screen.getByRole('button', { name: 'Más acciones' }));
+    const menu = screen.getByRole('menu');
+    expect(within(menu).getByRole('button', { name: 'Deshacer' })).toBeInTheDocument();
+    expect(within(menu).getByRole('button', { name: 'Rehacer' })).toBeInTheDocument();
   });
 
   it('en escritorio no hay menú «Más»: las acciones van en la barra', () => {

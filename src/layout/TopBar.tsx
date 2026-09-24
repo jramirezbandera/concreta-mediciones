@@ -159,9 +159,8 @@ export function TopBar({
 
       {/* Acciones */}
       <div className={styles.actions}>
-        {/* Deshacer/Rehacer: en móvil no caben (la barra ya va justa a 390px);
-            pendiente de un pase de UX móvil (¿Drawer?). Los atajos Ctrl+Z/Ctrl+Y
-            viven en useAppHotkeys. */}
+        {/* Deshacer/Rehacer: en móvil no caben en la barra; van al menú «Más».
+            Los atajos Ctrl+Z/Ctrl+Y viven en useAppHotkeys. */}
         {!isMobile && <UndoRedoButtons />}
         {!isMobile && importAction}
         {!isMobile && onObra && (
@@ -231,6 +230,12 @@ export function TopBar({
               onClick={closeMore}
               className={styles.menu}
             >
+              {/* Deshacer/Rehacer: en el teléfono no hay Ctrl+Z. No cierran el menú
+                  (stopPropagation) para poder deshacer varios pasos seguidos. */}
+              <div className={styles.menuUndo} onClick={(e) => e.stopPropagation()}>
+                <UndoRedoButtons />
+              </div>
+              <div className={styles.menuDivider} />
               {onToggleRef && (
                 <button
                   type="button"

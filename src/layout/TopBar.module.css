@@ -177,6 +177,11 @@
 .menuItemOn {
   background: var(--accent-soft);
 }
+.menuUndo {
+  display: flex;
+  gap: var(--sp-4);
+  padding: var(--sp-2);
+}
 .menuDivider {
   height: 1px;
   margin: 5px var(--sp-2);
