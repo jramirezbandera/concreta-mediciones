@@ -36,7 +36,7 @@
 }
 .rowSub {
   font-size: var(--fs-table);
-  color: var(--text-disabled);
+  color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -70,5 +70,29 @@
 }
 .foot {
   font-size: var(--fs-table);
-  color: var(--text-disabled);
+  color: var(--text-secondary);
+}
+
+/* Teléfono: tres formatos junto al texto no caben (descripción recortada a ~20
+   caracteres, título en dos líneas). Los formatos bajan a su propia línea,
+   alineados con el texto, con altura táctil; la descripción se lee entera. */
+@media (max-width: 759px) {
+  .row {
+    flex-wrap: wrap;
+    row-gap: var(--sp-8);
+  }
+  .rowBody {
+    flex-basis: calc(100% - 34px - var(--sp-12));
+  }
+  .rowSub {
+    white-space: normal;
+  }
+  .chips {
+    margin-left: calc(34px + var(--sp-12));
+    gap: var(--sp-6);
+  }
+  .chip {
+    height: 32px;
+    padding: 0 var(--sp-12);
+  }
 }
