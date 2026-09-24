@@ -1222,6 +1222,11 @@
   overflow: hidden;
   box-shadow: var(--shadow-panel);
 }
+/* Con el menú ⋮ abierto la tarjeta deja de recortar: el popover (absoluto) se
+   cortaba en el borde inferior y «Copiar partida», «Borrar»… quedaban fuera. */
+.pCard:has(.menuPop) {
+  overflow: visible;
+}
 .pCard.open {
   border-color: color-mix(in srgb, var(--accent) 45%, var(--border-main));
 }
