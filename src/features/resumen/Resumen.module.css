@@ -219,6 +219,38 @@
   letter-spacing: -0.01em;
 }
 
+/* Móvil: el importe se come la mitad de la fila y las etiquetas largas partían en
+   2–3 líneas con la ⓘ flotando a media altura. Las etiquetas fluyen como texto
+   (la ⓘ sigue a la última palabra), las filas de % van en dos líneas (concepto /
+   % + importe) y el total final baja bajo su etiqueta. */
+.compact .pemLabel,
+.compact .totalLabel,
+.compact .bigLabel {
+  display: block;
+}
+.compact .pemLabel > button,
+.compact .totalLabel > button,
+.compact .bigLabel > button {
+  vertical-align: -2px;
+}
+.compact .pctRow {
+  flex-wrap: wrap;
+  row-gap: var(--sp-6);
+}
+.compact .pctLeft {
+  flex: 1 1 100%;
+}
+.compact .pctEdit {
+  margin-left: calc(9px + var(--sp-8)); /* bajo la etiqueta, no bajo el swatch */
+}
+.compact .bigRow {
+  flex-wrap: wrap;
+  row-gap: var(--sp-4);
+}
+.compact .bigVal {
+  margin-left: auto;
+}
+
 /* observaciones */
 .notesCard {
   margin-top: var(--sp-16);
