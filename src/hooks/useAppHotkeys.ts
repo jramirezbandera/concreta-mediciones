@@ -8,6 +8,7 @@ import {
   inEditGrid,
   isInteractiveTarget,
   isTextEditingTarget,
+  isTextField,
 } from './hotkeyGuards';
 import { chapterIdOfPartida, deletePartidaWithUndo } from './usePartidaDelete';
 
@@ -85,7 +86,10 @@ export function useAppHotkeys({ onHelp }: { onHelp: () => void }): void {
       // Esc — pila de cierre. Los campos/dropdowns/modales gestionan su propio
       // Esc; aquí solo actuamos si no hay UI transitoria ni edición en curso.
       if (e.key === 'Escape') {
-        if (isTextEditingTarget() || hasTransientOverlay()) return;
+        // El Esc que CANCELA una celda en edición desmonta su input antes de
+        // llegar aquí (React confirma el render dentro del propio evento): el foco
+        // ya no está en un campo, pero el Esc era suyo. Por eso también el target.
+        if (isTextEditingTarget() || isTextField(e.target) || hasTransientOverlay()) return;
         const s = useObraStore.getState();
         if (s.refMaximized) {
           s.setRefMax(false); // 1.º Esc restaura el tamaño; el 2.º cierra el panel

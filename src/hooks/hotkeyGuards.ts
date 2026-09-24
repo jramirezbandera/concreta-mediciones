@@ -5,12 +5,16 @@
    las dos capas de hotkeys no diverjan.
    =========================================================================== */
 
-/** ¿El foco está en edición de texto (input/textarea/select/contentEditable)? */
-export function isTextEditingTarget(): boolean {
-  const el = document.activeElement as HTMLElement | null;
-  if (!el) return false;
+/** ¿El elemento es un campo de texto (input/textarea/select/contentEditable)? */
+export function isTextField(el: EventTarget | null): boolean {
+  if (!(el instanceof HTMLElement)) return false;
   const tag = el.tagName;
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+}
+
+/** ¿El foco está en edición de texto (input/textarea/select/contentEditable)? */
+export function isTextEditingTarget(): boolean {
+  return isTextField(document.activeElement);
 }
 
 /** ¿Hay un modal/diálogo bloqueante abierto? */

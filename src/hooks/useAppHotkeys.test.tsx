@@ -59,6 +59,20 @@ describe('useAppHotkeys', () => {
     fireEvent.keyDown(document.body, { key: 'Escape' });
     expect(useObraStore.getState().openPartidaId).toBeNull();
   });
+
+  it('Esc que cancela una celda en edición NO deselecciona la partida', () => {
+    // En el navegador, React 19 desmonta el input de la celda DENTRO del propio
+    // evento, así que cuando el Esc llega a window el foco ya no está en él. Se
+    // emula igual: el target es un campo, pero el foco no.
+    useObraStore.getState().togglePartida('p111');
+    render(<Harness />);
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    expect(document.activeElement).not.toBe(input);
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(useObraStore.getState().openPartidaId).toBe('p111');
+    input.remove();
+  });
 });
 
 describe('useAppHotkeys — deshacer/rehacer (T6)', () => {
