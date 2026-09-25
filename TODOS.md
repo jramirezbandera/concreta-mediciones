@@ -170,8 +170,34 @@ Todo vive en IndexedDB del navegador; la única red era acordarse de exportar el
   dimensiones. Desde una línea, volver a la zona del plano de donde salió.
 - **Por qué:** donde se va el tiempo al medir es en leer el plano y teclear cifras.
 - **Contexto:** encaja con `expr` (de dónde sale cada número) y con «Medir por»
-  (qué columnas). Hay que decidir dónde se guardan los PDF (pesan: ¿IndexedDB
-  aparte de la obra?). Pasarlo por `/autoplan` antes de empezar.
+  (qué columnas). Plan revisado con `/autoplan` (2026-09-25):
+  `docs/plan-medir-planos-pdf.md`. Los PDF van en un almacén de IndexedDB aparte,
+  por huella; la obra solo guarda sus metadatos (esquema v6).
+
+#### Aplazados del plan «Medir sobre planos PDF» (autoplan 2026-09-25)
+
+Son lo que las revisiones CEO, diseño, DX e ingeniería dejaron fuera a propósito. Todo
+depende de que la Etapa A supere su puerta cronometrada.
+
+- **Exportar el plano marcado para la DF (P2).** Las páginas con las formas medidas,
+  numeradas como sus líneas, en PDF para adjuntar a la medición. Es otra superficie de
+  salida (tamaño L).
+- **Comparar revisiones de un plano (P2).** Poner la Rev. B sobre la Rev. A y ver qué
+  líneas caen en zonas que cambiaron. La Etapa A solo guarda `sustituye` y avisa de que
+  hay una revisión más nueva.
+- **Varias escalas por página (P3).** Ventanas de detalle a otra escala dentro de la
+  misma hoja. En la Etapa A cada página tiene una sola calibración; el detalle se mide
+  adjuntando otra vez el PDF.
+- **Certificar sobre el plano (P3).** Marcar en el plano lo ejecutado y que cuente en
+  la certificación por líneas.
+- **Contar símbolos iguales automáticamente (P3).** Recuento de un símbolo repetido
+  (enchufes, luminarias) buscando sus copias en el PDF vectorial.
+- **Probar con un plano de ejemplo (P3).** En el estado vacío del visor, para el
+  usuario final. El sandbox «Planos (ejemplo)» ya cubre al desarrollador.
+- **Borrado automático de PDF sin referencia entre pestañas (P3).** En la Etapa A se
+  marcan y se borran a mano con «Liberar espacio». Hacerlo solo exige un protocolo
+  entre pestañas: publicación de bytes, referencias sin guardar y las dos pilas del
+  historial de cada pestaña.
 
 ### Documentos que aún obligan a volver a Presto o a Excel (P2)
 
@@ -187,4 +213,4 @@ estos ya están calculados:
 
 ---
 
-_Backlog: 1 TODO (mutaciones en pestaña readonly) + 5 aplazados del plan de líneas de medición + mejoras de producto (recordatorio de copia, guardar en carpeta, obra en el móvil, medir sobre planos, documentos). El pase de diseño móvil y la navegación de teclado en certificaciones están hechos._
+_Backlog: 1 TODO (mutaciones en pestaña readonly) + 5 aplazados del plan de líneas de medición + mejoras de producto (recordatorio de copia, guardar en carpeta, obra en el móvil, medir sobre planos con 7 aplazados, documentos). El pase de diseño móvil y la navegación de teclado en certificaciones están hechos._
