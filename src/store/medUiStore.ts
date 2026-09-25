@@ -30,7 +30,23 @@ export type FocusRequest =
 
 /** Diálogo único de revisión pendiente (`MedPasteReview`). */
 export type MedReview =
-  | { kind: 'paste'; prep: PegadoPreparado }
+  /** Pegar o mover con algo que confirmar (formas, certificadas, faltantes). */
+  | { kind: 'paste'; prep: PegadoPreparado; nota?: string }
+  /**
+   * Elegir qué hacer cuando el pegado no trae la identidad del corte (solo
+   * coincide el texto) o el texto es de un corte ya movido.
+   */
+  | {
+      kind: 'choose';
+      reason: 'cut-text' | 'consumed-text';
+      partidaId: string;
+      afterId: string | null;
+      /** Texto pegado (para «Pegar una copia» de un corte ya movido). */
+      text: string;
+      /** Código de la partida del corte. */
+      srcCode: string;
+      n: number;
+    }
   | {
       kind: 'delete';
       chapterId: string;
@@ -59,6 +75,9 @@ interface MedUiState {
   lastFocusedLineId: string | null;
   pendingFocus: FocusRequest | null;
   review: MedReview | null;
+  /** Franja de error de un pegado rechazado (TSV ilegible), bajo la medición.
+   *  Se va con ✕ o con un pegado que salga bien. */
+  pasteError: { partidaId: string; text: string } | null;
   /** Texto para `aria-live` (reordenar no muestra aviso visual). `n` fuerza el
    *  re-anuncio aunque el texto se repita. */
   announce: { text: string; n: number };
@@ -73,6 +92,7 @@ interface MedUiState {
   consumeFocus: () => void;
   openReview: (review: MedReview) => void;
   closeReview: () => void;
+  setPasteError: (err: { partidaId: string; text: string } | null) => void;
   say: (text: string) => void;
   reset: () => void;
 }
@@ -85,6 +105,7 @@ const INITIAL = {
   lastFocusedLineId: null,
   pendingFocus: null,
   review: null,
+  pasteError: null,
 };
 
 export const useMedUiStore = create<MedUiState>((set) => ({
@@ -108,6 +129,7 @@ export const useMedUiStore = create<MedUiState>((set) => ({
   consumeFocus: () => set({ pendingFocus: null }),
   openReview: (review) => set({ review }),
   closeReview: () => set({ review: null }),
+  setPasteError: (pasteError) => set({ pasteError }),
   say: (text) => set((s) => ({ announce: { text, n: s.announce.n + 1 } })),
   reset: () => set({ ...INITIAL }),
 }));

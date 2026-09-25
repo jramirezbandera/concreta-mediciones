@@ -14,6 +14,7 @@ import {
   lineaParaDestino,
   ordenTrasDesplazar,
   ordenTrasMover,
+  ordenTrasMoverBloque,
 } from '../../core/medPaste';
 import { mainTypeOf, precioSegunModo } from '../../core/banco';
 import { findNode, flattenContainers, subtreeIds } from '../../core/tree';
@@ -331,6 +332,7 @@ type EstructuraSlice = Pick<
   | 'insertMedLines'
   | 'duplicateMedLines'
   | 'deleteMedLines'
+  | 'moveMedLinesTo'
   | 'deletePartida'
   | 'restorePartida'
   | 'movePartida'
@@ -781,6 +783,56 @@ export const createEstructuraSlice: ObraSlice<EstructuraSlice> = (set, get) => (
       }),
     );
     return ok ? { ids: gone } : { ids: [], reason: 'stale' };
+  },
+
+  moveMedLinesTo: (srcChapterId, srcPartidaId, lineIds, dstChapterId, dstPartidaId, afterId, expect): MedResult => {
+    const s0 = get();
+    const src = findPartida(s0, srcChapterId, srcPartidaId);
+    const dst = findPartida(s0, dstChapterId, dstPartidaId);
+    if (!dst) return { ids: [], reason: 'no-partida' };
+    const want = new Set(lineIds);
+    const moving = src ? src.med.filter((l) => want.has(l.id)) : [];
+    const movingIds = moving.map((l) => l.id);
+    if (expect && (expect.length !== movingIds.length || expect.some((id, i) => id !== movingIds[i])))
+      return { ids: [], reason: 'stale' }; // la UI preparó otra cosa: que vuelva a preparar
+    if (!src || moving.length === 0) return { ids: [], reason: 'no-lines' };
+
+    if (src.id === dst.id) {
+      const order = ordenTrasMoverBloque(
+        src.med.map((l) => l.id),
+        movingIds,
+        afterId,
+      );
+      if (!order) return { ids: [], reason: 'noop' }; // mismo sitio: ni historial ni BASE
+      let ok = false;
+      structural(() =>
+        set((s) => {
+          const q = findPartida(s, srcChapterId, srcPartidaId);
+          if (!q || !applyLineOrder(q, order)) return;
+          q.fromBase = false;
+          ok = true;
+        }),
+      );
+      return ok ? { ids: movingIds } : { ids: [], reason: 'stale' };
+    }
+
+    // A otra partida: ids NUEVOS (el viejo sigue siendo clave de la cert del origen).
+    const forma = medFormaDe(dst);
+    const nuevas = moving.map((l) => ({ ...lineaParaDestino(l, forma), id: nextMedLineId() }));
+    let ok = false;
+    structural(() =>
+      set((s) => {
+        const a = findPartida(s, srcChapterId, srcPartidaId);
+        const b = findPartida(s, dstChapterId, dstPartidaId);
+        if (!a || !b) return;
+        a.med = a.med.filter((l) => !want.has(l.id));
+        b.med.splice(indiceInsercion(b.med, afterId), 0, ...nuevas);
+        a.fromBase = false;
+        b.fromBase = false;
+        ok = true;
+      }),
+    );
+    return ok ? { ids: nuevas.map((l) => l.id) } : { ids: [], reason: 'stale' };
   },
 
   deletePartida: (chapterId, partidaId) =>

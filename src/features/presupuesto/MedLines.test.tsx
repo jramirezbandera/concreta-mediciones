@@ -13,8 +13,10 @@ import { useClipboardHotkeys } from '../../hooks/usePartidaClipboard';
 import { ClipboardToast } from '../../layout/ClipboardToast';
 import { Toast } from '../../layout/Toast';
 import { useClipboardStore, useObraStore, useToastStore } from '../../store';
+import { copyLines, takeStagedCopy } from '../../store/medLineOps';
 import { useMedUiStore } from '../../store/medUiStore';
 import { __resetHistoryForTests, initHistory } from '../../store/temporal';
+import { fakeSystemClipboard, restoreSystemClipboard, type FakeSystemClipboard } from '../../test/sysClipboard';
 import { CertDetail } from '../certificaciones/CertTable';
 import { PresupuestoView } from './PresupuestoView';
 
@@ -51,8 +53,12 @@ function stubTouch(touch: boolean) {
   }));
 }
 
+let sys: FakeSystemClipboard;
+
 beforeEach(() => {
   __resetHistoryForTests();
+  sys = fakeSystemClipboard();
+  takeStagedCopy(); // nada pendiente de una prueba anterior
   st().reset();
   useClipboardStore.getState().clear();
   useMedUiStore.getState().reset();
@@ -61,6 +67,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   __resetHistoryForTests();
+  restoreSystemClipboard();
   vi.useRealTimers();
   vi.unstubAllGlobals();
   document.body.innerHTML = '';
@@ -222,9 +229,10 @@ describe('teclado: copiar, pegar, duplicar', () => {
     const [a, b] = ids('p111');
     act(() => comment(b!).focus());
     ctrl(comment(b!), 'c');
+    sys.copy(comment(b!)); // el navegador dispara `copy` tras Ctrl+C
     act(() => comment(a!).focus());
     ctrl(comment(a!), 'v');
-    fireEvent.paste(comment(a!));
+    sys.paste(comment(a!));
     expect(P('p111').med.map((l) => l.comment)).toEqual([
       'Zanjas de saneamiento',
       'Zanjas de instalaciones',
@@ -236,17 +244,13 @@ describe('teclado: copiar, pegar, duplicar', () => {
   it('Ctrl+V con el foco fuera de la tabla pega al final de la partida abierta y cambia a Medición', () => {
     render(<Harness />);
     open('p111');
-    act(() => {
-      useClipboardStore.getState().setMedClip({
-        lines: [{ id: 'x', comment: 'Copiada', uds: 1, largo: 2, ancho: 3, alto: 4 }],
-        source: { chapterId: '01', partidaId: 'p112', code: 'E02SZ070', title: '', forma: 'vol', ud: 'm³', obraName: 'Obra' },
-      });
-    });
+    act(() => void copyLines('p112', [ids('p112')[0]!])); // «Pozos de zapatas aisladas»
+    sys.copy(document.body);
     fireEvent.click(screen.getByRole('button', { name: /^Descripción/ }));
     act(() => (document.activeElement as HTMLElement | null)?.blur());
-    fireEvent.paste(document.body);
-    expect(P('p111').med.at(-1)!.comment).toBe('Copiada');
-    expect(screen.getByText('Copiada')).toBeInTheDocument(); // pestaña Medición
+    sys.paste(document.body);
+    expect(P('p111').med.at(-1)!.comment).toBe('Pozos de zapatas aisladas');
+    expect(screen.getByText('Pozos de zapatas aisladas')).toBeInTheDocument(); // pestaña Medición
   });
 
   it('Ctrl+V con partidas en el portapapeles, fuera de la tabla, sigue pegando PARTIDAS', () => {
@@ -282,9 +286,10 @@ describe('teclado: copiar, pegar, duplicar', () => {
     const [a] = ids('p111');
     act(() => comment(a!).focus());
     ctrl(comment(a!), 'c');
+    sys.copy(comment(a!));
     ctrl(comment(a!), 'v');
     act(() => vi.advanceTimersByTime(300));
-    fireEvent.paste(comment(a!));
+    sys.paste(comment(a!));
     act(() => vi.advanceTimersByTime(1000));
     expect(P('p111').med).toHaveLength(3);
     expect(screen.queryByText(/Pulsa/)).toBeNull();
@@ -307,7 +312,8 @@ describe('teclado: copiar, pegar, duplicar', () => {
     const [a] = ids('p111');
     act(() => comment(a!).focus());
     ctrl(comment(a!), 'c');
-    fireEvent.paste(comment(a!));
+    sys.copy(comment(a!));
+    sys.paste(comment(a!));
     expect(screen.getAllByRole('status')).toHaveLength(1);
   });
 });

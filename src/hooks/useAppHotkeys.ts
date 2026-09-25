@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { ALL, useObraStore } from '../store';
+import { cutPending } from '../store/medLineOps';
 import { useMedUiStore } from '../store/medUiStore';
 import { redo, undo } from '../store/temporal';
 import {
@@ -24,8 +25,9 @@ import { chapterIdOfPartida, deletePartidaWithUndo } from './usePartidaDelete';
  *               seguridad: ignora si el foco está en un campo, en un botón, en
  *               una celda de medición, si hay selección de texto, modal, o la
  *               vista no es el presupuesto.
- *  - Esc      → cierra en pila: panel Referencia → (selección de líneas, que
- *               vacía `useMedClipboard`) → deselecciona la partida.
+ *  - Esc      → cierra en pila: (selección de líneas y cortado pendiente, que
+ *               atiende antes `useMedClipboard`) → panel Referencia → asistente
+ *               → deselecciona la partida.
  * Se apoya en las guardas compartidas de `hotkeyGuards`.
  */
 export function useAppHotkeys({ onHelp }: { onHelp: () => void }): void {
@@ -98,6 +100,7 @@ export function useAppHotkeys({ onHelp }: { onHelp: () => void }): void {
         const s = useObraStore.getState();
         const ui = useMedUiStore.getState();
         if (s.openPartidaId && ui.partidaId === s.openPartidaId && ui.selected.length) return;
+        if (cutPending()) return; // un cortado pendiente se cancela antes (useMedClipboard)
         if (s.refMaximized) {
           s.setRefMax(false); // 1.º Esc restaura el tamaño; el 2.º cierra el panel
           e.preventDefault();

@@ -228,3 +228,52 @@ describe('medLineOps — pegar', () => {
     expect(useMedUiStore.getState().selected).toEqual([]);
   });
 });
+
+describe('moveMedLinesTo — pegar un cortado', () => {
+  it('a otra partida: ids nuevos, lo quita del origen, y UN Deshacer restaura las dos', () => {
+    const [a, b] = ids('p111');
+    const origen = ids('p112');
+    const r = st().moveMedLinesTo('01', 'p111', [a!], '01', 'p112', null);
+    expect(r.ids).toHaveLength(1);
+    expect(r.ids[0]).not.toBe(a);
+    expect(ids('p111')).toEqual([b]);
+    expect(ids('p112')).toEqual([...origen, r.ids[0]]);
+    undo();
+    expect(ids('p111')).toEqual([a, b]);
+    expect(ids('p112')).toEqual(origen);
+  });
+
+  it('en la misma partida conserva los ids; el orden igual es no-op sin historial', () => {
+    const [a, b] = ids('p111');
+    expect(st().moveMedLinesTo('01', 'p111', [a!], '01', 'p111', b!).ids).toEqual([a]);
+    expect(ids('p111')).toEqual([b, a]);
+    const past = __historyState().past;
+    expect(st().moveMedLinesTo('01', 'p111', [a!], '01', 'p111', b!).reason).toBe('noop');
+    expect(__historyState().past).toBe(past);
+  });
+
+  it('el origen se busca por id aunque la partida haya cambiado de capítulo', () => {
+    const [a] = ids('p111');
+    st().movePartida('01', 'p111', '02', null); // la partida de origen se va a otro capítulo
+    const r = st().moveMedLinesTo('01', 'p111', [a!], '01', 'p112', null);
+    expect(r.ids).toHaveLength(1);
+    expect(P('p111').med.map((l) => l.id)).not.toContain(a);
+  });
+
+  it('mueve el contenido ACTUAL (lo editado tras cortar viaja)', () => {
+    const [a] = ids('p111');
+    st().editMedLine('01', 'p111', 0, 'comment', 'Editada tras cortar');
+    const r = st().moveMedLinesTo('01', 'p111', [a!], '01', 'p112', null);
+    expect(P('p112').med.find((l) => l.id === r.ids[0])!.comment).toBe('Editada tras cortar');
+  });
+
+  it('si lo vivo no es lo preparado → stale, sin tocar nada', () => {
+    const [a, b] = ids('p111');
+    st().deleteMedLines('01', 'p111', [b!]);
+    const past = __historyState().past;
+    expect(st().moveMedLinesTo('01', 'p111', [a!, b!], '01', 'p112', null, [a!, b!]).reason).toBe('stale');
+    expect(__historyState().past).toBe(past);
+    expect(st().moveMedLinesTo('01', 'p111', ['fantasma'], '01', 'p112', null).reason).toBe('no-lines');
+    expect(st().moveMedLinesTo('01', 'p111', [a!], '01', 'nope', null).reason).toBe('no-partida');
+  });
+});

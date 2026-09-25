@@ -24,6 +24,7 @@ import { immer } from 'zustand/middleware/immer';
 import type { Agente, Cert, MedForma, MedLine, Partida, Rates, ResourceType } from '../core/types';
 import { composeCertFirmantes, firmaCertDefinitiva } from '../core/listado';
 import { ancestorIds, findNode } from '../core/tree';
+import { rawUuid } from '../core/id';
 import type { ImportedObra } from '../core/bc3import';
 import { REF_SOURCES, type RefCopyItem, type RefDrag, type Resolution } from '../core/refdata';
 import type { View } from '../layout/types';
@@ -129,6 +130,13 @@ export interface ObraState extends ObraData {
    * copia privada; `'all'` = editar el concepto compartido en todas.
    */
   cowChoice: Record<string, CowChoice>;
+  /**
+   * Identidad EN MEMORIA del documento abierto: nueva en cada carga, cambio de
+   * obra o reset (vía `seedUi`). Un cortado de líneas solo se MUEVE si se pega
+   * en el mismo documento; en otro se pega como copia. No se usa
+   * `sessionStore.activeId`, que es null en la demo hasta el primer guardado.
+   */
+  docToken: string;
 
   /* ---- acciones (F1) ---- */
   setView: (v: View) => void;
@@ -353,6 +361,23 @@ export interface ObraState extends ObraData {
   duplicateMedLines: (chapterId: string, partidaId: string, lineIds: string[]) => MedResult;
   /** Borra varias líneas de golpe. La guarda de certificadas vive en la UI. */
   deleteMedLines: (chapterId: string, partidaId: string, lineIds: string[]) => MedResult;
+  /**
+   * MUEVE líneas (pegar un cortado) en UN solo `set` = un paso de Deshacer:
+   * inserta el contenido ACTUAL de `lineIds` en el destino, detrás de `afterId`,
+   * y las quita del origen. Misma partida → conserva los ids (el ancla se
+   * traduce al orden original); otra → ids nuevos y kg/m del destino. Las
+   * partidas se buscan por id en todo el mapa. `expect` (opcional) son los ids
+   * que la UI preparó: si ya no son los vivos, `reason: 'stale'` y no toca nada.
+   */
+  moveMedLinesTo: (
+    srcChapterId: string,
+    srcPartidaId: string,
+    lineIds: string[],
+    dstChapterId: string,
+    dstPartidaId: string,
+    afterId: string | null,
+    expect?: string[],
+  ) => MedResult;
   /** Fija la forma de medir (columnas de la tabla de medición); undefined la
    *  devuelve a la de la unidad. Solo presentación: no toca líneas ni cantidad. */
   setMedForma: (chapterId: string, partidaId: string, forma: MedForma | undefined) => void;
@@ -554,6 +579,7 @@ function seedUi(certs: Cert[]) {
     revealNonce: 0,
     searchFocusNonce: 0,
     cowChoice: {} as Record<string, CowChoice>,
+    docToken: rawUuid(),
   };
 }
 

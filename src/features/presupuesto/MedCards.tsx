@@ -12,6 +12,8 @@ import { useMedUiStore } from '../../store/medUiStore';
 import check from '../../styles/lineCheck.module.css';
 import { FUERA_TITLE, decOf } from './format';
 import { MedComment, MedNum } from './MedCells';
+import { CutTag } from './MedLineRow';
+import { useIsCut } from './useIsCut';
 import styles from './Presupuesto.module.css';
 
 /** Campo etiquetado (Uds/Longitud/…) para la medición en tarjeta. `col` marca la
@@ -44,7 +46,7 @@ function MedField({
 
 /** Tarjeta de UNA línea: casilla de selección + comentario + X, sus casillas y
  *  su parcial. Sin menú ⋮: la barra de selección es la única superficie de
- *  acciones (copiar, duplicar, subir, bajar, eliminar). */
+ *  acciones (copiar, cortar, duplicar, subir, bajar, eliminar). */
 const MedLineCard = memo(function MedLineCard({
   line,
   index,
@@ -60,10 +62,11 @@ const MedLineCard = memo(function MedLineCard({
 }) {
   const editMedLine = useObraStore((s) => s.editMedLine);
   const selected = useMedUiStore((s) => s.partidaId === partidaId && s.selected.includes(line.id));
+  const cut = useIsCut(partidaId, line.id);
   const name = line.comment.trim() || `línea ${index + 1}`;
   return (
     <div
-      className={`${styles.medCard} ${selected ? styles.cardSelected : ''}`}
+      className={`${styles.medCard} ${selected ? styles.cardSelected : ''} ${cut ? styles.lineCut : ''}`}
       data-editrow=""
       data-lineid={line.id}
       aria-selected={selected}
@@ -89,6 +92,7 @@ const MedLineCard = memo(function MedLineCard({
             onCommit={(v) => editMedLine(chapterId, partidaId, index, 'comment', v)}
           />
         </span>
+        {cut && <CutTag />}
         <button
           type="button"
           title="Eliminar línea"

@@ -32,8 +32,21 @@ describe('clipboardStore', () => {
 
   it('la última copia manda: líneas y partidas se excluyen', () => {
     const medClip = {
+      id: 'c1',
+      tsv: 'L\t1\t\t\t',
+      cut: false,
+      sysOk: null,
       lines: [{ id: 'm1', comment: 'L', uds: 1 as const, largo: '' as const, ancho: '' as const, alto: '' as const }],
-      source: { chapterId: '01', partidaId: 'p1', code: 'A1', title: 'X', forma: 'ud' as const, ud: 'ud', obraName: 'Obra A' },
+      source: {
+        chapterId: '01',
+        partidaId: 'p1',
+        code: 'A1',
+        title: 'X',
+        forma: 'ud' as const,
+        ud: 'ud',
+        obraName: 'Obra A',
+        docToken: 'd1',
+      },
     };
     useClipboardStore.getState().setClip([item('A1')], 'Obra A');
     useClipboardStore.getState().setMedClip(medClip);

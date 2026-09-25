@@ -10,8 +10,18 @@ import { deleteLines, moveLineTo, toggleLine } from '../../store/medLineOps';
 import { useMedUiStore } from '../../store/medUiStore';
 import check from '../../styles/lineCheck.module.css';
 import { decOf } from './format';
+import { useIsCut } from './useIsCut';
 import { MedComment, MedNum } from './MedCells';
 import styles from './Presupuesto.module.css';
+
+/** Etiqueta de texto de una línea cortada (no solo color: se lee). */
+export function CutTag() {
+  return (
+    <span className={styles.cutTag} title="Cortada: pégala donde quieras moverla (Esc cancela)">
+      cortada
+    </span>
+  );
+}
 
 /**
  * Fila de la tabla de medición (escritorio). Primera columna: asa de arrastre
@@ -40,6 +50,7 @@ export const MedLineRow = memo(function MedLineRow({
 }) {
   const editMedLine = useObraStore((s) => s.editMedLine);
   const selected = useMedUiStore((s) => s.partidaId === partidaId && s.selected.includes(line.id));
+  const cut = useIsCut(partidaId, line.id);
   const comment = line.comment.trim();
 
   const drag = useReorderSource(
@@ -59,7 +70,7 @@ export const MedLineRow = memo(function MedLineRow({
 
   return (
     <tr
-      className={`med-row ${styles.medRow} ${selected ? styles.lineSelected : ''} ${drag.dragging ? styles.dragging : ''} ${drop.place === 'before' ? styles.dropBefore : ''} ${drop.place === 'after' ? styles.dropAfter : ''}`}
+      className={`med-row ${styles.medRow} ${selected ? styles.lineSelected : ''} ${cut ? styles.lineCut : ''} ${drag.dragging ? styles.dragging : ''} ${drop.place === 'before' ? styles.dropBefore : ''} ${drop.place === 'after' ? styles.dropAfter : ''}`}
       data-editrow=""
       data-lineid={line.id}
       aria-selected={selected}
@@ -101,11 +112,14 @@ export const MedLineRow = memo(function MedLineRow({
         </div>
       </td>
       <td className={`${styles.medTd} ${styles.medTdComment}`} data-editfield="" data-col="0">
-        <MedComment
-          value={line.comment}
-          ariaLabel="Comentario de la línea"
-          onCommit={(v) => editMedLine(chapterId, partidaId, index, 'comment', v)}
-        />
+        <div className={styles.medCommentWrap}>
+          <MedComment
+            value={line.comment}
+            ariaLabel="Comentario de la línea"
+            onCommit={(v) => editMedLine(chapterId, partidaId, index, 'comment', v)}
+          />
+          {cut && <CutTag />}
+        </div>
       </td>
       {cols.map((c, ci) => (
         <td key={c.slot} className={styles.medTd} data-editfield="" data-col={ci + 1}>

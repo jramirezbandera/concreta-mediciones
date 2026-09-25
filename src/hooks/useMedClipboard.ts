@@ -10,15 +10,21 @@
    React (celdas, teclas locales del grid) y ANTES de los de `window`
    (`useClipboardHotkeys` de partidas, `useAppHotkeys`).
 
-     keydown ─┬─ Ctrl/⌘+C ── contexto ──► copyLines(selección | línea con foco)
-              ├─ Ctrl/⌘+D ── contexto ──► duplicateLines(…)  (+preventDefault)
-              ├─ Ctrl/⌘+V ── hay líneas y partida abierta ──► pista a 500 ms
-              └─ Esc ─────── selección ──► la vacía (+preventDefault: useAppHotkeys
-                                           no cierra la partida)
-     paste ───── líneas en el portapapeles interno, foco fuera de un campo:
-                   partida = la del grid con el foco o la abierta
-                   ─► pasteLines(partida, ancla, pestaña → Medición)
-                   sin partida abierta ─► «Abre una partida para pegar las líneas»
+     keydown ─┬─ Ctrl/⌘+C/X ── contexto ──► copyLines(selección | foco, cut)
+              │                              + TSV pendiente para el sistema
+              ├─ Ctrl/⌘+D ─── contexto ──► duplicateLines(…)  (+preventDefault)
+              ├─ Ctrl/⌘+V ─── partida abierta y líneas ──► pista a 500 ms
+              └─ Esc ──────── selección ──► la vacía; si no, cortado ──► lo cancela
+                                (+preventDefault: useAppHotkeys no cierra la partida)
+     copy/cut ── TSV pendiente ──► text/plain + MEDLINES_MIME (id) en el evento
+                 (síncrono, funciona en http); si no llega, writeText; si nada
+                 confirma, sysOk=false y aviso
+     paste ───── foco fuera de un campo de texto:
+                   resolverPegado(text/plain, MEDLINES_MIME) → interno (con o
+                   sin autoridad para mover), ya movido, o TSV ajeno
+                   partida = la del grid con el foco o la abierta (→ Medición)
+                   texto ajeno SIN tabuladores ni saltos solo con el foco en el
+                   grid (un texto suelto no se convierte en línea por accidente)
 
    Pegar va SOLO por el evento `paste` real (sin carreras de temporizador): si a
    los 500 ms del Ctrl+V no llegó ninguno (Safari con el foco en el body), sale
@@ -26,14 +32,20 @@
    Dentro de un campo de texto, copiar y pegar son los del navegador.
    =========================================================================== */
 import { useEffect } from 'react';
-import { useClipboardStore } from '../store/clipboardStore';
+import { MEDLINES_MIME, useClipboardStore } from '../store/clipboardStore';
 import {
   actionLines,
+  aplicarResolucion,
+  cancelCut,
   copyLines,
+  cutPending,
   duplicateLines,
+  flushSystemCopy,
   locatePartida,
   pasteAnchor,
-  pasteLines,
+  resolverPegado,
+  systemCopyResult,
+  takeStagedCopy,
 } from '../store/medLineOps';
 import { useMedUiStore } from '../store/medUiStore';
 import { useObraStore } from '../store/obraStore';
@@ -97,11 +109,15 @@ export function useMedClipboard(): void {
     function onEsc(e: KeyboardEvent) {
       // Campos, desplegables y modales gestionan su propio Esc.
       if (isTextEditingTarget() || isTextField(e.target) || hasTransientOverlay()) return;
+      if (useObraStore.getState().view !== 'presupuesto') return;
       const ctx = medContext();
       const ui = useMedUiStore.getState();
-      if (!ctx || ui.partidaId !== ctx.partidaId || !ui.selected.length) return;
-      ui.clearSelection();
-      e.preventDefault(); // useAppHotkeys no cierra la partida con este Esc
+      if (ctx && ui.partidaId === ctx.partidaId && ui.selected.length) {
+        ui.clearSelection();
+        e.preventDefault(); // useAppHotkeys no cierra la partida con este Esc
+        return;
+      }
+      if (cutPending() && cancelCut()) e.preventDefault();
     }
 
     function onKey(e: KeyboardEvent) {
@@ -112,7 +128,7 @@ export function useMedClipboard(): void {
       }
       if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return;
       const k = e.key.toLowerCase();
-      if (k !== 'c' && k !== 'd' && k !== 'v') return;
+      if (k !== 'c' && k !== 'x' && k !== 'd' && k !== 'v') return;
       if (isTextEditingTarget() || hasBlockingOverlay()) return; // nativo del navegador
       if (useObraStore.getState().view !== 'presupuesto') return;
 
@@ -122,15 +138,12 @@ export function useMedClipboard(): void {
         if (!clip || !(medContext() || open)) return;
         clearHint();
         const n = clip.lines.length;
+        const accion = cutPending(clip) ? `Mover ${n === 1 ? 'línea' : `${n} líneas`} aquí` : `Pegar ${n === 1 ? 'línea' : `${n} líneas`}`;
         hint = setTimeout(() => {
           hint = null;
           useToastStore
             .getState()
-            .show(
-              `Pulsa «Pegar ${n === 1 ? 'línea' : `${n} líneas`}» para pegar lo copiado en Concreta`,
-              undefined,
-              { tone: 'warn' },
-            );
+            .show(`Pulsa «${accion}» para pegar lo copiado en Concreta`, undefined, { tone: 'warn' });
         }, PASTE_HINT_MS);
         return; // sin preventDefault: tiene que llegar el evento `paste`
       }
@@ -138,10 +151,12 @@ export function useMedClipboard(): void {
       const ctx = medContext();
       const p = ctx && locatePartida(ctx.partidaId)?.partida;
       if (!ctx || !p) return;
-      if (k === 'c') {
+      if (k === 'c' || k === 'x') {
         if (hasNativeSelection()) return; // no pisar una selección de texto real
         const ids = actionLines(p, ctx.focusLineId);
-        if (ids.length) copyLines(ctx.partidaId, ids);
+        // Sin preventDefault: el navegador dispara `copy`/`cut`, que escribe el
+        // TSV en el sistema; si no llegara, el respaldo corre justo después.
+        if (ids.length && copyLines(ctx.partidaId, ids, { cut: k === 'x' })) setTimeout(flushSystemCopy, 0);
         return;
       }
       // Ctrl/⌘+D: duplicar (y que el navegador no abra «añadir marcador»).
@@ -150,29 +165,53 @@ export function useMedClipboard(): void {
       if (ids.length) duplicateLines(ctx.partidaId, ids);
     }
 
+    /** `copy`/`cut` del documento: si hay un TSV de líneas pendiente, va aquí. */
+    function onCopy(e: ClipboardEvent) {
+      if (!e.clipboardData || isTextField(e.target)) return;
+      const st = takeStagedCopy();
+      if (!st) return;
+      e.clipboardData.setData('text/plain', st.tsv);
+      e.clipboardData.setData(MEDLINES_MIME, st.id);
+      e.preventDefault(); // sin esto el navegador ignora setData
+      systemCopyResult(st.id, true);
+    }
+
     function onPaste(e: ClipboardEvent) {
       clearHint();
       if (e.defaultPrevented) return;
       if (isTextField(e.target) || isTextEditingTarget() || hasBlockingOverlay()) return;
       const obra = useObraStore.getState();
       if (obra.view !== 'presupuesto') return;
-      if (!useClipboardStore.getState().medLines) return; // nada nuestro que pegar
-      e.preventDefault();
+      const text = e.clipboardData?.getData('text/plain') ?? '';
+      const mimeId = e.clipboardData?.getData(MEDLINES_MIME) || null;
+      const r = resolverPegado(text, mimeId);
+      if (r.kind === 'none') return;
       const ctx = medContext();
+      // Texto ajeno suelto (sin tabuladores ni saltos) solo con el foco en la
+      // medición: pegar una palabra con el foco en la página no crea líneas.
+      if (r.kind === 'foreign' && !ctx && !/[\t\r\n]/.test(text)) return;
       const partidaId = ctx?.partidaId ?? obra.openPartidaId;
       if (!partidaId) {
-        useToastStore.getState().show('Abre una partida para pegar las líneas', undefined, { tone: 'warn' });
+        if (r.kind === 'internal')
+          useToastStore.getState().show('Abre una partida para pegar las líneas', undefined, { tone: 'warn' });
         return;
       }
+      e.preventDefault();
       const p = locatePartida(partidaId)?.partida;
-      pasteLines(partidaId, p ? pasteAnchor(p, ctx?.focusLineId ?? null) : null, { switchTab: true });
+      aplicarResolucion(r, partidaId, p ? pasteAnchor(p, ctx?.focusLineId ?? null) : null, text, {
+        switchTab: true,
+      });
     }
 
     document.addEventListener('keydown', onKey);
+    document.addEventListener('copy', onCopy);
+    document.addEventListener('cut', onCopy);
     document.addEventListener('paste', onPaste);
     return () => {
       clearHint();
       document.removeEventListener('keydown', onKey);
+      document.removeEventListener('copy', onCopy);
+      document.removeEventListener('cut', onCopy);
       document.removeEventListener('paste', onPaste);
     };
   }, []);

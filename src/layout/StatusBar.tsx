@@ -1,6 +1,7 @@
 import { Icon } from '../components';
 import { fmtCents, type Cents } from '../core/money';
-import { useClipboardStore } from '../store';
+import { useClipboardStore, useObraStore } from '../store';
+import { cancelCut } from '../store/medLineOps';
 import styles from './StatusBar.module.css';
 
 export interface Counts {
@@ -24,9 +25,13 @@ export function StatusBar({ counts, pem, pec, onHelp }: StatusBarProps) {
   const medClip = useClipboardStore((s) => s.medLines);
   const clearClip = useClipboardStore((s) => s.clear);
   const clipHead = clip?.[0]?.partida;
+  const docToken = useObraStore((s) => s.docToken);
   const nLines = medClip?.lines.length ?? 0;
+  // Un cortado de ESTA obra se dice como tal (y su ✕ lo cancela); de otra obra
+  // se pegará como copia.
+  const cut = !!medClip?.cut && medClip.source.docToken === docToken;
   const linesLabel = medClip
-    ? `${nLines} ${nLines === 1 ? 'línea' : 'líneas'} · ${medClip.source.code} ${medClip.source.title}`.trim()
+    ? `${nLines} ${nLines === 1 ? 'línea' : 'líneas'}${cut ? (nLines === 1 ? ' cortada' : ' cortadas') : ''} · ${medClip.source.code} ${medClip.source.title}`.trim()
     : '';
   return (
     <footer className={`mono no-print ${styles.bar}`}>
@@ -64,14 +69,14 @@ export function StatusBar({ counts, pem, pec, onHelp }: StatusBarProps) {
         )}
         {medClip && (
           <span className={styles.clip} title={`En el portapapeles: ${linesLabel}`}>
-            <Icon name="copy" size={12} />
+            <Icon name={cut ? 'scissors' : 'copy'} size={12} />
             <span className={styles.clipName}>{linesLabel}</span>
             <button
               type="button"
               className={styles.clipClear}
-              onClick={clearClip}
-              aria-label="Vaciar el portapapeles"
-              title="Vaciar el portapapeles"
+              onClick={cut ? cancelCut : clearClip}
+              aria-label={cut ? 'Cancelar el corte' : 'Vaciar el portapapeles'}
+              title={cut ? 'Cancelar el corte (Esc)' : 'Vaciar el portapapeles'}
             >
               <Icon name="x" size={12} />
             </button>

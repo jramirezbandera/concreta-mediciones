@@ -10,7 +10,7 @@ import { useGridNav } from '../../hooks/useGridNav';
 import { useMedGridTab } from '../../hooks/useMedGridTab';
 import { useMedLineKeys } from '../../hooks/useMedLineKeys';
 import { useClipboardStore, useObraStore } from '../../store';
-import { pasteAnchor, pasteLines } from '../../store/medLineOps';
+import { cancelCut, pasteAnchor, pasteLines } from '../../store/medLineOps';
 import { selectionOf, useMedUiStore } from '../../store/medUiStore';
 import { FUERA_TITLE } from './format';
 import { MedCards } from './MedCards';
@@ -48,36 +48,71 @@ function currentAnchor(p: Partida): string | null {
  * el foco de la línea (en Safari un botón no toma el foco y la línea lo pierde);
  * activado con teclado se calcula al pulsar. Si hay destino lo dice en gris.
  */
-function PasteButton({ p, touch }: { p: Partida; touch: boolean }) {
+function PasteButton({ p, touch, compact }: { p: Partida; touch: boolean; compact: boolean }) {
   const clip = useClipboardStore((s) => s.medLines);
+  const docToken = useObraStore((s) => s.docToken);
   const anchorId = useMedUiStore((s) => pasteAnchor(p, s.partidaId === p.id ? s.lastFocusedLineId : null));
   const pinned = useRef<string | null | undefined>(undefined);
   if (!clip) return null;
   const n = clip.lines.length;
+  const qty = n === 1 ? 'línea' : `${n} líneas`;
+  // Un cortado de esta obra se MUEVE; uno de otra obra se pega como copia.
+  const moving = clip.cut && clip.source.docToken === docToken;
+  const label = moving ? `Mover ${qty} aquí` : clip.cut ? `Pegar ${qty} como copia` : `Pegar ${qty}`;
   const idx = anchorId ? p.med.findIndex((l) => l.id === anchorId) : -1;
   const anchor = idx >= 0 ? p.med[idx]! : null;
+  const cortadas = clip.cut ? (n === 1 ? ' cortada' : ' cortadas') : '';
   const title =
-    `${n} ${n === 1 ? 'línea' : 'líneas'} de ${clip.source.code || 'otra partida'} · ` +
+    `${n} ${n === 1 ? 'línea' : 'líneas'}${cortadas} de ${clip.source.code || 'otra partida'} · ` +
     `medidas por ${medFormaDef(clip.source.forma).nombre}${touch ? '' : ' · Ctrl/⌘+V'}`;
   return (
-    <button
-      type="button"
-      title={title}
-      className={`tcol ${styles.medAddBtn} ${styles.medPasteBtn}`}
-      onPointerDown={() => {
-        pinned.current = currentAnchor(p);
-      }}
-      onClick={() => {
-        const afterId = pinned.current !== undefined ? pinned.current : currentAnchor(p);
-        pinned.current = undefined;
-        pasteLines(p.id, afterId);
-      }}
-    >
-      <Icon name="paste" size={14} /> Pegar {n === 1 ? 'línea' : `${n} líneas`}
-      {anchor && (
-        <span className={styles.medPasteWhere}>tras «{anchor.comment.trim() || `línea ${idx + 1}`}»</span>
+    <>
+      <button
+        type="button"
+        title={title}
+        className={`tcol ${styles.medAddBtn} ${styles.medPasteBtn}`}
+        onPointerDown={() => {
+          pinned.current = currentAnchor(p);
+        }}
+        onClick={() => {
+          const afterId = pinned.current !== undefined ? pinned.current : currentAnchor(p);
+          pinned.current = undefined;
+          pasteLines(p.id, afterId, { authority: true }); // botón de Concreta: puede mover
+        }}
+      >
+        <Icon name={moving ? 'move' : 'paste'} size={14} /> {label}
+        {anchor && (
+          <span className={styles.medPasteWhere}>tras «{anchor.comment.trim() || `línea ${idx + 1}`}»</span>
+        )}
+      </button>
+      {/* En móvil no hay StatusBar (con su ✕ del corte): se cancela aquí. */}
+      {moving && compact && (
+        <button type="button" className={styles.cancelCutLink} onClick={cancelCut}>
+          Cancelar corte
+        </button>
       )}
-    </button>
+    </>
+  );
+}
+
+/** Franja de error de un pegado rechazado: fila, columna, valor y arreglo. */
+function PasteErrorStrip({ partidaId }: { partidaId: string }) {
+  const text = useMedUiStore((s) => (s.pasteError?.partidaId === partidaId ? s.pasteError.text : null));
+  const setPasteError = useMedUiStore((s) => s.setPasteError);
+  if (!text) return null;
+  return (
+    <div className={styles.pasteError} role="alert">
+      <Icon name="alert" size={15} />
+      <span className={styles.pasteErrorText}>{text}</span>
+      <button
+        type="button"
+        className={styles.pasteErrorClose}
+        aria-label="Cerrar el aviso de error"
+        onClick={() => setPasteError(null)}
+      >
+        <Icon name="x" size={14} />
+      </button>
+    </div>
   );
 }
 
@@ -295,10 +330,11 @@ export function DetailPanel({
               >
                 <Icon name="plus" size={14} /> Añadir línea{compact ? '' : ' de medición'}
               </button>
-              <PasteButton p={p} touch={touch} />
+              <PasteButton p={p} touch={touch} compact={compact} />
             </div>
             <Cantidad p={p} />
           </div>
+          <PasteErrorStrip partidaId={p.id} />
           {/* Detrás del pie (que sigue pegado a la tabla) y pegajosa al fondo
               de la vista mientras la medición no quepa entera. */}
           <MedSelectionBar p={p} compact={compact} />

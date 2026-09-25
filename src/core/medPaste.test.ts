@@ -5,8 +5,11 @@ import {
   lineaParaDestino,
   lineasCertificadas,
   normalizarUd,
+  necesitaRevision,
   ordenTrasDesplazar,
   ordenTrasMover,
+  ordenTrasMoverBloque,
+  prepararMovimiento,
   prepararPegado,
 } from './medPaste';
 import type { Cert, MedLine, Partida } from './types';
@@ -186,5 +189,68 @@ describe('reglas de orden', () => {
     expect(ordenTrasDesplazar(ids, ['a', 'c'], -1)).toBeNull();
     expect(ordenTrasDesplazar(ids, ['b', 'd'], 1)).toBeNull();
     expect(ordenTrasDesplazar(ids, [], 1)).toBeNull();
+  });
+});
+
+describe('ordenTrasMoverBloque — pegar un cortado en su propia partida', () => {
+  const ids = ['a', 'b', 'c', 'd', 'e'];
+
+  it('mueve el bloque detrás del ancla, en su orden relativo', () => {
+    expect(ordenTrasMoverBloque(ids, ['b', 'c'], 'd')).toEqual(['a', 'd', 'b', 'c', 'e']);
+    expect(ordenTrasMoverBloque(ids, ['a'], null)).toEqual(['b', 'c', 'd', 'e', 'a']);
+  });
+
+  it('un ancla DENTRO del bloque se traduce a la anterior que se queda', () => {
+    // Pegar «detrás de c» cuando c se mueve: el ancla pasa a a (la anterior fija).
+    expect(ordenTrasMoverBloque(ids, ['b', 'c', 'e'], 'c')).toEqual(['a', 'b', 'c', 'e', 'd']);
+  });
+
+  it('sin fija anterior, al principio', () => {
+    expect(ordenTrasMoverBloque(ids, ['a', 'c'], 'a')).toEqual(['a', 'c', 'b', 'd', 'e']);
+  });
+
+  it('selección no contigua detrás de la última fija', () => {
+    expect(ordenTrasMoverBloque(ids, ['a', 'c'], 'e')).toEqual(['b', 'd', 'e', 'a', 'c']);
+  });
+
+  it('si el orden no cambia es no-op (null)', () => {
+    expect(ordenTrasMoverBloque(ids, ids, 'c')).toBeNull(); // todas seleccionadas
+    expect(ordenTrasMoverBloque(ids, ['b', 'c'], 'a')).toBeNull(); // ya estaban ahí
+    expect(ordenTrasMoverBloque(ids, ['zz'], 'a')).toBeNull();
+  });
+});
+
+describe('prepararMovimiento', () => {
+  const src = partida({
+    id: 'src',
+    code: 'EAV010',
+    ud: 'kg',
+    medForma: 'peso',
+    med: [line('a', { uds: 1, largo: 2, ancho: 10 }), line('b', { uds: 1, largo: 3, ancho: 10 }), line('c', { uds: 1, largo: 1, ancho: 10 })],
+  });
+
+  it('a otra partida: contenido actual, faltantes, certificadas y cantidades de las dos', () => {
+    const dest = partida({ id: 'dst', code: 'EAV011', ud: 'kg', medForma: 'peso' });
+    const certs = [{ id: 'c1', num: 1, period: '', retencion: 0, data: {}, lineQty: { src: { b: 30 } } }];
+    const prep = prepararMovimiento({
+      src, srcChapterId: 'c', srcForma: 'peso', lineIds: ['a', 'b', 'borrada'],
+      destino: dest, chapterId: 'c', destinoForma: 'peso', afterId: null, certs, coefK: 1,
+    });
+    expect(prep.mover).toMatchObject({ lineIds: ['a', 'b'], faltan: 1, mismaPartida: false, certLineIds: ['b'], certNums: [1] });
+    expect(prep.mover!.srcAntes.cantidad).toBe(60);
+    expect(prep.mover!.srcDespues.cantidad).toBe(10);
+    expect(prep.despues.cantidad).toBe(50);
+    expect(prep.compat.compatible).toBe(true);
+    expect(necesitaRevision(prep)).toBe(true); // faltantes y certificadas
+  });
+
+  it('en la misma partida no pregunta por certificadas (conserva ids) y detecta el no-op', () => {
+    const certs = [{ id: 'c1', num: 1, period: '', retencion: 0, data: {}, lineQty: { src: { a: 20 } } }];
+    const base = { src, srcChapterId: 'c', srcForma: 'peso' as const, destino: src, chapterId: 'c', destinoForma: 'peso' as const, certs, coefK: 1 };
+    const mueve = prepararMovimiento({ ...base, lineIds: ['a'], afterId: 'c' });
+    expect(mueve.mover).toMatchObject({ mismaPartida: true, noop: false, certLineIds: [] });
+    expect(necesitaRevision(mueve)).toBe(false);
+    expect(prepararMovimiento({ ...base, lineIds: ['a'], afterId: null }).mover!.noop).toBe(false);
+    expect(prepararMovimiento({ ...base, lineIds: ['c'], afterId: 'b' }).mover!.noop).toBe(true);
   });
 });

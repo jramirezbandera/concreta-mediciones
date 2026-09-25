@@ -22,6 +22,19 @@
                      ▼
                  nada cambia
 
+     cortar → pegar ─► prepararMovimiento(origen vivo, ids, destino, ancla)
+                     │   · contenido ACTUAL de las líneas (lo editado viaja)
+                     │   · misma partida: reordena conservando ids (ancla
+                     │     traducida al orden original; sin cambio = no-op)
+                     │   · otra partida: ids nuevos + formas + certificadas
+                     │   · faltantes (líneas del corte que ya no existen)
+                     ▼
+              ¿revisión? ── no ──► moveMedLinesTo(…, expect)  (un solo set;
+                     │ sí                       'stale' si los vivos cambiaron)
+                     ▼
+              MedPasteReview ── «Mover N líneas» / «Mover las M restantes» /
+                                «Pegar la copia guardada»
+
    El dato vive siempre en las cuatro casillas (uds · largo · ancho · alto);
    «Medir por» solo las rotula. Por eso pegar copia casilla a casilla y, si el
    destino las rotula de otra forma, lo dice ANTES de tocar el dinero.
@@ -151,6 +164,26 @@ export interface OrigenPegado {
   ud: string;
 }
 
+/** Un cortado que se pega: se MUEVEN las líneas vivas del origen. */
+export interface MovimientoPreparado {
+  srcChapterId: string;
+  srcPartidaId: string;
+  srcCode: string;
+  srcUd: string;
+  /** Ids del corte que siguen existiendo, en su orden de origen. */
+  lineIds: string[];
+  /** Cuántas líneas del corte ya no existen. */
+  faltan: number;
+  mismaPartida: boolean;
+  /** Misma partida y el orden no cambia: no hay nada que hacer. */
+  noop: boolean;
+  /** Certificadas de entre las que se mueven a OTRA partida (y en qué nº). */
+  certLineIds: string[];
+  certNums: number[];
+  srcAntes: ResumenCantidad;
+  srcDespues: ResumenCantidad;
+}
+
 export interface PegadoPreparado {
   destino: {
     chapterId: string;
@@ -167,6 +200,10 @@ export interface PegadoPreparado {
   compat: Compatibilidad;
   antes: ResumenCantidad;
   despues: ResumenCantidad;
+  /** Presente si se mueven líneas cortadas (en vez de pegar copias). */
+  mover?: MovimientoPreparado;
+  /** Se pega la instantánea guardada al cortar porque ninguna línea sigue viva. */
+  copiaGuardada?: boolean;
 }
 
 /**
@@ -204,6 +241,104 @@ export function prepararPegado(args: {
     antes: resumenCantidad(destino, coefK),
     despues: resumenCantidad({ ...destino, med }, coefK),
   };
+}
+
+/**
+ * Prepara MOVER líneas cortadas (Cortar → Pegar) de `src` a `destino`, con su
+ * contenido ACTUAL (lo editado tras cortar viaja). En la misma partida conserva
+ * los ids y solo reordena (el ancla se traduce al orden original, ver
+ * `ordenTrasMoverBloque`); a otra partida van con ids nuevos, así que se
+ * evalúan forma de medir y certificadas. Si no queda ninguna viva, `lines`
+ * queda vacío y la UI ofrece pegar la copia guardada.
+ */
+export function prepararMovimiento(args: {
+  src: Partida;
+  srcChapterId: string;
+  srcForma: MedForma;
+  lineIds: readonly string[];
+  destino: Partida;
+  chapterId: string;
+  destinoForma: MedForma;
+  afterId: string | null;
+  certs: readonly Cert[];
+  coefK: number;
+}): PegadoPreparado {
+  const { src, destino, destinoForma, coefK } = args;
+  const want = new Set(args.lineIds);
+  const vivas = src.med.filter((l) => want.has(l.id));
+  const ids = vivas.map((l) => l.id);
+  const misma = src.id === destino.id;
+  const srcAntes = resumenCantidad(src, coefK);
+  const base = {
+    destino: {
+      chapterId: args.chapterId,
+      partidaId: destino.id,
+      code: destino.code,
+      forma: destinoForma,
+      ud: destino.ud,
+    },
+    origen: { code: src.code, forma: args.srcForma, ud: src.ud },
+  };
+  const mover = (over: Partial<MovimientoPreparado>): MovimientoPreparado => ({
+    srcChapterId: args.srcChapterId,
+    srcPartidaId: src.id,
+    srcCode: src.code,
+    srcUd: src.ud,
+    lineIds: ids,
+    faltan: args.lineIds.length - ids.length,
+    mismaPartida: misma,
+    noop: false,
+    certLineIds: [],
+    certNums: [],
+    srcAntes,
+    srcDespues: srcAntes,
+    ...over,
+  });
+
+  if (misma) {
+    const order = ordenTrasMoverBloque(
+      src.med.map((l) => l.id),
+      ids,
+      args.afterId,
+    );
+    const r = resumenCantidad(destino, coefK);
+    return {
+      ...base,
+      afterId: args.afterId,
+      lines: vivas,
+      compat: { compatible: true, cambios: [], udCambia: false },
+      antes: r,
+      despues: r,
+      mover: mover({ noop: ids.length > 0 && !order }),
+    };
+  }
+
+  const afterId =
+    args.afterId != null && destino.med.some((l) => l.id === args.afterId) ? args.afterId : null;
+  const lines = vivas.map((l) => lineaParaDestino(l, destinoForma));
+  const at = indiceInsercion(destino.med, afterId);
+  const med = [...destino.med.slice(0, at), ...lines, ...destino.med.slice(at)];
+  const cert = lineasCertificadas(args.certs, src.id, ids);
+  return {
+    ...base,
+    afterId,
+    lines,
+    compat: compatibilidad(lines, { forma: args.srcForma, ud: src.ud }, { forma: destinoForma, ud: destino.ud }),
+    antes: resumenCantidad(destino, coefK),
+    despues: resumenCantidad({ ...destino, med }, coefK),
+    mover: mover({
+      certLineIds: cert.lineIds,
+      certNums: cert.certNums,
+      srcDespues: resumenCantidad({ ...src, med: src.med.filter((l) => !want.has(l.id)) }, coefK),
+    }),
+  };
+}
+
+/** ¿Hay algo que el usuario deba confirmar antes de aplicar este pegado? */
+export function necesitaRevision(prep: PegadoPreparado): boolean {
+  if (prep.copiaGuardada || !prep.compat.compatible) return true;
+  const m = prep.mover;
+  return !!m && (m.faltan > 0 || (!m.mismaPartida && m.certLineIds.length > 0));
 }
 
 /**
@@ -249,6 +384,39 @@ export function ordenTrasMover(
   const rest = ids.filter((id) => id !== lineId);
   const at = beforeId == null ? rest.length : rest.indexOf(beforeId);
   const out = [...rest.slice(0, at), lineId, ...rest.slice(at)];
+  return out.every((id, i) => id === ids[i]) ? null : out;
+}
+
+/**
+ * Orden tras MOVER un bloque (un cortado pegado en su propia partida) detrás
+ * de `afterId` (`null` = al final). El bloque conserva su orden relativo. Si el
+ * ancla es una de las líneas que se mueven, se traduce sobre el orden ORIGINAL
+ * a la anterior más cercana que se queda; si no hay ninguna, al principio.
+ * `null` si el orden no cambia (no-op: no consume el cortado).
+ */
+export function ordenTrasMoverBloque(
+  ids: readonly string[],
+  moving: readonly string[],
+  afterId: string | null,
+): string[] | null {
+  const mov = new Set(moving.filter((id) => ids.includes(id)));
+  if (mov.size === 0) return null;
+  let anchor: string | null | 'start' = afterId;
+  if (anchor != null && mov.has(anchor)) {
+    const i = ids.indexOf(anchor);
+    anchor = 'start';
+    for (let j = i - 1; j >= 0; j--) {
+      if (!mov.has(ids[j]!)) {
+        anchor = ids[j]!;
+        break;
+      }
+    }
+  }
+  if (anchor != null && anchor !== 'start' && !ids.includes(anchor)) anchor = null;
+  const rest = ids.filter((id) => !mov.has(id));
+  const block = ids.filter((id) => mov.has(id));
+  const at = anchor == null ? rest.length : anchor === 'start' ? 0 : rest.indexOf(anchor) + 1;
+  const out = [...rest.slice(0, at), ...block, ...rest.slice(at)];
   return out.every((id, i) => id === ids[i]) ? null : out;
 }
 

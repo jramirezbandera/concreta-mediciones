@@ -3,7 +3,7 @@ import { Icon, type IconName } from '../../components';
 import { lineParcial } from '../../core/medicion';
 import { fmtNum, round2 } from '../../core/money';
 import type { Partida } from '../../core/types';
-import { copyLines, deleteLines, duplicateLines, moveLinesBy } from '../../store/medLineOps';
+import { copyLines, copyToSystem, deleteLines, duplicateLines, moveLinesBy } from '../../store/medLineOps';
 import { useMedUiStore } from '../../store/medUiStore';
 import styles from './Presupuesto.module.css';
 
@@ -45,7 +45,7 @@ function BarBtn({
   );
 }
 
-/** Menú «Más» de la barra en compacto (Duplicar, Subir, Bajar · Eliminar). */
+/** Menú «Más» de la barra en compacto (Cortar, Duplicar, Subir, Bajar · Eliminar). */
 function MoreMenu({ children }: { children: (close: () => void) => ReactNode }) {
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
@@ -125,8 +125,8 @@ function MenuItem({
  * Barra de la selección de líneas: franja PROPIA y pegajosa (`sticky; bottom:
  * 0` en el contenedor con scroll), fuera de `.medWrap` (que recorta) y encima
  * del pie, que nunca sustituye: «Añadir línea», «Pegar» y la cantidad siguen a
- * la vista. «N líneas · Σ parciales» + Copiar · Duplicar · Subir · Bajar ·
- * Eliminar + quitar selección. En compacto: Copiar + «Más» + quitar.
+ * la vista. «N líneas · Σ parciales» + Copiar · Cortar · Duplicar · Subir ·
+ * Bajar · Eliminar + quitar selección. En compacto: Copiar + «Más» + quitar.
  */
 export function MedSelectionBar({ p, compact }: { p: Partida; compact: boolean }) {
   const selected = useMedUiStore((s) => (s.partidaId === p.id ? s.selected : EMPTY));
@@ -139,7 +139,10 @@ export function MedSelectionBar({ p, compact }: { p: Partida; compact: boolean }
   const sum = round2(ordered.reduce((a, l) => a + lineParcial(l), 0));
   const canUp = p.med[0]?.id !== undefined && !selected.includes(p.med[0].id);
   const canDown = p.med.at(-1)?.id !== undefined && !selected.includes(p.med.at(-1)!.id);
-  const copy = () => copyLines(p.id, ids);
+  // Copiar y Cortar llegan también al portapapeles del sistema (Excel), dentro
+  // del mismo gesto del click.
+  const copy = () => copyLines(p.id, ids) && copyToSystem();
+  const cut = () => copyLines(p.id, ids, { cut: true }) && copyToSystem();
   const dup = () => duplicateLines(p.id, ids);
   const up = () => moveLinesBy(p.id, ids, -1);
   const down = () => moveLinesBy(p.id, ids, 1);
@@ -172,6 +175,7 @@ export function MedSelectionBar({ p, compact }: { p: Partida; compact: boolean }
                 };
                 return (
                   <>
+                    <MenuItem icon="scissors" label="Cortar" onClick={then(cut)} />
                     <MenuItem icon="duplicate" label="Duplicar" onClick={then(dup)} />
                     <MenuItem icon="arrowUp" label="Subir" disabled={!canUp} onClick={then(up)} />
                     <MenuItem icon="arrowDown" label="Bajar" disabled={!canDown} onClick={then(down)} />
@@ -185,6 +189,12 @@ export function MedSelectionBar({ p, compact }: { p: Partida; compact: boolean }
         ) : (
           <>
             <BarBtn icon="copy" label="Copiar" title="Copiar las líneas (Ctrl/⌘+C)" onClick={copy} />
+            <BarBtn
+              icon="scissors"
+              label="Cortar"
+              title="Cortar para moverlas a otro sitio (Ctrl/⌘+X)"
+              onClick={cut}
+            />
             <BarBtn icon="duplicate" label="Duplicar" title="Duplicar las líneas (Ctrl/⌘+D)" onClick={dup} />
             <BarBtn icon="arrowUp" label="Subir" title="Subir una posición (Alt+↑)" onClick={up} disabled={!canUp} />
             <BarBtn icon="arrowDown" label="Bajar" title="Bajar una posición (Alt+↓)" onClick={down} disabled={!canDown} />
