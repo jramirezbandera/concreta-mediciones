@@ -1,0 +1,530 @@
+{
+  "schemaVersion": 6,
+  "chapters": [
+    {
+      "id": "c01",
+      "code": "01",
+      "title": "Albañilería y acabados"
+    },
+    {
+      "id": "c02",
+      "code": "02",
+      "title": "Estructura e instalaciones"
+    }
+  ],
+  "partidas": {
+    "c01": [
+      {
+        "id": "p-tabique",
+        "pos": "1.1",
+        "code": "FFR010",
+        "title": "Tabique de ladrillo hueco doble",
+        "ud": "m",
+        "precio": 0,
+        "desc": "",
+        "med": [
+          {
+            "id": "l-tabique",
+            "comment": "P1 · Tabique cocina",
+            "uds": 1,
+            "largo": 9.45,
+            "ancho": "",
+            "alto": "",
+            "expr": {
+              "largo": "3,2+4,15+2,1"
+            },
+            "origen": {
+              "planoId": "pl-p1",
+              "huella": "0fc3db22bad221635f818c2293d837a3c996dd00d137681c147ee79502969119",
+              "pagina": 1,
+              "formaId": "f-tabique",
+              "herramienta": "longitud",
+              "puntos": [
+                [
+                  150,
+                  200
+                ],
+                [
+                  331.42,
+                  200
+                ],
+                [
+                  331.42,
+                  435.28
+                ],
+                [
+                  212.37,
+                  435.28
+                ]
+              ],
+              "calRev": "cal-p1-1",
+              "mPorUnidad": 0.017638861941,
+              "n": 50,
+              "magnitud": "longitud",
+              "slots": [
+                "largo"
+              ],
+              "valores": {
+                "largo": 9.45
+              },
+              "at": "2026-09-26T10:00:00.000Z"
+            }
+          }
+        ],
+        "items": []
+      },
+      {
+        "id": "p-solado",
+        "pos": "1.2",
+        "code": "RSG010",
+        "title": "Solado de baldosa cerámica",
+        "ud": "m²",
+        "precio": 0,
+        "desc": "",
+        "med": [
+          {
+            "id": "l-salon-b",
+            "comment": "P1 · Salón",
+            "uds": 1,
+            "largo": 20,
+            "ancho": "",
+            "alto": "",
+            "origen": {
+              "planoId": "pl-p1b",
+              "huella": "d262b47dde0d9426f40e836ab1baecc8241322de408fcac0e20fcd0472d409ee",
+              "pagina": 1,
+              "formaId": "f-salon-b",
+              "herramienta": "superficie",
+              "puntos": [
+                [
+                  400,
+                  150
+                ],
+                [
+                  683.46,
+                  150
+                ],
+                [
+                  683.46,
+                  376.77
+                ],
+                [
+                  400,
+                  376.77
+                ]
+              ],
+              "calRev": "cal-p1b-1",
+              "mPorUnidad": 0.017638888889,
+              "n": 50,
+              "escalaAjustada": true,
+              "magnitud": "area",
+              "slots": [
+                "largo"
+              ],
+              "valores": {
+                "largo": 20
+              },
+              "at": "2026-09-26T10:00:00.000Z"
+            }
+          }
+        ],
+        "items": [],
+        "medForma": "area"
+      },
+      {
+        "id": "p-rodapie",
+        "pos": "1.3",
+        "code": "RSP010",
+        "title": "Rodapié cerámico",
+        "ud": "m",
+        "precio": 0,
+        "desc": "",
+        "med": [
+          {
+            "id": "l-rodapie-b",
+            "comment": "P1 · Salón",
+            "uds": 1,
+            "largo": 18,
+            "ancho": "",
+            "alto": "",
+            "expr": {
+              "largo": "5+4+5+4"
+            },
+            "origen": {
+              "planoId": "pl-p1b",
+              "huella": "d262b47dde0d9426f40e836ab1baecc8241322de408fcac0e20fcd0472d409ee",
+              "pagina": 1,
+              "formaId": "f-salon-b",
+              "herramienta": "superficie",
+              "puntos": [
+                [
+                  400,
+                  150
+                ],
+                [
+                  683.46,
+                  150
+                ],
+                [
+                  683.46,
+                  376.77
+                ],
+                [
+                  400,
+                  376.77
+                ]
+              ],
+              "calRev": "cal-p1b-1",
+              "mPorUnidad": 0.017638888889,
+              "n": 50,
+              "escalaAjustada": true,
+              "magnitud": "perimetro",
+              "slots": [
+                "largo"
+              ],
+              "valores": {
+                "largo": 18
+              },
+              "at": "2026-09-26T10:00:00.000Z"
+            }
+          }
+        ],
+        "items": []
+      },
+      {
+        "id": "p-pintura",
+        "pos": "1.4",
+        "code": "RIP010",
+        "title": "Pintura plástica en paramentos",
+        "ud": "m²",
+        "precio": 0,
+        "desc": "",
+        "med": [
+          {
+            "id": "l-pintura-b",
+            "comment": "P1 · Salón",
+            "uds": 1,
+            "largo": 48.6,
+            "ancho": "",
+            "alto": "",
+            "expr": {
+              "largo": "(5+4+5+4)×2,7"
+            },
+            "origen": {
+              "planoId": "pl-p1b",
+              "huella": "d262b47dde0d9426f40e836ab1baecc8241322de408fcac0e20fcd0472d409ee",
+              "pagina": 1,
+              "formaId": "f-salon-b",
+              "herramienta": "superficie",
+              "puntos": [
+                [
+                  400,
+                  150
+                ],
+                [
+                  683.46,
+                  150
+                ],
+                [
+                  683.46,
+                  376.77
+                ],
+                [
+                  400,
+                  376.77
+                ]
+              ],
+              "calRev": "cal-p1b-1",
+              "mPorUnidad": 0.017638888889,
+              "n": 50,
+              "escalaAjustada": true,
+              "magnitud": "longitudPorFactor",
+              "factor": 2.7,
+              "slots": [
+                "largo"
+              ],
+              "valores": {
+                "largo": 48.6
+              },
+              "at": "2026-09-26T10:00:00.000Z"
+            }
+          }
+        ],
+        "items": [],
+        "medForma": "area"
+      },
+      {
+        "id": "p-techo",
+        "pos": "1.5",
+        "code": "RTC010",
+        "title": "Falso techo de placas de yeso",
+        "ud": "m²",
+        "precio": 0,
+        "desc": "",
+        "med": [
+          {
+            "id": "l-dorm1-b",
+            "comment": "P1 · Dormitorio 1",
+            "uds": 1,
+            "largo": 4.2,
+            "ancho": 3.05,
+            "alto": "",
+            "origen": {
+              "planoId": "pl-p1b",
+              "huella": "d262b47dde0d9426f40e836ab1baecc8241322de408fcac0e20fcd0472d409ee",
+              "pagina": 1,
+              "formaId": "f-dorm1-b",
+              "herramienta": "rectangulo",
+              "puntos": [
+                [
+                  750,
+                  150
+                ],
+                [
+                  988.11,
+                  150
+                ],
+                [
+                  988.11,
+                  325.75
+                ],
+                [
+                  750,
+                  325.75
+                ]
+              ],
+              "calRev": "cal-p1b-1",
+              "mPorUnidad": 0.017638888889,
+              "n": 50,
+              "escalaAjustada": true,
+              "magnitud": "lados",
+              "slots": [
+                "largo",
+                "ancho"
+              ],
+              "valores": {
+                "largo": 4.2,
+                "ancho": 3.1
+              },
+              "aceptada": true,
+              "at": "2026-09-26T10:00:00.000Z"
+            }
+          }
+        ],
+        "items": []
+      }
+    ],
+    "c02": [
+      {
+        "id": "p-sumideros",
+        "pos": "2.1",
+        "code": "ISS010",
+        "title": "Sumidero sifónico",
+        "ud": "ud",
+        "precio": 0,
+        "desc": "",
+        "med": [
+          {
+            "id": "l-sumideros",
+            "comment": "CU · Sumideros",
+            "uds": 3,
+            "largo": "",
+            "ancho": "",
+            "alto": "",
+            "origen": {
+              "planoId": "pl-cub",
+              "huella": "043ea1d76e6127d0fa7ce92cdbedac53421ce4c85812de5c5b1a56822920199e",
+              "pagina": 1,
+              "formaId": "f-sumideros",
+              "herramienta": "recuento",
+              "puntos": [
+                [
+                  300,
+                  300
+                ],
+                [
+                  500,
+                  300
+                ],
+                [
+                  700,
+                  300
+                ]
+              ],
+              "mPorUnidad": 1,
+              "magnitud": "recuento",
+              "slots": [
+                "uds"
+              ],
+              "valores": {
+                "uds": 3
+              },
+              "at": "2026-09-26T10:00:00.000Z"
+            }
+          }
+        ],
+        "items": []
+      }
+    ]
+  },
+  "recursos": {},
+  "certs": [
+    {
+      "id": "c1",
+      "num": 1,
+      "period": "",
+      "retencion": 0,
+      "data": {}
+    }
+  ],
+  "rates": {
+    "iva": 0.1,
+    "gg": 0.13,
+    "bi": 0.06,
+    "ci": 0,
+    "coefK": 1
+  },
+  "obra": {
+    "denominacion": "Fixture planos · A1",
+    "direccion": "",
+    "localidad": ""
+  },
+  "bajas": {},
+  "planos": [
+    {
+      "id": "pl-p1",
+      "tipo": "pdf",
+      "nombre": "Planta primera",
+      "archivo": "Planta primera.pdf",
+      "tamano": 2483115,
+      "huella": "0fc3db22bad221635f818c2293d837a3c996dd00d137681c147ee79502969119",
+      "paginas": 1,
+      "etiquetas": {
+        "1": "P1"
+      },
+      "escalas": {
+        "1": {
+          "rev": "cal-p1-1",
+          "mPorUnidad": 0.017638861941,
+          "n": 50,
+          "ref": {
+            "a": [
+              100,
+              700
+            ],
+            "b": [
+              666.93,
+              700
+            ],
+            "metros": 10
+          },
+          "comprobacion": {
+            "fuente": "cota",
+            "a": [
+              900,
+              100
+            ],
+            "b": [
+              900,
+              440.16
+            ],
+            "metros": 6,
+            "medidos": 6.000035,
+            "desviacion": 0.000006
+          },
+          "at": "2026-09-26T10:00:00.000Z"
+        }
+      },
+      "revision": "Rev. A"
+    },
+    {
+      "id": "pl-p1b",
+      "tipo": "pdf",
+      "nombre": "Planta primera",
+      "archivo": "Planta primera rev B.pdf",
+      "tamano": 2519002,
+      "huella": "d262b47dde0d9426f40e836ab1baecc8241322de408fcac0e20fcd0472d409ee",
+      "huellasAnteriores": [
+        "d7b0d3a5278ef6e442ab25a9710f9b3de21c8b48d60f04b25830abcbf681a35c"
+      ],
+      "paginas": 1,
+      "etiquetas": {
+        "1": "P1"
+      },
+      "escalas": {
+        "1": {
+          "rev": "cal-p1b-1",
+          "mPorUnidad": 0.017638888889,
+          "n": 50,
+          "ref": {
+            "a": [
+              100,
+              700
+            ],
+            "b": [
+              666.93,
+              700
+            ],
+            "metros": 10
+          },
+          "comprobacion": {
+            "fuente": "cajetin",
+            "escalaDeclarada": 50,
+            "desviacion": 0.000002
+          },
+          "escalaDeclarada": 50,
+          "ajustada": true,
+          "at": "2026-09-26T10:00:00.000Z"
+        }
+      },
+      "revision": "Rev. B",
+      "sustituye": "pl-p1"
+    },
+    {
+      "id": "pl-cub",
+      "tipo": "pdf",
+      "nombre": "Cubierta",
+      "archivo": "Cubierta.pdf",
+      "tamano": 1180220,
+      "huella": "043ea1d76e6127d0fa7ce92cdbedac53421ce4c85812de5c5b1a56822920199e",
+      "paginas": 1,
+      "etiquetas": {
+        "1": "CU"
+      },
+      "escalas": {
+        "1": {
+          "rev": "cal-cub-1",
+          "mPorUnidad": 0.017638861941,
+          "n": 50,
+          "ref": {
+            "a": [
+              100,
+              700
+            ],
+            "b": [
+              666.93,
+              700
+            ],
+            "metros": 10
+          },
+          "comprobacion": {
+            "fuente": "cota",
+            "a": [
+              900,
+              100
+            ],
+            "b": [
+              900,
+              440.16
+            ],
+            "metros": 6,
+            "medidos": 6.000035,
+            "desviacion": 0.000006
+          },
+          "at": "2026-09-26T10:00:00.000Z"
+        }
+      },
+      "quitado": "2026-09-27T09:00:00.000Z"
+    }
+  ]
+}

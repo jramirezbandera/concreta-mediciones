@@ -2,7 +2,7 @@
 ## Implementation plan
 # Plan · Medir sobre planos PDF
 
-> Estado: APROBADO (/autoplan, 2026-09-25). Orden: Etapa 0 → X0 → A0 → puerta cronometrada → A1 → Etapa B. Lo que manda está en los bloques aceptados (ingeniería > DX > diseño > CEO) y, cuando exista, en la «Especificación · Etapa A» (X0).
+> Estado: APROBADO (/autoplan, 2026-09-25). Etapa 0 hecha (`30d99eb`, pendiente de publicar). X0 hecho (2026-09-25): la «Especificación · Etapa A» es la fuente única; lo que sustituye está en «Historial» y en el «Registro de la revisión». Orden: Etapa 0 → X0 → A0 → puerta cronometrada → A1 → Etapa B.
 
 ## Petición
 
@@ -17,13 +17,1191 @@ no vuelvo a Presto».» (TODOS.md, «Medir sobre planos PDF (P2, grande)»).
 ## Objetivo medible
 
 - Medir una partida típica desde el plano (12 tabiques de una planta, 8 estancias de
-  solado) sin teclear ninguna cifra que el plano ya da: clic, clic, Enter por medida.
+  solado) sin teclear ninguna cifra que el plano ya da: clic… Enter para cerrar la
+  forma y Enter para aceptar el comentario.
 - Cada línea medida sabe de qué plano, página y geometría sale, y se puede volver a
   ella con un clic.
 - Una medida nunca cambia dinero en silencio: escala sin calibrar, forma de medir que
   no encaja o línea retocada a mano se ven.
 
-## Qué ya existe (reuso)
+## Especificación · Etapa A
+
+Fuente única para implementar la Etapa A (tarea X0, 2026-09-25). Reúne el plan base y los cuatro bloques aceptados (CEO, diseño, DX e ingeniería, con sus precedencias ya aplicadas) y las decisiones de la aprobación. Lo que sustituye está en «Historial» y en el «Registro de la revisión»; si algo de allí contradice esto, manda esto.
+
+### 0. Cómo se lee
+
+- **Subetapas.** Cada punto lleva la suya:
+  - **[A0]** lo mínimo para la puerta cronometrada; sin etiqueta, un punto es A0;
+  - **[A1]** después de la puerta;
+  - **[B]** Etapa B, solo si se supera la puerta.
+- **Prerrequisitos de A0:**
+  - La Etapa 0 (`30d99eb`) está publicada ANTES del primer push de A0. Un push a `main` publica todo lo acumulado, y la Etapa 0 tiene que llegar sola a las pestañas abiertas.
+  - La certificación por líneas con signo (§4.6, tarea E12) está hecha antes de habilitar Restar. Mientras no lo esté, Restar sale deshabilitado con su motivo.
+- **Entregas:**
+  - A0 y A1 se entregan en verde: `tsc -b`, `vitest run`, `vitest run -c vitest.node.config.ts`, `eslint` y `vite build`.
+  - El lector y el escritor v6 entran en UN commit, porque cada push publica. Ese commit no va detrás del interruptor (§5.9).
+- **Fixtures.** Los ejemplos JSON de §1.7 son fixtures de verdad: `src/test/fixtures/planos/`, comprobados por `fixtures.test.ts`.
+- **Etapa B.** Aquí solo se fija lo que A necesita para no cerrarle el paso (tipos, `trazados?`, `moveShapeVertices`). Su detalle sigue en los bloques del «Registro de la revisión» y se escribirá como especificación propia si se supera la puerta. En este orden:
+  1. imán a la geometría vectorial;
+  2. capa de toda la obra con leyenda y filtro;
+  3. editar vértices con «Aplicar también a N líneas»;
+  4. PNG/JPG como plano;
+  5. medir con el dedo en tablet.
+- **Fuera de alcance:**
+  - DWG/DXF;
+  - varias escalas por página (TODOS P3);
+  - certificar sobre el plano (P3);
+  - medición automática con IA;
+  - imprimir el plano con las medidas;
+  - sincronizar planos entre equipos;
+  - plano marcado para la DF (P2);
+  - comparar revisiones (P2);
+  - contar símbolos (P3);
+  - borrado automático de PDF entre pestañas (P3);
+  - «Probar con un plano de ejemplo» para el usuario final (P3).
+- **Ficheros:**
+  - Nuevos:
+    - `core/planoGeom.ts`, `core/planoMedida.ts`, `core/planoCiclo.ts`, `core/planoTexto.ts` [A1], `core/sha256.ts`;
+    - `persist/planos.ts`;
+    - `store/planoUiStore.ts` y el módulo de textos de motivos;
+    - `features/planos/` (`PlanosPanel`, `PlanoViewer`, `PlanoToolbar`, `PlanoOverlay`, `CalibrarPasos`, `Lupa`, `AnadirTambien` [A1], `pdfAdapter`, `pdfAdapter.fake`, `flag`, `Planos.module.css`);
+    - `features/presupuesto/MedOrigen.tsx`;
+    - `src/test/pdfMinimo.ts` y `vitest.node.config.ts`.
+  - Editados:
+    - `core/types.ts`, `store/schema.ts`, `store/obraStore.ts`, `store/slices/estructuraSlice.ts`, `store/slices/certSlice.ts` (E12), `store/medLineOps.ts`, `store/temporal.ts` [A1];
+    - `core/medPaste.ts`, `core/bc3export.ts`;
+    - `persist/persist.ts`, `persist/registry.ts`, `persist/sync.ts`, `persist/transfer.ts` [A1];
+    - `App.tsx`, `layout/TopBar.tsx`, `layout/ayudaContent.ts`;
+    - `features/presupuesto/MedLineRow.tsx` y `MedCards.tsx`, `features/obra/ProjectBackup.tsx`;
+    - `hooks/hotkeyGuards.ts`, `hooks/editGridNav.ts`, `hooks/useMedGridTab.ts`;
+    - `vite.config.ts` y `package.json`.
+- **Cambios.** Un cambio posterior se hace en esta sección y deja una línea en §14.
+
+### 1. Lo que se guarda (contrato v6)
+
+#### 1.1 Versión, claves y migración
+
+- `SCHEMA_VERSION` pasa a 6.
+  - `MIGRATIONS[5]`: v5 → v6 añade `planos: []`.
+  - Regla de versión: todo cambio que amplíe las formas o los valores válidos que se guardan (una herramienta nueva, un campo con significado nuevo) sube `SCHEMA_VERSION`. Así el código anterior pasa a solo lectura por la Etapa 0 en vez de reinterpretar.
+  - Por eso v6 trae desde A0 todos los campos que usan A1 y B (§1.2): A1 no sube la versión.
+- **Espacio de claves propio de v6**, que el código v5 no lista ni escribe:
+
+  | Clave | Contenido |
+  |---|---|
+  | `concreta6.obra.<id>` | sobre v6 de la obra (`ObraEnvelope` con `data: ObraData` v6) |
+  | `concreta6.version.<id>` | `schemaVersion` del último sobre escrito (la clave pequeña de la Etapa 0, en el prefijo nuevo) |
+  | `concreta6.obras.index` | índice v6 (`ObraIndex`, con la meta de §1.6) |
+
+  - `reconcile`, `obraKeys` y la migración legacy trabajan con el prefijo nuevo.
+  - Las claves v5 (`concreta.obra.<id>`, `concreta.version.<id>`, `concreta.obras.index.v1`) solo se leen para migrar, con tres excepciones que escriben en ellas (abajo): el sello de versión al migrar, la limpieza de los 30 días y borrar una obra.
+- **Índice v6 y obras «por migrar»:**
+  - La primera vez, el índice v6 nace del v5: misma lista, mismo orden, mismo `activeId` y la meta de cada obra tal cual (`kind`, `ultimaCopia`…), con `porMigrar: true` (§1.2).
+  - Después, `reconcile` v6 añade al final las obras del índice v5 que no están en el v6 (una pestaña antigua pudo crear una), también `porMigrar`.
+  - Una entrada `porMigrar` se conserva mientras exista su clave v5; sin ella, `reconcile` la quita como cualquier entrada sin sobre.
+  - En el selector salen como las demás.
+- **Migrar, perezoso y una sola vez por obra:**
+  - Solo migra la pestaña DUEÑA de la obra, al abrirla. Una pestaña de solo lectura y la fuente de Referencia (`obraSource`) la leen de la clave v5 y la migran en memoria, sin escribir.
+  - Al abrir una obra `porMigrar`:
+    1. se lee `concreta.obra.<id>` y se migra en memoria (`fromSerializable`);
+    2. se escribe `concreta6.obra.<id>` con `migracionV5: { savedAt, indiceSavedAt, at }` en el sobre: el `savedAt` del sobre v5, el de su meta en el índice v5 y el momento de migrar. Son dos `savedAt` porque `metaOf` sella el del índice DESPUÉS de guardar el sobre, así que no coinciden;
+    3. se escribe `concreta.version.<id> = 6`, así una pestaña con la Etapa 0 que intente guardar esa obra en v5 recibe `version-conflict` y pasa a solo lectura con el aviso de «más nueva»;
+    4. la entrada deja de ser `porMigrar`.
+  - La clave v5 se queda tal cual y hace de copia v5.
+  - Una obra v5 dañada va al banner de recuperación de siempre, sin tocar la clave v5.
+- **Cambios antiguos.**
+  - Una pestaña anterior a la Etapa 0 no mira la clave de versión: puede seguir guardando en las claves v5, pero nunca pisa la v6.
+  - Al abrir una obra migrada, se compara el `savedAt` de su meta en el índice v5 (lectura barata, sin el sobre) con `migracionV5.indiceSavedAt`. Si es posterior, el aviso dice «Una versión antigua de Concreta guardó cambios en esta obra después de actualizarla», con:
+    - [Abrir esos cambios como obra aparte]: crea una obra v6 nueva desde la clave v5 migrada, con el nombre «<nombre> (cambios de la versión antigua)»;
+    - [Ignorar].
+  - Las dos respuestas vuelven a sellar `migracionV5` con el estado v5 de ese momento (`savedAt`, `indiceSavedAt` y `at`): el aviso no se repite por los mismos cambios y la limpieza cuenta los 30 días desde ahí.
+- **Limpieza de la copia v5,** en reposo al arrancar. 30 días después de `migracionV5.at`, si la meta v5 sigue con `indiceSavedAt` y el sobre v5, leído entonces, sigue con `savedAt`:
+  - se borran `concreta.obra.<id>` y `concreta.version.<id>`;
+  - se quita la obra del índice v5.
+- **Borrar una obra** en v6 borra también sus claves v5 y su entrada del índice v5. Si no, `reconcile` la volvería a traer como «por migrar».
+- **Guardar:** `saveObra` y el resultado terminal `version-conflict` de la Etapa 0, sobre las claves v6.
+
+#### 1.2 Tipos
+
+```ts
+/** sha256 de los bytes del fichero, en hexadecimal minúsculo (64 caracteres). */
+type Huella = string;
+/** Punto en coordenadas de página: espacio de usuario del PDF, con la y hacia
+ *  arriba, SIN rotar (independiente del zoom y de /Rotate), redondeado a 0,01.
+ *  En una imagen [B], píxeles de la imagen ya orientada. */
+type Punto = [number, number];
+
+interface ObraData {            // v6: lo de v5 más
+  planos: PlanoMeta[];          // entra en DOMAIN_KEYS: adjuntar, quitar y calibrar se deshacen
+  _ilegible?: Ilegible[];       // §1.4; también en DOMAIN_KEYS
+}
+
+interface PlanoMeta {
+  id: string;
+  tipo: 'pdf' | 'imagen';       // 'imagen' se usa desde [B]
+  nombre: string;               // editable («Planta primera»)
+  archivo: string;              // nombre original del fichero
+  tamano: number;               // bytes del fichero
+  huella: Huella;               // clave de sus bytes en el almacén (§1.5)
+  huellasAnteriores?: Huella[]; // [A1] «Usar este PDF para este plano» (T10), de más antigua a más nueva
+  paginas: number;              // ≥ 1
+  etiquetas?: Record<number, string>; // rótulo corto por página («P1»): prefijo del comentario
+  escalas: Record<number, Escala>;    // UNA calibración activa por página calibrada
+  revision?: string;            // [A1] «Rev. B»
+  sustituye?: string;           // [A1] id del plano de la revisión anterior
+  quitado?: string;             // ISO; fuera de listas, se conserva por la procedencia
+}
+
+interface Escala {
+  rev: string;                  // id nuevo en CADA calibración; `origen.calRev` lo copia
+  mPorUnidad: number;           // metros por unidad de página; finito y > 0
+  n: number;                    // N de «1:N», con 1 decimal: mPorUnidad / (userUnit · 0,0254 / 72). Solo para enseñar
+  ref: { a: Punto; b: Punto; metros: number }; // la cota de calibración
+  comprobacion?: Comprobacion;  // en A0 siempre presente; en A1 puede faltar («sin comprobar»)
+  escalaDeclarada?: number;     // [A1] la N de «1:N» leída del cajetín
+  ajustada?: boolean;           // [A1] mPorUnidad llevada a la declarada exacta (< 1 %)
+  at: string;                   // ISO
+}
+
+type Comprobacion =
+  | { fuente: 'cota'; a: Punto; b: Punto; metros: number; medidos: number; desviacion: number }
+  | { fuente: 'cajetin'; escalaDeclarada: number; desviacion: number }; // [A1] T9
+// desviacion es una fracción: 0,003 = 0,3 %
+
+type Herramienta = 'longitud' | 'superficie' | 'rectangulo' | 'recuento';
+type Magnitud = 'recuento' | 'longitud' | 'perimetro' | 'area' | 'lados' | 'longitudPorFactor';
+
+interface OrigenComun {
+  planoId: string;
+  huella: Huella;               // la del PDF con el que se midió: manda en «Ver en plano» y cuenta como referencia
+  pagina: number;               // desde 1
+  formaId: string;              // identidad de UNA geometría inmutable (§1.3)
+  magnitud: Magnitud;
+  slots: MedDim[];              // casillas que salen del plano, fijadas al medir
+  valores: Partial<Record<MedDim, number>>; // lo escrito en cada casilla de `slots` al medir
+  fijas?: Partial<Record<MedDim, number>>;  // dimensiones fijas escritas en casillas
+  factor?: number;              // solo el multiplicador dentro de `expr` (la h de «(tramos)×h»)
+  aceptada?: boolean;           // [A1] «Aceptar valores actuales»
+  at: string;                   // ISO
+}
+interface OrigenConEscala extends OrigenComun {
+  calRev: string;               // Escala.rev con la que se midió
+  mPorUnidad: number;           // escala congelada al medir
+  n: number;                    // su «1:N», para enseñar
+  escalaAjustada?: boolean;     // [A1] la escala estaba ajustada al cajetín
+}
+type OrigenPlano =
+  | (OrigenConEscala & { herramienta: 'longitud'; puntos: Punto[] })   // polilínea abierta, ≥ 2 puntos
+  | (OrigenConEscala & { herramienta: 'superficie'; puntos: Punto[] }) // polígono, ≥ 3 vértices; el cierre es implícito
+  | (OrigenConEscala & { herramienta: 'rectangulo'; puntos: [Punto, Punto, Punto, Punto] }) // 4 esquinas en orden
+  | (OrigenComun & { herramienta: 'recuento'; puntos: Punto[]; mPorUnidad: 1 }); // los puntos contados, ≥ 1; sin escala
+
+interface MedLine {             // v5 más
+  origen?: OrigenPlano;         // opcional: una línea sin origen es una línea de siempre
+}
+
+interface Ilegible { donde: string; valor: unknown } // §1.4
+
+/* Fuera de ObraData */
+interface ObraMeta {            // índice de obras (Etapa 0 más)
+  porMigrar?: true;             // su sobre sigue solo en la clave v5 (§1.1)
+  huellas?: Huella[];           // [A1] huellas referenciadas por la obra (planos y orígenes)
+  huellasDe?: string;           // [A1] savedAt del sobre del que salen
+}
+interface ObraEnvelope {        // sobre v6 (Etapa 0 más)
+  migracionV5?: {
+    savedAt: string;            // del sobre v5 al migrar (o al último «Ignorar» / «Abrir aparte»)
+    indiceSavedAt: string;      // de su meta en el índice v5, en ese mismo momento
+    at: string;                 // cuándo; la limpieza cuenta 30 días desde aquí
+  };
+}
+```
+
+Nombres que cambian respecto al plan base: `sha256` pasa a `huella`, `bytes` a `tamano` y `slot` a `slots`. `valor` y `resta` desaparecen: los sustituyen `valores` y el signo de `uds` (§1.3).
+
+#### 1.3 Reglas de los datos
+
+- **Una forma, una geometría.** Misma `formaId` ⇒ mismos `planoId`, `pagina`, `herramienta` y `puntos` (invariante con test).
+  - Nace en las llamadas, nunca en `lineaParaDestino`, que es el constructor común:
+    - medir, duplicar y pegar dan una nueva;
+    - «Volver a medir» da una nueva a la línea;
+    - «Añadir también a…» [A1] reutiliza la de la forma;
+    - mover a otra partida la conserva.
+  - [B] Con «Aplicar también», `moveShapeVertices` conserva la `formaId` solo en las líneas que actualiza; las que se salta pasan a una propia.
+- **Restar = signo de `uds`.**
+  - Fuera de Recuento, `uds` se escribe siempre: 1, o −1 con Restar. No entra en `valores`: recalcular, «Volver a medir» y editar vértices no lo tocan (un `uds = 2` tecleado se conserva).
+  - En Recuento, `uds = ±N` y sí entra en `valores`.
+  - La capa, el marcador y «Volver a medir» leen el estado de Restar del signo de `uds`. No hay campo `resta`.
+- **Retocada a mano:** alguna casilla de `slots` difiere de su `valores`. Una fija cambiada no cuenta: es dato del usuario.
+- **Aceptada [A1]:**
+  - «Aceptar valores actuales» pone `aceptada: true` y deja `valores` como salieron de la geometría;
+  - la línea sale de los recálculos automáticos y se lista con las retocadas;
+  - solo «Volver a medir» devuelve la autoridad a la geometría (quita `aceptada`).
+- **Escala histórica.** Una línea cuyo `calRev` no es la `rev` activa de su página conserva su escala. Solo pasa en [A1], con las que un recálculo se saltó (retocadas, aceptadas o certificadas), y se listan como «N líneas con otra escala».
+- **Plano quitado:**
+  - quitarlo pide confirmación con cuántas líneas salen de él («Quitar "Planta primera": 23 líneas conservan sus números, pero dejan de verse en el plano»);
+  - `removePlano` pone `quitado`: sale de las listas y de los recuentos de referencias de «Liberar espacio» [A1];
+  - el blob no se borra, así que Deshacer lo recupera entero;
+  - sus líneas conservan números y `origen`, y el marcador sale atenuado;
+  - volver a adjuntar el mismo PDF (misma huella) lo revive con sus escalas y líneas.
+- **Claves de página:** `escalas` y `etiquetas` usan enteros de 1 a `paginas`. En JSON llegan como texto y se validan (§1.4).
+- **Copias de líneas** (`core/medPaste`):
+  - `lineaParaDestino` clona `origen` en profundidad;
+  - el TSV nunca lo lleva;
+  - pegar en una obra cuyo `planos` no contiene `origen.planoId` lo quita (conserva los números);
+  - pegar en una partida cuya forma cambia el significado o la unidad de las casillas (`compatibilidad()`) lo quita.
+  Así un recálculo nunca escribe una magnitud geométrica donde la unidad ya es otra.
+- **Carga sin herencia:**
+  - `loadObra` pone `planos: []` por defecto, como con `bajas`;
+  - `importObraAsReferenceImpl` estampa `planos: []`;
+  - `toSerializable` incluye `planos` y `_ilegible`.
+
+#### 1.4 Validar sin destruir
+
+- `isObraData` (tras migrar) solo exige `Array.isArray(planos)`. Una obra nunca va a recuperación por un plano mal formado.
+- **Opaco:** un `PlanoMeta`, una `Escala` o un `origen` que es un objeto pero no se entiende NO se borra:
+  - se conserva tal cual y no se pinta;
+  - la línea sigue con sus números;
+  - se escribe de vuelta sin cambios.
+  Lo deciden guardas puras (`planoLegible`, `escalaLegible`, `origenLegible`) en cada uso: una escala ilegible deja la página como «sin calibrar», un `origen` ilegible deja el marcador como «procedencia ilegible».
+- **`_ilegible`:** solo lo que rompería el render se aparta, con su valor crudo y su ruta (`donde`, p. ej. `planos/3` o `partidas/c01/p-12/med/l-4/origen`):
+  - un elemento de `planos` que no es un objeto;
+  - un `origen` que no es un objeto;
+  - `escalas` o `etiquetas` que no son un objeto.
+- **Aviso:** aparece en la lista de planos («N datos de planos no se pueden leer; las líneas conservan sus números»), con `console.warn`.
+- **Sin guardado implícito:** apartar o marcar no guarda. Lo apartado se escribe con el siguiente guardado real.
+- **Claves de página:** una clave que no es un entero de 1 a `paginas` se ignora al usarla y se conserva.
+- **Topes al importar un .json:** protegen el validador y la capa de un fichero manipulado.
+
+  | Qué | Tope |
+  |---|---|
+  | puntos por `origen` | 2 000 |
+  | planos | 200 |
+  | páginas por plano | 2 000 |
+  | líneas con `origen` | 50 000 |
+
+  - Al pasarse, `ImportError('demasiado-grande')` con su texto (§7).
+  - Los mismos topes valen al crear: una forma no admite más de 2 000 puntos («Esta forma ya tiene 2 000 puntos: termínala»).
+
+#### 1.5 Almacén de PDF (`concreta-planos`)
+
+- **Qué es:** un módulo propio de IndexedDB, `persist/planos.ts`, con la base `concreta-planos` (versión 1) y dos almacenes, los dos con la huella como clave:
+
+  | Almacén | Contenido |
+  |---|---|
+  | `meta` | `{ tamano, tipo, tocadoEn: ISO, sinReferenciaDesde?: ISO [A1], restauracion?: string [A1] }` |
+  | `bytes` | `ArrayBuffer`, escrito una sola vez |
+
+  - idb-keyval no sirve aquí: su `update` reescribe el valor entero y solo admite un almacén por base de datos.
+  - Los bytes, no un Blob: jsdom no implementa `Blob.arrayBuffer()`. El fichero se lee con `FileReader`.
+- **Adjuntar** (coordinador, sin transacción común entre la obra y el almacén):
+  1. captura el `docToken`;
+  2. calcula la huella en un worker (`crypto.subtle` o, fuera de contexto seguro, `core/sha256.ts`);
+  3. en una transacción de lectura y escritura sobre los dos almacenes, escribe los bytes si faltan y actualiza `meta` (sella `tocadoEn` y [A1] quita la marca);
+  4. SOLO después publica el metadato con `attachPlano`.
+  - Si el `docToken` cambió entretanto (otra obra), descarta el resultado: los bytes se quedan.
+  - Reintentar es idempotente por huella.
+  - Nunca queda un metadato que apunte a bytes sin guardar.
+- **Tamaño:** más de 50 MB avisa y deja seguir; más de 500 MB se rechaza.
+- **Espacio:** `navigator.storage.estimate()`, siempre protegido. Si no existe, no se enseña el espacio.
+- **A0 no borra ningún PDF.** Ni marcas ni «Liberar espacio».
+- **Reenlazar:**
+  - A0: al adjuntar un fichero cuya huella es la de un plano «no disponible», el plano vuelve solo. No cambia nada en la obra: los bytes vuelven a estar.
+  - [A1] Con otra huella, ver §9.3.
+- **«Liberar espacio» [A1]:** §9.4.
+
+#### 1.6 Índice de obras
+
+- La meta se FUSIONA al guardar (hecho en la Etapa 0): `kind`, `ultimaCopia` y los campos de versiones futuras sobreviven.
+- [A1] `huellas` + `huellasDe`:
+  - los escriben `saveActiveObra` y `reconcile` al registrar una obra;
+  - un índice que falta, o cuyo `huellasDe` no es el `savedAt` del sobre, vale «desconocido» y NUNCA `[]`: hay que leer el sobre.
+
+#### 1.7 Fixtures (ejemplos JSON)
+
+- **`src/test/fixtures/planos/obra-v6-a0.json`:** una obra v6 con un plano A3 a 1:50 calibrado (cota de 10,00 m y comprobación vertical de 6,00 m) y un ejemplo de cada cosa que A0 crea:
+  - Longitud;
+  - Superficie;
+  - Rectángulo en L×A;
+  - Recuento;
+  - Restar;
+  - Longitud × h en Superficie directa;
+  - Peso con el perfil del comentario.
+- **`obra-v6-a1.json`:** lo que A0 no crea pero tiene que conservar y devolver igual:
+  - revisión con `sustituye`;
+  - escala ajustada al cajetín con `comprobacion.fuente = 'cajetin'`;
+  - `huellasAnteriores`;
+  - una forma en tres partidas con la misma `formaId` (área, perímetro y perímetro × 2,70);
+  - una línea `aceptada`;
+  - un plano `quitado` con una línea que sale de él.
+- **`fixtures.test.ts`:**
+  - recalcula cada valor desde los puntos con las reglas de §3 y comprueba cada `expr` con `evalEsExpr`;
+  - comprueba los invariantes de §1.3 y que la app v5 los reconoce como «más nueva».
+  La implementación de A0 (`valoresDesdeOrigen`) tiene que dar lo mismo.
+
+Una línea de Longitud, tal como está en el fixture (con la huella abreviada):
+
+```json
+{
+  "id": "l-tabique",
+  "comment": "P1 · Tabique cocina",
+  "uds": 1, "largo": 9.45, "ancho": "", "alto": "",
+  "expr": { "largo": "3,2+4,15+2,1" },
+  "origen": {
+    "planoId": "pl-p1",
+    "huella": "…",
+    "pagina": 1,
+    "formaId": "f-tabique",
+    "herramienta": "longitud",
+    "puntos": [[150, 200], [331.42, 200], [331.42, 435.28], [212.37, 435.28]],
+    "calRev": "cal-p1-1",
+    "mPorUnidad": 0.017638861941,
+    "n": 50,
+    "magnitud": "longitud",
+    "slots": ["largo"],
+    "valores": { "largo": 9.45 },
+    "at": "2026-09-26T10:00:00.000Z"
+  }
+}
+```
+
+Los demás, por herramienta, en el fixture (`l-salon`, `l-hueco`, `l-dorm1`, `l-enchufes`, `l-pintura-tab`, `l-viga`).
+
+### 2. Geometría y calibración (`core/planoGeom`)
+
+- **Cálculos:**
+  - distancia;
+  - longitud de polilínea;
+  - área por la fórmula del lazo;
+  - perímetro CERRADO de polígono y rectángulo;
+  - rectángulo por tres clics: la arista con dos y la anchura con el tercero, por proyección perpendicular, así sirve en estancias giradas.
+  - La conversión a metros multiplica por `mPorUnidad`.
+  - Tests de propiedades: el área no cambia con giros ni traslaciones.
+- **Formateador de cifras de `expr`:** uno solo en `core/`, con coma decimal, sin separador de miles, sin notación exponencial y sin ceros de cola. Tests de referencia: los fixtures.
+- **Redondeo:**
+  - un valor sin `expr` es `round2`;
+  - uno con `expr` es exactamente `evalEsExpr(expr)` sobre operandos `round2` (tramos, lados, h);
+  - el área de un polígono es `round2` del lazo;
+  - los puntos se guardan redondeados a 0,01 unidades de página.
+- **Entrada segura, comprobada en cada clic:**
+  - un punto a menos de 4 px de pantalla del anterior se descarta;
+  - el doble clic que cierra no añade vértices;
+  - Recuento solo termina con Enter o con [Terminar], nunca con un doble clic;
+  - el polígono se cierra también con un clic en el primer vértice (anillo de 8 px);
+  - un tramo que cruza la forma se pinta en `--state-danger`, el clic se rechaza y la pista lo explica («La forma se cruza: rehazla en orden»). Casos con test: colineal, vértice que toca y tramo de cierre;
+  - se rechazan con su motivo la longitud 0, el polígono de menos de 3 vértices y el de área 0;
+  - Mayús fuerza 0/45/90° en la orientación de la pantalla, también con `/Rotate 90` (test).
+- **Calibrar** (en el lienzo, sin modal: `CalibrarPasos.tsx` + `Lupa.tsx`):
+  1. **Cota conocida:**
+     - dos clics y la distancia real en un campo anclado al segmento, en metros;
+     - la cota mide al menos 300 px en pantalla. Si no: «Acerca el zoom o elige una cota más larga: esta mide 180 px en pantalla y la precisión sería ±1,1 %»;
+     - la franja enseña la precisión: ≈ 2 px / longitud en px.
+  2. **Comprobación:**
+     - dos clics sobre otra cota y su valor;
+     - si se puede, a más de 45° de la primera. La franja lo sugiere y la lupa lo facilita;
+     - si la página no tiene una segunda cota, se puede repetir la misma en otra zona;
+     - sin comprobación no se mide.
+  3. **Etiqueta:** «Esta página es: [P1]». En A0 se teclea; [A1] propuesta desde el texto.
+  - **Ayudas de precisión**, también al colocar vértices:
+    - cursor en cruz con guías a todo el ancho;
+    - lupa ×4, un recuadro de 120 px en la esquina opuesta al cursor;
+    - los puntos se pueden arrastrar antes de confirmar.
+  - **Desviación > 1 %:** «Desviación 2,8 %» con [Rehacer cota] [Rehacer comprobación], sin empezar de cero. Rehacer la comprobación conserva la cota.
+  - **Plausibilidad:** pide confirmación antes de guardar, con [Sí, es correcta] [Rehacer cota]. Un «cm» tecleado como «m» pasa la segunda cota; esto lo caza.
+    - Fuera de 1:1–1:5000: «1:5 000 000 no parece la escala de un plano: ¿la cota está en metros?».
+    - Dentro, pero a más de un 3 % de todas las habituales: «1:63,5 no es una escala habitual: ¿el PDF se imprimió ajustado a la página? Si la cota es correcta, sigue».
+    - Las habituales son 1, 2, 5, 10, 15, 20, 25, 30, 40, 50, 75, 100, 125, 150, 200, 250, 300, 400, 500, 750, 1000, 1500, 2000, 2500 y 5000.
+  - **Resultado:** `setPlanoPageScale` con cota y comprobación. Guarda una `Escala` completa con `rev` nuevo; una calibración a medias no se guarda.
+- **Una calibración activa por página.** «Líneas medidas» son aquí las que llevan escala: las de Recuento no cuentan, así que se puede contar antes de calibrar.
+  - Cambiar la escala de una página SIN líneas medidas: `setPlanoPageScale`.
+  - CON líneas en A0: `setPlanoPageScale` devuelve `has-lines` y la escala no cambia. Aviso: «Esta página ya tiene N líneas medidas con esta escala. Recalcularlas llega más adelante; para medir a otra escala, adjunta el PDF otra vez».
+  - CON líneas en [A1]: pregunta «¿La escala anterior estaba mal?» con [Recalcular N líneas] y [Cancelar]. Cancelar es la opción por defecto: Enter cancela. Todo camino que cambia la escala de una página con líneas pasa por `rescalePlanoPage` (§4):
+    - recalibrar;
+    - «Usar la calibrada»;
+    - «Usar esta calibración en otras páginas»;
+    - «Usar este PDF para este plano», solo si su comprobación nueva falla y hay que recalibrar (§9.3).
+  - Añadir una comprobación a una escala que no la tiene [A1] no cambia la escala ni su `rev`: `setPlanoPageCheck` (§4.1).
+  - Los detalles a otra escala se miden adjuntando el mismo PDF otra vez, que queda como otro plano con los mismos bytes. La escala por zonas sigue en TODOS.
+- **Cajetín [A1]** (`core/planoTexto`), con textos contiguos unidos:
+  - Lee «1:N», «E 1:N», «ESCALA 1:N», «1/N», «E 1/N» y «ESCALA 1/N». Descarta fechas y fracciones sueltas («1/2»).
+  - Solo si la página declara UNA escala:
+    - la franja compara («calibrada 1:49,7 · el plano dice 1:50»), teniendo en cuenta `userUnit`;
+    - a menos del 1 %, cuenta como comprobación (`fuente: 'cajetin'`, T9) y ajusta `mPorUnidad` a la exacta (`ajustada`), reversible con «Usar la calibrada (1:49,7)»;
+    - por encima, aviso en `--state-warn` sin bloquear, porque la cota manda: «La calibración no cuadra con la escala del plano: ¿el PDF está a otro tamaño?».
+    - Una comprobación por cota posterior se evalúa contra la escala ya ajustada.
+  - Dos escalas en el texto: ni comprobación ni ajuste.
+- **[A1] «Usar esta calibración en otras páginas»:** mismo tamaño de página y misma escala en el cajetín. Copia la escala (con `rev` nuevo por página) y cada página pide su comprobación (`setPlanoPageCheck`).
+
+### 3. De medida a línea (`core/planoMedida`)
+
+#### 3.1 Tabla herramienta × forma
+
+La herramienta da una magnitud y la forma de la partida (`medFormaDe`) decide la casilla. En cada celda:
+
+- **lo que escribe el plano** (sus casillas son `slots`);
+- **las fijas obligatorias** (van a `fijas`);
+- **la `magnitud`**.
+
+La tabla va como DATOS (un objeto por celda) y el test la recorre entera.
+
+| Herramienta ↓ · Forma → | Unidades (`ud`) | Longitud (`lin`) | Superficie L×A (`sup`) | Sup. directa (`area`) | Volumen (`vol`) | Sup. × espesor (`areaEsp`) | Peso (`peso`) |
+|---|---|---|---|---|---|---|---|
+| **Recuento** (N puntos) | uds = ±N · recuento | uds = ±N; fija Longitud · recuento | uds = ±N; fijas Longitud y Anchura · recuento | uds = ±N; fija Superficie · recuento | uds = ±N; fijas L, A y Altura · recuento | uds = ±N; fijas Superficie y Espesor · recuento | uds = ±N; fijas Longitud y kg/m · recuento |
+| **Longitud** (tramos) | no encaja → Recuento | largo = «t1+t2…» · longitud | largo = «t1+t2…»; fija Anchura · longitud | largo = «(t1+t2…)×h»; factor h · longitudPorFactor | largo = «t1+t2…»; fijas Anchura y Altura · longitud | largo = «(t1+t2…)×h»; factor h; fija Espesor · longitudPorFactor | largo = «t1+t2…»; kg/m · longitud |
+| **Superficie** (polígono) | no encaja → Recuento | largo = perímetro «t1+…+tn» (cerrado) · perimetro | pasa a Sup. directa (§3.2) | largo = área (sin `expr`) · area | no encaja → Rectángulo | largo = área; fija Espesor · area | no encaja → Longitud |
+| **Rectángulo** (L, A) | no encaja → Recuento | largo = perímetro «L+A+L+A» · perimetro | largo = L, ancho = A · lados | largo = «L×A» · area | largo = L, ancho = A; fija Altura · lados | largo = «L×A»; fija Espesor · area | no encaja → Longitud |
+
+- **`expr`:**
+  - Longitud y perímetro llevan SIEMPRE la suma de tramos, también con uno solo («5»).
+  - «(tramos)×h» lleva paréntesis solo con más de un tramo («5×2,7»).
+  - Una fija se rotula con el nombre de su casilla y, si hace falta, con su sentido. Cuando una Longitud o un perímetro miden un paramento en una partida L×A, la Anchura es la altura del paramento: «Anchura (altura del paramento)».
+- **Toda casilla visible se rellena o no se mide.** Una casilla vacía vale ×1 (`core/medicion.ts`), así que cada casilla de la forma que el plano no da sale de una fija OBLIGATORIA. Si falta, la herramienta sale deshabilitada: «Indica la Altura fija para medir paramentos».
+  - Cuentan solo las columnas de la forma (`medFormaDef(forma).cols`). Una casilla fuera de la forma, visible por otras líneas, queda vacía en la línea medida.
+- **«No encaja»:** la herramienta sale deshabilitada y el motivo nombra la que sí encaja y la selecciona («Esta partida se mide por Unidades: usa Recuento»).
+- **Recuento sin escala:** funciona en una página sin calibrar.
+
+#### 3.2 Superficie en una partida L×A
+
+- La decisión llega al elegir la herramienta, antes de dibujar; nunca tras cerrar un polígono.
+- **Sin líneas** en la partida (elección 9 de la aprobación): el cambio es automático.
+  - `medForma` pasa a `'area'` en el MISMO paso de Deshacer que la primera medida;
+  - aviso con [Deshacer].
+- **Con líneas L×A:** la franja ofrece [Medir esta partida por Superficie directa] [Usar Rectángulo].
+  - Aceptar cambia la forma con la primera medida, en un paso. Las líneas L×A siguen igual: su Anchura sale como columna fuera de la forma.
+  - Rechazar deja Superficie deshabilitada y arma Rectángulo.
+
+#### 3.3 Dimensiones fijas y Peso
+
+- **Qué son:** campos en la fila 2 de la franja, en reposo. Viven en `planoUiStore` POR PARTIDA, así que la Altura de Pintura no aparece al abrir Alicatado.
+- **Propuesta:** sale de `origen.fijas` o `origen.factor` de la última línea medida de esa partida, así que sobrevive a recargar.
+- **Rótulos:**
+  - con el nombre de la casilla («Anchura»), frente a «Altura (multiplica)» para el `factor`;
+  - la obligatoria que falta, con borde `--state-warn`.
+- **Peso.** El kg/m sale de una de dos fuentes:
+  - el campo fijo, que admite un número o un perfil («IPE 300») con `leerCelda`;
+  - el perfil que nombre el comentario (`pesoDesdeComentario`).
+  Con estas reglas:
+  - Enter no crea la línea mientras el kg/m no se resuelva.
+  - Si el campo y el comentario nombran perfiles distintos, Enter se bloquea con [Usar HEB 200] [Usar IPE 300].
+  - Un kg/m fijo numérico se escribe sin `expr`, así `pesoDesdeComentario` no lo pisa. Uno con perfil, con `expr` = nombre del perfil.
+
+#### 3.4 Funciones puras
+
+- **`prepararMedida({ herramienta, puntos, pagina y su Escala, partida (forma, med, cantidad fija), fijas, restar, comentario })`**
+  - Devuelve `{ lineas: NewPlanoLine[], cambioForma?, resumen }` o un motivo (§4.3).
+  - La usan la vista previa, la confirmación y la repreparación dentro del `set` (§4.2).
+- **`valoresDesdeOrigen(origen, { mPorUnidad })`**
+  - Devuelve `{ valores, expr }` SOLO para `origen.slots`.
+  - Es una sola función para crear, recalcular [A1], copiar a otra partida [A1] y editar vértices [B].
+
+#### 3.5 Comentario, cantidad fija y líneas medidas
+
+- **Comentario:**
+  - prefijo fijo «<etiqueta> · » («Pág. 3 · » sin etiqueta) + el texto que se teclea;
+  - la revisión («Rev. A») NO entra en el comentario, para no ensuciar los exportes;
+  - [A1] en Superficie y Rectángulo se propone el texto de la página dentro del polígono: el de mayor tamaño de letra que no sea una cifra. Entra seleccionado (lo que se teclea lo sustituye) y nunca bloquea.
+- **Cantidad fija → medida:** si la partida tenía cantidad fija y no tenía líneas, la vista previa de NOMBRANDO y el aviso de CREADA enseñan «fija 100 → medida 5» (`resumenCantidad` y `cambioCantidad`, como el pegado). Convertir la fija en primera línea sigue en TODOS.
+- **«Volver a medir»:**
+  - la forma vieja se atenúa, se arma la MISMA herramienta con el mismo signo y el destino es la partida de la línea (se abre si hace falta);
+  - Enter sustituye `valores`, `expr` y `origen` con una `formaId` nueva; Esc restaura;
+  - sobre una línea certificada pasa por la guarda de certificadas de siempre (una partida).
+  - Para cambiar de herramienta o de signo, se borra la línea y se mide de nuevo.
+- **Retocada:** trazo discontinuo e insignia «✎» en la capa y en el marcador.
+  - [A1] Su popover añade [Aceptar valores actuales] y [Desvincular del plano]; desvincular quita `origen` y conserva los números.
+
+### 4. Acciones del store
+
+#### 4.1 Acciones
+
+- **Cómo son todas:**
+  - UN `set` dentro de `structural()`, con cortes de historial antes y después, así que UN paso de Deshacer;
+  - `fromBase = false` y `pesoDesdeComentario`, como `insertMedLines`;
+  - reciben un objeto de opciones con `expect` (§4.2; en las que no tocan líneas basta el `docToken`) y devuelven `MedResult`.
+- **Nombres:** verbo en inglés + nombre de dominio, la convención del store. Los módulos puros siguen en castellano.
+
+| Acción | Subetapa | Qué hace |
+|---|---|---|
+| `attachPlano({ meta, expect })` | A0 | publica un `PlanoMeta` (tras guardar los bytes); revive un plano `quitado` con la misma huella |
+| `removePlano({ planoId, expect })` | A0 | pone `quitado` |
+| `renamePlano({ planoId, nombre, expect })` | A0 | |
+| `setPlanoPageLabel({ planoId, pagina, etiqueta, expect })` | A0 | |
+| `setPlanoPageScale({ planoId, pagina, escala, expect })` | A0 | calibración nueva; `has-lines` si la página tiene líneas medidas |
+| `addPlanoLines({ destinos: [{ chapterId, partidaId, lineas, medForma?, afterId? }], expect })` | A0 un destino · A1 varios | alta de las líneas y, si toca, del cambio de forma; todo o nada; un error por destino (partida, campo, motivo) |
+| `remeasureLine({ lineId, preparada, expect })` | A0 | «Volver a medir» |
+| `setPlanoScaleAdjusted({ planoId, pagina, ajustada, expect })` | A1 | ajuste al cajetín y «Usar la calibrada»; con líneas, por `rescalePlanoPage` |
+| `rescalePlanoPage({ planoId, pagina, escala, lineIds, expect })` | A1 | escala nueva + recálculo de las líneas indicadas, en varias partidas |
+| `attachPlanoRevision({ meta, sustituye, expect })` | A1 | plano nuevo con `sustituye` y `revision`; el anterior no se toca |
+| `relinkPlano({ planoId, huella, expect })` | A1 | «Usar este PDF para este plano» (§9.3) |
+| `setPlanoPageCheck({ planoId, pagina, comprobacion, expect })` | A1 | añade la comprobación a una escala que no la tiene, sin cambiar la escala ni su `rev` |
+| `acceptLineValues({ lineId, expect })` / `unlinkLineOrigen({ lineId, expect })` | A1 | «Aceptar valores actuales» / «Desvincular del plano» |
+| `moveShapeVertices({ lineId, puntos, alsoLineIds, expect })` | B | editar vértices, con «Aplicar también a N líneas» |
+
+#### 4.2 `expect` por operación
+
+- **Qué lleva `ExpectLineas`:**
+  - ids;
+  - valores;
+  - ids certificados;
+  - `docToken`;
+  - `calRev` de la página;
+  - `huella` del plano;
+  - `medForma` y unidad de cada destino.
+- **Dentro del `set`:** la acción vuelve a preparar contra el estado vivo con la MISMA función pura (`prepararMedida` o `valoresDesdeOrigen`). Solo aplica si el resultado coincide con lo que el usuario revisó.
+- **Si no coincide:** `reason: 'stale'` con el motivo («La línea 7 se certificó mientras confirmabas»), y la UI vuelve a preparar y a preguntar.
+
+#### 4.3 Motivos
+
+- **Los motivos:** `MedResult.reason` suma a los de hoy (`no-partida`, `no-lines`, `noop`, `stale`):
+  - `no-plano`;
+  - `sin-calibrar`;
+  - `no-encaja`;
+  - `certificada`;
+  - `falta-dimension`;
+  - `has-lines`.
+- **Los textos:** `failText` sale de `medLineOps.ts` a un módulo con un texto por motivo, cada uno con problema, causa y arreglo (§7). Hay un test por motivo.
+
+#### 4.4 Recalcular [A1]
+
+- **Candidatas:** las líneas de la página con `calRev` distinto de la `rev` nueva, que no son de Recuento, ni retocadas, ni aceptadas.
+  - Se agrupan por escala antigua («12 líneas a 1:50 · 3 a 1:20»).
+- **Aparte, sin cambiar:**
+  - las retocadas y las aceptadas;
+  - las certificadas (`lineQty > 0` en alguna cert): «2 líneas certificadas en C1: revísalas a mano».
+- **El paso:**
+  - cambiar la escala y recalcular son UN paso de Deshacer: valores y `expr` salen de `valoresDesdeOrigen`, y `origen.mPorUnidad`/`calRev` se actualizan;
+  - el resumen dice «N líneas · cantidad A → B <ud>» por partida;
+  - avisa si alguna queda por debajo de lo ya certificado («C2 certificó 120 m²; la medición pasa a 112 m²»).
+
+#### 4.5 Números y exportes
+
+- **El .bc3** exporta las dimensiones con hasta 4 decimales: `num(v, 4)`, que ya quita los ceros de cola. Las líneas de ≤ 3 decimales salen idénticas, y un «(tramos)×h» con 3 decimales viaja entero (25,515).
+- **El texto sacado del PDF** [A1] solo entra en la interfaz como nodo de texto de React o `<text>` de SVG, nunca con `innerHTML`. Al .bc3 va por el `field()` que ya sanea.
+
+#### 4.6 Certificación por líneas con signo (E12, antes de Restar)
+
+- `completeDraft` marca las líneas con parcial ≠ 0, no solo las > 0.
+- `setCertLine` guarda cantidades negativas y solo borra la 0.
+- La cantidad certificada de la partida es la suma con signo. Con +100 y −10, «Completada» certifica 90.
+- Los tests actuales de líneas positivas no cambian.
+
+### 5. Visor
+
+#### 5.1 Hueco lateral y anchos
+
+- **Ocupante:** `lateral` gana `'planos'`, con `LateralAside` (hecho en la Etapa 0). Abrir Planos cierra Referencia y el Asistente.
+- **Entrada:** botón «Planos» en la barra superior (en el menú «Más» por debajo de 1024 px, donde la barra ya lo usa), visible con el interruptor encendido (§5.9). Al cerrar el visor, el foco vuelve a él.
+- **Ancho propio** (no el 320–640 de Referencia), en `planoUiStore`:
+  - mínimo 480 px;
+  - máximo «ancho útil − 520 px»;
+  - por defecto el 55 % del área principal;
+  - el tirador es el de `LateralAside`.
+- **Por anchos de ventana:**
+
+  | Ancho | Disposición |
+  |---|---|
+  | ≥ 1366 | split por defecto |
+  | 1024–1365 | split si caben el lienzo (≥ 480) y el presupuesto (≥ 520); si no, overlay |
+  | 760–1023 (tablet) | overlay de solo ver: «Ver en plano» y navegar; medir con el dedo es [B] |
+  | < 760 | solo ver |
+
+  - El umbral sale de los anchos útiles, no del `SPLIT_WIDTH` de 1100.
+  - Las herramientas de medir, por debajo de 1024, salen deshabilitadas: «Para medir, usa una pantalla más ancha».
+
+#### 5.2 Cabecera, aviso y franja
+
+- **Cabecera** (40 px, una fila):
+  - plano ▾;
+  - página ▾ («P1 · Planta baja · 1:50 ✓ · 4 medidas»);
+  - chip de escala;
+  - [Pantalla completa]: el visor tapa la barra lateral y el presupuesto, bajo la barra superior. Esc sale de ella (§5.9);
+  - menú ⋯: Adjuntar plano, [A1] Adjuntar revisión, Renombrar, Etiquetas de página, Quitar plano.
+- **Barra de herramientas,** encima del lienzo:
+  - Mano · Calibrar │ Longitud · Superficie · Rectángulo · Recuento │ Restar │ zoom − / + / Ajustar;
+  - iconos de lucide (hand, crosshair, ruler, square-dashed, hash, minus), con el atajo en el tooltip.
+- **Lista de planos** (desde plano ▾ o sin plano abierto):
+  - cada plano con su escala y el número de medidas por página;
+  - el espacio usado y libre del navegador, si `navigator.storage.estimate()` existe;
+  - [A1] «Liberar espacio».
+- **Chip de escala:**
+  - «Sin calibrar» (neutral);
+  - «1:50 · ±0,3 %» (accent);
+  - [A1] «1:50 ajustada» (accent);
+  - [A1] «sin comprobar» (`--state-warn`);
+  - [A1] «no cuadra con el cajetín» (`--state-warn`).
+- **Aviso único:** una banda de 32 px encima del lienzo con solo el más prioritario y su acción. Orden:
+  1. plano no disponible;
+  2. [A1] revisión más nueva;
+  3. [A1] calibración que no cuadra con el cajetín;
+  4. página sin calibrar (o [A1] sin comprobar);
+  5. datos de planos ilegibles.
+- **Franja inferior:**
+  - Fila 1, siempre: «Midiendo en: 2.6 EAV010 Acero en vigas · Peso ▾» y el total de la partida («12 líneas · 148,30 kg»).
+  - Fila 2, según el estado del ciclo:
+    - EN REPOSO: dimensiones fijas;
+    - DIBUJANDO: lectura en vivo (Geist Mono) con la escala activa («9,45 m · 1:50») y pistas («Enter cierra · Retroceso quita punto · Esc cancela»);
+    - NOMBRANDO: prefijo como chip fijo, campo de comentario y vista previa («largo 18,40 → parcial 18,40 m²», con «fija → medida» si toca);
+    - CREADA: «✓ Línea 7 · 18,40 m²», [Ver línea] y [A1] «Añadir también a…», hasta el siguiente vértice.
+- **Barra de control flotante mientras se dibuja:** [Terminar (n)] [Deshacer punto] [Cancelar], con botones de 44 px. Sirve también con ratón; Recuento termina con ella.
+
+#### 5.3 Ciclo de medida (`core/planoCiclo`)
+
+Reductor puro `(estado, evento) → { estado, efectos }`: el visor solo lo conecta, y esta tabla es su tabla de tests.
+
+- **Estados:**
+  - `reposo`, con la herramienta armada (Mano o una de medir);
+  - `dibujando`, con herramienta, puntos y, si es «Volver a medir», la línea que sustituye;
+  - `nombrando`, con la medida preparada y el texto;
+  - `creada`, con la línea creada;
+  - `calibrando.cota`;
+  - `calibrando.comprobacion`.
+- **La herramienta armada** se mantiene tras crear una línea, igual que las dimensiones fijas.
+
+| Estado | Evento | Condición | Pasa a | Efectos |
+|---|---|---|---|---|
+| reposo (Mano) | clic sobre una forma | — | reposo | seleccionar la forma → su popover (§5.6) |
+| reposo (Mano) | Supr | forma seleccionada | reposo | borrar su línea (`deleteLines`, con la guarda de certificadas) |
+| reposo (medir) | clic | herramienta habilitada | dibujando [p] | — |
+| reposo (medir) | clic | herramienta deshabilitada | reposo | motivo en el aviso + su arreglo (§7) |
+| reposo | Esc | — | reposo | cerrar el visor |
+| dibujando | clic | a < 4 px del anterior | dibujando | ninguno |
+| dibujando | clic | Superficie y el tramo cruza | dibujando | rechazo: tramo en danger + pista |
+| dibujando | clic | Superficie sobre el primer vértice, ≥ 3 vértices | nombrando | preparar |
+| dibujando | clic | Rectángulo, tercer clic | nombrando | preparar (4 esquinas) |
+| dibujando | clic | resto | dibujando [+p] | lectura en vivo; en Recuento, «N» |
+| dibujando | doble clic | Longitud ≥ 2 o Superficie ≥ 3 | nombrando | preparar (el doble clic no añade vértice) |
+| dibujando | doble clic | Recuento | dibujando | ninguno |
+| dibujando | Enter o [Terminar] | forma válida (Recuento ≥ 1) | nombrando | preparar |
+| dibujando | Enter o [Terminar] | forma inválida | dibujando | motivo (longitud 0, < 3 vértices, área 0) |
+| dibujando | Retroceso, Ctrl/⌘+Z o [Deshacer punto] | ≥ 2 puntos | dibujando [−último] | no toca el historial |
+| dibujando | Retroceso, Ctrl/⌘+Z o [Deshacer punto] | 1 punto | reposo | — |
+| dibujando | Esc o [Cancelar] | — | reposo | descartar (en «Volver a medir», restaurar) |
+| dibujando o nombrando | cambio de partida, página, plano, ocupante o escala; Deshacer que quita el plano o la escala | — | reposo | [A0] descartar con aviso «Forma descartada: cambiaste de partida» (o de página…); [A1] borrador (§5.8) |
+| nombrando | teclas de edición | — | nombrando | nativas: Retroceso borra letras, Ctrl/⌘+Z deshace texto |
+| nombrando | Enter | `isComposing` | nombrando | ninguno |
+| nombrando | Enter | preparada sin motivo | creada | `addPlanoLines` o `remeasureLine`; `aria-live` «Línea 7 creada: P1 · Salón, 18,40 m²»; la línea se desplaza a la vista SIN mover el foco |
+| nombrando | Enter | con motivo (kg/m sin resolver, perfiles en conflicto, falta una fija) | nombrando | motivo en la franja |
+| nombrando | resultado `stale` | — | nombrando | volver a preparar y enseñar el motivo |
+| nombrando | Esc | — | reposo | descartar la forma (un solo Esc) |
+| creada | clic | herramienta habilitada | dibujando [p] | — |
+| creada | Esc | — | reposo | — |
+| cualquiera | cambio de herramienta | — | reposo (armada la nueva) | si se dibujaba: como «cambio de partida» |
+| reposo | Calibrar | — | calibrando.cota | — |
+| calibrando.cota | clic ×2, arrastrar, metros | cota ≥ 300 px en pantalla | calibrando.comprobacion | — |
+| calibrando.cota | confirmar | cota < 300 px | calibrando.cota | «Acerca el zoom o elige una cota más larga…» |
+| calibrando.comprobacion | confirmar | desviación ≤ 1 % y escala plausible | reposo | `setPlanoPageScale`; «P1 calibrada 1:50 · comprobada 0,3 %» |
+| calibrando.comprobacion | confirmar | desviación > 1 % | calibrando.comprobacion | [Rehacer cota] [Rehacer comprobación] |
+| calibrando.comprobacion | confirmar | escala poco plausible | calibrando.comprobacion | pedir confirmación (§2) |
+| calibrando.* | Esc | — | reposo | cancelar; la página se queda como estaba |
+
+- **Punto de inserción:**
+  - se fija al entrar a medir: tras la línea con el foco o, si no hay, al final;
+  - AVANZA a la última línea creada desde el visor, así las medidas salen en orden;
+  - no usa el `requestFocus(…, scroll)` de `medLineOps`.
+- **Foco:** tras crear, sigue en el visor.
+- **Aviso con [Deshacer]:** se ancla a la izquierda del área principal y no tapa ni la franja ni el lienzo.
+
+#### 5.4 Destino
+
+- La partida abierta (`openPartidaId`) es la única fuente.
+- «Midiendo en ▾» es un buscador más las 5 partidas usadas hace poco en este plano. Elegir una la abre.
+- Sin partida abierta:
+  - las herramientas de medir salen deshabilitadas («Abre una partida para medir»), y pulsar una abre el selector;
+  - Mano y Calibrar funcionan.
+
+#### 5.5 Capa (`PlanoOverlay`, SVG)
+
+- **Qué pinta:** las formas de la partida abierta. [B] Toda la obra, con leyenda y filtro.
+- **Lenguaje visual:** independiente del tema, y el PDF nunca se invierte.
+  - Partida abierta: relleno accent al 15 % y trazo de 2 px con halo blanco de 1 px.
+  - Misma `formaId` [A1], al seleccionar: contorno punteado accent.
+  - Restar (`uds` < 0): sombreado a 45° e insignia «−». Sin rojo: en DESIGN.md el rojo es error o acción destructiva.
+  - Retocada: trazo discontinuo e insignia «✎» en `--state-warn`.
+  - Dibujo en curso: trazo de 1,5 px accent con vértices de 6 px.
+  - Insignias numeradas con el número de la línea en su partida: tamaño fijo en pantalla (18 px, Geist Mono 11, fondo del tema con halo), iguales a las del marcador.
+  - Contraste de los gráficos ≥ 3:1, sobre blanco y sobre línea negra.
+- **Vacío:** «Esta partida tiene medidas en P2 y P3», con enlaces.
+
+#### 5.6 Marcador de origen y popovers
+
+- **Marcador en la línea:**
+  - columna de 28 px en `MedLineRow` (chip en `MedCards`) con el número de la forma; es el botón «Ver en plano»;
+  - solo aparece con el interruptor encendido (§5.9) y si la partida tiene alguna línea con `origen`: con el visor apagado, la tabla no cambia para nadie;
+  - estados: normal, «✎» retocada (`--state-warn`), o atenuado si el plano no está disponible, se quitó o el `origen` es ilegible;
+  - no cuenta como celda en `editGridNav`, `useMedGridTab` ni en el TSV de copiar y cortar.
+- **Popover del marcador:**
+  - plano, revisión, página, escala («1:50», «ajustada» si lo está), herramienta y fecha;
+  - [Ver en plano] [Volver a medir];
+  - [A1] además [Aceptar valores actuales] y [Desvincular del plano] si está retocada.
+- **Forma seleccionada con Mano en el visor:**
+  - comentario, valores, parcial y detalles;
+  - [Ver línea] [Volver a medir] [Borrar];
+  - [A1] «Añadir también a…».
+  - Supr equivale a Borrar, con la guarda de certificadas.
+- **«Ver en plano»:**
+  - abre el visor en la página de la forma, la encuadra y la destaca 1,5 s;
+  - [A1] Usa los bytes de `origen.huella` si están; si no, los del plano, con el aviso «Esta línea se midió sobre otra versión del PDF».
+  - Plano no disponible o quitado: el popover dice «Vuelve a adjuntar el PDF» con el nombre del fichero y su tamaño.
+- **Popovers:** siguen el vocabulario del menú ⋮ y del `InfoTip`. No llevan `role="dialog"`, que es solo para modales de verdad: `hasBlockingOverlay` apagaría Ctrl+Z y Ctrl+K.
+
+#### 5.7 «Añadir también a…» [A1]
+
+- **Dónde se ofrece:** en CREADA y desde el popover de una forma.
+- **La hoja:**
+  - selección múltiple de partidas (recientes y buscador);
+  - por cada partida, en castellano: la interpretación («perímetro», «perímetro × 2,70», «área»), la fija que falte (campo en línea), la cantidad resultante con su ud y el cambio de forma si lo hay;
+  - un único botón [Añadir a N partidas], todo o nada: si alguna no es válida, no se crea ninguna y se marca cuál.
+- **Qué se ofrece** (de la tabla de §3.1):
+  - el perímetro CERRADO de la forma, como la fila Longitud: largo = perímetro; «(tramos)×h» en Sup. directa; en L×A, largo = perímetro con la Anchura fija como altura del paramento;
+  - su área, como la fila Superficie, con el paso a Sup. directa.
+  - Un rectángulo ofrece también su perímetro.
+- **Las líneas nuevas:**
+  - comparten `formaId`;
+  - conservan el signo de la forma: un hueco (Restar) entra como hueco en cada partida;
+  - cada una guarda su propia `magnitud` y se recalcula con ella;
+  - `addPlanoLines` con varios destinos, en un solo `set`.
+
+#### 5.8 Borradores [A1]
+
+- **Qué son:** viven en `planoUiStore`, ligados a:
+  - partida;
+  - página;
+  - herramienta;
+  - `rev` de la calibración;
+  - `docToken`.
+- **Al cambiar de partida:**
+  - si la herramienta encaja en la nueva, el borrador pasa a ella: se recalcula la interpretación y se piden las fijas que falten;
+  - si no, queda en espera: «Borrador para <partida>: [Volver] [Descartar]».
+- **Al cambiar de página, de plano o de ocupante, o al redimensionar:** se conserva y al volver se ofrece [Seguir] [Descartar].
+- **Se descarta con aviso:** al cambiar de obra, al recalibrar esa página o al deshacer un cambio de escala.
+- En A0 no hay borradores: cambiar de contexto descarta la forma con aviso (§5.3).
+
+#### 5.9 Solo lectura, interruptor y errores
+
+- **Pestaña de solo lectura** (`sessionStore.readonly`):
+  - el visor solo deja ver;
+  - adjuntar, calibrar y medir salen deshabilitados con el motivo («Esta obra está abierta en otra pestaña: aquí solo se puede ver», o el de «más nueva»), igual que el asistente.
+- **Interruptor en tiempo de ejecución:**
+  - hasta superar la puerta, el visor se enciende con `?planos=1` o `localStorage['concreta.planos'] = '1'` (`?planos=0` lo apaga);
+  - en producción va apagado por defecto y en desarrollo encendido;
+  - tras la puerta [A1], encendido por defecto;
+  - el lector y el escritor v6 NO van detrás del interruptor.
+- **Frontera de errores local:** envuelve el chunk de Planos dentro de `LateralAside`. El presupuesto nunca se queda en blanco.
+  - Si falla la carga del chunk: «Hay una versión nueva de Concreta: recarga la página» con [Recargar] (`reloadToLatest`).
+  - Si falla el worker o el PDF: el nombre del fichero y la causa.
+- **Teclado, defensa en profundidad:**
+  - `isInteractiveTarget` reconoce `[data-planos-viewer]`, así que Supr nunca borra la partida aunque falle un `stopPropagation`;
+  - la raíz del visor lleva `tabIndex=-1` y toma el foco en `pointerdown`;
+  - dibujando o calibrando, el visor consume Esc, Enter, Retroceso, Espacio y Ctrl/⌘+Z (`preventDefault` + `stopPropagation`);
+  - nombrando, las teclas de edición del campo son nativas: el visor solo hace `stopPropagation` (que no lleguen a los atajos globales) y consume Enter y Esc;
+  - en creada, consume Esc;
+  - los atajos de una tecla (§6) no actúan con el foco en un campo de texto: el comentario, las dimensiones fijas, los metros de la cota o el buscador de partidas.
+- **Orden de Esc:**
+  1. el ciclo, si no está en reposo (dibujando, nombrando, creada o calibrando; §5.3), lo consume el visor;
+  2. en reposo: salir de pantalla completa;
+  3. cerrar el visor, como Referencia y el Asistente;
+  4. ya fuera del visor, `useAppHotkeys` cierra la partida.
+- **Tras Deshacer:** `planoUiStore` se reconcilia con `obraStore.planos` en cada cambio.
+  - Si desaparece el plano que se ve, vuelve a la lista.
+  - Si la página no existe, va a la 1.
+  - Una forma a medio dibujar se descarta con aviso si su página ya no está calibrada.
+
+#### 5.10 Accesibilidad
+
+- herramientas como `radiogroup` con `aria-checked`; Restar como conmutador con `aria-pressed`;
+- herramientas deshabilitadas con `aria-disabled`, enfocables, y su motivo al pulsarlas;
+- lienzo con `role="application"` y `aria-label` («Plano P1, 1:50, herramienta Longitud»);
+- `aria-live` con límite para crear, descartar, calibrar y errores;
+- foco visible con `--ring-accent`;
+- la tabla de medición, con su marcador, hace de lista accesible de las formas;
+- [A1] cursor de teclado: se enciende al pulsar una flecha y se apaga al mover el ratón. Las flechas lo mueven 1 px (×10 con Mayús), Intro coloca un punto y Mayús+Intro cierra la forma.
+
+### 6. Atajos del visor
+
+Solo con el foco dentro del visor. Van en `ayudaContent` y en los tooltips (no en táctil).
+
+| Tecla | Acción | Subetapa |
+|---|---|---|
+| M | Mano | A0 |
+| L | Longitud | A0 |
+| S | Superficie | A0 |
+| R | Rectángulo | A0 |
+| N | Recuento | A0 |
+| D | Restar («descontar»), conmutador | A0 (con E12) |
+| C | Calibrar | A0 |
+| F | Ajustar a la ventana | A0 |
+| + / − · Ctrl + rueda | zoom (al cursor) | A0 |
+| rueda | desplazar | A0 |
+| Espacio mantenido · botón central · arrastrar con Mano | desplazar | A0 |
+| Enter · doble clic | cerrar la forma; en NOMBRANDO, crear la línea | A0 |
+| Retroceso · Ctrl/⌘+Z | quitar el último punto (a medio dibujo; no toca el historial) | A0 |
+| Esc | por estado (§5.3) | A0 |
+| Mayús | fuerza 0/45/90° | A0 |
+| Supr | con una forma seleccionada (Mano), borra su línea con la guarda de certificadas; sin selección, nada | A0 |
+| flechas · Intro · Mayús+Intro | cursor de teclado | A1 |
+
+- La rueda y el lienzo: la rueda se escucha con un listener nativo `{ passive: false }`, y el lienzo lleva `touch-action: none`.
+- Ninguna tecla de esta tabla actúa con el foco en un campo de texto (§5.9); Espacio tampoco desplaza entonces.
+
+### 7. Estados y errores
+
+#### 7.1 Estados por función
+
+| Función | Cargando | Vacío | Error | Éxito | Parcial |
+|---|---|---|---|---|---|
+| Adjuntar | fases «Leyendo… · Calculando huella… · Guardando…» | — | contraseña, dañado, no es PDF, vacío, > 500 MB, cuota llena (§7.2) | abre la pág. 1 con «Calibra esta página» | misma huella ya en la obra: «Ya está adjunto como Planta 1» [Abrirlo] [Adjuntar otra vez (para otra escala)] |
+| Lista de planos | «Cargando planos…» | zona de soltar con «Adjunta el PDF · Calibra con una cota · Mide» y [Adjuntar plano] | plano no disponible: «Vuelve a adjuntar el PDF» | lista con escala y número de medidas por página | [A1] «N líneas con otra escala»; datos ilegibles |
+| Página | página previa borrosa + «Pintando…»; medir deshabilitado hasta que la mostrada sea la activa | sin medidas de la partida aquí: «Tiene medidas en P2 y P3» | «No se pudo pintar esta página» [Reintentar] | página nítida con la capa | texto ilegible: sin propuesta ni cajetín, sin aviso |
+| Calibrar | — | — | «Desviación 2,8 %» [Rehacer cota] [Rehacer comprobación] | «P1 calibrada 1:50 · comprobada 0,3 %» | [A1] ajustada / no cuadra con el cajetín (warn) |
+| Medir | — | sin partida: selector abierto | no encaja → motivo + arreglo; cruce → tramo en danger | «✓ Línea 7 · 18,40 m²» + `aria-live` | falta una fija → campo en warn |
+| Ver en plano | abriendo el plano | — | plano no disponible o quitado → marcador atenuado + popover | encuadra y destaca 1,5 s | línea borrada → no hay marcador |
+| Reenlazar | — | — | huella distinta: A0 «Este PDF no es idéntico al original» [Cancelar]; [A1] [Usar este PDF para este plano] [Adjuntar como revisión nueva] [Cancelar] | «Plano reenlazado: 12 líneas» | — |
+| [A1] Copia .zip | «Empaquetando 3 planos…» | sin planos → solo .json | fallo → mensaje; la .json sigue disponible | «Copia completa (42 MB)» | planos no disponibles → «incompleta: falta Planta 2» |
+| [A1] Restaurar .zip | progreso | — | zip no válido / demasiado grande | obra y planos restaurados | resumen persistente plano a plano, con acciones |
+
+#### 7.2 Textos de error
+
+Cada uno con problema, causa y arreglo. Los de calibración, «no encaja» y «PDF no idéntico» llevan «?» a su sección de la ayuda (§10).
+
+| Situación | Texto | Acción |
+|---|---|---|
+| fichero no legible | «No se pudo leer el archivo.» | — |
+| vacío | «El archivo está vacío.» | — |
+| no es PDF / dañado | «No se pudo leer "X.pdf" (dañado o no es un PDF). Ábrelo en otro visor y vuelve a guardarlo.» | — |
+| con contraseña | «Este PDF tiene contraseña: quítala y vuelve a adjuntarlo.» | — |
+| > 500 MB | «"X.pdf" pesa 612 MB: el máximo es 500 MB. Divide el plano o expórtalo con menos resolución.» | — |
+| > 50 MB | «"X.pdf" pesa 84 MB: la copia de la obra será grande.» (informa) | — |
+| cuota llena | «No queda espacio en el navegador (usados 1,8 GB).» | lista de planos con tamaños: [Quitar plano], [A1] [Copia .zip] y [Liberar espacio] |
+| plano no disponible | «No está el PDF de "X.pdf" (2,4 MB) en este navegador. Vuelve a adjuntarlo: las líneas y la escala se recuperan solas.» | [Adjuntar PDF] |
+| PDF no idéntico al reenlazar | «Este PDF no es idéntico al original.» | A0: [Cancelar]; [A1] ver §7.1 |
+| chunk del visor | «Hay una versión nueva de Concreta: recarga la página.» | [Recargar] |
+| worker o pintado | «No se pudo pintar esta página de "X.pdf": <causa>.» (1 reintento automático) | [Reintentar] |
+| sin partida | «Abre una partida para medir.» | abre el selector |
+| sin calibrar (`sin-calibrar`) | «Calibra esta página para medir longitudes y superficies. Recuento funciona sin escala.» | empieza Calibrar |
+| no encaja (`no-encaja`) | «Esta partida se mide por <forma>: usa <herramienta>.» | selecciona la herramienta que encaja |
+| falta una fija (`falta-dimension`) | «Indica la <Altura> fija para medir <paramentos>.» | foco en el campo |
+| kg/m sin resolver | «Indica el kg/m o nombra el perfil en el comentario (p. ej. IPE 300).» | foco en el campo |
+| perfiles en conflicto | «El comentario dice HEB 200 y el kg/m fijo es IPE 300.» | [Usar HEB 200] [Usar IPE 300] |
+| cota corta | «Acerca el zoom o elige una cota más larga: esta mide 180 px en pantalla y la precisión sería ±1,1 %.» | — |
+| distancia no válida | «Escribe la distancia real en metros.» | — |
+| desviación > 1 % | «Desviación 2,8 %: la calibración no cuadra con la comprobación.» | [Rehacer cota] [Rehacer comprobación] |
+| escala poco plausible | «1:5 000 000 no parece la escala de un plano: ¿la cota está en metros?» | [Sí, es correcta] [Rehacer cota] |
+| página con líneas (`has-lines`, A0) | «Esta página ya tiene N líneas medidas con esta escala. Recalcularlas llega más adelante; para medir a otra escala, adjunta el PDF otra vez.» | — |
+| certificada (`certificada`) | «La línea 7 está certificada en C2: revísala a mano.» | guarda de certificadas |
+| `stale` | dice qué cambió: «La línea 7 se certificó mientras confirmabas» / «La escala de P1 cambió» / «La partida cambió de forma de medir» | vuelve a preparar |
+| `no-partida` | «La partida ya no existe.» | — |
+| `no-plano` | «Ese plano ya no está en la obra.» | — |
+| forma cruzada | «La forma se cruza: rehazla en orden.» | — |
+| forma degenerada | «La forma no tiene longitud» / «Hace falta al menos 3 puntos» / «La superficie es 0» | — |
+| forma demasiado grande | «Esta forma ya tiene 2 000 puntos: termínala.» | — |
+| solo lectura | «Esta obra está abierta en otra pestaña: aquí solo se puede ver.» | — |
+| Restar sin E12 | «Restar llega con la certificación de líneas negativas.» | — |
+| .json con topes superados | «El archivo tiene más planos o medidas de las que Concreta admite (máx. 200 planos, 50 000 líneas medidas).» | — |
+| [A1] .zip rechazado | con su causa: «La copia pasa de 2 GB», «Nombre desconocido en la copia: X», «Nombre repetido en la copia: X» | — |
+| [A1] PDF de la copia que no cuadra con su huella | no se rechaza la copia: ese PDF se descarta y su plano queda «no disponible», dicho en el resumen de la restauración («El PDF de Planta 2 no cuadra con su huella: vuelve a adjuntarlo») | — |
+| [A1] revisión más nueva | «Hay una revisión más nueva: Rev. B.» | [Abrir] |
+| [A1] cajetín que no cuadra | «La calibración no cuadra con la escala del plano: ¿el PDF está a otro tamaño?» (warn, no bloquea) | [Rehacer cota] |
+| [A1] sin comprobar | «Comprueba la escala de esta página con otra cota antes de medir.» | [Comprobar] |
+| cambios antiguos (migración a v6) | «Una versión antigua de Concreta guardó cambios en esta obra después de actualizarla.» | [Abrir esos cambios como obra aparte] [Ignorar] |
+| quitar plano | «Quitar "Planta primera": 23 líneas conservan sus números, pero dejan de verse en el plano.» | [Quitar] [Cancelar] |
+
+### 8. Motor de PDF
+
+#### 8.1 Adaptador (`features/planos/pdfAdapter.ts`)
+
+```ts
+interface PdfAdapter {
+  abrir(datos: ArrayBuffer, opts: { signal: AbortSignal }): Promise<DocPdf>; // se queda con el buffer
+}
+interface DocPdf {
+  readonly paginas: number;
+  pagina(n: number): { vista: [number, number, number, number]; rotacion: 0 | 90 | 180 | 270; userUnit: number };
+  pintar(n: number, lienzo: HTMLCanvasElement, region: Caja, escala: number, signal: AbortSignal): Promise<void>;
+  textos(n: number): Promise<{ texto: string; caja: Caja; tamano: number }[]>;
+  trazados?(n: number): Promise<[Punto, Punto][]>; // [B] imán; en la interfaz, sin implementar en A
+  cerrar(): void; // idempotente
+}
+type Caja = [number, number, number, number]; // x0, y0, x1, y1 en coordenadas de página
+```
+
+- **Convenciones:**
+  - `n` empieza en 1;
+  - `vista` es la caja visible (CropBox) en el espacio de usuario del PDF, con la y hacia arriba, SIN rotar;
+  - las transformaciones pantalla ↔ página son funciones puras fuera del adaptador, y `region`, `escala`, los textos y los puntos usan esa misma convención.
+- **Apertura:**
+  - `abrir` se puede cancelar;
+  - cada resultado lleva un número de generación, y un documento que llega tarde se cierra;
+  - los bytes se releen de IndexedDB en cada apertura (pdf.js se queda con el buffer) y se transfieren al worker sin copia.
+- **Para `StrictMode`:** cada pintado se cancela con su `AbortSignal` (`renderTask.cancel()`); solo pinta la última petición y `cerrar` se puede llamar dos veces.
+- **Doble y tests:** un doble completo (`pdfAdapter.fake.ts`) comparte tests de contrato con el real.
+
+#### 8.2 pdf.js
+
+- **Versión:** `pdfjs-dist` con versión EXACTA en `package.json` (≥ 4.2.67 por CVE-2024-4367), en un chunk diferido. Un test comprueba que la versión de la librería y la del worker coinciden, y la ruta del worker.
+- **Build `legacy`**, también para el worker (`legacy/build/pdf.worker.min.mjs`, con `new URL(…, import.meta.url)`). Se prueba en Safari de iPad.
+- **Opciones:**
+  - `isEvalSupported: false`;
+  - `enableXfa: false`;
+  - sin scripting, ni formularios, ni capa de anotaciones.
+- **Assets:** `cMapUrl`, `standardFontDataUrl` y `wasmUrl` salen en `dist` con un plugin propio en `vite.config.ts` (como el `versionFile` de `version.json`, sin dependencia nueva) y se resuelven con el `base` de Pages. Sin ellos, el texto CID del cajetín sale mal y los escaneos salen en blanco.
+- **Pintado:**
+  - la página entera a la resolución de «ajustar»;
+  - al hacer zoom, solo la zona visible a la resolución del zoom (con retardo), enseñando mientras la imagen escalada;
+  - nunca un lienzo de más de 16 MP;
+  - los lienzos se liberan (ancho y alto a 0) al cambiar de página.
+- **Texto de cada página:** se cachea mientras el plano está abierto.
+- **Tras cada subida de versión:** tests de contrato y prueba del build publicado con el `base` de Pages, con cambios de página rápidos.
+- **Fixtures sin binarios:** `src/test/pdfMinimo.ts` escribe PDFs a mano, con:
+  - página;
+  - `/Rotate`;
+  - `/UserUnit`;
+  - MediaBox o CropBox con origen ≠ 0;
+  - líneas;
+  - textos (Helvetica).
+- **Proyecto aparte:** los tests de pdf.js real van en `vitest.node.config.ts` (entorno node, su propio setup; `src/test/setup.ts` toca `Element`), con `pdfjs-dist/legacy/build/pdf.mjs`.
+
+### 9. Copias y almacén
+
+#### 9.1 Copia .json (A0)
+
+- Lleva las líneas con su `origen` y los metadatos de los planos, no los PDF.
+- `ProjectBackup` lo dice: «Los planos no van en esta copia: si se pierden, vuelve a adjuntar el PDF. Las líneas medidas conservan sus números».
+- Descargarla sella `ultimaCopia` (Etapa 0).
+
+#### 9.2 Copia .zip y restauración [A1]
+
+- **Contenido:** `obra.json` + `planos/<huella>.pdf` (o `.png`/`.jpg` en [B]).
+- **Topes absolutos:**
+
+  | Qué | Tope |
+  |---|---|
+  | descomprimido en total | 2 GB |
+  | por entrada | 500 MB |
+  | entradas | 500 |
+  | `obra.json` | 50 MB |
+
+  - Los bytes se cuentan al descomprimir en flujo (`Unzip` de fflate) y se aborta al pasarse; nunca se confía en los tamaños declarados.
+  - Se rechazan los nombres duplicados y los desconocidos.
+  - La clave de cada PDF es la huella CALCULADA.
+- **Exportar:**
+  - PDF sin comprimir (nivel 0), escrito por partes en un Blob, con la API asíncrona de fflate para no bloquear la interfaz;
+  - `fflate` pasa a `dependencies` (hoy llega de forma transitiva por `write-excel-file`).
+- **Un solo contrato para exportar e importar:**
+  - adjuntar rechaza > 500 MB y avisa si la obra pasaría de los topes;
+  - exportar los comprueba antes de empezar. Si no caben, lo dice y ofrece «.json y los PDF por separado».
+- **Interfaz:**
+  - con planos, «Copia completa con planos (.zip)» es la acción principal y enseña el tamaño («42 MB · 3 planos»);
+  - «Solo presupuesto (.json)» es secundaria y dice que no lleva planos;
+  - una copia con planos no disponibles se rotula «incompleta» y dice cuáles faltan.
+- **Restaurar por etapas:**
+  1. escribe los PDF uno a uno, anotados en `meta` con el token de esta restauración, y apunta cuáles son nuevos en este equipo;
+  2. si la cuota se acaba, deja de escribir PDF y retira los nuevos que hagan falta para que quepa la obra;
+  3. carga la obra y espera a que `flushPending()` devuelva `true` antes de anunciar nada;
+  4. con la obra guardada, el resumen dice qué planos quedaron «no disponibles».
+  - Si la obra no se puede guardar ni así:
+    - retira los PDF nuevos de esta restauración que sigan siendo suyos y no tengan referencia viva, con la misma comprobación que «Liberar espacio». Si otra pestaña adoptó esa huella, se quedan;
+    - vuelve a la obra anterior (instantánea en memoria tomada antes de `loadObra`) y lo dice.
+  - La restauración va en `serializeOp` y cancela los guardados pendientes de la obra importada antes de volver.
+  - La copia previa a importar es un .zip si la obra actual tiene planos.
+  - Nunca se anuncia un éxito que solo existe en memoria.
+
+#### 9.3 Otra huella: «Usar este PDF para este plano» [A1] (T10)
+
+- **Cuándo:** solo si coinciden el número de páginas y el tamaño de cada una.
+- **Qué hace:**
+  - `relinkPlano` pone la huella nueva y pasa la anterior a `huellasAnteriores`;
+  - conserva escalas y líneas;
+  - quita la `comprobacion` de cada página calibrada, así cada una pide comprobar de nuevo antes de medir. La comprobación nueva se guarda con `setPlanoPageCheck`: la escala y su `rev` no cambian y las líneas siguen al día.
+- **Las líneas antiguas:** conservan su `origen.huella`, que manda en «Ver en plano» y cuenta como referencia en «Liberar espacio».
+- **Si la comprobación nueva falla:** se recalibra, por `rescalePlanoPage`.
+
+#### 9.4 «Liberar espacio» [A1]
+
+- **Marcas:** se marcan los PDF sin referencia (`sinReferenciaDesde`), pero nunca se borran solos. El borrado automático entre pestañas sigue en TODOS.
+- **Adjuntar, reenlazar y restaurar:**
+  - hacen siempre un `update` de `meta` que quita la marca y sella `tocadoEn`, aunque los bytes ya existan;
+  - toman el Web Lock `concreta.planos` en modo compartido hasta que su guardado aterriza.
+- **«Liberar espacio»,** en la lista de planos:
+  - enseña los PDF sin referencia en ninguna obra con su tamaño y los borra tras confirmar;
+  - toma el lock en exclusiva y borra en una transacción que relee `meta` y solo borra si la marca no cambió;
+  - excluye las huellas del estado en memoria y de las dos pilas del historial de esta pestaña (consulta mínima que expone `temporal.ts`);
+  - nunca ofrece un PDF con `tocadoEn` de menos de 24 h.
+- **Referencias:**
+  - salen de `ObraMeta.huellas`;
+  - un índice «desconocido» obliga a leer el sobre, en crudo si hace falta;
+  - un sobre ilegible que no se puede recorrer detiene la limpieza con su motivo («limpieza detenida»).
+- **Sin Web Locks** (http en red local): pregunta antes a las demás pestañas por `BroadcastChannel` qué huellas tienen en memoria y en su historial, y espera 500 ms.
+- **Plano quitado:** cuenta como referencia mientras su alta esté en el historial de esta pestaña. Se lista aparte con «Liberar ya: Deshacer ya no recuperará la capa de N líneas».
+
+### 10. Ayuda, sandbox y documentación
+
+- **Ayuda:** `ayudaContent` gana la función «Medir sobre planos», el grupo de atajos del visor y secciones con ancla para los «?»:
+  - qué herramienta para qué partida (la tabla, en lenguaje de obra);
+  - el ciclo «clic… Enter, Enter»;
+  - calibrar y comprobar;
+  - una escala por página y cómo medir un detalle (adjuntar otra vez);
+  - líneas retocadas;
+  - [A1] .zip frente a .json («tus líneas sobreviven aunque se pierda el PDF»).
+  - Tras la Etapa A, el paso de primeros pasos en `STEPS`.
+- **Sandbox «Planos (ejemplo)»:**
+  - `npm run dev` → `/#sandbox` → «Planos (ejemplo)» carga un PDF de `pdfMinimo` (A3 a 1:50, un tabique de 5,00 m y una estancia de 20,00 m²);
+  - ya calibrado y comprobado, con un `obraStore` propio (no toca las obras guardadas) y dos partidas (m y m²);
+  - medir el tabique da `largo = 5`, `expr` «5», un `origen` completo y un paso de Deshacer;
+  - objetivo: < 3 min desde `npm run dev`;
+  - el ejemplo es un test (`PlanosSandbox.test.tsx`).
+- **[A1]:**
+  - README con «Medir sobre planos PDF»;
+  - `/design-review` a 1366, 1024 y 390 px tras implementar.
+
+### 11. Puerta cronometrada (entre A0 y A1)
+
+Sin `docs/spike/03-planos-cronometrado.md` con la meta cumplida no empieza A1. El documento se escribe ANTES de medir, con:
+
+- **La prueba:** las dos partidas del objetivo (12 tabiques, 8 estancias de solado), medidas como hoy (visor de PDF y tecleo) y con Concreta.
+- **Referencias:** los valores de referencia calculados antes de medir a partir de las cotas del plano.
+- **Tolerancias por magnitud:**
+  - longitudes: |Δ| ≤ 2 cm + 0,5 %;
+  - superficies: |Δ| ≤ 1 %;
+  - recuentos: exactos;
+  - cada total de partida: ≤ 0,5 %.
+- **Meta:** al menos el doble de rápido que hoy y ninguna medida fuera de tolerancia.
+- **Cronómetro:** desde abrir el PDF hasta crear la última línea, con la calibración dentro y la caché del navegador vacía en la primera página.
+- **Orden cruzado:** una partida se mide primero a mano y la otra primero con Concreta.
+- **Presupuesto de pintado,** con un plano CAD real pesado en el portátil de dogfood:
+  - primera página visible < 2 s;
+  - cambio de página < 1 s;
+  - zoom nítido < 1,5 s.
+
+### 12. Tests
+
+Una sola lista, por fichero. Lo hecho en la Etapa 0 no se repite.
+
+- **`src/core/planoGeom.test.ts`** (A0):
+  - longitud, lazo, perímetro cerrado y rectángulo por 3 clics (también girado);
+  - área invariante a giro y traslación;
+  - autocruces (colineal, vértice que toca, tramo de cierre);
+  - punto < 4 px descartado; doble clic sin vértice extra; cierre en el primer vértice;
+  - Mayús con `/Rotate 90`;
+  - formateador de `expr` y redondeo, con los fixtures como referencia (0,1+0,2; 3 decimales en «(tramos)×h»);
+  - precisión de calibración (cota < 300 px), plausibilidad (1:5 000 000 fuera de rango, 1:63,5 rara, 1:30 habitual sin pregunta) y desviación.
+- **`src/core/planoMedida.test.ts`** (A0):
+  - CADA celda de §3.1: casillas, fijas obligatorias, `magnitud` y motivo de «no encaja»;
+  - Recuento en formas con más columnas; Peso sin perfil y con perfiles en conflicto;
+  - paso a Sup. directa sin líneas (automático) y con líneas (pregunta; rechazar deshabilita);
+  - `valoresDesdeOrigen` = fixtures; solo escribe en `slots`; `uds = 2` tecleado se conserva;
+  - Restar (signo, también en Recuento); «fija → medida».
+- **`src/core/planoCiclo.test.ts`** (A0): la tabla de §5.3 fila a fila; Esc por estado; Enter con `isComposing`; tres medidas seguidas.
+- **`src/core/planoTexto.test.ts`** [A1]:
+  - «E 1:50», «ESCALA 1/50», dos escalas (no ajusta), fecha y «1/2» descartados, textos contiguos unidos;
+  - cajetín: dos puntos a 1:49,7 con «E 1:50» se ajustan a 1:50; a 1:47 solo avisan; `userUnit` 2 dobla la unidad;
+  - comentario propuesto (dentro/fuera, cifra descartada, sin texto).
+- **`src/core/sha256.test.ts`** (A0): vectores conocidos, 0 bytes, 1 MB; adjuntar con `crypto.subtle` ausente.
+- **`src/store/schema.test.ts`** (A0):
+  - v5 → v6 (`planos: []`);
+  - carga sin herencia: `loadObra` de un .bc3 tras una obra con planos, `importObraAsReference` y `toSerializable` con `planos`;
+  - `planos: [null]`, escala 0 y `origen` con NaN cargan la obra;
+  - lo ilegible se aparta a `_ilegible` sin guardar solo;
+  - claves de página de ida y vuelta por .json;
+  - topes al importar;
+  - el lector A0 ante `obra-v6-a1.json` conserva lo que no entiende y lo devuelve igual al guardar.
+- **`src/store/planos.test.ts`** (A0 salvo lo marcado):
+  - cada acción es un paso de Deshacer y `stale` no toca nada;
+  - `expect` por operación (`calRev`, `huella`, `medForma`), también con la hoja abierta [A1];
+  - `setPlanoPageScale` con líneas → `has-lines`; con solo líneas de Recuento, calibra;
+  - adjuntar un PDF cuya huella ya está en la obra → «Ya está adjunto como Planta 1»; «Adjuntar otra vez» crea otro plano con los mismos bytes;
+  - Restar deshabilitado sin E12;
+  - `removePlano` con `quitado` y revivir al adjuntar la misma huella; quitar → Deshacer → la capa vuelve;
+  - `remeasureLine` con `formaId` nueva, misma herramienta y signo; sobre certificada, la guarda;
+  - invariante `formaId` ⇒ `puntos`;
+  - `formaId` al duplicar, pegar, mover y [A1] «Añadir también a…»;
+  - [A1] `addPlanoLines` a varias partidas, todo o nada, conservando el signo; el polígono de Solado entra como perímetro en Rodapié y como perímetro × 2,70 en Pintura; en una partida por Unidades no se ofrece;
+  - [A1] recalcular: Enter cancela; recalcular cambia valor, `expr`, `mPorUnidad` y `calRev`; salta retocadas, aceptadas y certificadas y las lista; Deshacer revierte escala y líneas; cada línea de una misma forma con su `magnitud`; aviso de certificado > medición;
+  - [A1] `setPlanoPageCheck` no cambia la `rev` y las líneas siguen al día; `relinkPlano` guarda la huella anterior;
+  - [A1] adjuntar una revisión conserva el plano viejo, sus escalas y sus líneas, y el aviso de «revisión más nueva» sale en el viejo;
+  - adjuntar → Deshacer → el visor enseña la lista sin errores.
+- **`src/store/slices/certSlice`** (en `certificacion.test.ts`, E12): +100 / −10 → «Completada» certifica 90; las positivas, idénticas.
+- **`src/core/medPaste.test.ts`** (A0): `origen` en las cuatro rutas; TSV sin `origen`; pegar en una obra sin el plano lo quita; pegar en otra forma de medir lo quita.
+- **`src/core/bc3export.test.ts`** (A0): 4 decimales de ida y vuelta; ≤ 3 decimales, idénticos.
+- **`src/persist/planos.test.ts`:**
+  - (A0) adjuntar y leer por huella; misma huella dos veces, bytes una vez; el `update` de `meta` al adjuntar no reescribe `bytes`; cambio de obra a mitad (`docToken`); cuota llena simulada;
+  - [A1] `update` quita la marca; «Liberar espacio» relee y respeta una marca cambiada; sobre ilegible → recorrido crudo o «limpieza detenida»; «Liberar ya» de un plano quitado; adjuntar en B y liberar en A conserva el PDF.
+- **`src/persist/sync.test.ts` / `registry.test.ts`** (A0):
+  - espacio `concreta6.*`: el índice v6 nace del v5 (orden, `activeId`, `kind`, `ultimaCopia`); una v5 se migra una sola vez, solo en la pestaña dueña (ni en solo lectura ni desde Referencia);
+  - `reconcile` v6 no lista las claves v5 como obras, conserva las entradas `porMigrar` mientras exista su clave v5 y añade las obras nuevas del índice v5;
+  - al migrar, `concreta.version.<id> = 6`: una pestaña con la Etapa 0 que guarde esa obra recibe `version-conflict`;
+  - pestaña antigua + traspaso con la obra ya en v6: la v6 queda intacta y sale el aviso de cambios antiguos, con «Abrir como obra aparte» e «Ignorar»; una obra migrada sin cambios NO avisa (los dos `savedAt`); tras responder, no vuelve a avisar;
+  - limpieza a los 30 días: borra con la meta y el sobre v5 sin cambios, y no borra si alguno cambió;
+  - borrar una obra borra sus claves v5;
+  - [A1] `huellas`/`huellasDe` y una meta sin `huellas` que hace leer el sobre.
+- **`src/persist/transfer.node.test.ts`** [A1]: .zip con tamaños falsos, duplicados, nombres desconocidos y topes reales en los dos sentidos; exportar → borrar IDB → importar → capa y «Ver en plano»; restauración con cuota llena y con adopción concurrente.
+- **`src/features/planos/pdfAdapter.node.test.ts`** (A0): contrato real = doble; caja con origen ≠ 0, CropBox, las cuatro rotaciones y rotación con `UserUnit`; abrir A → B → llega A y se cierra; versión y ruta del worker.
+- **`src/features/planos/*.test.tsx`** (A0, con el doble):
+  - calibrar (arrastrar un punto recalcula; rehacer la comprobación conserva la cota);
+  - medir longitud → línea con `expr` y `origen`, Deshacer; herramienta que no encaja; Esc a medio dibujo no cierra la partida;
+  - Esc en reposo cierra el visor y deja la partida abierta; Esc en CREADA no cierra la partida; en pantalla completa, Esc en reposo sale de ella; Ctrl+Z quita un vértice sin deshacer la última línea;
+  - en el comentario, Retroceso y Ctrl+Z editan el texto y la C no arma Calibrar;
+  - abrir el visor cierra Referencia;
+  - el foco no sale del visor tras crear;
+  - «Ver en plano»; plano no disponible;
+  - pestaña de solo lectura (solo ve);
+  - chunk que falla (el presupuesto sigue usable);
+  - split a 1366 y a 1024, overlay con su selector;
+  - dimensiones fijas por partida;
+  - `PlanosSandbox.test.tsx`;
+  - quitar un plano pide confirmación con su número de líneas;
+  - con el interruptor apagado, la tabla no enseña el marcador;
+  - [A1] borradores: las tres rutas de cambio de contexto y las cuatro de descarte (cambiar de obra, recalibrar, deshacer un cambio de escala, cambiar de partida sin encajar); cursor de teclado.
+- **`src/hooks/useAppHotkeys.test.tsx`** (A0): Supr dentro de `[data-planos-viewer]` no borra la partida, aunque falle el `stopPropagation`.
+- **`src/features/presupuesto/*`** (A0): Tab y TSV con la columna del marcador; marcador en sus tres estados.
+- **E2E con `/qa`** en el navegador (A0): adjuntar, calibrar, medir 3 tabiques, cantidad = la calculada a mano; en Safari de iPad, solo ver.
+
+### 13. Decisiones de X0
+
+Lo que esta especificación decide donde el plan no llegaba o se contradecía. Cada una se puede cambiar en §14.
+
+1. **`n` en `Escala` y en `origen`:** es la escala «1:N» para enseñar.
+   - Hace falta `userUnit` para calcularla, y un plano no disponible no la da.
+   - Nunca se usa para calcular.
+2. **Sin `resta`:** Restar es el signo de `uds` en todas partes. Así la capa, la línea y «Volver a medir» no pueden contradecirse.
+3. **`Comprobacion` como unión** (`cota` | `cajetin`). La del cajetín no tiene metros ni puntos.
+4. **Recuento sin escala:** sin `calRev` y con `mPorUnidad = 1`. Funciona en páginas sin calibrar, no se recalcula nunca y no cuenta para `has-lines`: se puede contar antes de calibrar.
+5. **Nombres:**
+   - `huella` (antes `sha256`), `huellasAnteriores` (el «historial de huellas» de T10), `tamano` y `slots`;
+   - acciones que el plan no nombraba: `acceptLineValues`, `unlinkLineOrigen` y `setPlanoPageCheck` (añadir una comprobación sin cambiar la `rev`, para T10 y «Usar esta calibración en otras páginas»);
+   - todas las acciones llevan `expect`; las que no tocan líneas, al menos el `docToken`.
+6. **Claves y migración v6:**
+   - `concreta6.version.<id>` para la comprobación de versión de la Etapa 0;
+   - el índice v6 nace del v5 y marca `porMigrar`; migra solo la pestaña dueña;
+   - `migracionV5` guarda DOS `savedAt` (sobre e índice): `metaOf` sella el del índice después de guardar el sobre, así que no coinciden. El aviso compara el del índice (sin leer el sobre); la limpieza lee además el sobre antes de borrar;
+   - al migrar se escribe `concreta.version.<id> = 6`, así una pestaña con la Etapa 0 pasa a solo lectura en vez de seguir guardando en v5;
+   - «Ignorar» y «Abrir aparte» vuelven a sellar `migracionV5`;
+   - borrar una obra borra también sus claves v5.
+7. **`_ilegible`:** solo lo que no es un objeto; lo demás se queda opaco en su sitio, con guardas puras.
+8. **Topes del .json** en cifras: 2 000 puntos por forma, 200 planos, 2 000 páginas y 50 000 líneas medidas.
+9. **Plausibilidad de la escala:** la lista de escalas habituales (de 1:1 a 1:5000, con 1:15, 1:30, 1:40, 1:150, 1:300, 1:400 y 1:750) y el margen del 3 %, con un texto para «fuera de rango» y otro para «rara». Solo pide confirmación: un PDF impreso «ajustado a la página» tiene escalas raras legítimas.
+10. **Qué va en A0 de lo que el plan no asignaba:**
+    - A0: la disposición por anchos, el selector de partida, los estados y errores, la barra de control, el rectángulo por 3 clics, el cierre en el primer vértice, las fijas por partida con propuesta, las etiquetas de página (tecleadas), renombrar, la pantalla completa, el marcador con su popover, la accesibilidad básica y el .bc3 a 4 decimales;
+    - A1: los borradores completos (en A0 se descartan con aviso), el cursor de teclado, la etiqueta propuesta desde el texto, el README y el `/design-review`.
+    - «Planos» va en el menú «Más» por debajo de 1024 px (diseño decía 760), porque ahí la barra ya usa ese menú.
+    - El marcador solo aparece con el interruptor encendido, así la tabla no cambia en producción antes de la puerta.
+11. **Calibración:** una calibración a medias no se guarda; en A0 toda `Escala` lleva `comprobacion`. «Sin comprobar» solo aparece en A1, por dos caminos: «Usar este PDF para este plano» (T10) y «Usar esta calibración en otras páginas».
+12. **Reenlazar con otra huella en A0:** solo explica y cancela; el plano nuevo se adjunta desde el menú.
+13. **Medir por debajo de 1024 px:** herramientas deshabilitadas con su motivo (tablet y móvil solo ven en la Etapa A).
+14. **Interruptor:** encendido por defecto en desarrollo y apagado en producción hasta la puerta.
+15. **Teclado en campos de texto:** los atajos de una tecla no actúan con el foco en un campo, y en el comentario las teclas de edición son nativas (el visor solo corta su propagación). Corrige el «consume» del bloque CEO, que habría bloqueado Retroceso y Ctrl+Z dentro del texto.
+16. **PDF de un .zip con la huella mal:** se descarta ese PDF y su plano queda «no disponible» (bloque CEO); el resto de la copia se restaura.
+
+### 14. Cambios a la especificación
+
+(Vacío. Cada cambio posterior: fecha, qué cambia y por qué.)
+
+## Historial
+
+Lo sustituido por la «Especificación · Etapa A». Se conserva tal cual para saber de dónde sale cada decisión:
+
+- el plan base, abajo, con las ediciones de la fase CEO ya aplicadas;
+- los bloques aceptados de cada fase (CEO, diseño, DX e ingeniería), con su orden de precedencia, en el «Registro de la revisión».
+
+### Qué ya existe (reuso)
 
 - **Línea de medición** (`core/types.ts`): `MedLine { id, comment, uds, largo, ancho,
   alto, expr? }`. `expr` es la operación de la que sale el número de una casilla, y el
@@ -56,9 +1234,9 @@ no vuelvo a Presto».» (TODOS.md, «Medir sobre planos PDF (P2, grande)»).
   modelo lee; no se guardan en la obra.
 - **Operaciones y perfiles**: `evalEsExpr`, `leerCelda`, `core/perfiles`.
 
-## Cambios
+### Cambios
 
-### 1. Modelo de datos (esquema v6)
+#### 1. Modelo de datos (esquema v6)
 
 - `ObraData.planos: PlanoMeta[]` (entra en `DOMAIN_KEYS`: adjuntar, quitar y calibrar
   se deshacen):
@@ -104,7 +1282,7 @@ no vuelvo a Presto».» (TODOS.md, «Medir sobre planos PDF (P2, grande)»).
     CERRADO.
 - Migración v5 → v6: `planos: []`. `isObraData` acepta `planos` ausente o array.
 
-### 2. Almacén de PDF, fuera de la obra
+#### 2. Almacén de PDF, fuera de la obra
 
 - `persist/planos.ts`: un almacén `idb-keyval` propio (`createStore('concreta-planos',
   'pdf')`), clave = `planoId`, valor `{ sha256, bytes, datos: ArrayBuffer, tipo,
@@ -132,7 +1310,7 @@ no vuelvo a Presto».» (TODOS.md, «Medir sobre planos PDF (P2, grande)»).
   `sha256` se reenlaza solo, con sus escalas y las líneas que salen de él.
 - `ProjectBackup` dice que los planos no viajan en el .json.
 
-### 3. Motor de PDF
+#### 3. Motor de PDF
 
 - Dependencia nueva `pdfjs-dist` (Apache-2.0) en un chunk diferido. Worker con
   `new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url)` (respeta el `base`
@@ -145,7 +1323,7 @@ no vuelvo a Presto».» (TODOS.md, «Medir sobre planos PDF (P2, grande)»).
   visible a la resolución del zoom (con retardo). Nunca un canvas de más de 16 MP
   (límite de iOS).
 
-### 4. Geometría pura (`core/planoGeom.ts`)
+#### 4. Geometría pura (`core/planoGeom.ts`)
 
 - Distancia, longitud de polilínea, área (fórmula del lazo), perímetro, rectángulo por
   dos esquinas; conversión de unidades PDF a metros con `mPorUnidad`.
@@ -160,7 +1338,7 @@ no vuelvo a Presto».» (TODOS.md, «Medir sobre planos PDF (P2, grande)»).
   `mPorUnidad` se ajusta a la escala exacta (`ajustada`), lo que elimina el error del
   clic. No hay atajo «Escala 1:N» sin dos puntos.
 
-### 5. De medida a línea (`core/planoMedida.ts`)
+#### 5. De medida a línea (`core/planoMedida.ts`)
 
 La herramienta da una magnitud y la forma de la partida decide la casilla:
 
@@ -209,7 +1387,7 @@ La herramienta da una magnitud y la forma de la partida decide la casilla:
   herramienta y el mismo estado de Restar (para cambiarlos, se borra la línea y se mide
   de nuevo), así que nunca deja un `uds` de Recuento multiplicando una longitud.
 
-### 6. Visor
+#### 6. Visor
 
 - Botón «Planos» en la barra superior; abre el visor en el hueco lateral (tercer
   ocupante, excluyente con Referencia y Asistente), con split redimensionable y
@@ -236,16 +1414,16 @@ La herramienta da una magnitud y la forma de la partida decide la casilla:
 - Página sin calibrar: aviso «Calibra esta página»; Longitud, Superficie y Rectángulo
   deshabilitadas; Recuento sí funciona.
 
-### 7. Móvil y táctil
+#### 7. Móvil y táctil
 
 - Escritorio primero. Tablet: eventos de puntero, pellizco para zoom, medir con toques.
 - Móvil (< 760): solo ver («Ver en plano» y navegar); medir queda fuera.
 
-### 8. Ayuda
+#### 8. Ayuda
 
 - `ayudaContent`: función «Medir sobre planos» y grupo de atajos del visor.
 
-### 9. Tests
+#### 9. Tests
 
 - `core/planoGeom` y `core/planoMedida` (toda la tabla, `expr` = valor, restar,
   dimensiones fijas, peso con perfil).
@@ -255,7 +1433,7 @@ La herramienta da una magnitud y la forma de la partida decide la casilla:
 - UI con el doble del adaptador: calibrar, medir longitud → línea con `expr` y
   `origen`, Deshacer, «Ver en plano», plano no disponible, herramienta que no encaja.
 
-## Etapas
+### Etapas
 
 - **Etapa A** (la que se usa en una obra real):
   - modelo v6 con `origen` completo (`formaId`) y `valoresDesdeOrigen`;
@@ -284,14 +1462,14 @@ La herramienta da una magnitud y la forma de la partida decide la casilla:
   - editar vértices;
   - PNG/JPG como plano.
 
-## Fuera de alcance (propuesta)
+### Fuera de alcance (propuesta)
 
 - DWG/DXF; varias escalas por página (ventanas de detalle); certificar sobre el plano;
   medición automática con IA; imprimir el plano con las medidas; sincronizar planos
   entre equipos. El imán a la geometría vectorial no está fuera: es lo primero de la
   Etapa B.
 
-## Archivos (estimación)
+### Archivos (estimación)
 
 Nuevos: `core/planoGeom.ts`, `core/planoMedida.ts`, `core/planoTexto.ts` (escala y
 nombres de estancia desde el texto del PDF), `persist/planos.ts`,
@@ -307,604 +1485,6 @@ Editados: `core/types.ts`, `store/schema.ts`, `store/obraStore.ts`,
 (guarda de certificadas al volver a medir y al borrar con Supr), `persist/sync.ts` (obra de referencia),
 `persist/transfer.ts` (.zip), `hooks/useAppHotkeys.ts` (Esc mientras se dibuja).
 
-<!-- autoplan-accepted:ceo -->
-- **Recalibrar con medidas hechas:** si una página ya tiene líneas medidas y se cambia su escala, el visor pregunta «¿La escala anterior estaba mal?». Hay dos respuestas: «Sí, recalcular N líneas con la escala nueva» y «No, solo cambia la escala para lo que mida ahora». La segunda es la opción por defecto: Enter no recalcula nada, así que cambiar a 1:20 para medir un detalle y volver a 1:50 no toca las líneas.
-  - Candidatas: las líneas de esa página cuya escala es distinta de la nueva, que no son de Recuento y que no están retocadas a mano, agrupadas por escala antigua («12 líneas a 1:50 · 3 a 1:20»). Las retocadas se listan aparte y no cambian.
-  - Cambiar la escala y recalcular son UN paso de Deshacer (valores y `expr` salen de `valoresDesdeOrigen`). El aviso resume «N líneas · cantidad A → B <ud>» por partida.
-  - Si se rechaza, la página queda con la escala nueva para lo que se mida después, y las líneas viejas conservan la suya. La lista de planos avisa: «N líneas medidas con otra escala».
-  - Las líneas certificadas (`lineQty > 0` en alguna cert) NO se recalculan: se listan aparte («2 líneas certificadas en C1: revísalas a mano»), igual que las retocadas. Así no hace falta una guarda nueva para varias partidas y ninguna cantidad certificada cambia sola.
-  - Tests: recalcular cambia valor, `expr` y `origen.mPorUnidad`; la retocada y la certificada no cambian y se listan; Deshacer revierte todo; Enter por defecto no recalcula; detalle a 1:20 y vuelta a 1:50 deja las líneas como estaban.
-- **La escala siempre a la vista:** la lectura en vivo y la franja del visor muestran la escala activa («1:50 · calibrada con 5,00 m · comprobada 0,3 %»). Cada línea guarda la suya (`origen.mPorUnidad`).
-- **Escala del cajetín como comprobación** (sustituye al atajo 1:N y a la calibración desde el texto, que las dos voces CEO vieron redundantes con la cota obligatoria): si el texto de la página contiene «1:N», «E 1:N» o «ESCALA 1:N», la franja compara la calibrada con la declarada («calibrada 1:49,7 · el plano dice 1:50»).
-  - A menos del 1 %, `mPorUnidad` se ajusta a la escala exacta (`ajustada: true`). Por encima, aviso en tono de advertencia («La calibración no cuadra con la escala del plano: ¿el PDF está a otro tamaño?»), sin bloquear, porque la cota manda.
-  - Hasta calibrar con dos puntos y comprobar con una segunda cota, Longitud, Superficie y Rectángulo siguen deshabilitadas.
-  - Tests: dos puntos a 1:49,7 con «E 1:50» en el texto se ajustan a 1:50; a 1:47 avisan sin ajustar; `userUnit` 2 dobla la unidad; el lector descarta «1:2» dentro de una fecha y «1/2».
-- **Comentario propuesto desde el texto del PDF:** en Superficie y Rectángulo se propone el texto de la página que cae dentro del polígono: el de mayor tamaño de letra que no sea una cifra. En Longitud y Recuento solo va el prefijo.
-  - Nunca bloquea: Enter acepta la propuesta; el primer Esc deja solo el prefijo y el segundo descarta la forma (ver «Teclado y clics del visor»).
-  - Tests con textos simulados: dentro o fuera, número descartado, sin texto.
-- **Una forma, varias partidas** (taste; pasa a la Etapa A por acuerdo de las dos voces CEO): al crear la línea de una forma, la franja ofrece «Añadir también a…» con las partidas usadas hace poco en este plano (hasta 5) y un buscador. Con Mano, una forma ya dibujada ofrece lo mismo. No necesita la capa de toda la obra.
-  - Cada partida elegida recibe una línea NUEVA con el mismo `formaId` y su propia magnitud; todas en UN paso de Deshacer.
-  - Las ofertas salen de la tabla de §5: el perímetro CERRADO de la forma se trata como la fila Longitud (largo = perímetro; «(tramos)×h» en Sup. directa; largo = perímetro con la Anchura fija como altura en Superficie L×A) y su área como la fila Superficie, incluido el paso a Sup. directa en partidas L×A. Un rectángulo ofrece también su perímetro, igual que en §5.
-  - La línea nueva guarda su propia `magnitud`: cuando un recálculo de escala o una edición de vértices propagada (ver «Editar vértices») la alcanza, se recalcula con esa magnitud, nunca con la del origen.
-  - Tests: el polígono de «Solado» entra como perímetro en «Rodapié» (Longitud) y como perímetro × 2,70 en «Pintura» (Sup. directa); en una partida por Unidades no se ofrece; recalcular la escala actualiza las dos líneas, cada una con su magnitud.
-  - Etapa A.
-- **Capa de toda la obra:** conmutador «Esta partida / Toda la obra», color por partida con leyenda y formas ajenas atenuadas (Etapa B).
-- **Editar vértices:** arrastrar un vértice recalcula valores, `expr` y `origen` de su línea en un paso de Deshacer. Una línea retocada a mano pide confirmación antes de sobrescribirse (Etapa B).
-  - Si otras líneas comparten el mismo `formaId` (creadas con «Añadir también a…»; una línea duplicada es independiente), se ofrece «Aplicar también a N líneas» (taste, amplía #5). Cada una se recalcula con su `magnitud`, en el MISMO paso de Deshacer; las retocadas a mano y las certificadas se saltan y se listan. Sin aplicarlo, la capa marca «N líneas más usan la forma anterior».
-  - Tests: editar el polígono de Solado con «Aplicar también» actualiza Rodapié y Pintura con su magnitud; sin aplicarlo, quedan igual y marcadas.
-- **Copia de la obra con planos (.zip), en la Etapa A** (Codex: una copia que no restaura los planos rompe la promesa de «guardar la obra entera»): `ProjectBackup` ofrece «.json» (sin planos) y «.zip con planos», y restaurar el .zip en un navegador limpio devuelve obra, planos, escalas y capa.
-  - Importar un .zip restaura obra y blobs, y verifica el `sha256` de cada PDF. Un PDF que no cuadra se descarta con aviso y su plano queda «no disponible».
-  - `fflate` pasa a `dependencies`: hoy solo está en `devDependencies` y llega de forma transitiva por `write-excel-file`.
-  - Test: exportar .zip → borrar IndexedDB → importar → la capa y «Ver en plano» funcionan.
-  - La interfaz dice que las líneas medidas no dependen del PDF: si se pierde, solo se pierde la capa, y se recupera volviendo a adjuntarlo.
-- **Imágenes como plano (Etapa B, esfuerzo M):** PNG y JPG entran como plano de una página.
-  - Unidades en píxeles de la imagen, con la orientación EXIF ya aplicada (`createImageBitmap` con `imageOrientation: 'from-image'`).
-  - Para pintar se reduce a ≤ 16 MP; la geometría sigue en píxeles originales.
-  - Sin atajo 1:N ni escala leída: calibración con dos puntos obligatoria.
-  - El botón dice «Adjuntar plano (PDF o imagen)».
-- **Tabla herramienta × forma, dos casillas más:**
-  - Superficie (polígono) en una partida por Longitud → largo = perímetro, con `expr` de los tramos.
-  - Longitud en Sup. directa o Sup. × espesor → largo = L × altura fija, con `expr` «(tramos)×h». Sin altura fija, la herramienta pide rellenarla.
-  - Tests de las dos.
-- **Esquema v6 obligatorio:** `SCHEMA_VERSION` sube a 6 para que una versión antigua RECHACE la obra en vez de guardarla sin `planos`.
-  - Tests: migración v5 → v6 (`planos: []`); rechazo de v7.
-- **Tabla completa en tests:** `core/planoMedida` prueba CADA celda de la tabla herramienta × forma de §5: casillas escritas, dimensiones fijas obligatorias y motivo de «no encaja». Incluye Recuento en formas con más columnas, Peso sin perfil y el paso a Sup. directa (un paso de Deshacer; rechazar deshabilita la herramienta).
-- **`origen` en las copias de líneas:** `lineaParaDestino` (`core/medPaste.ts`) clona `origen` en profundidad; hoy lo perdería.
-  - Duplicar y mover (cortar y pegar) lo conservan mientras el destino tenga ese plano.
-  - El TSV nunca lo lleva. Pegar en una obra cuyo `planos` no contiene `origen.planoId` lo quita (no se usa `docToken`, que cambia al volver a abrir la misma obra).
-  - Tests de las cuatro rutas.
-- **Carga de obra sin herencia:**
-  - `loadObra` pone `planos: []` por defecto, como ya hace con `bajas`: importar un .bc3 tras una obra con planos no los hereda.
-  - `importObraAsReferenceImpl` (`persist/sync.ts`) estampa `planos: []`.
-  - `toSerializable` incluye `planos` en su lista explícita de claves.
-  - Tests de las tres rutas.
-- **Planos compartidos entre obras:** un `planoId` puede estar en más de una obra (importar el .json de X en Y).
-  - Borrar una obra no borra blobs: los deja a la limpieza de huérfanos (§2), que solo borra los que ninguna obra referencia.
-  - La limpieza lee los sobres de todas las obras y se ABORTA entera si alguno no se puede leer (los corruptos se guardan para recuperarlos). La marca `sinReferenciaDesde` se quita en cuanto el blob vuelve a tener referencia.
-  - Tests: borrar Y con un plano compartido con X lo conserva; un sobre corrupto detiene la limpieza; un blob marcado, referenciado de nuevo y vuelto a quitar espera otros 7 días.
-- **Sin contexto seguro:** con la app servida por `http://`, adjuntar y reenlazar funcionan con el `sha256` puro (`core/sha256.ts`). Tests: vectores conocidos, y adjuntar con `crypto.subtle` ausente.
-- **Quitar un plano:** pide confirmación con cuántas líneas salen de él.
-  - Las líneas conservan números y `origen`, marcado «plano quitado».
-  - Quitar es un paso de Deshacer. El blob no se borra en el acto (lo hará la limpieza de huérfanos, con su margen de 7 días), así que Deshacer lo recupera entero.
-  - Tests: quitar → Deshacer → la capa vuelve.
-- **Teclado y clics del visor:**
-  - La raíz del visor lleva `tabIndex=-1` y toma el foco en `pointerdown`: los atajos globales escuchan en burbuja (`useAppHotkeys` en `window`, `useMedClipboard` en `document`), así que el visor solo puede consumir teclas si el foco está dentro.
-  - Mientras se dibuja una forma o está abierto el comentario, el visor consume Esc, Enter, Retroceso, Espacio y Ctrl/⌘+Z (`preventDefault` + `stopPropagation`), así `useAppHotkeys` no cierra la partida.
-  - Esc a medio dibujo cancela la forma. En el comentario, el primer Esc borra el texto propuesto y el segundo descarta la forma sin crear la línea.
-  - El visor entra en el orden de Esc de `useAppHotkeys`: salir de pantalla completa → cerrar el visor de planos (como Referencia y Asistente) → cerrar la partida. Y entra en la exclusión mutua de `setRefOpen` / `setAsistenteOpen` (abrir uno cierra los otros).
-  - Ctrl/⌘+Z a medio dibujo quita el último vértice y no toca el historial.
-  - Supr (Delete) con el foco en el visor NUNCA llega a `useAppHotkeys` (que borraría la partida abierta): con una forma seleccionada (Mano) borra su línea por `deleteLines`, con la guarda de certificadas; sin selección no hace nada.
-  - Espacio desplaza solo si el foco no está en un campo de texto (el comentario).
-  - Con una herramienta de medir activa, un clic siempre añade vértice. Seleccionar una forma existente (foco en su línea, o «Añadir también a…») solo funciona con Mano o sin herramienta.
-  - Tests: Esc a medio dibujo no cierra la partida; Esc con el visor en reposo lo cierra y deja la partida abierta; dos Esc en el comentario descartan la forma; Ctrl+Z quita un vértice sin deshacer la última línea; abrir el visor cierra Referencia; Supr con el visor enfocado no borra la partida.
-- **Revisión de un plano** (Codex; mínimo, Etapa A): «Adjuntar revisión» crea un plano NUEVO con `sustituye` apuntando al anterior y `revision` («Rev. B»); el anterior no se toca. Las líneas siguen en la revisión con la que se midieron y lo dicen («P1 · Rev. A»). Al abrir una revisión sustituida, aviso «Hay una revisión más nueva». Comparar revisiones queda en TODOS.
-  - Tests: adjuntar revisión conserva el plano viejo, sus escalas y sus líneas; el aviso aparece en la vieja.
-- **Trazados en el adaptador:** `pdfAdapter` expone ya `trazados(pagina)` (segmentos de las rutas del PDF vectorial), aunque el imán llegue en la Etapa B, para no rehacer la interfaz. Test con el doble.
-- **Puerta cronometrada** antes de la Etapa B (ver Etapas): sin el documento `docs/spike/03-planos-cronometrado.md` con la meta cumplida no se empieza la B.
-- **Acciones de store atómicas** (cada una es UN `set` dentro de `structural()`, con cortes de historial antes y después, y revalida contra el estado del momento: partida existente, líneas retocadas y certificadas):
-  - `adjuntarPlano(meta)`, `quitarPlano(planoId)`, `calibrarPagina(planoId, pagina, escala)`;
-  - `medirEnPartida(chapterId, partidaId, lineas, { medForma?, afterId? })`: cambia la forma (paso a Sup. directa) y da de alta las líneas en el mismo `set`;
-  - `recalibrarPagina(planoId, pagina, escala, lineIds, expect)`: escala nueva + recálculo de las líneas indicadas, en varias partidas;
-  - `volverAMedir(lineId, origen, expect)` y `editarVertices(origenLineId, puntos, alsoLineIds, expect)`.
-  - `expect` es, como en `moveMedLinesTo`, lo que la UI preparó y el usuario confirmó: ids, valores y ids certificados. Si una línea se certificó o se retocó entre la confirmación y el `set`, devuelven `reason: 'stale'` y la UI vuelve a preparar y a preguntar.
-  - `volverAMedir` sobre una línea certificada pasa por la guarda de certificadas existente (una partida). `editarVertices` se salta las líneas certificadas de otras partidas y las lista, igual que recalcular.
-  - Devuelven `MedResult` (`reason: 'stale'` si algo cambió entre la preparación y el `set`).
-  - Tests: cada acción es un solo paso de Deshacer; `stale` no toca nada.
-- **El estado del visor tras Deshacer:** `planoUiStore` se reconcilia con `obraStore.planos` en cada cambio: si desaparece el plano que se ve, vuelve a la lista; si la página ya no existe, va a la 1; la forma a medio dibujar se descarta si su página ya no está calibrada.
-  - Test: adjuntar → Deshacer → el visor enseña la lista sin errores.
-- **`uds` y dimensiones fijas en tests:** recalcular una línea con `uds = 2` tecleado conserva el 2; la Altura fija de Pintura no aparece al abrir Alicatado; conflicto de perfiles en Peso bloquea Enter.
-- **Casos límite de las secciones CEO:**
-  - Adjuntar un PDF con el mismo `sha256` que otro plano de la obra no lo duplica: «Ya está adjunto como Planta 1».
-  - Cambiar de partida abierta a medio dibujar descarta la forma con el aviso «Forma descartada: cambiaste de partida».
-  - Tests de los dos.
-- **.zip seguro y sin bloquear:** exportar e importar con la API asíncrona de `fflate`; al importar, tope de tamaño descomprimido (500 MB), solo nombres conocidos (`obra.json`, `planos/<id>.pdf|.png|.jpg`) y `sha256` verificado. Tests: bomba zip rechazada; nombre desconocido ignorado.
-- **Bytes al worker sin copia:** los bytes leídos de IDB se transfieren al worker de pdf.js; el pintado se cancela (`renderTask.cancel()`) y solo pinta la última petición.
-- **PDF reales en tests:** fixtures generados con geometría conocida (A3 a 1:50, variante con /Rotate 90 y con `userUnit` 2) y un test de pdf.js real en entorno node que comprueba coordenadas, rotación y unidad.
-- **Un solo envoltorio para el hueco lateral:** `LateralAside` en `App.tsx` para Referencia, Asistente y Planos (divisor, split, overlay y pantalla completa), en lugar de una tercera copia del bloque.
-- **Detalles de la medida:** cada línea con `origen` enseña plano, revisión, página, escala (y si está ajustada), herramienta y fecha. La forma exacta la decide la fase de diseño.
-- **TODOS.md al aprobar:** varias escalas por página (P3), exportar el plano marcado para la DF (P2), certificar sobre el plano (P3), contar símbolos iguales automáticamente (P3), comparar revisiones de un plano (P2). El imán a la geometría vectorial pasa a ser lo primero de la Etapa B.
-<!-- /autoplan-accepted:ceo -->
-
-<!-- autoplan-accepted:design -->
-- **Precedencia:** si choca con el bloque CEO, manda este (diseño > CEO); cada punto dice qué sustituye.
-- **Sustituciones en el texto base del plan** (se leen como corregidas):
-  - Objetivo: «clic, clic, Enter por medida» pasa a «clic… Enter para cerrar la forma y Enter para aceptar el comentario».
-  - §4: «rectángulo por dos esquinas» pasa a «rectángulo por tres clics» (ver abajo).
-  - §5: Restar ya no sale «en rojo discontinuo»: usa sombreado e insignia «−» (ver «Lenguaje visual de la capa»).
-  - §5: «Comentario … que se pide tras cada medida» sigue igual, dentro del estado NOMBRANDO.
-  - §6: «Página sin calibrar: aviso» es el aviso único con su acción; «Clic en una forma (con Mano)» abre el popover de la forma.
-  - §7: la tablet solo ve en la Etapa A.
-  - Archivos: `CalibrarDialog.tsx` pasa a `CalibrarPasos.tsx` + `Lupa.tsx`; nuevos `MedOrigen.tsx` y `AnadirTambien.tsx`.
-- **Espacio de trabajo del visor:**
-  - Planos tiene su propio ancho, no el tope 320–640 de Referencia (`setRefWidth`): mínimo 480 px, máximo «ancho útil − 520 px», por defecto el 55 % del área principal. El tirador es el de `LateralAside`.
-  - Hay split solo si caben el lienzo (≥ 480 px) y el presupuesto (≥ 520 px); si no, el visor ocupa el área principal. El umbral sale de esos anchos útiles, no del `SPLIT_WIDTH` de 1100.
-  - Selector de partida propio en la franja («Midiendo en ▾»): buscador más las recientes (las mismas 5 de «Añadir también a…»). Así el visor sirve también en pantalla completa y en overlay.
-  - Por anchos:
-    - ≥ 1366: split por defecto;
-    - 1024–1365: split si caben los mínimos; si no, overlay;
-    - 760–1023 (tablet): overlay de solo ver (medir con el dedo pasa a la Etapa B);
-    - < 760: solo ver, con «Planos» en el menú «Más» del TopBar.
-  - Tests: el cálculo de split a 1366 y a 1024; el overlay trae su selector.
-- **Cabecera, aviso y franja:**
-  - Cabecera, una fila de 40 px:
-    - plano ▾;
-    - página ▾ («P1 · Planta baja · 1:50 ✓ · 4 medidas»);
-    - chip de escala por estado: «Sin calibrar» (neutral), «1:50 · ±0,3 %» (accent), «1:50 ajustada» (accent), no cuadra con el cajetín (`--state-warn`);
-    - menú ⋯: Adjuntar plano, Adjuntar revisión, Renombrar, Etiquetas de página, Quitar plano.
-  - Aviso único encima del lienzo (banda de 32 px): solo el más prioritario, con su acción. Orden: plano no disponible > revisión más nueva > calibración que no cuadra > página sin calibrar.
-  - Franja inferior, fila 1 (siempre): «Midiendo en: 2.6 EAV010 Acero en vigas · Peso ▾» y el total «12 líneas · 148,30 kg».
-  - Franja inferior, fila 2, según el estado:
-    - EN REPOSO: dimensiones fijas; la obligatoria que falta, con borde `--state-warn`;
-    - DIBUJANDO: lectura en vivo (Geist Mono) y pistas «Enter cierra · Retroceso quita punto · Esc cancela»;
-    - NOMBRANDO: prefijo como chip fijo, comentario con la propuesta seleccionada y vista previa («largo 18,40 → parcial 18,40 m²»);
-    - CREADA: «✓ Línea 7 · 18,40 m²», [Ver línea] y «Añadir también a…», hasta el siguiente vértice.
-  - Sustituye a la franja del §6 como única superficie de medir.
-- **Ciclo de una medida (contrato):**
-  - Estados: EN REPOSO → DIBUJANDO → NOMBRANDO → CREADA → (siguiente clic) DIBUJANDO.
-  - Enter o doble clic cierra la forma y pasa a NOMBRANDO con la propuesta seleccionada (lo que se teclee la sustituye). Un segundo Enter crea la línea. La secuencia real es «clic… Enter, Enter», y así la cuentan la ayuda y el objetivo.
-  - Tras crear la línea:
-    - el foco sigue en el visor y se mantienen la herramienta y las dimensiones fijas;
-    - la línea nueva se desplaza a la vista en la tabla SIN mover el foco;
-    - `aria-live` anuncia «Línea 7 creada: P1 · Salón, 18,40 m²».
-  - Punto de inserción: se fija al entrar a medir (tras la línea con el foco, o al final) y AVANZA a la última línea creada desde el visor, así las medidas salen en orden. No usa el `requestFocus(..., scroll)` de `medLineOps`.
-  - El aviso con «Deshacer» se ancla a la izquierda del área principal y no tapa ni la franja ni el lienzo.
-  - Tests: tres medidas seguidas salen en orden; el foco no sale del visor; Esc tras crear no cierra la partida.
-- **Teclado en el campo de comentario:** mandan las teclas nativas de edición (Retroceso borra letras, Ctrl/⌘+Z deshace texto). El visor solo gestiona Enter (crear) y Esc. Un solo Esc descarta la forma: sustituye el doble Esc del bloque CEO, porque con la propuesta seleccionada ya no hace falta el primero.
-- **Calibrar en el lienzo, sin modal:**
-  - Paso 1 «Cota conocida»: dos clics y la distancia en un campo anclado al segmento.
-  - Paso 2 «Comprobación»: dos clics sobre otra cota y su valor.
-  - En los dos pasos, los puntos se pueden arrastrar antes de confirmar.
-  - Ayudas de precisión al colocar puntos de calibración y vértices: cursor en cruz con guías a todo el ancho y lupa ×4 (recuadro de 120 px en la esquina opuesta al cursor). Mayús bloquea 0/45/90°.
-  - Si falla la comprobación: «Desviación 2,8 %» con [Rehacer cota] y [Rehacer comprobación], sin empezar de cero.
-  - En el mismo flujo se pide «Esta página es: [P1]» (la etiqueta), con propuesta desde el texto si la hay.
-  - «Usar esta calibración en otras páginas» (mismo tamaño de página y misma escala en el cajetín) copia la escala, pero cada página pide su comprobación (2 clics y 1 número).
-  - Si la página no tiene una segunda cota, la comprobación puede repetir la misma cota en otra zona. Sin comprobación no se mide.
-  - Tests: arrastrar un punto recalcula; rehacer la comprobación conserva la cota.
-- **Una sola escala por página** (Codex; sustituye el flujo «detalle a 1:20 y vuelta» del bloque CEO):
-  - Cambiar la escala de una página con líneas pregunta «¿La escala anterior estaba mal?», con [Recalcular N líneas] y [Cancelar]. Cancelar es la opción por defecto: Enter cancela.
-  - Desaparece «solo cambia la escala para lo que mida ahora»: una página nunca queda con dos escalas.
-  - Los detalles a otra escala no se miden en la Etapa A (la ayuda lo dice); la escala por zonas sigue en TODOS.
-  - El ajuste al cajetín solo se hace si la página declara UNA sola escala, y la comprobación se evalúa contra la escala ya ajustada.
-  - Tests: cancelar deja la escala y las líneas intactas; dos escalas en el texto no ajustan.
-- **Herramientas deshabilitadas:** van con `aria-disabled` y siguen enfocables. Al pulsarlas, el motivo sale en el aviso y lleva al arreglo:
-  - sin calibrar → empieza Calibrar;
-  - falta la Altura → foco en el campo;
-  - sin partida → abre el selector;
-  - forma de medir que no encaja → nombra la herramienta que sí encaja y la selecciona.
-  - Mano y Calibrar funcionan sin partida abierta.
-- **Superficie en partidas L×A:** la oferta «Medir esta partida por Superficie directa / Usar Rectángulo» aparece en la franja al elegir la herramienta, antes de dibujar; nunca tras cerrar un polígono.
-- **Rectángulo por tres clics** (taste): arista con dos clics y anchura con el tercero (proyección perpendicular), para que sirva en estancias giradas. Alternativa: dos esquinas alineadas con la página.
-- **Polígono:**
-  - Se cierra también con un clic en el primer vértice (anillo de enganche de 8 px).
-  - El cruce se comprueba en cada clic: el tramo de vista previa se pinta en `--state-danger`, el clic se rechaza y la pista lo explica. Sustituye «se rechaza al cerrar».
-- **Lenguaje visual de la capa:** no depende del tema, y el PDF nunca se invierte.
-  - Partida abierta: relleno accent al 15 % y trazo de 2 px con halo blanco de 1 px.
-  - Líneas con la misma forma (`formaId`), al seleccionar: contorno punteado accent.
-  - Restar: sombreado a 45° e insignia «−». Sin rojo: en DESIGN.md el rojo es error o acción destructiva.
-  - Retocada a mano: trazo discontinuo e insignia «✎» en `--state-warn`.
-  - Dibujo en curso: trazo de 1,5 px accent con vértices de 6 px.
-  - Insignias numeradas de tamaño fijo en pantalla (18 px, Geist Mono 11, fondo del tema con halo), iguales a las del marcador de la línea.
-  - Contraste de los gráficos ≥ 3:1, comprobado sobre blanco y sobre línea negra.
-- **Marcador de origen en la línea** (sustituye «Detalles de la medida: lo decide diseño» del bloque CEO):
-  - Columna estrecha de 28 px en `MedLineRow` (y chip en `MedCards`) con el número de la forma. Es el botón «Ver en plano».
-  - Muestra el estado: normal, «✎» retocada (`--state-warn`), o atenuado si el plano no está disponible o se quitó.
-  - Su popover lleva plano, revisión, página, escala (ajustada o no), herramienta y fecha, más [Ver en plano] [Volver a medir].
-  - La revisión («Rev. A») NO entra en el texto del comentario, para no ensuciar los exportes.
-- **Forma seleccionada con Mano en el visor:** popover con comentario, valores, parcial y detalles, y las acciones [Ver línea] [Volver a medir] [Añadir también a…] [Borrar]. Supr equivale a Borrar, con la guarda de certificadas.
-  - «Volver a medir»: la forma vieja se atenúa, se arma la misma herramienta y el destino es la partida de la línea (se abre si hace falta). Enter sustituye; Esc restaura.
-- **«Añadir también a…», hoja de revisión:**
-  - Selección múltiple de partidas (recientes y buscador).
-  - Por cada partida, en castellano: interpretación («perímetro», «perímetro × 2,70», «área»), dimensión fija que falte (campo en línea), cantidad resultante con su ud y el cambio de forma si lo hay.
-  - Un único botón «Añadir a N partidas», todo o nada: si alguna no es válida, no se crea ninguna y se marca cuál.
-  - Se ofrece en el estado CREADA y desde el popover de una forma.
-- **Borradores al cambiar de contexto** (sustituye «descarta la forma con aviso» del bloque CEO): el borrador vive en `planoUiStore`, ligado a partida, página, herramienta y escala.
-  - Al cambiar de partida: si la herramienta encaja en la nueva, el borrador pasa a ella; si no, queda en espera con «Borrador para <partida>: [Volver] [Descartar]».
-  - Al cambiar de página, de plano o de ocupante del hueco lateral, o al redimensionar: el borrador se conserva y al volver se ofrece [Seguir] [Descartar].
-  - Tests de las tres rutas.
-- **Estados** (la tabla de la revisión de diseño se implementa tal cual):
-  - Adjuntando, con progreso por fases (leer, huella, guardar).
-  - Abriendo.
-  - Pintando: página previa borrosa y «Pintando…». Medir sigue deshabilitado hasta que la página mostrada sea la activa.
-  - PDF con contraseña: «Este PDF tiene contraseña: quítala y vuelve a adjuntarlo».
-  - PDF dañado.
-  - Cuota llena, con el espacio usado si se puede leer.
-  - Fallo del visor: «No se pudo cargar el visor. Recarga la página.»
-  - Reenlazar con una huella distinta: «Este PDF no es idéntico al original», con [Adjuntar como revisión nueva] [Cancelar].
-  - Restauración parcial del .zip: resumen persistente plano a plano, con acciones.
-- **Vacíos:**
-  - Obra sin planos: zona de soltar en el panel con tres pasos («Adjunta el PDF · Calibra con una cota · Mide») y botón «Adjuntar plano».
-  - Partida sin medidas en esta página: «Esta partida tiene medidas en P2 y P3», con enlaces.
-- **Páginas y etiquetas:** el selector de página enseña etiqueta, escala y número de medidas. Las etiquetas se editan en el menú ⋯ y al calibrar. Sin etiqueta, el prefijo es «Pág. 3».
-- **Atajos del visor** (solo con el foco dentro): M Mano, L Longitud, S Superficie, R Rectángulo, N Recuento, − Restar, C Calibrar, F Ajustar a la ventana, +/− zoom. Van en `ayudaContent` y en los tooltips (no en táctil).
-- **Colocar puntos con el teclado:** con una herramienta activa, las flechas mueven el cursor en cruz 1 px de pantalla (×10 con Mayús), Espacio coloca el punto y Enter (con 2 puntos o más) cierra. La tabla de medición, con su marcador, hace de lista accesible de formas.
-- **Accesibilidad:**
-  - herramientas como `radiogroup` con `aria-checked`, y Restar como conmutador con `aria-pressed`;
-  - el lienzo con `role="application"` y `aria-label` («Plano P1, 1:50, herramienta Longitud»);
-  - `aria-live` con límite para crear, descartar, calibrar y errores;
-  - foco visible con `--ring-accent`;
-  - al cerrar el visor, el foco vuelve al botón «Planos».
-- **Dimensiones fijas:** se proponen desde el `origen.factor` de la última línea medida de esa partida, así que sobreviven a recargar. Se rotulan con el nombre de la columna y, si hace falta, su sentido: «Anchura (altura del paramento)».
-- **Copia de seguridad:**
-  - Con planos en la obra, «Copia completa con planos (.zip)» es la acción principal y enseña el tamaño («42 MB · 3 planos»).
-  - «Solo presupuesto (.json)» queda como secundaria y dice que no lleva planos.
-  - Un .zip con planos no disponibles se rotula «incompleta» y dice cuáles faltan.
-  - El aviso de > 50 MB informa, no bloquea.
-- **Barra de control mientras se dibuja:** barra flotante [Terminar (n)] [Deshacer punto] [Cancelar], con botones de 44 px que no se solapan. Sirve también con ratón, y Recuento se puede terminar con ella.
-- **Tablet** (taste): en la Etapa A la tablet solo ve, como el móvil. Medir con el dedo (un dedo coloca, dos desplazan y hacen zoom, lupa desplazada) pasa a la Etapa B. Sustituye «Tablet: … medir con toques» del §7.
-- **Verificación visual:** `/design-review` a 1366, 1024 y 390 px tras implementar la Etapa A.
-<!-- /autoplan-accepted:design -->
-
-<!-- autoplan-accepted:dx -->
-- **Precedencia:** si choca con los bloques CEO o de diseño, manda este (DX > diseño > CEO); cada punto dice qué sustituye.
-- **Especificación canónica antes de codificar** (las dos voces DX): tras el gate, y antes de la primera línea de código, el plan se reescribe en UNA sección «Especificación · Etapa A» con estas cinco partes:
-  - los tipos;
-  - la tabla herramienta × forma con su magnitud;
-  - la tabla de estados y eventos del visor;
-  - la tabla de atajos;
-  - la tabla de errores y la lista de tests regenerada.
-  Lo que ha quedado sustituido pasa al historial, no se anota encima.
-- **Primer hito, un sandbox que funciona:**
-  - `npm run dev` → `/#sandbox` → «Planos (ejemplo)» carga un PDF de prueba generado (A3 a 1:50, un tabique de 5,00 m y una estancia de 20,00 m²) ya calibrado y comprobado, en un store aislado con dos partidas (m y m²).
-  - Medir el tabique da `largo = 5`, `expr` de un tramo, un `origen` completo y un paso de Deshacer.
-  - El ejemplo es un test (`PlanosSandbox.test.tsx`).
-  - Objetivo: < 3 min desde `npm run dev` hasta la primera línea medida.
-- **PDF de prueba sin dependencias:**
-  - un generador en `src/test/pdfMinimo.ts` escribe a mano PDFs pequeños (página, `/Rotate`, `/UserUnit`, líneas y textos);
-  - los fixtures salen de él dentro del propio test, así que no hay binarios en el repo;
-  - los tests de pdf.js real van en un proyecto de Vitest aparte con entorno node y su propio setup (`src/test/setup.ts` toca `Element` y no vale en node), usando `pdfjs-dist/legacy/build/pdf.mjs`.
-- **Interfaz exacta del adaptador** (sustituye el esbozo del §3), con un doble completo y tests de contrato comunes para el real y el doble:
-  - `abrir(datos: ArrayBuffer): Promise<DocPdf>`. Se queda con el buffer (lo transfiere al worker), así que quien llama no lo reutiliza.
-  - `DocPdf.paginas: number`
-  - `DocPdf.pagina(n)` → `{ ancho, alto, rotacion, userUnit }`: `n` desde 1, en unidades PDF y sin rotar.
-  - `DocPdf.pintar(n, lienzo, region, escala, signal)`
-  - `DocPdf.textos(n)` → `[{ texto, caja, tamano }]`
-  - `DocPdf.trazados?(n)`: opcional, para la Etapa B.
-  - `DocPdf.cerrar()`: idempotente.
-  - Las transformaciones pantalla ↔ página son funciones puras, fuera del adaptador.
-  - Pensado para `StrictMode`: cada pintado se cancela con su `AbortSignal` y `cerrar` se puede llamar dos veces.
-- **Tipos y unidades** (sustituyen donde choquen con §1):
-  - `pagina` empieza en 1;
-  - `desviacion` es una fracción (0,003);
-  - `at` es ISO;
-  - `escalaDeclarada` es la N de 1:N;
-  - el tamaño del fichero se llama `tamano` (no `bytes`).
-  - `OrigenPlano` es una unión discriminada por herramienta:
-    - un rectángulo guarda sus 4 esquinas en orden;
-    - Recuento guarda los puntos contados.
-  - `OrigenPlano` añade:
-    - `slots` (las casillas que salen del plano, fijadas al medir, nunca por la forma actual de la partida);
-    - `fijas?: Partial<Record<MedDim, number>>` (dimensiones fijas escritas en casillas);
-    - `factor?` (solo el multiplicador dentro de `expr`, p. ej. la h de «(tramos)×h»);
-    - `at`;
-    - `escalaAjustada`.
-  - `valoresDesdeOrigen(origen, { mPorUnidad })` escribe solo en `origen.slots`.
-  - La tabla del §5 gana una columna con la `magnitud` de cada celda.
-  - En la franja las dimensiones se rotulan distinto: «Anchura» (casilla) frente a «Altura (multiplica)».
-  - Hay un ejemplo JSON de `OrigenPlano` por herramienta, que también sirve de fixture.
-- **Escala de la página, dicho con exactitud** (sustituye «una página nunca queda con dos escalas» del bloque de diseño): cada página tiene UNA calibración activa. Las líneas que se saltó un recálculo (retocadas o certificadas) conservan su escala histórica y se listan como «N líneas con otra escala».
-- **Calibrar sin fricción:**
-  - Si la página declara UNA escala en el cajetín y la calibración por dos puntos queda a menos del 1 %, eso cuenta como la comprobación (dos fuentes independientes), y queda en `comprobacion.fuente = 'cajetin'`. Sin cajetín, o si no cuadran, se pide la segunda cota.
-  - En una partida L×A SIN líneas, elegir Superficie cambia la forma a Sup. directa sin preguntar (mismo paso de Deshacer, aviso con Deshacer). Solo se pregunta si ya hay líneas L×A (precisa el punto de diseño).
-- **Escala ajustada reversible:** el chip «1:50 ajustada» ofrece «Usar la calibrada (1:49,7)».
-- **Acción por lotes para «Añadir a N partidas»** (sustituye el uso de `medirEnPartida` en bucle):
-  - `addPlanoLines({ destinos: [{ chapterId, partidaId, lineas, medForma?, afterId? }], expect })`: todas las partidas en UN `set`, todo o nada.
-  - Devuelve un error por destino (partida, campo, motivo).
-  - La preparación (`prepararMedida`) es pura y la usan la vista previa y la confirmación.
-- **Nombres de las acciones de store** (convención del store: verbo en inglés + nombre de dominio; sustituye los nombres del bloque CEO):
-  - `attachPlano`, `removePlano`;
-  - `setPlanoPageScale` (devuelve `reason: 'has-lines'` si la página ya tiene líneas medidas: la única vía para cambiar la escala de líneas es `rescalePlanoPage`);
-  - `addPlanoLines`, `rescalePlanoPage`, `remeasureLine`, `moveShapeVertices`.
-  - Todas reciben un objeto de opciones y un `expect: ExpectLineas` común (ids, valores, ids certificados, `docToken`).
-  - Los módulos puros siguen en castellano (`planoGeom`, `planoMedida`, `valoresDesdeOrigen`), como el resto de `core/`.
-- **Motivos y textos:** `MedResult.reason` suma `'no-plano' | 'sin-calibrar' | 'no-encaja' | 'certificada' | 'falta-dimension' | 'has-lines'`. `failText` (hoy en `medLineOps.ts`) pasa a un módulo con un texto por motivo, con problema, causa y arreglo. Tests: cada motivo tiene texto.
-- **Coordinador de adjuntar** (dos almacenes, sin transacción común):
-  - Captura el `docToken`, guarda los bytes y SOLO después publica el metadato.
-  - Si cambia la obra a mitad, descarta el resultado (el blob queda para la limpieza).
-  - Reintentar es idempotente por `sha256`.
-  - Restaurar un .zip escribe primero todos los bytes. Si falta cuota a mitad, la obra se restaura con los planos que entraron y el resto queda «no disponible», dicho en el resumen.
-  - Tests: cambio de obra durante adjuntar; cuota a mitad de restaurar.
-- **Bytes por huella** (sustituye «clave = `planoId`» del §2):
-  - El almacén de planos usa como clave el `sha256`.
-  - El mismo PDF adjuntado dos veces (p. ej. para otra escala: se ofrece «Adjuntar otra vez») o compartido entre obras guarda los bytes una sola vez.
-  - Reenlazar es buscar por huella, y la limpieza cuenta referencias por huella.
-  - Para la limpieza, el historial de Deshacer expone una consulta mínima de las huellas referenciadas (`temporal.ts` es privado).
-- **Reenlazar con otra huella:** además de «Adjuntar como revisión nueva», se ofrece «Usar este PDF para este plano», solo si coinciden el número de páginas y el tamaño de cada una. Conserva escalas y líneas, pide una comprobación nueva en cada página calibrada y guarda la huella nueva.
-- **Línea retocada:** el popover del marcador ofrece además «Aceptar valores actuales» (reescribe `valores`) y «Desvincular del plano» (quita `origen` y conserva los números).
-- **Validación del esquema v6** (sustituye «`isObraData` acepta `planos` ausente o array»):
-  - Antes de migrar, se admite v5 sin `planos`.
-  - Después de migrar, `planos` es obligatorio y se validan sus elementos:
-    - id y huella;
-    - páginas > 0;
-    - escalas finitas y > 0;
-    - que cada `origen` tenga su forma según herramienta, con puntos finitos.
-  - Un `origen` inválido se descarta de su línea (se conservan los números) con un aviso en la recuperación. Nunca rompe el render.
-  - Tests: v6 con `planos: [null]`, escala 0 u `origen` con NaN.
-- **Rollback:**
-  - La primera entrega mete el lector y el escritor v6 y el visor detrás de una constante de compilación (`PLANOS_VISOR`). Revertir el visor es apagar la constante, no volver a v5.
-  - Antes de la primera migración a v6 de cada obra se guarda una copia del sobre v5 (clave de recuperación).
-  - La app vieja distingue «esta obra necesita una versión más nueva» de «obra dañada».
-  - Test: el lector v5 ante un fixture v6 no toca los datos guardados.
-- **pdf.js:**
-  - Versión exacta en `package.json` (sin ^), por la CVE.
-  - El worker sale del MISMO paquete instalado, y un test comprueba que la versión de la librería y la del worker coinciden.
-  - Tras cada subida de versión: tests de contrato del adaptador y prueba del build publicado con el `base` de Pages (cambios de página rápidos incluidos).
-- **Error del visor aislado:**
-  - Una frontera de errores local envuelve el chunk de Planos dentro de `LateralAside`.
-  - Si falla la carga del chunk: «Hay una versión nueva: recarga», enlazado con `update/`.
-  - Si falla el worker o el PDF: el nombre del fichero y la causa.
-  - El presupuesto nunca se queda en blanco.
-  - Test: un chunk que falla deja el presupuesto usable.
-- **Textos de error con acción** (tabla completa en la especificación canónica):
-  - PDF dañado: «No se pudo leer "X.pdf" (dañado o no es un PDF). Ábrelo en otro visor y vuelve a guardarlo».
-  - Cuota llena: lleva a la lista de planos con tamaños, con «Quitar plano» y «Copia .zip».
-  - `stale`: dice qué cambió («La línea 7 se certificó mientras confirmabas»).
-  - Conflicto de perfiles en Peso: [Usar HEB 200] [Usar IPE 300].
-  - Plano no disponible: nombra el fichero y su tamaño.
-  - Rechazos del .zip: con su causa.
-  - Los avisos de calibración, «no encaja» y «PDF no idéntico» llevan «?» a su sección de la ayuda.
-- **Tope del .zip calculado del contenido** (sustituye el tope fijo de 500 MB): suma de los tamaños declarados de los planos + margen + un límite para `obra.json`. Los nombres desconocidos se siguen rechazando.
-- **Borradores** (precisa el bloque de diseño):
-  - Ligados al `docToken` y a la revisión de la calibración de su página.
-  - Cambiar de obra, recalibrar esa página o Deshacer un cambio de escala los descarta con aviso.
-  - Al cambiar de partida se recalcula la interpretación y se piden las dimensiones que pase a necesitar.
-  - Tests de las cuatro rutas.
-- **Atajos sin choques** (sustituye los puntos «Atajos del visor» y «Colocar puntos con el teclado» del bloque de diseño):
-  - Restar = D («descontar»);
-  - zoom = + / − y Ctrl + rueda;
-  - Espacio mantenido = desplazar;
-  - el cursor de teclado se activa al pulsar una flecha y se apaga al mover el ratón. Con él activo, Intro coloca un punto y Mayús+Intro cierra la forma; sin él, Enter cierra la forma como en el ciclo de medida;
-  - Esc por estado: DIBUJANDO cancela la forma; NOMBRANDO descarta; CREADA vuelve a EN REPOSO; EN REPOSO cierra el visor.
-- **Ayuda:** `ayudaContent` gana las secciones:
-  - qué herramienta para qué partida (la tabla, en lenguaje de obra);
-  - el ciclo «clic… Enter, Enter»;
-  - calibrar y comprobar;
-  - una escala por página y cómo medir un detalle (adjuntar otra vez);
-  - .zip frente a .json («tus líneas sobreviven aunque se pierda el PDF»);
-  - líneas retocadas.
-  Todas con ancla para los «?». Tras la Etapa A se añade el paso de primeros pasos en `STEPS`.
-- **README:** la lista de características suma «Medir sobre planos PDF».
-- **TODOS.md al aprobar:** «Probar con un plano de ejemplo» para el usuario final, en el estado vacío (P3; el sandbox cubre al desarrollador).
-<!-- /autoplan-accepted:dx -->
-
-<!-- autoplan-accepted:eng -->
-- **Precedencia:** si choca con los bloques DX, de diseño o CEO, manda este (ingeniería > DX > diseño > CEO); cada punto dice qué sustituye. La «Especificación · Etapa A» canónica (tarea X0) lo absorbe todo.
-- **Decisiones del usuario en la aprobación (D4 y D5, 2026-09-25)** (sustituyen la lista «Etapa A» de «Etapas» y el punto «Puerta cronometrada» del bloque CEO donde choquen):
-  - **Orden (reto 1, respuesta B):**
-    - La Etapa 0 lleva también el recordatorio de copia (P1 de TODOS, «Que la obra no pueda perderse»):
-      - «Última copia: hace N días» con botón para hacerla;
-      - visible fuera del modal de obra cuando `durability` no es `persisted`, o cuando pasan más de 7 días sin copia;
-      - la fecha se guarda por obra en la meta del registro (`ObraMeta.ultimaCopia`, ISO) y no entra en `ObraData`;
-      - la sella cada descarga iniciada (.json hoy, .zip en A1), con el id de la obra capturado al exportar;
-      - el texto dice «Última copia descargada», porque el navegador no confirma que el fichero se guardó; sin fecha, dice «Aún no has hecho ninguna copia»;
-      - `saveActiveObra` y `metaOf` FUSIONAN la meta en vez de sustituirla. Hoy la reconstruyen y pierden campos, también `kind`; así `ultimaCopia` y `huellas` sobreviven al autosave;
-      - importar un .json o un .zip sobre la obra, crearla y borrarla ponen la fecha a cero; la copia automática previa a importar sella la obra ANTERIOR.
-      - Tests:
-        - exportar → editar → autosave → recargar conserva la fecha;
-        - el aviso sale a los 8 días y no a los 6;
-        - importar no hereda la fecha de la obra sustituida.
-    - Después, los planos. Los documentos (cuadros de precios nº 1 y nº 2, mediciones sin precios) siguen en TODOS, detrás.
-  - **Etapa A partida (reto 2, respuesta A):** A0 → puerta cronometrada → A1 → Etapa B.
-    - **A0**, lo mínimo para la puerta:
-      - modelo v6 completo, con todos los campos de `origen` (también los que usa A1), para no migrar otra vez;
-      - almacén por huella en su módulo propio de IndexedDB (`meta` + `bytes`, el formato definitivo, para no migrarlo en A1), con `update` de `meta` al adjuntar; sin marcas ni borrado de PDF;
-      - adjuntar, plano no disponible y reenlace solo por huella idéntica;
-      - visor con zoom y páginas;
-      - calibrar con dos puntos y comprobación con una segunda cota. En A0 no se lee el cajetín: ni aviso, ni ajuste, ni comprobación por cajetín;
-      - las cuatro herramientas con la tabla completa y dimensiones fijas obligatorias. Restar solo si la certificación por líneas con signo (E12) está hecha; si T11 no la aprueba, Restar queda deshabilitado en A0 con su motivo;
-      - cursor en cruz y lupa ×4 al colocar puntos de calibración y vértices. Sin ellos la tolerancia no se cumple a zoom de ajustar: un píxel son unos 3 cm a 1:50 en un A3;
-      - la cota de calibración mide al menos 300 px en pantalla y la franja enseña la precisión (≈ 2 px / longitud en px). Una escala fuera de 1:1–1:5000, o poco común, pide confirmación: un «cm» tecleado como «m» pasa la segunda cota;
-      - comentario con prefijo y texto que se teclea, sin propuesta desde el PDF;
-      - `addPlanoLines` a una sola partida y «Volver a medir»;
-      - capa de la partida abierta, marcador de origen y «Ver en plano»;
-      - quitar plano (con `quitado`);
-      - atajos de una tecla, Esc por estado y la defensa de Supr;
-      - pestaña de solo lectura, frontera de errores e interruptor en tiempo de ejecución;
-      - sandbox «Planos (ejemplo)».
-    - **Cambiar la escala de una página con líneas en A0:** `setPlanoPageScale` devuelve `has-lines`. El aviso dice «Esta página ya tiene N líneas medidas con esta escala. Recalcularlas llega más adelante; para medir a otra escala, adjunta el PDF otra vez». La escala no cambia.
-    - **Copia en A0:** solo .json. Lleva las líneas con su `origen` y los metadatos de los planos, no los PDF. `ProjectBackup` lo dice («los planos no van en esta copia; si se pierden, vuelve a adjuntar el PDF»).
-    - **La puerta:** con las tolerancias y el presupuesto de pintado de este bloque. Sin `docs/spike/03-planos-cronometrado.md` con la meta cumplida no empieza A1.
-    - **A1**, tras la puerta y antes de la Etapa B:
-      - .zip con planos y restauración por etapas;
-      - marcas, índice `huellas` y «Liberar espacio»;
-      - revisiones de un plano;
-      - recalcular al cambiar la escala (`rescalePlanoPage`) y «Usar esta calibración en otras páginas»;
-      - «Añadir también a…» con su hoja (`addPlanoLines` a varias partidas);
-      - cajetín: lectura, comparación y, según T9, comprobación y ajuste;
-      - comentario propuesto desde el texto del PDF;
-      - cursor de teclado con flechas;
-      - «Usar este PDF para este plano», según T10;
-      - «Aceptar valores actuales» y «Desvincular del plano».
-    - Cada pieza se lleva sus tests a su subetapa. A0 se entrega en verde (`tsc -b`, `vitest run`, `eslint`, `vite build`), igual que A1.
-- **Etapa 0, release de compatibilidad ANTES de cualquier escritor v6** (las dos voces; sustituye «la app vieja distingue…» del bloque DX, que no llega a pestañas ya abiertas):
-  - `loadObraData` devuelve un resultado con tipo (`ok | vacia | danada | mas-nueva`). Con «más nueva», el aviso dice «Esta obra se guardó con una versión más nueva de Concreta: recarga la página», sin «Descartar y empezar», y la pestaña queda en solo lectura para esa obra.
-  - Traspaso del candado (`claimActive` 'handoff', `persist/sync.ts`): si recargar de disco falla, la pestaña sigue en solo lectura y NO arma el autosave. Hoy lo arma igualmente y la siguiente edición pisaría la obra.
-  - `saveObra` no sobrescribe un sobre con `schemaVersion` mayor que el que escribe (el cómo, abajo: resultado `version-conflict` y transacción propia).
-  - Tests con un fixture v7: hidratar, conmutar, traspaso y guardar nunca lo borran ni lo pisan.
-  - Se publica sola, antes que A0. El tiempo que pase no es la garantía: una pestaña antigua puede seguir abierta semanas (el aviso de versión nueva admite «Más tarde»). La garantía es el espacio de claves propio de v6 (abajo). En el mismo paso previo: el hueco lateral pasa a un solo campo `lateral: 'ref' | 'asistente' | 'planos' | null` con `LateralAside`, con los tests actuales en verde.
-  - Traspaso, con exactitud (segunda pasada): `isOwner` y `readonly` no cambian hasta que la recarga devuelve `ok`. Hoy se ponen antes de recargar (`sync.ts:173-178`) y el autosave ya estaba armado desde `hydrate`, así que no basta con «no armarlo».
-  - `saveObra` ante una versión mayor en disco da un resultado terminal `version-conflict`:
-    - la entrada sale de `pending` (hoy se reintentaría para siempre y bloquearía el guardado de las demás obras);
-    - el índice no se toca;
-    - la pestaña pasa a solo lectura con el aviso de «más nueva».
-    - Comparar y escribir va en una transacción propia (el `update` de idb-keyval siempre hace `put`), contra una clave pequeña de versión por obra, sin leer el sobre entero en cada guardado.
-  - `loadObraData` mira `schemaVersion > SCHEMA_VERSION` ANTES de `isObraData`, así una v7 con otra forma nunca sale como «dañada». Lo mismo en `activateFirstLoadable`, `discardRecovery` y `features/referencia/obraSource.ts`, con tests en todas.
-  - Guardados fallidos, ya en la Etapa 0:
-    - importar un .json comprueba el `false` de `flushPending` y, si falla, lo dice y deja recuperar la obra anterior (hoy cierra como si hubiera ido bien, `ProjectBackup.tsx:78`);
-    - «Actualizar» no recarga si el volcado devuelve `false` o no termina a tiempo (`reloadToLatest`, `update/appVersion.ts`), y lo dice.
-    - Tests con `false` y con escritura lenta.
-- **Espacio de claves propio de v6** (segunda pasada, las dos voces; sustituye la copia v5 bajo `concreta.recovery.v5.*` de la primera pasada y la copia v5 del bloque DX):
-  - Las obras v6 y su índice viven bajo un prefijo que el código anterior no lista ni escribe: `concreta6.obra.<id>` y `concreta6.obras.index`.
-  - La primera vez que se abre una obra v5, se migra a la clave nueva. La clave v5 (`concreta.obra.<id>`) se queda tal cual y hace de copia v5.
-  - Una pestaña antigua solo puede escribir en la clave v5: nunca pisa la v6. Si al cargar la clave v5 tiene un `savedAt` posterior a la migración, el aviso dice «Una versión antigua de Concreta guardó cambios en esta obra después de actualizarla», con [Abrir esos cambios como obra aparte] [Ignorar].
-  - La clave v5 se borra 30 días después de la migración si no ha cambiado desde entonces.
-  - `reconcile`, `obraKeys` y la migración legacy trabajan con el prefijo nuevo; el prefijo v5 solo se lee para migrar.
-  - Tests:
-    - pestaña antigua con la obra en memoria + traspaso → la v6 queda intacta y sale el aviso;
-    - una v5 se migra una sola vez;
-    - limpieza a los 30 días.
-- **Validar v6 sin destruir** (las dos voces; sustituye «planos obligatorio y se validan sus elementos» del bloque DX y la limpieza de la primera pasada):
-  - Tras migrar, `isObraData` solo exige `Array.isArray(planos)`. Una obra nunca va a recuperación por un plano mal formado.
-  - Un `PlanoMeta`, una escala o un `origen` que no se entiende NO se borra:
-    - se conserva tal cual, como dato opaco, y no se pinta;
-    - la línea sigue con sus números;
-    - se escribe de vuelta sin cambios.
-  - Solo lo que rompería el render se aparta a un campo `_ilegible` con su valor crudo, y se avisa. Limpiar nunca provoca un guardado por sí solo.
-  - Regla de versión: todo cambio que amplíe las formas o los valores válidos que se guardan sube `SCHEMA_VERSION` (una herramienta nueva, un campo con significado nuevo), así el código anterior pasa a solo lectura por la Etapa 0 en vez de reinterpretar. Por eso el modelo v6 trae desde A0 todos los campos de A1.
-  - Topes al importar un .json: puntos por `origen`, número de planos, de páginas y de líneas con `origen`. Un fichero manipulado no puede congelar el validador ni la capa.
-  - Claves de página: `escalas` y `etiquetas` se validan como enteros de 1 a `paginas`, porque en JSON llegan como texto.
-  - Tests:
-    - `planos: [null]`, escala 0 y `origen` con NaN cargan la obra;
-    - un lector A0 ante un fixture A1 conserva lo que no entiende y lo devuelve igual al guardar;
-    - claves de página de ida y vuelta por .json.
-- **Almacén de PDF sin borrado automático en la Etapa A** (las dos voces; sustituye la limpieza de huérfanos del §2 y del bloque CEO):
-  - Se marcan los PDF sin referencia (`sinReferenciaDesde`), pero no se borran solos.
-  - «Liberar espacio», en la lista de planos, enseña los PDF sin referencia en ninguna obra con su tamaño y los borra tras confirmar. Ese borrado:
-    - toma un Web Lock `concreta.planos` si existe;
-    - borra dentro de una transacción de lectura y escritura que relee el registro y solo borra si la marca no cambió;
-    - excluye las huellas del estado en memoria y de las dos pilas del historial de esta pestaña.
-  - Adjuntar, reenlazar y restaurar hacen siempre un `update` que quita la marca y sella `tocadoEn`, aunque los bytes ya existan.
-  - Las referencias salen de un índice nuevo, `ObraMeta.huellas: string[]`, junto con `huellasDe`: el `savedAt` del sobre del que salen. Lo escriben `saveActiveObra` y `reconcile` cuando registra una obra.
-  - Un índice que falta, o que no coincide con el `savedAt` del sobre, vale «desconocido», nunca `[]`: se lee el sobre, en crudo si hace falta. Un sobre ilegible que no se puede recorrer detiene la limpieza con su motivo («limpieza detenida»).
-  - Nunca se ofrece borrar un PDF con `tocadoEn` de menos de 24 h.
-  - Adjuntar, reenlazar y restaurar toman el Web Lock `concreta.planos` en modo compartido hasta que su guardado ha aterrizado; «Liberar espacio» lo toma en exclusiva.
-  - Sin Web Locks (http en red local), «Liberar espacio» pregunta antes a las demás pestañas por `BroadcastChannel` qué huellas tienen en memoria y en su historial, y espera su respuesta 500 ms.
-  - El almacén es un módulo propio de IndexedDB (`concreta-planos`, con versión explícita) y dos almacenes:
-    - `meta`, por huella: `tamano`, `tipo`, `tocadoEn`, `sinReferenciaDesde`;
-    - `bytes`, por huella, escritos una sola vez.
-  - Las marcas solo tocan `meta`; borrar es una transacción sobre los dos. idb-keyval no sirve aquí: su `update` reescribe el valor entero (los bytes) y solo admite un almacén por base de datos.
-  - Un plano quitado sigue contando como referencia mientras su alta esté en el historial de Deshacer de esta pestaña. «Liberar espacio» lo lista aparte con «Liberar ya: Deshacer ya no recuperará la capa de N líneas», así el espacio se recupera en el acto si el usuario lo pide.
-  - El borrado automático entre pestañas queda en TODOS (P3).
-- **Plano quitado sin perder la procedencia** (las dos voces): `removePlano` deja el `PlanoMeta` con `quitado: at` (fuera de las listas y del recuento de referencias de «Liberar espacio»). Volver a adjuntar el mismo PDF lo revive con sus escalas y sus líneas. Cada `origen` guarda además `huella` (el sha256 del PDF con el que se midió).
-- **Revisión de calibración** (las dos voces; sustituye la comparación de `mPorUnidad` como número): cada `Escala` lleva `rev` (id nuevo en cada calibración) y cada `origen` guarda `calRev`. Las candidatas a recalcular son las líneas con `calRev` distinto. Todo camino que cambia la escala de una página con líneas pasa por `rescalePlanoPage`:
-  - «Usar la calibrada»;
-  - «Usar esta calibración en otras páginas»;
-  - «Usar este PDF para este plano».
-- **`expect` por operación** (Codex; precisa `ExpectLineas` del bloque DX): además de ids, valores, certificadas y `docToken`, cada acción compara `calRev` de la página, `huella` del plano y `medForma` y unidad del destino. Dentro del `set`, la acción vuelve a preparar contra el estado vivo con la misma función pura (`prepararMedida`) y solo aplica si el resultado coincide con lo que el usuario revisó; si no, `reason: 'stale'` con el motivo. Test: cambiar la calibración o la forma del destino con la hoja «Añadir a N partidas» abierta.
-- **Una forma, una geometría** (las dos voces): `formaId` identifica una geometría inmutable. «Volver a medir» da un `formaId` nuevo a la línea. En la Etapa B, `moveShapeVertices` con «Aplicar también» mantiene el `formaId` solo en las líneas que actualiza; las que se salta pasan a un `formaId` propio. Invariante con test: misma `formaId` ⇒ mismos `puntos`.
-- **Valores aceptados a mano** (Codex; precisa «Aceptar valores actuales» del bloque DX): aceptar marca `origen.aceptada = true`, conserva los valores que salieron de la geometría y excluye la línea de los recálculos automáticos (se lista con las retocadas). Solo «Volver a medir» devuelve la autoridad a la geometría.
-- **Primera medida en una partida con cantidad fija** (Codex): la vista previa de NOMBRANDO y el aviso de CREADA enseñan «fija 100 → medida 5» (`resumenCantidad` y `cambioCantidad`, como el pegado). La línea entra con Deshacer y el cambio queda dicho. Convertir la cantidad fija en línea sigue en TODOS (P3, ya existe).
-- **Copia .zip segura** (las dos voces; sustituye «tope calculado del contenido» del bloque DX):
-  - Topes absolutos:
-    - 2 GB descomprimidos en total;
-    - 500 MB por entrada;
-    - 500 entradas;
-    - 50 MB para `obra.json`.
-  - Los bytes se cuentan al descomprimir en flujo (`Unzip` de fflate) y se aborta al pasarse; nunca se confía en los tamaños declarados.
-  - Se rechazan los nombres duplicados y los desconocidos.
-  - La clave de cada PDF es la huella CALCULADA, no la declarada.
-  - Los PDF se guardan sin comprimir (nivel 0) y la exportación se escribe por partes en un Blob.
-  - Los tests del .zip van en el proyecto de Vitest en node.
-  - Un solo contrato para exportar e importar (segunda pasada):
-    - adjuntar rechaza un PDF de más de 500 MB y avisa si la obra pasaría de los topes del .zip;
-    - exportar comprueba los mismos topes antes de empezar. Si no caben, lo dice y ofrece «.json y los PDF por separado», en vez de rotular «completa» una copia que no se podría restaurar.
-    - Tests de cada tope en los dos sentidos.
-- **Restaurar un .zip por etapas** (Codex; precisa el coordinador del bloque DX y sustituye su «la obra se restaura con los planos que entraron»):
-  - escribe los PDF uno a uno y anota cuáles son nuevos en este equipo;
-  - si la cuota se acaba, deja de escribir PDF y retira los nuevos que hagan falta para que quepa la obra;
-  - carga la obra y espera a que `flushPending()` devuelva `true` antes de anunciar nada;
-  - con la obra guardada, el resumen dice qué planos quedaron «no disponibles» (restauración parcial del bloque de diseño);
-  - si la obra no se puede guardar ni así, retira todos los PDF nuevos de esta restauración, vuelve a cargar la obra anterior y lo dice. Nunca se anuncia un éxito que solo existe en memoria.
-  - La copia previa al importar es un .zip si la obra actual tiene planos.
-  - Cada restauración lleva un token (segunda pasada):
-    - los PDF que escribe se anotan con él en `meta`;
-    - retirarlos solo borra los que siguen siendo suyos y no tienen referencia viva, con la misma comprobación que «Liberar espacio». Si otra pestaña adoptó esa huella entretanto, se quedan.
-  - La restauración va en la cola de operaciones de obra (`serializeOp`) y cancela los guardados pendientes de la obra importada antes de volver a la anterior. «La obra anterior» sale de una instantánea en memoria tomada antes de `loadObra`, no del disco.
-  - Arreglo del mismo fallo que ya existe en `ProjectBackup.tsx`: hoy ignora el `false` de `flushPending` al importar un .json.
-- **Adaptador de pdf.js** (las dos voces; precisa la interfaz del bloque DX):
-  - `pagina(n)` devuelve `{ vista: [x0, y0, x1, y1], rotacion, userUnit }`: la caja visible en el espacio de usuario del PDF, con la y hacia arriba. Las transformaciones pantalla ↔ página y los textos usan esa misma convención, y `region` y `escala` de `pintar` se definen en ella.
-  - `abrir(datos, { signal })` se puede cancelar; cada resultado lleva un número de generación y un documento que llega tarde se cierra.
-  - Los bytes se releen de IndexedDB en cada apertura, porque pdf.js se queda con el buffer.
-  - Fixtures: origen de caja distinto de 0, CropBox, las cuatro rotaciones y rotación con `UserUnit`.
-  - `trazados?` queda en la interfaz, pero no se implementa en la Etapa A.
-- **pdf.js en el build:**
-  - `cMapUrl`, `standardFontDataUrl` y `wasmUrl` (pdf.js 5) salen en `dist` y se resuelven con el `base` de Pages; sin ellos, el texto CID del cajetín sale mal y los escaneos, en blanco.
-  - Se usa el build `legacy`, o el README dice el navegador mínimo; se prueba en Safari de iPad.
-  - La rueda se escucha con un listener nativo `{ passive: false }` y el lienzo lleva `touch-action: none`.
-  - Los lienzos se liberan (ancho y alto a 0) al cambiar de página.
-  - Se juntan los textos contiguos y se lee también «ESCALA 1/N» y «E 1/N».
-  - El hash de la huella se calcula en un worker.
-  - Los assets se copian a `dist` con un plugin propio en `vite.config.ts`, como el `versionFile` que ya emite `version.json`: sin dependencia nueva.
-  - Con el build `legacy`, el worker también es `legacy/build/pdf.worker.min.mjs`, y el test de versiones comprueba además la ruta.
-  - `enableXfa: false` explícito.
-  - El texto sacado del PDF (propuestas de comentario, en A1) solo entra como nodo de texto de React o `<text>` de SVG, nunca con `innerHTML`, y al .bc3 por el `field()` que ya sanea.
-- **Pestaña de solo lectura:** el visor solo deja ver; adjuntar, calibrar y medir salen deshabilitados con el motivo, igual que el asistente (`ai/executor.ts`).
-- **Interruptor en tiempo de ejecución** (sustituye la constante de compilación `PLANOS_VISOR` del bloque DX):
-  - Hasta superar la puerta, el visor se activa con `?planos=1` o con `localStorage['concreta.planos']`, y en producción va apagado por defecto. Así se hace el dogfood en la app publicada y apagarlo es inmediato.
-  - El lector y el escritor v6 NO van detrás del interruptor.
-- **Teclado, defensa en profundidad** (precisa «Teclado y clics del visor»):
-  - `isInteractiveTarget` reconoce `[data-planos-viewer]`, así que Supr nunca borra la partida aunque falle un `stopPropagation`.
-  - `role="dialog"` solo para modales de verdad: `hasBlockingOverlay` apagaría Ctrl+Z y Ctrl+K con los popovers.
-  - Enter con `e.isComposing` no crea la línea.
-- **Ciclo de medida como reductor puro:** `core/planoCiclo.ts` (`(estado, evento) → { estado, efectos }`). La tabla de estados y eventos de la especificación es su tabla de tests; el visor solo la conecta.
-- **Restar se ve por el signo:** el sombreado sale del signo de `uds`, no de `origen.resta`, así que la capa nunca contradice a la línea.
-- **Acciones que faltaban**, con `structural()`, `fromBase = false` y `pesoDesdeComentario` como `insertMedLines`: `renamePlano`, `setPlanoPageLabel`, `setPlanoScaleAdjusted`, `relinkPlano` y `attachPlanoRevision`.
-- **Números de las casillas:**
-  - Un solo formateador de cifras para `expr` en `core/` (sin separador de miles ni notación exponencial), con tests de referencia.
-  - El .bc3 exporta las dimensiones con hasta 4 decimales (`num(v, 4)` ya quita los ceros de cola, así que las líneas de ≤ 3 decimales salen idénticas); test de ida y vuelta.
-- **Contradicciones cerradas** (sustituyen las versiones anteriores):
-  - Destino: «Midiendo en ▾» abre la partida elegida (`openPartidaId` sigue siendo la única fuente).
-  - Dimensiones fijas: viven en `planoUiStore` por partida, se proponen desde el `origen.fijas` o `origen.factor` de su última línea medida, y `origen.fijas` registra lo escrito.
-  - La rueda desplaza y Ctrl + rueda hace zoom.
-  - Los PDF se guardan por huella y el tamaño se llama `tamano`.
-  - Adjuntar un PDF cuya huella ya está en la obra: «Ya está adjunto como Planta 1», con [Abrirlo] [Adjuntar otra vez (para otra escala)]. El bloque CEO («no lo duplica») y el DX («Adjuntar otra vez») quedan así: nunca se duplica sin que se pida, y los bytes se guardan una sola vez.
-- **Calibración:** si se puede, la comprobación va sobre una cota a más de 45° de la de calibrar. La franja lo sugiere y la lupa lo facilita.
-- **El resumen del recálculo avisa** si alguna partida queda por debajo de lo ya certificado («C2 certificó 120 m²; la medición pasa a 112 m²»).
-- **Marcador fuera de la rejilla:** la columna de 28 px no cuenta como celda en `editGridNav` ni en `useMedGridTab`, ni en el mapeo TSV de copiar y cortar. Se amplían los tests de Tab y de Excel.
-- **La puerta, medible** (las dos voces en la segunda pasada; sustituye las tolerancias de la primera):
-  - Los valores de referencia se calculan antes de medir, a partir de las cotas del plano, y se escriben en `docs/spike/03-planos-cronometrado.md`.
-  - Tolerancias por magnitud:
-    - longitudes: |Δ| ≤ 2 cm + 0,5 %;
-    - superficies: |Δ| ≤ 1 %;
-    - recuentos: exactos;
-    - cada total de partida: ≤ 0,5 %.
-  - Cronómetro: desde abrir el PDF hasta crear la última línea, con la calibración dentro y la caché del navegador vacía en la primera página.
-  - Orden cruzado, para quitar el efecto aprendizaje: una partida se mide primero a mano y la otra primero con Concreta.
-  - Presupuesto de pintado con un plano CAD real pesado, en el portátil de dogfood (mientras llega la imagen nítida, se enseña la escalada):
-    - primera página visible: < 2 s;
-    - cambio de página: < 1 s;
-    - zoom nítido: < 1,5 s.
-- **Tests que añade ingeniería** (además de los ya previstos; lista completa en el registro de la fase 3):
-  - `src/persist/sync.test.ts`: fixture v7 por hidratar, conmutar y traspaso, sin borrar ni pisar; traspaso fallido → solo lectura sin autosave.
-  - `src/persist/persist.test.ts`: `saveObra` sobre un sobre v7 no escribe.
-  - `src/persist/registry.test.ts`: las claves v5 (`concreta.obra.*`) no aparecen en el `reconcile` de v6; `huellas` y `huellasDe` en `ObraMeta`.
-  - `src/persist/planos.test.ts`: `update` quita la marca; «Liberar espacio» relee y respeta una marca cambiada; sobre ilegible → recorrido crudo o «limpieza detenida»; «Liberar ya» de un plano quitado.
-  - `src/store/schema.test.ts`: los `planos` inválidos se conservan como datos opacos y la obra carga.
-  - `src/core/planoGeom.test.ts`: área invariante a giro y traslación; autocruces (colineal, vértice tocante, tramo de cierre); Mayús con `/Rotate 90`; formateador de `expr`.
-  - `src/core/planoCiclo.test.ts`: la tabla de estados y eventos.
-  - `src/store/planos.test.ts`: `expect` por operación (`calRev`, `medForma`); `removePlano` con `quitado` y revivir; `remeasureLine` con `formaId` nuevo; invariante `formaId` ⇒ `puntos`; `aceptada` fuera del recálculo; aviso de certificado > medición; «fija → medida».
-  - `src/core/bc3export.test.ts`: 4 decimales de ida y vuelta; ≤ 3 decimales idénticos.
-  - `src/persist/transfer.node.test.ts`: .zip con tamaños falsos, duplicados y tope real; restauración con cuota llena.
-  - `src/features/obra/ProjectBackup.test.tsx`: `flushPending` falso → error visible.
-  - `src/features/planos/pdfAdapter.node.test.ts`: caja con origen ≠ 0, CropBox, cuatro rotaciones, rotación con `UserUnit`; abrir A → B → llega A y se cierra.
-  - `src/hooks/useAppHotkeys.test.tsx`: Supr dentro de `[data-planos-viewer]` no borra la partida.
-  - `src/features/presupuesto/*`: Tab y TSV con la columna del marcador; Enter con `isComposing`.
-  - Integración con el doble: pestaña de solo lectura (el visor solo ve); adjuntar mientras otra pestaña libera espacio; Deshacer tras medir y volver a medir.
-- **Dónde nace un `formaId`** (segunda pasada): en las llamadas, nunca dentro de `lineaParaDestino`, que es el helper común de las cuatro rutas.
-  - Duplicar y pegar dan uno nuevo.
-  - «Añadir también a…» reutiliza el de la forma.
-  - Mover a otra partida lo conserva.
-- **Pegar en otra forma de medir:** si `compatibilidad()` dice que las casillas cambian de significado o de unidad, la línea pegada pierde `origen` (conserva los números). Así un recálculo nunca escribe una magnitud geométrica donde la unidad ya es otra.
-- **X0 es una puerta dura:** la especificación canónica incluye el contrato de lo que se guarda y fixtures JSON de referencia por herramienta. El lector y el escritor v6 entran en UN commit, después de X0, porque cada push a `main` publica. El contrato cubre:
-  - `PlanoMeta` con `quitado`, `sustituye` y `revision`;
-  - `Escala` con `rev` y `comprobacion.fuente`;
-  - `OrigenPlano` con todos los campos de A1.
-- **Tests de la segunda pasada:**
-  - pestaña antigua + traspaso con la obra ya en el espacio v6: la v6 queda intacta y sale el aviso de cambios antiguos;
-  - un `saveObra` rechazado sale de `pending`, y otra obra se guarda después;
-  - una v7 con otra forma sale como «más nueva» en `activateFirstLoadable`, en `discardRecovery` y en la fuente de Referencia;
-  - importar un .json y «Actualizar», con el volcado en `false` o lento;
-  - `ultimaCopia` y `huellas` sobreviven al autosave;
-  - una meta sin `huellas` hace leer el sobre;
-  - adjuntar en B y pulsar «Liberar espacio» en A antes de que B guarde conserva el PDF;
-  - marcar no reescribe `bytes`;
-  - una restauración que falla mientras otra pestaña adopta la misma huella;
-  - los topes del .zip al exportar y al importar;
-  - la precisión y la plausibilidad de la calibración;
-  - el `formaId` al duplicar, pegar, mover y con «Añadir también a…»;
-  - pegar en otra forma quita `origen`;
-  - Restar deshabilitado sin E12.
-- **TODOS.md:** el borrado automático de PDF entre pestañas (P3), además de los aplazados de las fases anteriores.
-<!-- /autoplan-accepted:eng -->
 ## Review record
 
 <!-- autoplan-accepted:ceo -->
@@ -3409,6 +3989,7 @@ Nuevas:
   - 11 (T10): «Usar este PDF para este plano» con historial de huellas. La huella de `origen` manda en «Ver en plano» y cuenta como referencia.
   - 12 (T11): certificación por líneas con signo (E12) antes de habilitar Restar.
 - **Siguiente paso:** implementar la Etapa 0 (tareas E0, E1, E15 y E16) y escribir X0 antes de la primera línea de A0.
+- **X0 hecho (2026-09-25):** «Especificación · Etapa A» al principio del documento, con fixtures en `src/test/fixtures/planos/` comprobados por `fixtures.test.ts`. Siguiente: publicar la Etapa 0 y empezar A0.
 - **Etapa 0 implementada (2026-09-25), pendiente de publicar.** Clave de versión por obra `concreta.version.<id>`; `newObra` también deja de sustituir una obra sin guardar; `lateral: 'ref' | 'asistente' | null` (A0 añade `'planos'`). Tests con el fixture v7 en `persist/sync.etapa0.test.ts`. Siguiente: publicarla sola y escribir X0.
 
 ## GSTACK REVIEW REPORT
