@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProjectBackup } from './ProjectBackup';
 import { toSerializable, useObraStore } from '../../store';
+import { usePersistStore } from '../../persist';
 
 const state = () => useObraStore.getState();
 
@@ -16,6 +17,7 @@ function importableJson(denominacion: string): File {
 
 beforeEach(() => {
   state().reset();
+  usePersistStore.setState({ durability: 'unknown' });
   vi.stubGlobal('URL', { createObjectURL: () => 'blob:x', revokeObjectURL: () => {} });
   vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 });
@@ -88,5 +90,22 @@ describe('ProjectBackup (F6.3)', () => {
 
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/versión más nueva/i));
     expect(onImported).not.toHaveBeenCalled();
+  });
+
+  it('sin saber aún si el navegador protege las obras, no dice nada', () => {
+    render(<ProjectBackup />);
+    expect(screen.queryByText(/borrar(á)? tus obras/)).not.toBeInTheDocument();
+  });
+
+  it('avisa si el navegador puede borrar las obras', () => {
+    usePersistStore.setState({ durability: 'best-effort' });
+    render(<ProjectBackup />);
+    expect(screen.getByText(/puede borrar tus obras/)).toHaveTextContent(/marcadores/);
+  });
+
+  it('dice que están protegidas cuando el navegador lo concede', () => {
+    usePersistStore.setState({ durability: 'persisted' });
+    render(<ProjectBackup />);
+    expect(screen.getByText(/no borrará tus obras/)).toBeInTheDocument();
   });
 });

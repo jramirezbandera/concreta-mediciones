@@ -17,6 +17,29 @@ const ERROR_MSG: Record<string, string> = {
     'El archivo viene de una versión más nueva de Concreta y aún no se puede abrir aquí.',
 };
 
+/** ¿Puede el navegador borrar las obras por su cuenta? (`persist/durability`).
+ *  Mientras no se sepa (`unknown`), no dice nada. */
+function DurabilityNote() {
+  const durability = usePersistStore((s) => s.durability);
+  if (durability === 'unknown') return null;
+  if (durability === 'persisted')
+    return (
+      <div className={`${styles.note} ${styles.noteOk}`}>
+        <Icon name="check" size={14} />
+        Este navegador no borrará tus obras por su cuenta. La copia .json te sirve para cambiar de
+        equipo.
+      </div>
+    );
+  return (
+    <div className={`${styles.note} ${styles.noteWarn}`}>
+      <Icon name="alert" size={14} />
+      {durability === 'unsupported'
+        ? 'Este navegador puede borrar tus obras si le falta espacio. Exporta una copia a menudo.'
+        : 'Este navegador puede borrar tus obras si le falta espacio o si pasas tiempo sin abrir la app. Exporta una copia a menudo; en Chrome o Edge, guardar la app en marcadores ayuda a protegerlas.'}
+    </div>
+  );
+}
+
 export interface ProjectBackupProps {
   /** Se invoca tras un import correcto (la obra ya está reemplazada): cierra el modal. */
   onImported?: () => void;
@@ -73,6 +96,7 @@ export function ProjectBackup({ onImported }: ProjectBackupProps) {
           actual.
         </div>
       </div>
+      <DurabilityNote />
       <div className={styles.actions}>
         <button
           type="button"

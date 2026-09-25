@@ -54,6 +54,25 @@
   display: none;
 }
 
+.note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-6);
+  font-size: var(--fs-table);
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+.note > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.noteOk > svg {
+  color: var(--state-ok);
+}
+.noteWarn > svg {
+  color: var(--state-warn);
+}
+
 .error {
   display: flex;
   align-items: flex-start;

@@ -4,6 +4,7 @@ import './styles/tokens.css';
 import './styles/base.css';
 import App from './App';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
+import { watchDurability } from './persist/durability';
 import { hydrate } from './persist/sync';
 import { useObraStore } from './store';
 import { initHistory } from './store/temporal';
@@ -21,6 +22,9 @@ void hydrate().finally(() => {
   // Arranca el historial de Deshacer/Rehacer DESPUÉS de hidratar: la obra cargada
   // es la línea base y no se registra como una edición.
   initHistory(useObraStore);
+  // Que el navegador no borre las obras por su cuenta: se pide con el primer
+  // guardado de la sesión, nunca al cargar (Firefox pregunta al usuario).
+  watchDurability();
   createRoot(root).render(
     <StrictMode>
       <AppErrorBoundary>

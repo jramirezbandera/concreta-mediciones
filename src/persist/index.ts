@@ -43,6 +43,12 @@ export {
   type ObraIndex,
 } from './registry';
 export { usePersistStore, type SaveStatus } from './persistStore';
+export {
+  readDurability,
+  requestDurability,
+  watchDurability,
+  type Durability,
+} from './durability';
 export { PersistUI } from './PersistUI';
 export {
   buildExportText,
