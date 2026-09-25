@@ -123,6 +123,21 @@
   position: relative;
   display: inline-flex;
 }
+/* Punto de aviso en «Más»: dentro hay algo pendiente (la copia de la obra). */
+.badge {
+  position: relative;
+}
+.badge::after {
+  content: '';
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--state-warn);
+  box-shadow: 0 0 0 2px var(--bg-surface);
+}
 .menu {
   position: absolute;
   top: calc(100% + 6px);

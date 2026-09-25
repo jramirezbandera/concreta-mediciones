@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
-import { clear, set } from 'idb-keyval';
+import { clear, get, set } from 'idb-keyval';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { seedObraData, toSerializable, type ObraData } from '../store';
+import { SCHEMA_VERSION, seedObraData, toSerializable, type ObraData } from '../store';
 import {
   OBRA_KEY,
   clearObra,
@@ -11,6 +11,7 @@ import {
   obraKey,
   obraKeys,
   saveObra,
+  versionKey,
 } from './persist';
 
 const sample = (): ObraData => toSerializable(seedObraData());
@@ -104,5 +105,64 @@ describe('saveObra / loadObraEnvelope (round-trip por clave)', () => {
     const ks = await obraKeys();
     expect(ks).toContain(obraKey('x'));
     expect(ks).not.toContain(OBRA_KEY);
+  });
+});
+
+/* ---- Etapa 0: obras guardadas por una versión MÁS NUEVA ------------------- */
+const V7 = SCHEMA_VERSION + 2;
+/** Sobre de una Concreta futura con OTRA forma (no pasaría `isObraData`). */
+const futuro = () => ({ schemaVersion: V7, savedAt: 'x', appVersion: '9.0', data: { hojas: [] } });
+
+describe('versión más nueva (Etapa 0)', () => {
+  it('un sobre v7 con otra forma → «newer», nunca «corrupt»', async () => {
+    await set(K, futuro());
+    const res = await loadObraEnvelope(K);
+    expect(res.kind).toBe('newer');
+    if (res.kind === 'newer') expect(res.version).toBe(V7);
+  });
+
+  it('la versión se mira también en `data` (sobre sin versión propia)', async () => {
+    await set(K, { data: { schemaVersion: V7 } });
+    expect((await loadObraEnvelope(K)).kind).toBe('newer');
+  });
+
+  it('saveObra NO pisa un sobre más nuevo: «version-conflict» y el disco intacto', async () => {
+    await saveObra(K, sample()); // escribe la clave de versión
+    await set(K, futuro());
+    await set(versionKey(K), V7); // lo que dejaría la app nueva
+    expect(await saveObra(K, sample())).toBe('version-conflict');
+    expect(await get(K)).toEqual(futuro());
+    expect(await get(versionKey(K))).toBe(V7);
+  });
+
+  it('sin clave de versión (sobre anterior a la Etapa 0) mira la del sobre', async () => {
+    await set(K, futuro());
+    expect(await saveObra(K, sample())).toBe('version-conflict');
+    expect(await get(K)).toEqual(futuro());
+  });
+
+  it('el rechazo es TERMINAL: sale de la cola y no bloquea el guardado de otras obras', async () => {
+    const otra = obraKey('otra');
+    await set(K, futuro());
+    const [r1, r2] = await Promise.all([saveObra(K, sample()), saveObra(otra, sample())]);
+    expect(r1).toBe('version-conflict');
+    expect(r2).toBe('ok');
+    expect((await loadObraEnvelope(otra)).kind).toBe('ok');
+    // El siguiente guardado de otra obra no reintenta el rechazado.
+    expect(await saveObra(obraKey('tercera'), sample())).toBe('ok');
+    expect(await get(K)).toEqual(futuro());
+  });
+
+  it('guardar la misma versión o una anterior en disco escribe y sella la versión', async () => {
+    await set(K, { ...futuro(), schemaVersion: SCHEMA_VERSION - 1, data: sample() });
+    expect(await saveObra(K, sample())).toBe('ok');
+    expect(await get(versionKey(K))).toBe(SCHEMA_VERSION);
+  });
+
+  it('la clave de versión no cuenta como obra y se borra con la obra', async () => {
+    await saveObra(K, sample());
+    expect(await obraKeys()).toEqual([K]);
+    await clearObra(K);
+    expect(await get(versionKey(K))).toBeUndefined();
   });
 });

@@ -14,8 +14,9 @@ export const CURRENT_BUILD: string = __APP_BUILD__;
 export const CHECK_EVERY_MS = 5 * 60_000;
 /** Mínimo entre comprobaciones no forzadas (volver a la pestaña, reconectar). */
 const MIN_GAP_MS = 60_000;
-/** Tope de espera al guardado pendiente antes de recargar. */
-const FLUSH_TIMEOUT_MS = 3000;
+/** Tope de espera al guardado pendiente antes de recargar. Pasado, NO se recarga
+ *  (sin confirmar el guardado, recargar podría perder cambios). */
+export const FLUSH_TIMEOUT_MS = 10_000;
 
 type FetchFn = typeof fetch;
 
@@ -87,36 +88,69 @@ export function startUpdateWatcher({
 }
 
 export interface ReloadOptions {
-  /** Guardado pendiente que volcar antes de recargar (p. ej. `flushPending`). */
-  beforeReload?: () => Promise<unknown>;
+  /** Guardado pendiente que volcar antes de recargar (p. ej. `flushPending`).
+   *  Resuelve a si TODO llegó a disco. */
+  beforeReload?: () => Promise<boolean>;
   fetchImpl?: FetchFn;
   reload?: () => void;
 }
 
-/** Recarga a la versión publicada. Vuelca antes lo pendiente (con tope de espera)
- *  y pide el HTML a la red con `cache: 'reload'`, que además SUSTITUYE la copia
+/** Cómo acabó el intento de recargar. Solo `ok` recarga: `sin-guardar` (el
+ *  volcado falló) y `guardado-lento` (no terminó a tiempo) dejan la pestaña
+ *  como está para no perder cambios; `sin-red` evita la página de error. */
+export type ReloadResult = 'ok' | 'sin-red' | 'sin-guardar' | 'guardado-lento';
+
+/** Por qué no se ha recargado (todo menos `ok`). */
+export const RELOAD_FAILED: Record<Exclude<ReloadResult, 'ok'>, string> = {
+  'sin-red': 'Sin conexión: no se pudo actualizar. Inténtalo de nuevo.',
+  'sin-guardar':
+    'No se pudieron guardar los últimos cambios y no se ha recargado para no perderlos. Libera espacio o descarga una copia y vuelve a intentarlo.',
+  'guardado-lento':
+    'El guardado está tardando y no se ha recargado para no perder cambios. Vuelve a intentarlo en un momento.',
+};
+
+/** Vuelca lo pendiente con tope de espera: `ok` solo si confirma el guardado. */
+async function saveBeforeReload(
+  beforeReload: () => Promise<boolean>,
+): Promise<'ok' | 'sin-guardar' | 'guardado-lento'> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<'guardado-lento'>((resolve) => {
+    timer = setTimeout(() => resolve('guardado-lento'), FLUSH_TIMEOUT_MS);
+  });
+  const saved = beforeReload().then(
+    (ok) => (ok === true ? ('ok' as const) : ('sin-guardar' as const)),
+    () => 'sin-guardar' as const,
+  );
+  try {
+    return await Promise.race([saved, timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Recarga a la versión publicada. Vuelca antes lo pendiente y NO recarga si no
+ *  lo confirma a tiempo (antes recargaba igual y un guardado fallido se perdía).
+ *  Pide el HTML a la red con `cache: 'reload'`, que además SUSTITUYE la copia
  *  cacheada: la recarga, y la próxima vez que se abra la app, ya cargan el build
  *  nuevo sin vaciar la caché a mano. Sin red no recarga (dejaría la página de
- *  error del navegador en vez de la app) y devuelve false. */
+ *  error del navegador en vez de la app). */
 export async function reloadToLatest({
   beforeReload,
   fetchImpl = fetch,
   reload = () => window.location.reload(),
-}: ReloadOptions = {}): Promise<boolean> {
+}: ReloadOptions = {}): Promise<ReloadResult> {
   if (beforeReload) {
-    await Promise.race([
-      beforeReload().catch(() => undefined),
-      new Promise((resolve) => setTimeout(resolve, FLUSH_TIMEOUT_MS)),
-    ]);
+    const saved = await saveBeforeReload(beforeReload);
+    if (saved !== 'ok') return saved;
   }
   try {
     const res = await fetchImpl(window.location.pathname + window.location.search, {
       cache: 'reload',
     });
-    if (!res.ok) return false;
+    if (!res.ok) return 'sin-red';
   } catch {
-    return false;
+    return 'sin-red';
   }
   reload();
-  return true;
+  return 'ok';
 }

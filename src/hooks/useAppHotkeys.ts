@@ -106,14 +106,14 @@ export function useAppHotkeys({ onHelp }: { onHelp: () => void }): void {
           e.preventDefault();
           return;
         }
-        if (s.refOpen) {
+        if (s.lateral === 'ref') {
           s.setRefOpen(false);
           e.preventDefault();
           return;
         }
         // Asistente abierto: Esc lo cierra (cuando el foco NO está en su composer;
         // ahí lo gestiona el propio panel, y isTextEditingTarget ya nos sacó antes).
-        if (s.asistenteOpen) {
+        if (s.lateral === 'asistente') {
           s.setAsistenteOpen(false);
           e.preventDefault();
           return;

@@ -36,7 +36,7 @@ describe('switchObra ante un guardado fallido (A-04)', () => {
     state().editPartidaField('01', 'p111', 'title', 'A-base');
     await flushPending();
     const aId = getActiveObraId()!;
-    const bId = await newObra('Obra B');
+    const bId = (await newObra('Obra B'))!;
     await switchObra(aId);
     state().editPartidaField('01', 'p111', 'title', 'En riesgo');
 
@@ -52,6 +52,8 @@ describe('switchObra ante un guardado fallido (A-04)', () => {
     await switchObra(bId);
     expect(getActiveObraId()).toBe(bId);
     const diskA = await registry.loadObraData(aId);
-    expect(diskA!.partidas['01']!.find((p) => p.id === 'p111')!.title).toBe('En riesgo');
+    expect(
+      diskA.kind === 'ok' && diskA.data.partidas['01']!.find((p) => p.id === 'p111')!.title,
+    ).toBe('En riesgo');
   });
 });

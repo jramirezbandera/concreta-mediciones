@@ -1,11 +1,15 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useToastStore } from '../store';
+import type { ReloadResult } from './appVersion';
 import { UpdatePrompt } from './UpdatePrompt';
 import { useUpdateStore } from './updateStore';
 
-const reloadToLatest = vi.hoisted(() => vi.fn<() => Promise<boolean>>());
-vi.mock('./appVersion', () => ({ reloadToLatest }));
+const reloadToLatest = vi.hoisted(() => vi.fn<() => Promise<ReloadResult>>());
+vi.mock('./appVersion', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./appVersion')>()),
+  reloadToLatest,
+}));
 
 describe('UpdatePrompt', () => {
   beforeEach(() => {
@@ -48,7 +52,7 @@ describe('UpdatePrompt', () => {
   });
 
   it('sin red: vuelve a habilitarse y lo avisa', async () => {
-    reloadToLatest.mockResolvedValue(false);
+    reloadToLatest.mockResolvedValue('sin-red');
     useUpdateStore.getState().found('new');
     render(<UpdatePrompt />);
     await act(async () => {
@@ -56,5 +60,16 @@ describe('UpdatePrompt', () => {
     });
     expect(screen.getByRole('button', { name: 'Actualizar' })).toBeEnabled();
     expect(useToastStore.getState().msg).toMatch(/no se pudo actualizar/);
+  });
+
+  it('guardado fallido: no recarga, vuelve a habilitarse y dice por qué', async () => {
+    reloadToLatest.mockResolvedValue('sin-guardar');
+    useUpdateStore.getState().found('new');
+    render(<UpdatePrompt />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Actualizar' }));
+    });
+    expect(screen.getByRole('button', { name: 'Actualizar' })).toBeEnabled();
+    expect(useToastStore.getState().msg).toMatch(/no se ha recargado para no perderlos/);
   });
 });

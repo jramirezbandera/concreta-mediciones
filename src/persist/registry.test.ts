@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { clear, get, set } from 'idb-keyval';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { seedObraData, toSerializable, type ObraData } from '../store';
+import { SCHEMA_VERSION, seedObraData, toSerializable, type ObraData } from '../store';
 import { OBRA_KEY, loadObraEnvelope, obraKey, saveObra } from './persist';
 import { usePersistStore } from './persistStore';
 import {
@@ -10,9 +10,12 @@ import {
   deleteObra,
   listObras,
   loadIndex,
+  loadObraData,
   migrateLegacy,
   reconcile,
   saveActiveObra,
+  setActiveId,
+  setUltimaCopia,
 } from './registry';
 
 const data = (name: string): ObraData => ({
@@ -128,5 +131,70 @@ describe('registry · migrateLegacy (idempotente)', () => {
   it('instalación nueva (sin legacy) → no crea índice (la demo no se fosiliza)', async () => {
     await migrateLegacy();
     expect(await get(INDEX_KEY)).toBeUndefined();
+  });
+});
+
+describe('registry · loadObraData con tipo (Etapa 0)', () => {
+  it('distingue ok, vacía, dañada y más nueva; la versión se mira antes que la forma', async () => {
+    const id = await createObra(data('Sana'));
+    expect((await loadObraData(id)).kind).toBe('ok');
+    expect((await loadObraData('no-existe')).kind).toBe('vacia');
+    await set(obraKey('rota'), { schemaVersion: 1, data: { roto: true } });
+    expect((await loadObraData('rota')).kind).toBe('danada');
+    const v7 = SCHEMA_VERSION + 2;
+    await set(obraKey('v7'), { schemaVersion: v7, savedAt: 'x', appVersion: '9', data: { otra: 1 } });
+    const res = await loadObraData('v7');
+    expect(res).toMatchObject({ kind: 'mas-nueva', version: v7 });
+  });
+});
+
+describe('registry · meta FUSIONADA (Etapa 0)', () => {
+  it('el autosave conserva kind, ultimaCopia y campos que no conoce', async () => {
+    const id = await createObra(data('Ref'), 'reference');
+    await setUltimaCopia(id, '2026-09-01T10:00:00.000Z');
+    // Un campo de una versión futura en la meta del índice (p. ej. `huellas`).
+    const idx0 = await loadIndex();
+    await set(INDEX_KEY, {
+      ...idx0,
+      obras: idx0.obras.map((m) => (m.id === id ? { ...m, huellas: ['h1'] } : m)),
+    });
+    await saveActiveObra(id, data('Ref renombrada'));
+    const meta = (await loadIndex()).obras.find((m) => m.id === id)!;
+    expect(meta).toMatchObject({
+      name: 'Ref renombrada',
+      kind: 'reference',
+      ultimaCopia: '2026-09-01T10:00:00.000Z',
+      huellas: ['h1'],
+    });
+  });
+
+  it('setUltimaCopia sella y borra; sin entrada en el índice no hace nada', async () => {
+    const id = await createObra(data('A'));
+    await setUltimaCopia(id, '2026-09-20T08:00:00.000Z');
+    expect((await loadIndex()).obras[0]!.ultimaCopia).toBe('2026-09-20T08:00:00.000Z');
+    await setUltimaCopia(id, null);
+    expect((await loadIndex()).obras[0]).not.toHaveProperty('ultimaCopia');
+    const before = await loadIndex();
+    await setUltimaCopia('no-registrada', '2026-09-20T08:00:00.000Z');
+    expect(await loadIndex()).toEqual(before);
+  });
+
+  it('crear una obra no hereda fecha de copia', async () => {
+    const a = await createObra(data('A'));
+    await setUltimaCopia(a, '2026-09-20T08:00:00.000Z');
+    const b = await createObra(data('B'));
+    expect((await loadIndex()).obras.find((m) => m.id === b)).not.toHaveProperty('ultimaCopia');
+  });
+
+  it('saveActiveObra ante una versión más nueva en disco: rechazo terminal, índice intacto', async () => {
+    const id = await createObra(data('A'));
+    await setActiveId(id);
+    const futuro = { schemaVersion: SCHEMA_VERSION + 1, savedAt: 'x', appVersion: '9', data: {} };
+    await set(obraKey(id), futuro);
+    await set(`concreta.version.${id}`, SCHEMA_VERSION + 1);
+    const before = await loadIndex();
+    expect(await saveActiveObra(id, data('Pisaría'))).toEqual({ kind: 'version-conflict' });
+    expect(await loadIndex()).toEqual(before);
+    expect(await get(obraKey(id))).toEqual(futuro);
   });
 });

@@ -13,6 +13,7 @@ export type {
   CertMode,
   CopyTarget,
   CowChoice,
+  Lateral,
   MedResult,
   NewMedLine,
   ObraData,

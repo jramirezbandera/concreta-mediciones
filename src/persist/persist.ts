@@ -16,9 +16,14 @@
    · `flush()` espera a que la cola se vacíe (para import/reset/cerrar pestaña).
    · Validación ESTRUCTURAL antes de aceptar un blob cargado (Codex #11): un JSON
      de versión correcta pero malformado NO debe brickear los selectores.
+   · Versión MÁS NUEVA (Etapa 0 del plan de planos): un sobre guardado por una
+     Concreta posterior se reconoce ANTES de validar su forma (`newer`, nunca
+     `corrupt`) y `saveObra` no lo pisa (`version-conflict`). Así una pestaña con
+     la app antigua pasa a solo lectura en vez de borrar o reinterpretar la obra.
    =========================================================================== */
-import { del, get, keys as idbKeys, set } from 'idb-keyval';
+import { createStore, delMany, get, keys as idbKeys, promisifyRequest } from 'idb-keyval';
 import type { ObraData } from '../store';
+import { SCHEMA_VERSION } from '../store/schema';
 
 /** Clave LEGACY del proyecto único (pre multi-obra). La migración (registry) la
  *  mueve a `concreta.obra.<id>` y la borra. Exportada para esa ruta y para tests. */
@@ -27,6 +32,11 @@ export const OBRA_KEY = 'concreta.obra.v1';
 export const OBRA_KEY_PREFIX = 'concreta.obra.';
 /** Clave del blob de una obra por id. */
 export const obraKey = (id: string): string => `${OBRA_KEY_PREFIX}${id}`;
+/** Clave PEQUEÑA con el `schemaVersion` del último sobre escrito en `key`: el
+ *  guardado compara contra ella sin leer el sobre entero. Fuera del prefijo de
+ *  obra para que `obraKeys` no la liste como una obra. */
+export const versionKey = (key: string): string =>
+  `concreta.version.${key.startsWith(OBRA_KEY_PREFIX) ? key.slice(OBRA_KEY_PREFIX.length) : key}`;
 /** Versión de la app estampada en los sobres (diagnóstico). FUENTE ÚNICA:
  *  `transfer` la importa de aquí (antes había dos literales que podían divergir). */
 export const APP_VERSION = '0.6';
@@ -92,6 +102,23 @@ function isEnvelope(x: unknown): x is ObraEnvelope {
   return isRecord(x) && typeof x.schemaVersion === 'number' && isObraData(x.data);
 }
 
+/** Versión de esquema que declara un blob guardado (el sobre o su `data`, la
+ *  mayor), sin mirar nada más de su forma. `null` si no declara ninguna. */
+function declaredVersion(raw: unknown): number | null {
+  if (!isRecord(raw)) return null;
+  const vs = [raw.schemaVersion, isRecord(raw.data) ? raw.data.schemaVersion : undefined].filter(
+    (v): v is number => typeof v === 'number' && Number.isFinite(v),
+  );
+  return vs.length ? Math.max(...vs) : null;
+}
+
+/** Si `raw` lo guardó una Concreta MÁS NUEVA que esta, su versión; si no, `null`.
+ *  Se mira ANTES que la forma: una v7 con otra estructura no es «dañada». */
+export function newerVersionOf(raw: unknown): number | null {
+  const v = declaredVersion(raw);
+  return v !== null && v > SCHEMA_VERSION ? v : null;
+}
+
 /* ---- lectura -------------------------------------------------------------- */
 /** Lee el sobre crudo (sin validar) de una clave. Para recuperación/exportar copia. */
 export async function loadRaw(key: string): Promise<unknown> {
@@ -101,12 +128,17 @@ export async function loadRaw(key: string): Promise<unknown> {
 export type LoadResult =
   | { kind: 'empty' }
   | { kind: 'ok'; envelope: ObraEnvelope }
-  | { kind: 'corrupt'; raw: unknown };
+  | { kind: 'corrupt'; raw: unknown }
+  /** Lo guardó una versión más nueva de Concreta: ni se carga ni se descarta. */
+  | { kind: 'newer'; raw: unknown; version: number };
 
-/** Carga y valida el sobre de una clave. `corrupt` = había algo pero no es sano. */
+/** Carga y valida el sobre de una clave. `corrupt` = había algo pero no es sano;
+ *  `newer` = es de una versión posterior (se mira primero). */
 export async function loadObraEnvelope(key: string): Promise<LoadResult> {
   const raw = await get(key);
   if (raw === undefined) return { kind: 'empty' };
+  const version = newerVersionOf(raw);
+  if (version !== null) return { kind: 'newer', raw, version };
   if (isEnvelope(raw)) return { kind: 'ok', envelope: raw };
   return { kind: 'corrupt', raw };
 }
@@ -122,13 +154,51 @@ export async function obraKeys(): Promise<string[]> {
 }
 
 /* ---- escritura: cola de un carril + coalescing POR CLAVE ------------------ */
+/** El almacén por defecto de idb-keyval (misma base y mismo almacén), abierto a
+ *  mano para comparar y escribir en UNA transacción: su `update` siempre hace `put`. */
+const kvStore = createStore('keyval-store', 'keyval');
+
+/** Resultado de un guardado. `version-conflict` es TERMINAL: en disco hay un
+ *  sobre de una versión mayor que la que se escribe y no se ha tocado. */
+export type SaveResult = 'ok' | 'version-conflict';
+
+/** Escribe `env` en `key` salvo que el sobre en disco sea de una versión MAYOR.
+ *  Compara contra la clave pequeña de versión; si falta (sobre anterior a esta
+ *  comprobación), mira la del sobre una sola vez. Todo en una transacción. */
+function writeUnlessNewer(key: string, env: ObraEnvelope): Promise<SaveResult> {
+  const vKey = versionKey(key);
+  return kvStore('readwrite', (store) => {
+    let result: SaveResult = 'ok';
+    const write = (onDisk: number | null) => {
+      if (onDisk !== null && onDisk > env.schemaVersion) {
+        result = 'version-conflict';
+        return;
+      }
+      store.put(env, key);
+      store.put(env.schemaVersion, vKey);
+    };
+    const vReq = store.get(vKey);
+    vReq.onsuccess = () => {
+      const v: unknown = vReq.result;
+      if (typeof v === 'number') return write(v);
+      const eReq = store.get(key);
+      eReq.onsuccess = () => write(declaredVersion(eReq.result));
+    };
+    return promisifyRequest(store.transaction).then(() => result);
+  });
+}
+
 let chain: Promise<void> = Promise.resolve();
 /** Pendientes por clave: la clave se captura CON el dato (Codex). Map → obras
  *  distintas no se pisan; misma clave coalesce a su última versión. */
 const pending = new Map<string, ObraData>();
+/** Último resultado escrito por clave: lo lee cada llamador al acabar su turno
+ *  (su dato pudo drenarlo el turno de otro llamador). */
+const lastResult = new Map<string, SaveResult>();
 
-/** Encola un guardado del dominio bajo `key`. Devuelve la promesa de la cola. */
-export function saveObra(key: string, data: ObraData): Promise<void> {
+/** Encola un guardado del dominio bajo `key`. Resuelve con el resultado de la
+ *  escritura de esa clave; rechaza si IndexedDB falla (cuota, abort). */
+export function saveObra(key: string, data: ObraData): Promise<SaveResult> {
   pending.set(key, data); // coalesce por clave: solo la última de cada obra
   const run = chain.then(async () => {
     // Drena TODO lo pendiente en este carril (orden de inserción del Map).
@@ -140,19 +210,20 @@ export function saveObra(key: string, data: ObraData): Promise<void> {
         appVersion: APP_VERSION,
         data: d,
       };
-      await set(k, env);
-      // Borra SOLO tras escribir OK: si `set` rechaza (cuota/abort) la entrada
-      // SIGUE en `pending` y el próximo drain la reintenta (no se pierde el dato).
-      // Si un save más nuevo de la misma obra llega entre medias, coalesce (gana
-      // el último, mismo key en el Map).
+      lastResult.set(k, await writeUnlessNewer(k, env));
+      // Borra SOLO tras escribir OK: si la escritura rechaza (cuota/abort) la
+      // entrada SIGUE en `pending` y el próximo drain la reintenta (no se pierde
+      // el dato). Un `version-conflict` también sale: reintentarlo bloquearía
+      // para siempre la cola de las demás obras. Si un save más nuevo de la misma
+      // obra llega entre medias, coalesce (gana el último, mismo key en el Map).
       if (pending.get(k) === d) pending.delete(k);
     }
   });
-  // La cadena base NO se envenena si un `set` falla: queda resuelta para que la
-  // siguiente escritura corra y reintente lo pendiente. El llamador SÍ recibe el
+  // La cadena base NO se envenena si una escritura falla: queda resuelta para que
+  // la siguiente corra y reintente lo pendiente. El llamador SÍ recibe el
   // rechazo (autosave → estado 'error').
   chain = run.catch(() => undefined);
-  return run;
+  return run.then(() => lastResult.get(key) ?? 'ok');
 }
 
 /** Espera a que se vacíe la cola de escritura (import/reset/cerrar pestaña). */
@@ -164,5 +235,5 @@ export function flush(): Promise<void> {
  *  primero su pendiente para que un autosave en cola no la resucite (Codex). */
 export async function clearObra(key: string): Promise<void> {
   pending.delete(key);
-  await del(key);
+  await delMany([key, versionKey(key)]);
 }

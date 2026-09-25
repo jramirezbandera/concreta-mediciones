@@ -81,3 +81,18 @@
   line-height: 1.4;
   color: var(--state-danger);
 }
+/* Acción dentro del aviso de error («Volver a la obra anterior»). */
+.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.link:disabled {
+  opacity: 0.55;
+  cursor: default;
+}

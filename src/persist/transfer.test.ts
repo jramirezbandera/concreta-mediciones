@@ -60,6 +60,16 @@ describe('parseObraJson (F6.3)', () => {
     }
   });
 
+  it('una copia de una versión más nueva con OTRA forma → "version-desconocida", no "malformado"', () => {
+    const v7 = { kind: 'concreta-obra', schemaVersion: SCHEMA_VERSION + 2, data: { hojas: [] } };
+    try {
+      parseObraJson(JSON.stringify(v7));
+      throw new Error('debería haber lanzado');
+    } catch (e) {
+      expect((e as ImportError).kind).toBe('version-desconocida');
+    }
+  });
+
   it('una obra v1 (2 niveles) MIGRA en cadena hasta la última versión en el import .json', () => {
     // Backup real anterior a la jerarquía N niveles: schemaVersion 1, subs planos.
     const v1 = { ...toSerializable(state()), schemaVersion: 1 };

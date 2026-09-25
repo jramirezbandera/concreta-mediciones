@@ -138,13 +138,13 @@ Todo vive en IndexedDB del navegador; la única red era acordarse de exportar el
   uso (marcadores, instalada) y Safari casi solo a la app de pantalla de inicio, así
   que lo normal en una web nueva es seguir en `best-effort`.
 
-- **Recordatorio de copia (P1).**
-  - **Qué:** «Última copia: hace 12 días» con botón para hacerla. Más visible
-    (no solo en el modal de obra) cuando `durability` no es `persisted`.
-  - **Por qué:** con `best-effort`, el navegador puede borrar las obras; y ni con
-    `persisted` se salvan de un equipo roto o perdido.
-  - **Contexto:** hay que guardar la fecha del último `exportObraJson` por obra (la
-    meta del registro es el sitio natural). Decidir cada cuántos días avisar.
+- ~~**Recordatorio de copia (P1)**~~ — HECHO (2026-09-25, Etapa 0 del plan de
+  planos). `ObraMeta.ultimaCopia` la sella cada descarga de la copia .json
+  (`persist.descargarCopia`) y sobrevive al autosave (la meta se fusiona). El
+  modal de obra dice «Última copia descargada: hace N días»; fuera del modal, un
+  botón en la barra (en móvil, en el menú «Más» con un punto de aviso) aparece
+  siempre que el navegador pueda borrar las obras, y con obras protegidas a los
+  más de 7 días sin copia (`features/obra/recordatorioCopia.ts`).
 
 - **Guardar la obra en una carpeta elegida (P2).**
   - **Qué:** autoguardar la obra como fichero en una carpeta (File System Access

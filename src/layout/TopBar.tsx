@@ -26,6 +26,11 @@ export interface TopBarProps {
   obraSwitcher?: React.ReactNode;
   /** Acción contextual «Importar partidas» (.bc3). Solo en la vista presupuesto. */
   importAction?: React.ReactNode;
+  /** Recordatorio de copia (.json): en la barra en escritorio, en el menú «Más»
+   *  en compacto. Se pinta solo cuando hace falta. */
+  backupAction?: React.ReactNode;
+  /** Punto de aviso en «Más» (compacto): hay algo pendiente dentro (la copia). */
+  moreBadge?: boolean;
 }
 
 /** Ancho desde el que las acciones secundarias del escritorio llevan texto. */
@@ -49,6 +54,8 @@ export function TopBar({
   onHelp,
   obraSwitcher,
   importAction,
+  backupAction,
+  moreBadge = false,
 }: TopBarProps) {
   const { isMobile, isCompact, isTablet } = bp;
   // Menú «Más» (móvil y tablet): las acciones secundarias no caben (con puntero
@@ -177,6 +184,7 @@ export function TopBar({
             Los atajos Ctrl+Z/Ctrl+Y viven en useAppHotkeys. */}
         {!isMobile && <UndoRedoButtons />}
         {!useMenu && importAction}
+        {!useMenu && backupAction}
         {!useMenu && onObra && (
           <button
             type="button"
@@ -222,10 +230,10 @@ export function TopBar({
               type="button"
               onClick={() => setMoreOpen((o) => !o)}
               title="Más acciones"
-              aria-label="Más acciones"
+              aria-label={moreBadge ? 'Más acciones (hay una copia pendiente)' : 'Más acciones'}
               aria-haspopup="menu"
               aria-expanded={moreOpen}
-              className="tcol icon-btn"
+              className={`tcol icon-btn ${moreBadge ? styles.badge : ''}`}
               style={{
                 background: moreOpen ? 'var(--bg-elevated)' : undefined,
                 color: moreOpen ? 'var(--text-primary)' : undefined,
@@ -274,6 +282,7 @@ export function TopBar({
                   Datos de la obra
                 </button>
               )}
+              {backupAction && <div className={styles.menuSlot}>{backupAction}</div>}
               <div className={styles.menuDivider} />
               <button
                 type="button"

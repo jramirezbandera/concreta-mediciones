@@ -3409,6 +3409,7 @@ Nuevas:
   - 11 (T10): «Usar este PDF para este plano» con historial de huellas. La huella de `origen` manda en «Ver en plano» y cuenta como referencia.
   - 12 (T11): certificación por líneas con signo (E12) antes de habilitar Restar.
 - **Siguiente paso:** implementar la Etapa 0 (tareas E0, E1, E15 y E16) y escribir X0 antes de la primera línea de A0.
+- **Etapa 0 implementada (2026-09-25), pendiente de publicar.** Clave de versión por obra `concreta.version.<id>`; `newObra` también deja de sustituir una obra sin guardar; `lateral: 'ref' | 'asistente' | null` (A0 añade `'planos'`). Tests con el fixture v7 en `persist/sync.etapa0.test.ts`. Siguiente: publicarla sola y escribir X0.
 
 ## GSTACK REVIEW REPORT
 

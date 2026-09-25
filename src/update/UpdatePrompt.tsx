@@ -3,7 +3,7 @@ import { Icon } from '../components';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import { flushPending } from '../persist';
 import { useToastStore } from '../store';
-import { reloadToLatest } from './appVersion';
+import { RELOAD_FAILED, reloadToLatest } from './appVersion';
 import { selectUpdateVisible, useUpdateStore } from './updateStore';
 import styles from './UpdatePrompt.module.css';
 
@@ -25,10 +25,10 @@ export function UpdatePrompt() {
 
   const update = () => {
     setBusy(true);
-    void reloadToLatest({ beforeReload: flushPending }).then((ok) => {
-      if (ok) return; // la página se está recargando
+    void reloadToLatest({ beforeReload: flushPending }).then((res) => {
+      if (res === 'ok') return; // la página se está recargando
       setBusy(false);
-      useToastStore.getState().show('Sin conexión: no se pudo actualizar. Inténtalo de nuevo.');
+      useToastStore.getState().show(RELOAD_FAILED[res]);
     });
   };
 
@@ -47,7 +47,8 @@ export function UpdatePrompt() {
           {broken
             ? 'Esta pestaña se ha quedado en una versión anterior y parte de la app ya no carga. Actualiza para seguir.'
             : 'Actualiza para usar la última versión de Concreta.'}{' '}
-          Lo que tengas sin guardar se guarda antes de recargar.
+          Lo que tengas sin guardar se guarda antes de recargar; si no se puede guardar, no se
+          recarga.
         </p>
         <div className={styles.actions}>
           <button type="button" className={styles.later} onClick={dismiss} disabled={busy}>

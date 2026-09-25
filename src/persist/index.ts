@@ -9,9 +9,13 @@ export {
   importObraAsReference,
   deleteObraById,
   discardRecovery,
+  descargarCopia,
+  importarSobreActiva,
+  volverAObraGuardada,
   __resetSyncForTests,
+  type ImportarResult,
 } from './sync';
-export { useSessionStore } from './sessionStore';
+export { useSessionStore, type ReadonlyMotivo } from './sessionStore';
 export {
   loadObraEnvelope,
   loadRaw,
@@ -21,10 +25,13 @@ export {
   isObraData,
   obraKey,
   obraKeys,
+  versionKey,
+  newerVersionOf,
   OBRA_KEY,
   OBRA_KEY_PREFIX,
   type ObraEnvelope,
   type LoadResult,
+  type SaveResult,
 } from './persist';
 export {
   INDEX_KEY,
@@ -39,10 +46,13 @@ export {
   migrateLegacy,
   newObraId,
   loadObraData,
+  setUltimaCopia,
   type ObraMeta,
   type ObraIndex,
+  type LoadObraResult,
+  type SaveActiveResult,
 } from './registry';
-export { usePersistStore, type SaveStatus } from './persistStore';
+export { usePersistStore, type SaveStatus, type MasNueva } from './persistStore';
 export {
   readDurability,
   requestDurability,

@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { CertificacionesView } from './features/certificaciones';
 import { ExportModal, exportBc3, exportDocx, exportXlsx } from './features/exportar';
-import { ObraModal } from './features/obra';
+import { CopiaRecordatorio, ObraModal, useEstadoCopia } from './features/obra';
 import { PresupuestoView } from './features/presupuesto';
 import { type PrintTarget } from './features/print';
 import { ConflictModal, ReferenciaPanel, refStyles } from './features/referencia';
@@ -51,6 +51,53 @@ const exportFailed = (kind: string) => (err: unknown) => {
   useToastStore.getState().show(`No se pudo generar el ${kind}. Reintenta o recarga la página.`);
 };
 
+/** Cómo ocupa el panel lateral la pantalla: `split` (junto al presupuesto, con
+ *  tirador de ancho), `overlay` (encima, en pantallas estrechas) o `full`
+ *  (pantalla completa; solo Referencia). */
+type LateralModo = 'split' | 'overlay' | 'full';
+
+/**
+ * El hueco lateral (diseño D4). UNA sola instancia del panel para los tres
+ * modos: cambiar de tamaño SOLO alterna su clase, nunca la desmonta → no se
+ * pierde el estado local (selección, búsqueda, desplegados, obra de referencia
+ * cargada, conversación). Los `key` estables anclan la identidad aunque
+ * aparezca o desaparezca el tirador. El overlay (estrecho) se desplaza el ancho
+ * de la sidebar por CSS (`--sidebar-w`) para cubrir SOLO el presupuesto.
+ */
+function LateralAside({
+  modo,
+  width,
+  onResizeStart,
+  children,
+}: {
+  modo: LateralModo;
+  width: number;
+  onResizeStart: (e: React.PointerEvent) => void;
+  children: React.ReactNode;
+}) {
+  const split = modo === 'split';
+  return (
+    <>
+      {split && (
+        <div
+          key="divider"
+          className={`no-print ${refStyles.divider}`}
+          onPointerDown={onResizeStart}
+          role="separator"
+          aria-orientation="vertical"
+        />
+      )}
+      <aside
+        key="panel"
+        className={`no-print ${modo === 'full' ? refStyles.full : split ? refStyles.aside : refStyles.overlay}`}
+        style={split ? { width } : undefined}
+      >
+        {children}
+      </aside>
+    </>
+  );
+}
+
 /** Congela los firmantes de una cert al exportarla (pie de firma reproducible,
  *  OV1): la primera exportación sella quién firmó y la fecha. Idempotente. */
 function freezeCertFirmantesFor(target: PrintTarget): void {
@@ -76,7 +123,9 @@ export default function App() {
   const pec = useObraStore(selectPec);
   const total = useObraStore(selectTotalConIva);
 
-  const refOpen = useObraStore((s) => s.refOpen);
+  // Hueco lateral (diseño D4): UN solo panel a la vez, Referencia o el asistente.
+  const lateral = useObraStore((s) => s.lateral);
+  const refOpen = lateral === 'ref';
   const refWidth = useObraStore((s) => s.refWidth);
   const refMaximized = useObraStore((s) => s.refMaximized);
   const refDrag = useObraStore((s) => s.refDrag);
@@ -86,11 +135,11 @@ export default function App() {
   const requestCopyRefPartidas = useObraStore((s) => s.requestCopyRefPartidas);
 
   // Asistente de IA (F-A2): comparte el hueco lateral con Referencia (abrir uno
-  // pliega el otro — lo garantiza el store). Sin pantalla completa en el primer
-  // incremento: split (ancho) u overlay (estrecho), reusando el ancho de Referencia.
-  const asistenteOpen = useObraStore((s) => s.asistenteOpen);
+  // pliega el otro — lo garantiza la forma de `lateral`). Sin pantalla completa
+  // en el primer incremento: split (ancho) u overlay (estrecho), reusando el
+  // ancho de Referencia.
+  const asistenteOpen = lateral === 'asistente';
   const setAsistenteOpen = useObraStore((s) => s.setAsistenteOpen);
-  const asistSplit = asistenteOpen && bp.w >= SPLIT_WIDTH;
 
   // Redimensionar el panel en split: se arrastra el tirador (320–640 lo clampa el store).
   const startRefResize = useCallback(
@@ -107,14 +156,17 @@ export default function App() {
     [setRefWidth],
   );
 
-  // Pantalla completa: el panel tapa sidebar + presupuesto (bajo el topbar).
-  // Tiene prioridad sobre split/overlay, que solo aplican sin maximizar.
-  const refFull = refOpen && refMaximized;
-  const splitOpen = refOpen && !refMaximized && bp.w >= SPLIT_WIDTH;
-  const overlayOpen = refOpen && !refMaximized && bp.w < SPLIT_WIDTH;
+  // Pantalla completa (solo Referencia): el panel tapa sidebar + presupuesto
+  // (bajo el topbar). Tiene prioridad sobre split/overlay, que solo aplican sin
+  // maximizar.
+  const lateralModo: LateralModo =
+    lateral === 'ref' && refMaximized ? 'full' : bp.w >= SPLIT_WIDTH ? 'split' : 'overlay';
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [obraOpen, setObraOpen] = useState(false);
+  // Recordatorio de copia (Etapa 0): en compacto vive en el menú «Más», que
+  // lleva un punto de aviso mientras la copia está vencida.
+  const copia = useEstadoCopia();
   // Realce de la zona de presupuesto al arrastrar un fichero .bc3 externo (T4).
   const [fileOver, setFileOver] = useState(false);
   // Importar como obra de REFERENCIA (no reemplaza la activa): modal sobre el
@@ -244,6 +296,8 @@ export default function App() {
             <ImportPartidaButton compact={bp.isDesktop && bp.w < ROOMY_W} />
           ) : undefined
         }
+        backupAction={<CopiaRecordatorio variant={bp.isCompact ? 'menu' : 'bar'} />}
+        moreBadge={copia.visible && copia.vencida}
       />
 
       <div className={styles.body}>
@@ -330,57 +384,17 @@ export default function App() {
           )}
         </main>
 
-        {/* UNA sola instancia del panel para las tres vistas (split/overlay/full):
-            cambiar de tamaño SOLO alterna su clase, nunca la desmonta → no se pierde
-            el estado local (selección, búsqueda, desplegados, obra de referencia
-            cargada). El `key` estable ancla la identidad aunque aparezca/desaparezca
-            el tirador. El overlay (estrecho) se desplaza el ancho de la sidebar por
-            CSS (`--sidebar-w`) para cubrir SOLO el presupuesto, no la barra lateral. */}
-        {refOpen && (
-          <>
-            {splitOpen && (
-              <div
-                key="ref-divider"
-                className={`no-print ${refStyles.divider}`}
-                onPointerDown={startRefResize}
-                role="separator"
-                aria-orientation="vertical"
-              />
-            )}
-            <aside
-              key="ref-panel"
-              className={`no-print ${
-                refFull ? refStyles.full : overlayOpen ? refStyles.overlay : refStyles.aside
-              }`}
-              style={splitOpen ? { width: refWidth } : undefined}
-            >
+        {/* Hueco lateral: Referencia o el asistente de IA, nunca los dos (lo
+            garantiza la forma de `lateral`). El `key` separa un panel del otro;
+            dentro, cambiar de tamaño no lo desmonta (ver LateralAside). */}
+        {lateral && (
+          <LateralAside key={lateral} modo={lateralModo} width={refWidth} onResizeStart={startRefResize}>
+            {lateral === 'ref' ? (
               <ReferenciaPanel onImport={() => setRefImportOpen(true)} />
-            </aside>
-          </>
-        )}
-
-        {/* Asistente de IA en el MISMO hueco lateral (mutuamente excluyente con
-            Referencia: el store garantiza que solo uno esté abierto). Reusa las
-            clases del aside y el tirador de ancho de Referencia. */}
-        {asistenteOpen && (
-          <>
-            {asistSplit && (
-              <div
-                key="asist-divider"
-                className={`no-print ${refStyles.divider}`}
-                onPointerDown={startRefResize}
-                role="separator"
-                aria-orientation="vertical"
-              />
-            )}
-            <aside
-              key="asist-panel"
-              className={`no-print ${asistSplit ? refStyles.aside : refStyles.overlay}`}
-              style={asistSplit ? { width: refWidth } : undefined}
-            >
+            ) : (
               <AsistenteChat />
-            </aside>
-          </>
+            )}
+          </LateralAside>
         )}
       </div>
 

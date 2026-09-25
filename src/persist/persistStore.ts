@@ -16,9 +16,19 @@ interface PersistState {
   recoveryKey: string | null;
   /** ¿El navegador puede borrar las obras por su cuenta? Ver `durability`. */
   durability: Durability;
+  /** Obra guardada por una versión MÁS NUEVA de Concreta (Etapa 0): ni se carga
+   *  ni se ofrece descartarla; el aviso pide recargar la página. */
+  masNueva: MasNueva | null;
   setStatus: (s: SaveStatus) => void;
   setRecovery: (raw: unknown | null, key?: string | null) => void;
   setDurability: (d: Durability) => void;
+  setMasNueva: (m: MasNueva | null) => void;
+}
+
+/** Qué obra se guardó con una versión más nueva (id y nombre para el aviso). */
+export interface MasNueva {
+  id: string;
+  nombre: string;
 }
 
 export const usePersistStore = create<PersistState>((set) => ({
@@ -26,7 +36,9 @@ export const usePersistStore = create<PersistState>((set) => ({
   recovery: null,
   recoveryKey: null,
   durability: 'unknown',
+  masNueva: null,
   setStatus: (status) => set({ status }),
   setRecovery: (recovery, recoveryKey = null) => set({ recovery, recoveryKey }),
   setDurability: (durability) => set({ durability }),
+  setMasNueva: (masNueva) => set({ masNueva }),
 }));

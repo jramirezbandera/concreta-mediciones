@@ -36,7 +36,7 @@ beforeEach(async () => {
 describe('switchObra (round-trip multi-obra)', () => {
   it('[CRÍTICO] conmutar entre obras NO pierde datos', async () => {
     const aId = await bootWithDemoA();
-    const bId = await newObra('Obra B'); // blank, activa
+    const bId = (await newObra('Obra B'))!; // blank, activa
     expect(getActiveObraId()).toBe(bId);
     state().addChapter('Cap B'); // edita B
     await flushPending();
@@ -59,7 +59,7 @@ describe('switchObra (round-trip multi-obra)', () => {
 
   it('conmutar a una obra corrupta → recuperación, la activa NO cambia', async () => {
     const aId = await bootWithDemoA();
-    const bId = await newObra('B');
+    const bId = (await newObra('B'))!;
     await switchObra(aId); // activa A
     await set(obraKey(bId), { schemaVersion: 1, data: { roto: true } }); // corromper B
     await switchObra(bId);
@@ -72,7 +72,7 @@ describe('switchObra (round-trip multi-obra)', () => {
 describe('newObra', () => {
   it('crea una obra EN BLANCO, la persiste de inmediato y conmuta a ella', async () => {
     await bootWithDemoA();
-    const bId = await newObra('Obra B');
+    const bId = (await newObra('Obra B'))!;
     expect(getActiveObraId()).toBe(bId);
     expect(state().chapters.length).toBe(0); // en blanco
     expect((await loadObraEnvelope(obraKey(bId))).kind).toBe('ok'); // persistida sin editar
@@ -83,7 +83,7 @@ describe('newObra', () => {
 describe('deleteObraById', () => {
   it('borrar una obra NO activa conserva la activa y sus datos', async () => {
     const aId = await bootWithDemoA();
-    const bId = await newObra('B');
+    const bId = (await newObra('B'))!;
     await switchObra(aId); // activa A
     await deleteObraById(bId);
     expect(getActiveObraId()).toBe(aId);
@@ -93,7 +93,7 @@ describe('deleteObraById', () => {
 
   it('borrar la obra ACTIVA salta a otra y la carga', async () => {
     const aId = await bootWithDemoA();
-    const bId = await newObra('B'); // activa B
+    const bId = (await newObra('B'))!; // activa B
     await deleteObraById(bId);
     expect(getActiveObraId()).toBe(aId);
     expect((await listObras()).map((o) => o.id)).toEqual([aId]);
@@ -112,8 +112,8 @@ describe('deleteObraById', () => {
 
   it('borrar la activa salta SOBRE una obra corrupta hasta una sana (#6)', async () => {
     const aId = await bootWithDemoA(); // [A]
-    const bId = await newObra('B'); // [A,B]
-    const cId = await newObra('C'); // [A,B,C], activa C
+    const bId = (await newObra('B'))!; // [A,B]
+    const cId = (await newObra('C'))!; // [A,B,C], activa C
     await set(obraKey(aId), { schemaVersion: 1, data: { roto: true } }); // A (será obras[0]) corrupta
     await deleteObraById(cId); // borra activa C → índice activeId=A (corrupta) → fallback B
     expect(getActiveObraId()).toBe(bId);
@@ -123,7 +123,7 @@ describe('deleteObraById', () => {
 
   it('borrar la activa con TODAS las demás corruptas → recuperación (#6)', async () => {
     const aId = await bootWithDemoA();
-    const bId = await newObra('B'); // activa B
+    const bId = (await newObra('B'))!; // activa B
     await set(obraKey(aId), { schemaVersion: 1, data: { roto: true } });
     await deleteObraById(bId); // borra B → activeId=A corrupta, ninguna sana → recuperación
     expect(usePersistStore.getState().recovery).not.toBeNull();

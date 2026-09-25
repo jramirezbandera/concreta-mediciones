@@ -104,7 +104,9 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
       .then((rs) => {
         if (myReq !== reqRef.current) return; // el usuario cambió de fuente: descarta
         setLoading(false);
-        if (rs) setObraCache((c) => lruPut(c, refSourceId, rs));
+        if (rs === 'mas-nueva')
+          setError('Esta obra se guardó con una versión más nueva de Concreta: recarga la página para abrirla.');
+        else if (rs) setObraCache((c) => lruPut(c, refSourceId, rs));
         else setError('No se pudo cargar la obra (datos dañados).');
       })
       // E-06: un rechazo de IndexedDB dejaba el spinner girando para siempre

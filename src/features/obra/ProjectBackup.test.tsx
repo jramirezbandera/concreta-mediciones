@@ -3,7 +3,17 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProjectBackup } from './ProjectBackup';
 import { toSerializable, useObraStore } from '../../store';
-import { usePersistStore } from '../../persist';
+import { usePersistStore, useSessionStore, type ImportarResult } from '../../persist';
+
+// Por defecto, la implementación real; cada test puede forzar un resultado.
+const importarSobreActiva = vi.hoisted(() => vi.fn());
+const volverAObraGuardada = vi.hoisted(() => vi.fn());
+vi.mock('../../persist', async (importOriginal) => {
+  const real = await importOriginal<typeof import('../../persist')>();
+  importarSobreActiva.mockImplementation(real.importarSobreActiva);
+  volverAObraGuardada.mockImplementation(real.volverAObraGuardada);
+  return { ...real, importarSobreActiva, volverAObraGuardada };
+});
 
 const state = () => useObraStore.getState();
 
@@ -107,5 +117,54 @@ describe('ProjectBackup (F6.3)', () => {
     usePersistStore.setState({ durability: 'persisted' });
     render(<ProjectBackup />);
     expect(screen.getByText(/no borrará tus obras/)).toBeInTheDocument();
+  });
+
+  it('enseña cuándo se descargó la última copia de la obra', () => {
+    useSessionStore.setState({
+      activeId: 'o1',
+      obras: [{ id: 'o1', name: 'O', savedAt: 'x', schemaVersion: 5 }],
+    });
+    const { rerender } = render(<ProjectBackup />);
+    expect(screen.getByText('Aún no has hecho ninguna copia')).toBeInTheDocument();
+    useSessionStore.setState({
+      obras: [{ id: 'o1', name: 'O', savedAt: 'x', schemaVersion: 5, ultimaCopia: new Date().toISOString() }],
+    });
+    rerender(<ProjectBackup />);
+    expect(screen.getByText('Última copia descargada: hoy')).toBeInTheDocument();
+    useSessionStore.setState({ obras: [], activeId: null });
+  });
+
+  it('si la importada no se guarda: no cierra, lo dice y deja volver a la anterior', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const fallo: ImportarResult = { kind: 'sin-guardar', puedeVolver: true };
+    importarSobreActiva.mockResolvedValueOnce(fallo);
+    volverAObraGuardada.mockResolvedValueOnce(true);
+    const onImported = vi.fn();
+    render(<ProjectBackup onImported={onImported} />);
+
+    fireEvent.change(screen.getByLabelText('Importar proyecto .json'), {
+      target: { files: [importableJson('Obra Importada')] },
+    });
+
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/NO se ha podido guardar/));
+    expect(onImported).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Volver a la obra anterior' }));
+    await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
+    expect(volverAObraGuardada).toHaveBeenCalledTimes(1);
+  });
+
+  it('si la actual no se pudo guardar: no importa y lo dice (sin opción de volver)', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    importarSobreActiva.mockResolvedValueOnce({ kind: 'sin-guardar-actual' });
+    const onImported = vi.fn();
+    render(<ProjectBackup onImported={onImported} />);
+    fireEvent.change(screen.getByLabelText('Importar proyecto .json'), {
+      target: { files: [importableJson('Obra Importada')] },
+    });
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent(/no se ha importado nada/),
+    );
+    expect(screen.queryByRole('button', { name: 'Volver a la obra anterior' })).toBeNull();
+    expect(onImported).not.toHaveBeenCalled();
   });
 });

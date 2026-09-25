@@ -79,6 +79,11 @@ export interface MedResult {
 /** Salida del copy-on-write: forkar copia privada vs. editar el compartido en todas. */
 export type CowChoice = 'copy' | 'all';
 
+/** Qué ocupa el hueco lateral: Referencia, el asistente de IA o nada. UN solo
+ *  campo: que abrir uno cierre el otro sale de la forma, no de mantener a mano
+ *  booleanos excluyentes (regla única del hueco lateral, diseño D4). */
+export type Lateral = 'ref' | 'asistente' | null;
+
 export interface ObraState extends ObraData {
   /* ---- estado de UI ---- */
   /** Vista activa (tabs). */
@@ -89,16 +94,15 @@ export interface ObraState extends ObraData {
   expanded: Record<string, boolean>;
   /** Índice de la certificación en curso dentro de `certs`. */
   curCert: number;
-  /** Panel de Referencia abierto (F5). */
-  refOpen: boolean;
-  /** Panel del asistente de IA abierto (F-A2). Comparte el hueco lateral con
-   *  Referencia: abrir uno pliega el otro (regla única, diseño D4). */
-  asistenteOpen: boolean;
+  /** Panel del hueco lateral abierto: Referencia (F5), el asistente de IA
+   *  (F-A2) o ninguno. Ver `Lateral`. */
+  lateral: Lateral;
   /** Fuente de referencia seleccionada (id de `REF_SOURCES`). */
   refSourceId: string;
   /** Ancho del panel en modo split (px, clamp 320–640). */
   refWidth: number;
-  /** Panel de Referencia maximizado a pantalla completa (tapa sidebar + presupuesto). */
+  /** Panel de Referencia maximizado a pantalla completa (tapa sidebar + presupuesto).
+   *  Solo con `lateral === 'ref'`: cerrarlo o abrir otro panel lo restaura. */
   refMaximized: boolean;
   /** Arrastre en curso desde el panel Referencia (F5.2); null = nada arrastrándose. */
   refDrag: RefDrag | null;
@@ -245,6 +249,8 @@ export interface ObraState extends ObraData {
   deleteAjuste: (id: string) => void;
 
   /* ---- acciones F5 (panel Referencia) ---- */
+  /** Pone en el hueco lateral ese panel, o ninguno (`null`). */
+  setLateral: (lateral: Lateral) => void;
   /** Abre/cierra el panel de Referencia; sin argumento alterna. Abrirlo pliega el
    *  asistente (comparten el hueco lateral, diseño D4). */
   setRefOpen: (open?: boolean) => void;
@@ -559,6 +565,13 @@ export type ObraSlice<T> = StateCreator<
   T
 >;
 
+/** Hueco lateral tras abrir (`open` true), cerrar (false) o alternar (sin
+ *  argumento) el panel `cual`. Cerrar un panel que no está abierto no toca el otro. */
+function toggleLateral(actual: Lateral, cual: 'ref' | 'asistente', open?: boolean): Lateral {
+  if (open ?? actual !== cual) return cual;
+  return actual === cual ? null : actual;
+}
+
 /** Estado de UI inicial (sincronizado con el nº de certs sembradas). */
 function seedUi(certs: Cert[]) {
   return {
@@ -568,8 +581,7 @@ function seedUi(certs: Cert[]) {
     // el árbol desplegado es inmanejable; el usuario abre lo que necesita.
     expanded: {} as Record<string, boolean>,
     curCert: Math.max(0, certs.length - 1), // la última cert queda en curso
-    refOpen: false,
-    asistenteOpen: false,
+    lateral: null as Lateral,
     refSourceId: REF_SOURCES[0]?.id ?? '',
     refWidth: 400,
     refMaximized: false,
@@ -666,24 +678,17 @@ export const useObraStore = create<ObraState>()(
           s.curCert = Math.max(0, Math.min(index, s.certs.length - 1));
         }),
 
-      setRefOpen: (open) =>
+      setLateral: (lateral) =>
         set((s) => {
-          s.refOpen = open ?? !s.refOpen;
-          // Al cerrar, salir de pantalla completa: reabrir no debe sorprender maximizado.
-          if (!s.refOpen) s.refMaximized = false;
-          // Regla única del hueco lateral (diseño D4): abrir uno pliega el otro.
-          if (s.refOpen) s.asistenteOpen = false;
+          s.lateral = lateral;
+          // Fuera de Referencia no hay pantalla completa: reabrirla no debe
+          // sorprender maximizada.
+          if (lateral !== 'ref') s.refMaximized = false;
         }),
 
-      setAsistenteOpen: (open) =>
-        set((s) => {
-          s.asistenteOpen = open ?? !s.asistenteOpen;
-          // Abrir el asistente pliega Referencia (y su pantalla completa).
-          if (s.asistenteOpen) {
-            s.refOpen = false;
-            s.refMaximized = false;
-          }
-        }),
+      setRefOpen: (open) => get().setLateral(toggleLateral(get().lateral, 'ref', open)),
+
+      setAsistenteOpen: (open) => get().setLateral(toggleLateral(get().lateral, 'asistente', open)),
 
       setRefSource: (id) =>
         set((s) => {
@@ -721,7 +726,6 @@ export const useObraStore = create<ObraState>()(
             s.view = 'presupuesto';
             s.active = first ?? ALL;
             s.expanded = {}; // árbol colapsado: una obra recién importada se explora
-            s.refOpen = false;
           }),
         );
       },

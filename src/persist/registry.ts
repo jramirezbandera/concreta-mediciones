@@ -41,6 +41,10 @@ export interface ObraMeta {
   schemaVersion: number;
   /** Ausente = obra de trabajo (compat). `'reference'` = solo fuente de copia. */
   kind?: ObraKind;
+  /** Cuándo se DESCARGÓ la última copia .json de esta obra (ISO 8601). Vive en
+   *  la meta y no en `ObraData`: no es dominio ni viaja en la copia. Ausente =
+   *  nunca. El navegador no confirma que el fichero se guardara. */
+  ultimaCopia?: string;
 }
 
 /** Índice persistido: la obra activa + los metadatos de todas las guardadas. */
@@ -78,19 +82,29 @@ export function newObraId(): string {
   return rawUuid();
 }
 
+/** Resultado de leer una obra guardada. `mas-nueva` = la guardó una versión
+ *  posterior de Concreta: no se carga, no se descarta y no se pisa. */
+export type LoadObraResult =
+  | { kind: 'ok'; data: ObraData }
+  | { kind: 'vacia' }
+  | { kind: 'danada'; raw: unknown }
+  | { kind: 'mas-nueva'; raw: unknown; version: number };
+
 /**
- * Carga el blob de la obra `id` y migra su esquema (`fromSerializable`). `null`
- * si falta o no es válida. Punto único de decodificación: lo comparten la carga
- * al store (`sync.loadObraIntoStore`) y la carga como fuente de Referencia
- * (`obraSource.loadObraRefSource`).
+ * Carga el blob de la obra `id` y migra su esquema (`fromSerializable`). Punto
+ * único de decodificación: lo comparten la carga al store
+ * (`sync.loadObraIntoStore`) y la carga como fuente de Referencia
+ * (`obraSource.loadObraRefSource`). La versión se mira ANTES que la forma.
  */
-export async function loadObraData(id: string): Promise<ObraData | null> {
+export async function loadObraData(id: string): Promise<LoadObraResult> {
   const res = await loadObraEnvelope(obraKey(id));
-  if (res.kind !== 'ok') return null;
+  if (res.kind === 'empty') return { kind: 'vacia' };
+  if (res.kind === 'newer') return { kind: 'mas-nueva', raw: res.raw, version: res.version };
+  if (res.kind === 'corrupt') return { kind: 'danada', raw: res.raw };
   try {
-    return fromSerializable(res.envelope.data);
+    return { kind: 'ok', data: fromSerializable(res.envelope.data) };
   } catch {
-    return null; // versión no soportada
+    return { kind: 'danada', raw: res.envelope }; // versión antigua sin ruta de migración
   }
 }
 
@@ -252,17 +266,40 @@ export async function createObra(data: ObraData, kind?: ObraKind): Promise<strin
   return id;
 }
 
+/** Resultado de guardar la obra activa: el índice escrito, o el rechazo terminal
+ *  porque en disco hay una versión más nueva (entonces el índice no se toca). */
+export type SaveActiveResult =
+  | { kind: 'ok'; index: ObraIndex }
+  | { kind: 'version-conflict' };
+
 /** Guarda la obra ACTIVA (blob + meta en el índice). Lo usa el autosave. Si la
  *  obra aún no estaba registrada (1ª edición de la demo), la registra y la marca
- *  activa. Actualiza la meta EN SITIO para no alterar el orden de las pestañas. */
-export async function saveActiveObra(id: string, data: ObraData): Promise<ObraIndex> {
-  await saveObra(obraKey(id), data);
-  return updateIndex((idx) => {
-    const meta = metaOf(id, data);
-    const obras = idx.obras.some((m) => m.id === id)
+ *  activa. FUSIONA la meta EN SITIO: no altera el orden de las pestañas ni pierde
+ *  lo que no sale del blob (`kind`, `ultimaCopia`, campos de versiones futuras). */
+export async function saveActiveObra(id: string, data: ObraData): Promise<SaveActiveResult> {
+  if ((await saveObra(obraKey(id), data)) === 'version-conflict') return { kind: 'version-conflict' };
+  const index = await updateIndex((idx) => {
+    const prev = idx.obras.find((m) => m.id === id);
+    const meta = metaOf(id, data, undefined, prev);
+    const obras = prev
       ? idx.obras.map((m) => (m.id === id ? meta : m))
       : [...idx.obras, meta];
     return { activeId: id, obras };
+  });
+  return { kind: 'ok', index };
+}
+
+/** Sella (`at`, ISO) o borra (`null`) la fecha de la última copia descargada de
+ *  la obra `id`. Sin entrada en el índice no hace nada: la obra aún no existe en
+ *  disco (la demo antes de su primera edición). */
+export function setUltimaCopia(id: string, at: string | null): Promise<ObraIndex> {
+  return updateIndex((idx) => {
+    const prev = idx.obras.find((m) => m.id === id);
+    if (!prev || (prev.ultimaCopia ?? null) === at) return idx;
+    const meta: ObraMeta = { ...prev };
+    if (at) meta.ultimaCopia = at;
+    else delete meta.ultimaCopia;
+    return { ...idx, obras: idx.obras.map((m) => (m.id === id ? meta : m)) };
   });
 }
 
@@ -280,9 +317,11 @@ export async function deleteObra(id: string): Promise<ObraIndex> {
 
 /** Construye la meta de índice de una obra. Exportada para que la orquestación
  *  (importar como referencia) refresque `sessionStore` con la MISMA forma de meta
- *  sin re-leer el índice. `kind` ausente = obra de trabajo (compat). */
-export function metaOf(id: string, data: ObraData, kind?: ObraKind): ObraMeta {
+ *  sin re-leer el índice. `kind` ausente = obra de trabajo (compat). Con `prev`
+ *  FUSIONA: conserva sus campos y solo renueva los que salen del blob. */
+export function metaOf(id: string, data: ObraData, kind?: ObraKind, prev?: ObraMeta): ObraMeta {
   return {
+    ...prev,
     id,
     name: nameOf(data),
     savedAt: new Date().toISOString(),

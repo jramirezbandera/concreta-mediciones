@@ -2,19 +2,30 @@ import { useRef, useState } from 'react';
 import { Icon } from '../../components/Icon';
 import {
   ImportError,
-  exportObraJson,
-  flushPending,
+  descargarCopia,
+  importarSobreActiva,
   parseObraJson,
   readFileText,
   usePersistStore,
+  volverAObraGuardada,
+  type ImportarResult,
 } from '../../persist';
-import { useObraStore } from '../../store';
+import { useEstadoCopia } from './recordatorioCopia';
 import styles from './ProjectBackup.module.css';
 
 const ERROR_MSG: Record<string, string> = {
   malformado: 'El archivo no es un proyecto Concreta válido (JSON dañado o con otra estructura).',
   'version-desconocida':
     'El archivo viene de una versión más nueva de Concreta y aún no se puede abrir aquí.',
+};
+
+/** Por qué la importación no terminó bien (todo menos `ok`). */
+const IMPORT_MSG: Record<Exclude<ImportarResult['kind'], 'ok'>, string> = {
+  'solo-lectura': 'Esta pestaña está en solo lectura: aquí no se puede importar.',
+  'sin-guardar-actual':
+    'No se pudo guardar la obra actual y no se ha importado nada, para no perder sus cambios. Libera espacio y reinténtalo.',
+  'sin-guardar':
+    'La obra importada está en pantalla pero NO se ha podido guardar: si recargas, se pierde. La copia de la obra anterior está en tus descargas.',
 };
 
 /** ¿Puede el navegador borrar las obras por su cuenta? (`persist/durability`).
@@ -48,20 +59,24 @@ export interface ProjectBackupProps {
 /**
  * Copia de seguridad del proyecto (F6.3): exporta el dominio a .json e importa
  * uno reemplazando el proyecto actual. El import es DESTRUCTIVO → confirma y
- * descarga un backup del estado actual ANTES de pisar. Si la escritura en
- * IndexedDB falla tras cargar, lo avisa (el chip de PersistUI pasa a "Sin guardar").
+ * descarga un backup del estado actual ANTES de pisar. Solo cierra si la obra
+ * importada llegó a disco; si no, lo dice y deja volver a la anterior (Etapa 0).
+ * Enseña cuándo se descargó la última copia (recordatorio de copia).
  */
 export function ProjectBackup({ onImported }: ProjectBackupProps) {
-  const loadObra = useObraStore((s) => s.loadObra);
   const fileRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
+  // La importada no llegó a disco y la anterior sigue guardada: se ofrece volver.
+  const [puedeVolver, setPuedeVolver] = useState(false);
   const [busy, setBusy] = useState(false);
+  const copia = useEstadoCopia();
 
   async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = ''; // permite reelegir el mismo archivo
     if (!file) return;
     setError(null);
+    setPuedeVolver(false);
     setBusy(true);
     try {
       const text = await readFileText(file);
@@ -72,16 +87,29 @@ export function ProjectBackup({ onImported }: ProjectBackupProps) {
           '¿Continuar?',
       );
       if (!ok) return;
-      exportObraJson('concreta-copia-antes-de-importar.json'); // backup previo
-      loadObra(data);
-      try {
-        await flushPending(); // persiste la obra importada de inmediato
-      } catch {
-        usePersistStore.getState().setStatus('error'); // cargó pero no se pudo guardar
+      // Guarda la actual, descarga su copia, carga la importada y comprueba que
+      // llegó a disco: un guardado fallido ya no se da por bueno.
+      const res = await importarSobreActiva(data);
+      if (res.kind === 'ok') {
+        onImported?.();
+        return;
       }
-      onImported?.();
+      setError(IMPORT_MSG[res.kind]);
+      setPuedeVolver(res.kind === 'sin-guardar' && res.puedeVolver);
     } catch (err) {
       setError(err instanceof ImportError ? ERROR_MSG[err.kind]! : 'No se pudo leer el archivo.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function volver() {
+    setBusy(true);
+    try {
+      if (await volverAObraGuardada()) {
+        setError(null);
+        setPuedeVolver(false);
+      } else setError('No se pudo leer la obra anterior. Usa la copia que está en tus descargas.');
     } finally {
       setBusy(false);
     }
@@ -96,12 +124,18 @@ export function ProjectBackup({ onImported }: ProjectBackupProps) {
           actual.
         </div>
       </div>
+      {copia.registrada && (
+        <div className={`${styles.note} ${copia.vencida ? styles.noteWarn : ''}`}>
+          <Icon name="backup" size={14} />
+          {copia.texto}
+        </div>
+      )}
       <DurabilityNote />
       <div className={styles.actions}>
         <button
           type="button"
           className={`t150 ${styles.btn}`}
-          onClick={() => exportObraJson()}
+          onClick={() => descargarCopia()}
           disabled={busy}
         >
           <Icon name="download" size={14} />
@@ -128,7 +162,17 @@ export function ProjectBackup({ onImported }: ProjectBackupProps) {
       {error && (
         <div className={styles.error} role="alert">
           <Icon name="alert" size={14} />
-          {error}
+          <span>
+            {error}
+            {puedeVolver && (
+              <>
+                {' '}
+                <button type="button" className={styles.link} onClick={volver} disabled={busy}>
+                  Volver a la obra anterior
+                </button>
+              </>
+            )}
+          </span>
         </div>
       )}
     </section>

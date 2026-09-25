@@ -1346,11 +1346,11 @@ describe('acciones F5 (panel Referencia · copiar)', () => {
   });
 
   it('setRefOpen alterna, setRefSource cambia fuente, setRefWidth clampa 320–640', () => {
-    expect(state().refOpen).toBe(false);
+    expect(state().lateral).toBeNull();
     state().setRefOpen();
-    expect(state().refOpen).toBe(true);
+    expect(state().lateral).toBe('ref');
     state().setRefOpen(false);
-    expect(state().refOpen).toBe(false);
+    expect(state().lateral).toBeNull();
     state().setRefSource('cype-gp');
     expect(state().refSourceId).toBe('cype-gp');
     state().setRefWidth(9999);
@@ -1425,7 +1425,7 @@ describe('loadObra (importar .bc3, F5.3)', () => {
     expect(s.active).toBe('01');
     expect(s.expanded).toEqual({}); // una obra importada se explora colapsada
     expect(s.curCert).toBe(0);
-    expect(s.refOpen).toBe(false);
+    expect(s.lateral).toBeNull();
   });
 });
 

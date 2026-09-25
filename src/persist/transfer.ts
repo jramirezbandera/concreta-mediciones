@@ -10,7 +10,7 @@
      confirmación + el backup previo viven en la UI (ProjectBackup).
    =========================================================================== */
 import { fromSerializable, toSerializable, useObraStore, type ObraData } from '../store';
-import { APP_VERSION, isObraData } from './persist';
+import { APP_VERSION, isObraData, newerVersionOf } from './persist';
 
 const EXPORT_KIND = 'concreta-obra';
 
@@ -76,7 +76,9 @@ function pickObraData(x: unknown): ObraData | null {
 /**
  * Parsea y valida un texto JSON de proyecto. Lanza `ImportError`:
  *   · `malformado`: no es JSON, o no contiene un `ObraData` estructuralmente sano.
- *   · `version-desconocida`: es un `ObraData` pero de un `schemaVersion` sin migración.
+ *   · `version-desconocida`: es de una versión MÁS NUEVA de Concreta (se mira
+ *     antes que la forma: una v7 con otra estructura no es «malformado»), o de
+ *     un `schemaVersion` sin migración.
  * No toca el store: el llamador decide confirmar/cargar.
  */
 export function parseObraJson(text: string): ObraData {
@@ -86,6 +88,7 @@ export function parseObraJson(text: string): ObraData {
   } catch {
     throw new ImportError('malformado');
   }
+  if (newerVersionOf(parsed) !== null) throw new ImportError('version-desconocida');
   const candidate = pickObraData(parsed);
   if (!candidate) throw new ImportError('malformado');
   try {

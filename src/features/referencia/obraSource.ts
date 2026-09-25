@@ -31,11 +31,18 @@ export function lruPut(
 }
 
 /**
- * Carga la obra `id` y la adapta a `RefSource`. `null` si falta o no es válida
- * (la UI muestra error). El llamador descarta respuestas obsoletas si el usuario
- * cambia de fuente antes de que resuelva (guarda anti-stale).
+ * Carga la obra `id` y la adapta a `RefSource`. `null` si falta o no es válida;
+ * `'mas-nueva'` si la guardó una versión posterior de Concreta (la UI muestra
+ * un error distinto para cada caso). El llamador descarta respuestas obsoletas
+ * si el usuario cambia de fuente antes de que resuelva (guarda anti-stale).
  */
-export async function loadObraRefSource(id: string, name: string): Promise<RefSource | null> {
-  const data = await loadObraData(id);
-  return data ? obraToRefSource(id, name, data.chapters, data.partidas, data.recursos) : null;
+export async function loadObraRefSource(
+  id: string,
+  name: string,
+): Promise<RefSource | 'mas-nueva' | null> {
+  const res = await loadObraData(id);
+  if (res.kind === 'mas-nueva') return 'mas-nueva';
+  if (res.kind !== 'ok') return null;
+  const { chapters, partidas, recursos } = res.data;
+  return obraToRefSource(id, name, chapters, partidas, recursos);
 }

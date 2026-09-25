@@ -16,9 +16,13 @@ interface SessionState {
   activeId: string | null;
   /** Cambio de obra en curso (deshabilita el selector mientras carga). */
   switching: boolean;
-  /** Esta pestaña es SOLO-LECTURA: la obra activa la tiene otra pestaña (T-19).
-   *  Mientras es `true`, el autosave NO escribe (evita pisar a la dueña). */
+  /** Esta pestaña es SOLO-LECTURA: el autosave NO escribe. Por qué, en
+   *  `readonlyMotivo`. */
   readonly: boolean;
+  /** `otra-pestana`: la obra la tiene otra pestaña (T-19). `sin-recargar`: al
+   *  heredarla no se pudo releer de disco. `mas-nueva`: la guardó una versión
+   *  posterior de Concreta. `null` mientras no es solo lectura. */
+  readonlyMotivo: ReadonlyMotivo | null;
   setObras: (obras: ObraMeta[]) => void;
   /** Inserta/actualiza UNA obra sin tocar las demás. Lo usa la importación como
    *  referencia: añade la obra nueva al selector sin pisar la meta de la activa
@@ -26,14 +30,17 @@ interface SessionState {
   upsertObra: (meta: ObraMeta) => void;
   setActiveId: (activeId: string | null) => void;
   setSwitching: (switching: boolean) => void;
-  setReadonly: (readonly: boolean) => void;
+  setReadonly: (readonly: boolean, motivo?: ReadonlyMotivo) => void;
 }
+
+export type ReadonlyMotivo = 'otra-pestana' | 'sin-recargar' | 'mas-nueva';
 
 export const useSessionStore = create<SessionState>((set) => ({
   obras: [],
   activeId: null,
   switching: false,
   readonly: false,
+  readonlyMotivo: null,
   setObras: (obras) => set({ obras }),
   upsertObra: (meta) =>
     set((s) => ({
@@ -43,5 +50,6 @@ export const useSessionStore = create<SessionState>((set) => ({
     })),
   setActiveId: (activeId) => set({ activeId }),
   setSwitching: (switching) => set({ switching }),
-  setReadonly: (readonly) => set({ readonly }),
+  setReadonly: (readonly, motivo = 'otra-pestana') =>
+    set({ readonly, readonlyMotivo: readonly ? motivo : null }),
 }));

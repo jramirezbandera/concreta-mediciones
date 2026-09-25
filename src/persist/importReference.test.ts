@@ -56,7 +56,7 @@ describe('importObraAsReference (importar como referencia, sin reemplazar)', () 
     expect(env.kind).toBe('ok');
 
     const data = await loadObraData(id);
-    expect(data?.schemaVersion).toBe(SCHEMA_VERSION);
+    expect(data.kind === 'ok' && data.data.schemaVersion).toBe(SCHEMA_VERSION);
 
     const idx = await loadIndex();
     const meta = idx.obras.find((m) => m.id === id);

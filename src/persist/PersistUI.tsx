@@ -4,8 +4,10 @@
    =========================================================================== */
 import { useEffect, useState } from 'react';
 import { Icon } from '../components';
+import { useToastStore } from '../store';
+import { RELOAD_FAILED, reloadToLatest } from '../update/appVersion';
 import { OBRA_KEY, loadRaw } from './persist';
-import { discardRecovery } from './sync';
+import { discardRecovery, flushPending } from './sync';
 import { lockSupported } from './tabLock';
 import { usePersistStore } from './persistStore';
 import { useSessionStore } from './sessionStore';
@@ -86,19 +88,55 @@ function RecoveryBanner() {
   );
 }
 
+/** Obra guardada por una versión MÁS NUEVA de Concreta (Etapa 0). No está
+ *  dañada: sin «Descartar», solo hace falta cargar la versión nueva de la app.
+ *  Si es la obra en pantalla, la pestaña está en solo lectura. */
+function MasNuevaBanner() {
+  const masNueva = usePersistStore((s) => s.masNueva);
+  const activeId = useSessionStore((s) => s.activeId);
+  const [busy, setBusy] = useState(false);
+  if (!masNueva) return null;
+  const recargar = () => {
+    setBusy(true);
+    void reloadToLatest({ beforeReload: flushPending }).then((res) => {
+      if (res === 'ok') return; // la página se está recargando
+      setBusy(false);
+      useToastStore.getState().show(RELOAD_FAILED[res]);
+    });
+  };
+  return (
+    <div className={`${styles.banner} no-print`} role="alert">
+      <Icon name="refresh" size={16} />
+      <span className={styles.bannerText}>
+        {masNueva.id === activeId
+          ? 'Esta obra se guardó con una versión más nueva de Concreta: recarga la página. Aquí no se guardan los cambios.'
+          : `La obra «${masNueva.nombre}» se guardó con una versión más nueva de Concreta: recarga la página para abrirla.`}
+      </span>
+      <button type="button" className={styles.bannerBtn} onClick={recargar} disabled={busy}>
+        {busy ? 'Recargando…' : 'Recargar'}
+      </button>
+    </div>
+  );
+}
+
+const READONLY_TEXT = {
+  'otra-pestana':
+    'Esta obra está abierta en otra pestaña. Aquí no se guardan los cambios; cierra la otra pestaña para editar en esta.',
+  'sin-recargar':
+    'La otra pestaña ya soltó esta obra, pero no se pudo volver a leer del navegador. Aquí no se guardan los cambios: recarga la página.',
+} as const;
+
 /** Banner de SOLO-LECTURA (T-19): la obra activa está abierta en otra pestaña,
- *  que es la dueña del autosave. Aquí no se guardan los cambios; desaparece solo
- *  cuando esta pestaña toma el control (la otra se cierra o cambia de obra). */
+ *  que es la dueña del autosave, o al heredarla no se pudo releer de disco. Aquí
+ *  no se guardan los cambios; desaparece cuando esta pestaña toma el control.
+ *  La solo lectura por versión más nueva la explica `MasNuevaBanner`. */
 function ReadonlyBanner() {
-  const readonly = useSessionStore((s) => s.readonly);
-  if (!readonly) return null;
+  const motivo = useSessionStore((s) => (s.readonly ? s.readonlyMotivo : null));
+  if (!motivo || motivo === 'mas-nueva') return null;
   return (
     <div className={`${styles.banner} no-print`} role="alert">
       <Icon name="layers" size={16} />
-      <span className={styles.bannerText}>
-        Esta obra está abierta en otra pestaña. Aquí no se guardan los cambios; cierra la otra
-        pestaña para editar en esta.
-      </span>
+      <span className={styles.bannerText}>{READONLY_TEXT[motivo]}</span>
     </div>
   );
 }
@@ -127,6 +165,7 @@ export function PersistUI() {
   return (
     <>
       <RecoveryBanner />
+      <MasNuevaBanner />
       <ReadonlyBanner />
       <NoLockWarning />
       <SaveChip />

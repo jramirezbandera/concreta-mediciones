@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { CHECK_EVERY_MS, fetchLatestBuild, reloadToLatest, startUpdateWatcher } from './appVersion';
+import {
+  CHECK_EVERY_MS,
+  FLUSH_TIMEOUT_MS,
+  fetchLatestBuild,
+  reloadToLatest,
+  startUpdateWatcher,
+} from './appVersion';
 import { SNOOZE_MS, selectUpdateVisible, useUpdateStore } from './updateStore';
 
 const reset = () => useUpdateStore.setState({ latest: null, broken: false, snoozed: null });
@@ -133,10 +139,10 @@ describe('updateStore · «Más tarde»', () => {
 describe('reloadToLatest', () => {
   it('guarda lo pendiente, refresca el HTML cacheado y recarga', async () => {
     const order: string[] = [];
-    const beforeReload = vi.fn(async () => void order.push('flush'));
+    const beforeReload = vi.fn(async () => (order.push('flush'), true));
     const fetchImpl = vi.fn(async () => (order.push('fetch'), jsonRes('')));
     const reload = vi.fn(() => void order.push('reload'));
-    await expect(reloadToLatest({ beforeReload, fetchImpl, reload })).resolves.toBe(true);
+    await expect(reloadToLatest({ beforeReload, fetchImpl, reload })).resolves.toBe('ok');
     expect(order).toEqual(['flush', 'fetch', 'reload']);
     expect(fetchImpl).toHaveBeenCalledWith(window.location.pathname + window.location.search, {
       cache: 'reload',
@@ -146,27 +152,44 @@ describe('reloadToLatest', () => {
   it('sin red no recarga (evita la página de error del navegador)', async () => {
     const reload = vi.fn();
     const fetchImpl = vi.fn().mockRejectedValue(new TypeError('offline'));
-    await expect(reloadToLatest({ fetchImpl, reload })).resolves.toBe(false);
+    await expect(reloadToLatest({ fetchImpl, reload })).resolves.toBe('sin-red');
     await expect(
       reloadToLatest({ fetchImpl: vi.fn().mockResolvedValue(jsonRes('', false)), reload }),
-    ).resolves.toBe(false);
+    ).resolves.toBe('sin-red');
     expect(reload).not.toHaveBeenCalled();
   });
 
-  it('un guardado colgado o fallido no bloquea la actualización', async () => {
+  it('un guardado fallido NO recarga (se perderían los cambios) y lo dice', async () => {
+    const reload = vi.fn();
+    const fetchImpl = vi.fn().mockResolvedValue(jsonRes(''));
+    await expect(
+      reloadToLatest({ beforeReload: async () => false, fetchImpl, reload }),
+    ).resolves.toBe('sin-guardar');
+    await expect(
+      reloadToLatest({ beforeReload: () => Promise.reject(new Error('idb')), fetchImpl, reload }),
+    ).resolves.toBe('sin-guardar');
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(reload).not.toHaveBeenCalled();
+  });
+
+  it('un guardado lento NO recarga al vencer el tope; uno que acaba a tiempo sí', async () => {
     vi.useFakeTimers();
     try {
       const reload = vi.fn();
       const fetchImpl = vi.fn().mockResolvedValue(jsonRes(''));
       const hung = reloadToLatest({ beforeReload: () => new Promise(() => {}), fetchImpl, reload });
-      await vi.advanceTimersByTimeAsync(3000);
-      await expect(hung).resolves.toBe(true);
-      await reloadToLatest({
-        beforeReload: () => Promise.reject(new Error('idb')),
+      await vi.advanceTimersByTimeAsync(FLUSH_TIMEOUT_MS);
+      await expect(hung).resolves.toBe('guardado-lento');
+      expect(reload).not.toHaveBeenCalled();
+
+      const slowOk = reloadToLatest({
+        beforeReload: () => new Promise((r) => setTimeout(() => r(true), FLUSH_TIMEOUT_MS - 1000)),
         fetchImpl,
         reload,
       });
-      expect(reload).toHaveBeenCalledTimes(2);
+      await vi.advanceTimersByTimeAsync(FLUSH_TIMEOUT_MS);
+      await expect(slowOk).resolves.toBe('ok');
+      expect(reload).toHaveBeenCalledTimes(1);
     } finally {
       vi.useRealTimers();
     }

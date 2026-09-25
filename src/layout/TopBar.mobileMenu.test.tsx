@@ -6,7 +6,7 @@ import { TopBar } from './TopBar';
 const phone: Breakpoint = { w: 375, isMobile: true, isTablet: false, isDesktop: false, isCompact: true };
 const desktop: Breakpoint = { w: 1280, isMobile: false, isTablet: false, isDesktop: true, isCompact: false };
 
-function renderBar(bp: Breakpoint) {
+function renderBar(bp: Breakpoint, extra: Partial<React.ComponentProps<typeof TopBar>> = {}) {
   const handlers = {
     onObra: vi.fn(),
     onHelp: vi.fn(),
@@ -25,6 +25,7 @@ function renderBar(bp: Breakpoint) {
       onExport={() => {}}
       importAction={<button type="button">Importar partidas</button>}
       {...handlers}
+      {...extra}
     />,
   );
   return handlers;
@@ -104,5 +105,22 @@ describe('TopBar — menú «Más» en móvil (la fila de acciones pisaba la mar
     renderBar(desktop);
     expect(screen.queryByRole('button', { name: 'Más acciones' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Datos de la obra' })).toBeInTheDocument();
+  });
+
+  it('recordatorio de copia: en compacto va dentro de «Más», que lleva aviso', () => {
+    renderBar(phone, {
+      backupAction: <button type="button" role="menuitem">Descargar copia (.json)</button>,
+      moreBadge: true,
+    });
+    const trigger = screen.getByRole('button', { name: 'Más acciones (hay una copia pendiente)' });
+    fireEvent.click(trigger);
+    expect(
+      within(screen.getByRole('menu')).getByRole('menuitem', { name: 'Descargar copia (.json)' }),
+    ).toBeInTheDocument();
+  });
+
+  it('recordatorio de copia: en escritorio va en la barra', () => {
+    renderBar(desktop, { backupAction: <button type="button">Copia</button> });
+    expect(screen.getByRole('button', { name: 'Copia' })).toBeVisible();
   });
 });
