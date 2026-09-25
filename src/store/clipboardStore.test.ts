@@ -30,6 +30,22 @@ describe('clipboardStore', () => {
     expect(useClipboardStore.getState().copyTick).toBe(t0 + 2);
   });
 
+  it('la última copia manda: líneas y partidas se excluyen', () => {
+    const medClip = {
+      lines: [{ id: 'm1', comment: 'L', uds: 1 as const, largo: '' as const, ancho: '' as const, alto: '' as const }],
+      source: { chapterId: '01', partidaId: 'p1', code: 'A1', title: 'X', forma: 'ud' as const, ud: 'ud', obraName: 'Obra A' },
+    };
+    useClipboardStore.getState().setClip([item('A1')], 'Obra A');
+    useClipboardStore.getState().setMedClip(medClip);
+    expect(useClipboardStore.getState().items).toBeNull();
+    expect(useClipboardStore.getState().medLines?.lines).toHaveLength(1);
+    useClipboardStore.getState().setClip([item('A1')], 'Obra A');
+    expect(useClipboardStore.getState().medLines).toBeNull();
+    useClipboardStore.getState().setMedClip(medClip);
+    useClipboardStore.getState().clear();
+    expect(useClipboardStore.getState().medLines).toBeNull();
+  });
+
   it('SOBREVIVE un cambio de obra (loadObra resetea obraStore pero NO el portapapeles)', () => {
     useClipboardStore.getState().setClip([item('A1')], 'Obra A');
     // Conmutar de obra = loadObra: borra el estado de UI de obraStore.

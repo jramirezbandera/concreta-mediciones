@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { ALL, useObraStore } from '../store';
+import { useMedUiStore } from '../store/medUiStore';
 import { redo, undo } from '../store/temporal';
 import {
   hasBlockingOverlay,
@@ -23,7 +24,8 @@ import { chapterIdOfPartida, deletePartidaWithUndo } from './usePartidaDelete';
  *               seguridad: ignora si el foco está en un campo, en un botón, en
  *               una celda de medición, si hay selección de texto, modal, o la
  *               vista no es el presupuesto.
- *  - Esc      → cierra en pila: panel Referencia → deselecciona la partida.
+ *  - Esc      → cierra en pila: panel Referencia → (selección de líneas, que
+ *               vacía `useMedClipboard`) → deselecciona la partida.
  * Se apoya en las guardas compartidas de `hotkeyGuards`.
  */
 export function useAppHotkeys({ onHelp }: { onHelp: () => void }): void {
@@ -90,7 +92,12 @@ export function useAppHotkeys({ onHelp }: { onHelp: () => void }): void {
         // llegar aquí (React confirma el render dentro del propio evento): el foco
         // ya no está en un campo, pero el Esc era suyo. Por eso también el target.
         if (isTextEditingTarget() || isTextField(e.target) || hasTransientOverlay()) return;
+        // Ese Esc ya vació una selección de líneas (useMedClipboard): la partida
+        // se cierra con el SIGUIENTE. Y si queda selección, tampoco se cierra.
+        if (e.defaultPrevented) return;
         const s = useObraStore.getState();
+        const ui = useMedUiStore.getState();
+        if (s.openPartidaId && ui.partidaId === s.openPartidaId && ui.selected.length) return;
         if (s.refMaximized) {
           s.setRefMax(false); // 1.º Esc restaura el tamaño; el 2.º cierra el panel
           e.preventDefault();

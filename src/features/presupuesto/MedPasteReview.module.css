@@ -1,0 +1,120 @@
+/* Diálogo único de revisión de líneas de medición (MedPasteReview). */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-12);
+  font-size: var(--fs-body);
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+.sides {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-12);
+}
+@media (max-width: 520px) {
+  .sides {
+    grid-template-columns: 1fr;
+  }
+}
+.label {
+  font-size: var(--fs-badge);
+  font-weight: 600;
+  color: var(--text-disabled);
+  margin-bottom: var(--sp-4);
+}
+.side {
+  padding: var(--sp-8) var(--sp-10);
+  border: 1px solid var(--border-main);
+  border-radius: 7px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: var(--fs-table);
+}
+.changes,
+.lines {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+/* Casillas cuyo significado cambia: advertencia, no error. */
+.warn {
+  color: var(--state-warn);
+  font-weight: 600;
+}
+.lines li {
+  color: var(--text-primary);
+}
+.more {
+  color: var(--text-secondary) !important;
+  list-style: none;
+  margin-left: -18px;
+}
+.lead {
+  margin: 0;
+  color: var(--text-primary);
+}
+.note {
+  margin: 0;
+}
+.money {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--sp-6) var(--sp-16);
+  margin: 0;
+  padding: var(--sp-10) var(--sp-12);
+  border-radius: 7px;
+  background: var(--bg-elevated);
+}
+.money dt {
+  color: var(--text-secondary);
+}
+.money dd {
+  margin: 0;
+  text-align: right;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.cancel {
+  padding: var(--sp-8) var(--sp-16);
+  border: 1px solid var(--border-main);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--fs-body);
+  font-family: inherit;
+  cursor: pointer;
+}
+.cancel:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+.confirm,
+.danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: var(--sp-8) 18px;
+  border: none;
+  border-radius: 6px;
+  color: var(--on-accent);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+.confirm {
+  background: var(--accent);
+}
+.confirm:hover {
+  background: var(--accent-hover);
+}
+.danger {
+  background: var(--state-danger);
+}
+.danger:hover {
+  filter: brightness(1.05);
+}

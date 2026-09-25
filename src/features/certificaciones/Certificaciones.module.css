@@ -602,30 +602,8 @@
 .detailMedRow.lineOn {
   background: color-mix(in srgb, var(--accent) 8%, transparent);
 }
-.lineCheck {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 18px;
-  height: 18px;
-  padding: 0;
-  border: 1.5px solid var(--border-main);
-  border-radius: 5px;
-  background: var(--bg-surface);
-  color: var(--on-accent);
-  cursor: pointer;
-  transition:
-    background 0.12s ease,
-    border-color 0.12s ease;
-}
-.lineCheck:hover {
-  border-color: var(--accent);
-}
-.lineCheck.on {
-  background: var(--accent);
-  border-color: var(--accent);
-}
+/* La casilla de línea (`lineCheck`) vive en `styles/lineCheck.module.css`,
+   compartida con la selección de líneas de la medición. */
 
 /* ---- «Completado» por partida: check estilo lineCheck, verde = 100% (full) --- */
 /* Botón del chevron de desplegado: teclado-accesible (Enter/Espacio), sin cromo.

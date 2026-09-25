@@ -1,0 +1,81 @@
+/* Aviso transitorio: píldora flotante centrada abajo (por encima de la
+   BottomTabBar/StatusBar). Un solo hueco para todos los avisos. Centrado con
+   left/right + margin auto (no con translate): así el texto dispone del ancho
+   de la ventana y solo parte en dos líneas cuando de verdad no cabe. */
+.toast {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 64px;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: fit-content;
+  max-width: min(640px, calc(100vw - 24px));
+  margin: 0 auto;
+  padding: var(--sp-8) 14px;
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-main);
+  box-shadow: var(--shadow-float);
+  color: var(--text-primary);
+  font-size: var(--fs-body);
+  font-weight: 500;
+  line-height: 1.4;
+}
+.toast svg {
+  flex-shrink: 0;
+}
+.ok svg {
+  color: var(--accent);
+}
+.warn {
+  border-color: color-mix(in srgb, var(--state-warn) 55%, var(--border-main));
+}
+.warn svg {
+  color: var(--state-warn);
+}
+.error {
+  border-color: color-mix(in srgb, var(--state-danger) 55%, var(--border-main));
+}
+.error svg {
+  color: var(--state-danger);
+}
+.msg {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+/* Botón de acción (p.ej. «Deshacer»): no encoge aunque el texto parta. */
+.action {
+  flex-shrink: 0;
+  margin-left: var(--sp-4);
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  padding: var(--sp-2) var(--sp-6);
+  border-radius: 5px;
+  white-space: nowrap;
+}
+.action:hover {
+  background: var(--accent-soft);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .toast {
+    animation: toastIn 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

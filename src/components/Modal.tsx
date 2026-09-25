@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode, type RefObject } from 'react';
 import { Icon, type IconName } from './Icon';
 import styles from './Modal.module.css';
 
@@ -23,6 +23,9 @@ export interface ModalProps {
    * descarte lo escrito; ahí solo cierran Esc o el botón de cancelar.
    */
   closeOnOverlay?: boolean;
+  /** Control que recibe el foco al abrir (por defecto, el primero del panel).
+   *  Un diálogo que puede cambiar dinero lo pone en «Cancelar». */
+  initialFocus?: RefObject<HTMLElement | null>;
   children: ReactNode;
 }
 
@@ -43,6 +46,7 @@ export function Modal({
   footer,
   compact,
   closeOnOverlay = true,
+  initialFocus,
   children,
 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -60,8 +64,8 @@ export function Modal({
     const prevFocus = document.activeElement as HTMLElement | null;
     const focusables = () =>
       Array.from(panelRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []);
-    // Enfoca el primer control del panel (o el panel mismo si no hay ninguno).
-    (focusables()[0] ?? panelRef.current)?.focus();
+    // Enfoca el control pedido, o el primero del panel (o el panel mismo).
+    (initialFocus?.current ?? focusables()[0] ?? panelRef.current)?.focus();
 
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') {
@@ -98,6 +102,7 @@ export function Modal({
       prevFocus?.focus?.();
     };
     // Solo al abrir/cerrar: onClose se lee por ref (ver onCloseRef arriba).
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- initialFocus: solo al abrir
   }, [open]);
 
   if (!open) return null;

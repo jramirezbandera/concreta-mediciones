@@ -9,12 +9,19 @@
 import type { Cert, Chapter, MedDim, MedForma, MedLine, Partida, PartidaBaja, SubChapter } from '../../core/types';
 import { round2 } from '../../core/money';
 import { medFormaDe, pesoDesdeComentario } from '../../core/medForma';
+import {
+  indiceInsercion,
+  lineaParaDestino,
+  ordenTrasDesplazar,
+  ordenTrasMover,
+} from '../../core/medPaste';
 import { mainTypeOf, precioSegunModo } from '../../core/banco';
 import { findNode, flattenContainers, subtreeIds } from '../../core/tree';
 import { nextPos, renumberChapter } from '../../core/numbering';
 import { rawUuid } from '../../core/id';
 import { ALL, nextMedLineId, nextPartidaId, nextRecursoCode, subIn } from '../base';
-import type { ObraSlice, ObraState } from '../obraStore';
+import type { MedResult, ObraSlice, ObraState } from '../obraStore';
+import { historyCheckpoint } from '../temporal';
 
 /**
  * Siguiente índice libre entre los hijos de un contenedor: max(último segmento
@@ -211,6 +218,46 @@ function pesoDelComentario(forma: MedForma, line: MedLine): void {
   (line.expr ??= {})[cambio.slot] = cambio.expr;
 }
 
+/**
+ * Partida por id: primero en el capítulo dado y, si no está ahí (se movió de
+ * capítulo desde que la UI leyó su `chapterId`), en todo el mapa.
+ */
+function findPartida(
+  s: Pick<ObraState, 'partidas'>,
+  chapterId: string,
+  partidaId: string,
+): Partida | undefined {
+  const hit = s.partidas[chapterId]?.find((x) => x.id === partidaId);
+  if (hit) return hit;
+  for (const list of Object.values(s.partidas)) {
+    const p = list.find((x) => x.id === partidaId);
+    if (p) return p;
+  }
+  return undefined;
+}
+
+/** Reordena las líneas de una partida (draft) según una lista de ids. Si la
+ *  lista ya no casa con las líneas (algo cambió), no toca nada. */
+function applyLineOrder(p: Partida, order: readonly string[]): boolean {
+  if (order.length !== p.med.length) return false;
+  const byId = new Map(p.med.map((l) => [l.id, l]));
+  if (order.some((id) => !byId.has(id))) return false;
+  p.med = order.map((id) => byId.get(id)!);
+  return true;
+}
+
+/** Una acción estructural de medición = exactamente UN paso de Deshacer: corta
+ *  la ráfaga del historial antes y después (no se funde con una edición
+ *  contigua de <700 ms). */
+function structural(fn: () => void): void {
+  historyCheckpoint();
+  try {
+    fn();
+  } finally {
+    historyCheckpoint();
+  }
+}
+
 /** Hermanas de una partida (mismo contenedor) EN ORDEN de lista. */
 function groupSiblings(list: Partida[], p: Partida): Partida[] {
   const sub = p.sub ?? null;
@@ -279,6 +326,11 @@ type EstructuraSlice = Pick<
   | 'addPartida'
   | 'createPartida'
   | 'addMedLines'
+  | 'moveMedLine'
+  | 'moveMedLinesBy'
+  | 'insertMedLines'
+  | 'duplicateMedLines'
+  | 'deleteMedLines'
   | 'deletePartida'
   | 'restorePartida'
   | 'movePartida'
@@ -288,7 +340,7 @@ type EstructuraSlice = Pick<
   | 'moveContainerBy'
 >;
 
-export const createEstructuraSlice: ObraSlice<EstructuraSlice> = (set) => ({
+export const createEstructuraSlice: ObraSlice<EstructuraSlice> = (set, get) => ({
   editPartidaField: (chapterId, partidaId, field, value) =>
     set((s) => {
       const p = s.partidas[chapterId]?.find((x) => x.id === partidaId);
@@ -627,19 +679,109 @@ export const createEstructuraSlice: ObraSlice<EstructuraSlice> = (set) => ({
       if (!p || lines.length === 0) return;
       const forma = medFormaDe(p);
       for (const l of lines) {
-        const line: MedLine = {
-          id: nextMedLineId(),
+        const src: MedLine = {
+          id: '',
           comment: l.comment ?? '',
           uds: l.uds ?? '',
           largo: l.largo ?? '',
           ancho: l.ancho ?? '',
           alto: l.alto ?? '',
         };
-        pesoDelComentario(forma, line);
-        p.med.push(line);
+        p.med.push({ ...lineaParaDestino(src, forma), id: nextMedLineId() });
       }
       p.fromBase = false;
     }),
+
+  moveMedLine: (chapterId, partidaId, lineId, beforeId): MedResult => {
+    const p = findPartida(get(), chapterId, partidaId);
+    if (!p) return { ids: [], reason: 'no-partida' };
+    const order = ordenTrasMover(
+      p.med.map((l) => l.id),
+      lineId,
+      beforeId,
+    );
+    if (!order) return { ids: [], reason: 'noop' }; // soltar en su sitio: ni historial ni BASE
+    let ok = false;
+    structural(() =>
+      set((s) => {
+        const q = findPartida(s, chapterId, partidaId);
+        if (!q || !applyLineOrder(q, order)) return;
+        q.fromBase = false;
+        ok = true;
+      }),
+    );
+    return ok ? { ids: [lineId] } : { ids: [], reason: 'stale' };
+  },
+
+  moveMedLinesBy: (chapterId, partidaId, lineIds, delta): MedResult => {
+    const p = findPartida(get(), chapterId, partidaId);
+    if (!p) return { ids: [], reason: 'no-partida' };
+    const order = ordenTrasDesplazar(
+      p.med.map((l) => l.id),
+      lineIds,
+      delta,
+    );
+    if (!order) return { ids: [], reason: 'noop' }; // borde: el bloque entero se queda
+    let ok = false;
+    structural(() =>
+      set((s) => {
+        const q = findPartida(s, chapterId, partidaId);
+        if (!q || !applyLineOrder(q, order)) return;
+        q.fromBase = false;
+        ok = true;
+      }),
+    );
+    return ok ? { ids: lineIds.filter((id) => order.includes(id)) } : { ids: [], reason: 'stale' };
+  },
+
+  insertMedLines: (chapterId, partidaId, lines, afterId): MedResult => {
+    const p = findPartida(get(), chapterId, partidaId);
+    if (!p) return { ids: [], reason: 'no-partida' };
+    if (lines.length === 0) return { ids: [], reason: 'no-lines' };
+    // Copias PROFUNDAS con id nuevo: el id de origen es clave de `Cert.lineQty`
+    // y repetirlo haría que la línea pegada naciera ya certificada.
+    const forma = medFormaDe(p);
+    const nuevas = lines.map((l) => ({ ...lineaParaDestino(l, forma), id: nextMedLineId() }));
+    let ok = false;
+    structural(() =>
+      set((s) => {
+        const q = findPartida(s, chapterId, partidaId);
+        if (!q) return;
+        q.med.splice(indiceInsercion(q.med, afterId), 0, ...nuevas);
+        q.fromBase = false;
+        ok = true;
+      }),
+    );
+    return ok ? { ids: nuevas.map((l) => l.id) } : { ids: [], reason: 'stale' };
+  },
+
+  duplicateMedLines: (chapterId, partidaId, lineIds): MedResult => {
+    const p = findPartida(get(), chapterId, partidaId);
+    if (!p) return { ids: [], reason: 'no-partida' };
+    const want = new Set(lineIds);
+    const src = p.med.filter((l) => want.has(l.id)); // en su orden de lista
+    if (src.length === 0) return { ids: [], reason: 'no-lines' };
+    return get().insertMedLines(chapterId, partidaId, src, src[src.length - 1]!.id);
+  },
+
+  deleteMedLines: (chapterId, partidaId, lineIds): MedResult => {
+    const p = findPartida(get(), chapterId, partidaId);
+    if (!p) return { ids: [], reason: 'no-partida' };
+    const want = new Set(lineIds);
+    const gone = p.med.filter((l) => want.has(l.id)).map((l) => l.id);
+    if (gone.length === 0) return { ids: [], reason: 'no-lines' };
+    let ok = false;
+    structural(() =>
+      set((s) => {
+        const q = findPartida(s, chapterId, partidaId);
+        if (!q) return;
+        q.med = q.med.filter((l) => !want.has(l.id));
+        q.fromBase = false;
+        ok = true;
+      }),
+    );
+    return ok ? { ids: gone } : { ids: [], reason: 'stale' };
+  },
 
   deletePartida: (chapterId, partidaId) =>
     set((s) => {

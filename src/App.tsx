@@ -15,6 +15,7 @@ import { PersistUI, flushPending } from './persist';
 import { useAppHotkeys } from './hooks/useAppHotkeys';
 import { useBreakpoint } from './hooks/useBreakpoint';
 import { useClipboardHotkeys } from './hooks/usePartidaClipboard';
+import { useMedClipboard } from './hooks/useMedClipboard';
 import { useTheme } from './hooks/useTheme';
 import { AyudaCenter } from './layout/AyudaCenter';
 import type { HelpTab } from './layout/ayudaContent';
@@ -60,6 +61,7 @@ export default function App() {
   const { theme, toggleTheme } = useTheme();
   const bp = useBreakpoint();
   useClipboardHotkeys(); // Ctrl/Cmd+C copiar partida · Ctrl/Cmd+V pegar (T8)
+  useMedClipboard(); // líneas de medición: Ctrl/Cmd+C/V/D y Esc (cede a partidas fuera de contexto)
   // Centro de Ayuda: `null` = cerrado; el botón abre en 'inicio', la tecla `?` en 'atajos'.
   const [helpTab, setHelpTab] = useState<HelpTab | null>(null);
   const openHelp = useCallback((tab: HelpTab = 'inicio') => setHelpTab(tab), []);

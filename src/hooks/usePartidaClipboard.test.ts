@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useClipboardHotkeys, usePartidaClipboard } from './usePartidaClipboard';
+import { useMedClipboard } from './useMedClipboard';
 import { ALL, useObraStore } from '../store';
 import { useClipboardStore } from '../store/clipboardStore';
 
@@ -68,6 +69,41 @@ describe('useClipboardHotkeys', () => {
     press('c');
     expect(useClipboardStore.getState().items).toBeNull();
     input.remove();
+  });
+
+  it('Ctrl+C con el foco en una celda de la FILA de partida sigue copiando la partida', () => {
+    // La fila de partida también es `[data-editgrid]` (Cantidad ↔ Precio), pero
+    // no `[data-medgrid]`: no es contexto de líneas de medición.
+    renderHook(() => {
+      useMedClipboard();
+      useClipboardHotkeys();
+    });
+    const p = useObraStore.getState().partidas['01']![0]!;
+    act(() => useObraStore.getState().togglePartida(p.id));
+    const row = document.createElement('tr');
+    row.setAttribute('data-editgrid', '');
+    const cell = document.createElement('button');
+    cell.setAttribute('data-editcell', '');
+    row.appendChild(cell);
+    document.body.appendChild(row);
+    cell.focus();
+    press('c');
+    expect(useClipboardStore.getState().items?.[0]?.partida.code).toBe(p.code);
+    expect(useClipboardStore.getState().medLines).toBeNull();
+    row.remove();
+  });
+
+  it('Ctrl+V con partidas copiadas sigue pegando partidas aunque también esté el enrutador de líneas', () => {
+    renderHook(() => {
+      useMedClipboard();
+      useClipboardHotkeys();
+    });
+    const p = useObraStore.getState().partidas['01']![0]!;
+    act(() => useObraStore.getState().togglePartida(p.id));
+    press('c');
+    const before = useObraStore.getState().partidas['01']!.length;
+    press('v');
+    expect(useObraStore.getState().partidas['01']!.length).toBe(before + 1);
   });
 
   it('Ctrl+V es no-op en la vista "todos los capítulos" (active=ALL)', () => {

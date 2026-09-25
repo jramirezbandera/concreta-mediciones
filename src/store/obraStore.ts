@@ -64,6 +64,17 @@ export interface NewMedLine {
   alto?: number | '';
 }
 
+/**
+ * Resultado de las acciones de líneas de medición por id: los ids afectados
+ * (los NUEVOS al pegar/duplicar) y, si no se hizo nada, por qué. Un no-op sale
+ * antes de tocar el estado: sin entrada de Deshacer, sin autosave y sin quitar
+ * el chip BASE.
+ */
+export interface MedResult {
+  ids: string[];
+  reason?: 'no-partida' | 'no-lines' | 'noop' | 'stale';
+}
+
 /** Salida del copy-on-write: forkar copia privada vs. editar el compartido en todas. */
 export type CowChoice = 'copy' | 'all';
 
@@ -312,8 +323,36 @@ export interface ObraState extends ObraData {
     value: MedLine[K],
     expr?: string,
   ) => void;
-  /** Elimina una línea de medición. */
+  /** Elimina una línea de medición (por índice; lo usa el asistente de IA). */
   deleteMedLine: (chapterId: string, partidaId: string, index: number) => void;
+
+  /* ---- líneas de medición por ID (reordenar, copiar, duplicar, borrar) ----
+     Todas son UN paso de Deshacer exacto (cortan la ráfaga del historial antes
+     y después) y buscan la partida por id aunque haya cambiado de capítulo. */
+  /** Reordena UNA línea: la coloca delante de `beforeId` (`null` = al final).
+   *  CONSERVA su id (la certificación por líneas la sigue reconociendo). */
+  moveMedLine: (
+    chapterId: string,
+    partidaId: string,
+    lineId: string,
+    beforeId: string | null,
+  ) => MedResult;
+  /** Sube (-1) o baja (+1) cada línea indicada una posición (ids conservados).
+   *  Si alguna toca el borde en esa dirección, no se mueve ninguna. */
+  moveMedLinesBy: (chapterId: string, partidaId: string, lineIds: string[], delta: -1 | 1) => MedResult;
+  /** Inserta COPIAS (ids nuevos, `expr` copiado, kg/m del perfil del destino)
+   *  detrás de `afterId` (`null` o desconocido = al final). Devuelve los ids nuevos. */
+  insertMedLines: (
+    chapterId: string,
+    partidaId: string,
+    lines: MedLine[],
+    afterId: string | null,
+  ) => MedResult;
+  /** Duplica las líneas indicadas (en su orden de lista) justo detrás de la
+   *  última de ellas. Devuelve los ids nuevos. */
+  duplicateMedLines: (chapterId: string, partidaId: string, lineIds: string[]) => MedResult;
+  /** Borra varias líneas de golpe. La guarda de certificadas vive en la UI. */
+  deleteMedLines: (chapterId: string, partidaId: string, lineIds: string[]) => MedResult;
   /** Fija la forma de medir (columnas de la tabla de medición); undefined la
    *  devuelve a la de la unidad. Solo presentación: no toca líneas ni cantidad. */
   setMedForma: (chapterId: string, partidaId: string, forma: MedForma | undefined) => void;

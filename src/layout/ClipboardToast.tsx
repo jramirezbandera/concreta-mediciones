@@ -1,30 +1,30 @@
-import { useEffect, useState } from 'react';
-import { Icon } from '../components';
-import { useClipboardStore } from '../store';
-import styles from './ClipboardToast.module.css';
+import { useEffect, useRef } from 'react';
+import { useClipboardStore, useToastStore } from '../store';
 
 /**
- * Aviso transitorio "Copiado al portapapeles" tras copiar una partida (teclado o
- * menú). Sirve en escritorio y móvil (complementa el chip persistente de la
- * StatusBar, que solo existe en escritorio). Se dispara con `copyTick` para
- * reaparecer aunque se recopie la misma partida; se autodescarta a ~1,9 s.
+ * Aviso «Copiado al portapapeles» tras copiar una partida o líneas de medición
+ * (teclado, menú o barra de selección). No pinta nada: lo pasa a `toastStore`,
+ * así nunca hay dos avisos a la vez (copiar y enseguida pegar deja solo el
+ * último). Se dispara con `copyTick` para reaparecer aunque se recopie lo mismo.
  */
 export function ClipboardToast() {
   const tick = useClipboardStore((s) => s.copyTick);
-  const [msg, setMsg] = useState<string | null>(null);
+  // Solo las copias hechas con el aviso montado: el tick de una copia anterior
+  // (otra vista, un remontaje) no debe reavisar al montar.
+  const mountedTick = useRef(tick);
 
   useEffect(() => {
-    if (tick === 0) return; // todavía no se ha copiado nada
-    const head = useClipboardStore.getState().items?.[0]?.partida;
-    setMsg(head?.code ? `${head.code} copiada al portapapeles` : 'Copiado al portapapeles');
-    const t = setTimeout(() => setMsg(null), 1900);
-    return () => clearTimeout(t);
+    if (tick === mountedTick.current) return;
+    const { items, medLines } = useClipboardStore.getState();
+    let msg = 'Copiado al portapapeles';
+    if (medLines) {
+      const n = medLines.lines.length;
+      msg = `${n} ${n === 1 ? 'línea copiada' : 'líneas copiadas'} · ${medLines.source.code || 'partida'}`;
+    } else if (items?.[0]?.partida.code) {
+      msg = `${items[0].partida.code} copiada al portapapeles`;
+    }
+    useToastStore.getState().show(msg);
   }, [tick]);
 
-  if (!msg) return null;
-  return (
-    <div className={`no-print ${styles.toast}`} role="status" aria-live="polite">
-      <Icon name="check" size={14} /> {msg}
-    </div>
-  );
+  return null;
 }

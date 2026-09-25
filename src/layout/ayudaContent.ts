@@ -67,7 +67,7 @@ export const FEATURES: Feature[] = [
   {
     icon: 'ruler',
     title: 'Medición por líneas',
-    desc: 'Líneas uds × largo × ancho × alto con parciales; el total alimenta la cantidad de la partida en vivo. «Medir por» cambia las columnas de cada partida (superficie directa, superficie × espesor, peso…). Las celdas admiten operaciones (5,57+3, 2×4,5, (12−0,3)/2) y perfiles, que valen su kg/m (IPE 300, HEB 200, UPN 120, Ø12; también IPE300*1,05): se ve el resultado y se guarda lo escrito. Midiendo por Peso, basta con nombrar el perfil en el comentario («Vigas IPE300») y el kg/m se rellena solo.',
+    desc: 'Líneas uds × largo × ancho × alto con parciales; el total alimenta la cantidad de la partida en vivo. «Medir por» cambia las columnas de cada partida (superficie directa, superficie × espesor, peso…). Las celdas admiten operaciones (5,57+3, 2×4,5, (12−0,3)/2) y perfiles, que valen su kg/m (IPE 300, HEB 200, UPN 120, Ø12; también IPE300*1,05): se ve el resultado y se guarda lo escrito. Midiendo por Peso, basta con nombrar el perfil en el comentario («Vigas IPE300») y el kg/m se rellena solo. Marca líneas con su casilla para copiarlas a otra partida, duplicarlas, subirlas o bajarlas y borrarlas en bloque; «Pegar N líneas», en el pie, las deja en la partida abierta.',
   },
   {
     icon: 'split',
@@ -77,7 +77,7 @@ export const FEATURES: Feature[] = [
   {
     icon: 'grip',
     title: 'Ordenar a mano',
-    desc: 'Arrastra una partida por su asa (o un capítulo/subcapítulo del árbol) para cambiar el orden; en el menú ⋮ tienes Subir y Bajar. La numeración se rehace sola.',
+    desc: 'Arrastra una partida por su asa (o un capítulo/subcapítulo del árbol) para cambiar el orden; en el menú ⋮ tienes Subir y Bajar. La numeración se rehace sola. Las líneas de medición se ordenan igual: por su asa, con Alt+↑/↓ o con Subir y Bajar de la barra de selección.',
   },
   {
     icon: 'clipboardCheck',
@@ -121,7 +121,13 @@ export function shortcutGroups(mod: string): ShortcutGroup[] {
         { keys: ['Shift', 'Tab'], label: 'Ir a la celda anterior' },
         { keys: ['Enter'], label: 'Bajar en la misma columna' },
         { keys: [mod, 'Enter'], label: 'Añadir línea nueva' },
-        { keys: ['Esc'], label: 'Cancelar la edición de la celda' },
+        { keys: ['Esc'], label: 'Cancelar la edición de la celda; después, quitar la selección' },
+        { keys: ['Shift', 'Espacio'], label: 'Seleccionar o quitar la línea' },
+        { keys: ['Shift', '↑ ↓'], label: 'Ampliar la selección' },
+        { keys: ['Alt', '↑ ↓'], label: 'Subir o bajar la línea (o la selección)' },
+        { keys: [mod, 'C'], label: 'Copiar la línea (o la selección)' },
+        { keys: [mod, 'V'], label: 'Pegar las líneas copiadas detrás de la línea' },
+        { keys: [mod, 'D'], label: 'Duplicar la línea (no rellena hacia abajo)' },
       ],
     },
   ];

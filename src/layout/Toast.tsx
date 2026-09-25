@@ -1,45 +1,74 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { Icon } from '../components';
-import { useToastStore, type ToastAction } from '../store';
-import styles from './ClipboardToast.module.css';
-
-interface Shown {
-  msg: string;
-  action: ToastAction | null;
-}
+import { useToastStore } from '../store';
+import styles from './Toast.module.css';
 
 /**
- * Aviso transitorio genérico (éxito/info), disparado por `useToastStore.show()`.
- * Admite una acción opcional («Deshacer»): con acción dura más (~6 s) y muestra
- * un botón; sin acción, ~2,2 s. Reaparece con cada `show` (vía `tick`).
+ * Aviso transitorio genérico, disparado por `useToastStore.show()`. Un solo
+ * hueco en pantalla: el aviso de «copiada» también pasa por aquí.
+ *
+ * Es REACTIVO al store (antes cacheaba el mensaje y un `clear()` —undo, cambio
+ * de obra— dejaba a la vista un «Deshacer» muerto). Con acción dura ~6 s y sin
+ * ella ~2,2 s; con el ratón encima o el foco dentro no se cierra. Tres tonos:
+ * éxito/info, advertencia y error (este último se anuncia como `alert`).
  */
 export function Toast() {
-  const tick = useToastStore((s) => s.tick);
-  const [shown, setShown] = useState<Shown | null>(null);
+  const { msg, action, tone, tick } = useToastStore(
+    useShallow((s) => ({ msg: s.msg, action: s.action, tone: s.tone, tick: s.tick })),
+  );
+  // Retenido por hover/foco. Atado al tick: un aviso nuevo no hereda la retención.
+  const [heldTick, setHeldTick] = useState<number | null>(null);
+  const held = heldTick === tick;
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Apilado de abajo arriba: barras inferiores, barra de selección de líneas,
+  // aviso. Solo si la barra de selección ocupa el hueco del aviso (pegada al
+  // fondo de la vista) el aviso sube por encima; si no, se queda donde siempre.
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.bottom = '';
+    const bar = document.querySelector<HTMLElement>('[data-medbar]')?.getBoundingClientRect();
+    if (!bar || bar.height === 0) return;
+    const own = el.getBoundingClientRect();
+    if (bar.top < own.bottom + 8 && bar.bottom > own.top - 8)
+      el.style.bottom = `${window.innerHeight - bar.top + 8}px`;
+  }, [tick, msg]);
 
   useEffect(() => {
-    if (tick === 0) return; // todavía no se ha mostrado nada
-    const { msg, action } = useToastStore.getState();
-    if (!msg) return;
-    setShown({ msg, action });
-    const t = setTimeout(() => setShown(null), action ? 6000 : 2200);
+    if (!msg || held) return;
+    const t = setTimeout(() => useToastStore.getState().clear(), action ? 6000 : 2200);
     return () => clearTimeout(t);
-  }, [tick]);
+  }, [tick, msg, action, held]);
 
-  if (!shown) return null;
+  if (!msg) return null;
+  const hold = () => setHeldTick(tick);
+  const release = () => setHeldTick(null);
   return (
-    <div className={`no-print ${styles.toast}`} role="status" aria-live="polite">
-      <Icon name="check" size={14} /> {shown.msg}
-      {shown.action && (
+    <div
+      key={tick}
+      ref={ref}
+      className={`no-print ${styles.toast} ${styles[tone]}`}
+      role={tone === 'error' ? 'alert' : 'status'}
+      aria-live={tone === 'error' ? 'assertive' : 'polite'}
+      onMouseEnter={hold}
+      onMouseLeave={release}
+      onFocus={hold}
+      onBlur={release}
+    >
+      <Icon name={tone === 'ok' ? 'check' : 'alert'} size={14} />
+      <span className={styles.msg}>{msg}</span>
+      {action && (
         <button
           type="button"
-          className={styles.toastAction}
+          className={styles.action}
           onClick={() => {
-            shown.action!.run();
-            setShown(null);
+            useToastStore.getState().clear();
+            action.run();
           }}
         >
-          {shown.action.label}
+          {action.label}
         </button>
       )}
     </div>

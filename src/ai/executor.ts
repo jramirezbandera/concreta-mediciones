@@ -794,8 +794,10 @@ function applyOne(prop: Proposal, res: ApplyResult): void {
         res.skipped.push({ status: 'omitida', label: prop.target, detail: 'borrar línea', reason: 'la línea ya no existe' });
         return;
       }
+      // Sin la guarda de líneas certificadas de la UI (plan de líneas de
+      // medición): aquí la confirmación es aprobar la propuesta en PropuestaCard.
       st.deleteMedLine(hit.chapterId, p.id, index);
-      const gone = !findPartidaById(useObraStore.getState().partidas, p.id)?.partida.med.some((l) => l.id === prop.lineId);
+      const gone =!findPartidaById(useObraStore.getState().partidas, p.id)?.partida.med.some((l) => l.id === prop.lineId);
       if (gone) {
         res.applied.push({ status: 'aplicada', label: prop.target, detail: `línea eliminada` });
       } else {

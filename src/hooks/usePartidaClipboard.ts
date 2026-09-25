@@ -17,6 +17,7 @@ import { ALL, copyTargetOf, useObraStore } from '../store';
 import { partidaToRefCopyItem } from '../core/refdata';
 import type { Partida, PartidasMap } from '../core/types';
 import { hasBlockingOverlay, hasNativeSelection, isTextEditingTarget } from './hotkeyGuards';
+import { inMedGrid, medContext } from './useMedClipboard';
 
 export interface PartidaClipboard {
   /** ¿Hay algo copiado? (reactivo: muestra/oculta los botones "Pegar aquí"). */
@@ -65,6 +66,11 @@ function findPartidaById(partidas: PartidasMap, id: string): Partida | undefined
  * editable, si hay un modal abierto, si la vista no es el presupuesto, si Ctrl+C
  * coincide con una selección de texto nativa, o si Ctrl+V no tiene un destino
  * claro (vista "todos los capítulos" → no-op, sin caer en chapters[0]).
+ *
+ * Cede a las LÍNEAS de medición (`useMedClipboard`), sin `preventDefault`:
+ * Ctrl+C con contexto de medición (foco en el grid o líneas seleccionadas), y
+ * Ctrl+V cuando el portapapeles tiene líneas o el foco está en el grid (ahí el
+ * pegado va por el evento `paste`, que un `preventDefault` aquí anularía).
  */
 export function useClipboardHotkeys(): void {
   useEffect(() => {
@@ -78,6 +84,7 @@ export function useClipboardHotkeys(): void {
       if (s.view !== 'presupuesto') return;
 
       if (k === 'c') {
+        if (medContext()) return; // copia líneas, no la partida
         // No pisar una selección de texto real del usuario.
         if (hasNativeSelection()) return;
         if (!s.openPartidaId) return;
@@ -87,6 +94,7 @@ export function useClipboardHotkeys(): void {
         useClipboardStore.getState().setClip([partidaToRefCopyItem(p, s.recursos, name)], name);
         e.preventDefault();
       } else {
+        if (useClipboardStore.getState().medLines || inMedGrid()) return; // pegado de líneas
         if (s.active === ALL) return; // sin capítulo enfocado: no adivinar destino
         const clip = useClipboardStore.getState().items;
         if (!clip?.length) return;

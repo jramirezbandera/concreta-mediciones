@@ -9,7 +9,15 @@ export {
   fromSerializable,
   copyTargetOf,
 } from './obraStore';
-export type { CertMode, CopyTarget, CowChoice, NewMedLine, ObraData, ObraState } from './obraStore';
+export type {
+  CertMode,
+  CopyTarget,
+  CowChoice,
+  MedResult,
+  NewMedLine,
+  ObraData,
+  ObraState,
+} from './obraStore';
 export {
   selectCertChapterRows,
   selectCertTotals,
@@ -29,4 +37,4 @@ export {
 } from './selectors';
 export type { Counts } from './selectors';
 export { useClipboardStore } from './clipboardStore';
-export { useToastStore, type ToastAction } from './toastStore';
+export { useToastStore, type ToastAction, type ToastTone } from './toastStore';

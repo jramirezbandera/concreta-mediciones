@@ -636,6 +636,205 @@
   font-size: var(--fs-table);
   color: var(--text-disabled);
 }
+
+/* ---- líneas: asa, casilla, selección, arrastre ---------------------------- */
+/* Columna de selección: asa de arrastre + casilla. Se ven al pasar el ratón,
+   con el foco en la fila, si hay selección y SIEMPRE en táctil (`.medTouch`,
+   que decide `isTouchOnly()` en JS; ahí el asa ni se pinta: no hay arrastre). */
+.medThSel {
+  width: 46px;
+  padding: 0;
+}
+.medSelTd {
+  padding-left: var(--sp-6);
+  padding-right: 0;
+}
+.medSelInner {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+}
+.medGrip {
+  display: grid;
+  place-items: center;
+  width: 12px;
+  height: 22px;
+  color: var(--text-disabled);
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.medGrip:active {
+  cursor: grabbing;
+}
+.medCheck {
+  opacity: 0;
+  transition:
+    opacity 0.12s ease,
+    background 0.12s ease,
+    border-color 0.12s ease;
+}
+.medRow:hover .medGrip,
+.medRow:focus-within .medGrip,
+.medRow:hover .medCheck,
+.medRow:focus-within .medCheck,
+.medHasSel .medCheck,
+.medTouch .medCheck,
+.medCheck:focus-visible {
+  opacity: 1;
+}
+/* Táctil: la X de borrar, oculta hasta el hover en `tokens.css`, siempre a la vista. */
+.medTouch :global(.med-row) :global(.med-del) {
+  opacity: 1;
+}
+.medRow.lineSelected > td {
+  background: var(--accent-soft);
+}
+.medRow.lineSelected > td:first-child {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.medRow.dragging > td {
+  opacity: 0.45;
+}
+.medRow.dropBefore > td {
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+.medRow.dropAfter > td {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+.medRow.lineSelected.dropBefore > td:first-child {
+  box-shadow: inset 2px 0 0 var(--accent), inset 0 2px 0 var(--accent);
+}
+.medRow.lineSelected.dropAfter > td:first-child {
+  box-shadow: inset 2px 0 0 var(--accent), inset 0 -2px 0 var(--accent);
+}
+
+/* ---- barra de selección (sticky, fuera de .medWrap, encima del pie) ------- */
+.medBar {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--sp-6) var(--sp-12);
+  margin-top: var(--sp-8);
+  padding: var(--sp-6) var(--sp-8) var(--sp-6) 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border-main));
+  border-radius: 9px;
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-float);
+}
+.medBarCount {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-8);
+  min-width: 0;
+  font-size: var(--fs-table);
+}
+.medBarN {
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+.medBarSum {
+  color: var(--accent);
+  white-space: nowrap;
+}
+.medBarActions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-left: auto;
+}
+.medBarBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-6);
+  height: 30px;
+  padding: 0 var(--sp-10);
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: var(--fs-table);
+  font-weight: 500;
+  cursor: pointer;
+}
+.medBarBtn:hover:not(:disabled) {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.medBarBtn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.medBarIcon {
+  width: 30px;
+  padding: 0;
+}
+.medBarDanger,
+.medBarDanger:hover:not(:disabled) {
+  color: var(--state-danger);
+}
+.medBarBtn.medBarDanger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--state-danger) 12%, transparent);
+}
+/* Compacto: botones de icono con 44px de área táctil que no se solapan. */
+.medBarCompact .medBarBtn {
+  min-width: 44px;
+  min-height: 44px;
+}
+.medBarMore {
+  position: relative;
+}
+.medBarMenu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 190px;
+  padding: var(--sp-4);
+  border: 1px solid var(--border-main);
+  border-radius: 9px;
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-float);
+}
+.medBarMenuItem {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  min-height: 44px;
+  padding: 0 var(--sp-12);
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: var(--fs-body);
+  text-align: left;
+  cursor: pointer;
+}
+.medBarMenuItem:hover:not(:disabled) {
+  background: var(--bg-elevated);
+}
+.medBarMenuItem.medBarDanger {
+  color: var(--state-danger);
+}
+.medBarMenuItem:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.medBarMenuSep {
+  height: 1px;
+  margin: var(--sp-4) 0;
+  background: var(--border-sub);
+}
 .medFoot {
   display: flex;
   align-items: center;
@@ -663,6 +862,31 @@
   background: transparent;
   color: var(--accent);
   font-family: inherit;
+}
+
+.medFootBtns {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  min-width: 0;
+}
+/* «Pegar N líneas»: el destino («tras «…»») en gris, sin partir el botón. */
+.medPasteBtn {
+  max-width: 100%;
+  min-width: 0;
+}
+.medPasteBtn:hover {
+  background: var(--accent-soft);
+}
+.medPasteWhere {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 220px;
+  color: var(--text-secondary);
+  font-weight: 400;
 }
 
 /* selector de forma de medir en compacto (en escritorio va en la detailBar) */
@@ -1240,7 +1464,9 @@
   border-radius: 11px;
   border: 1px solid var(--border-main);
   background: var(--bg-surface);
-  overflow: hidden;
+  /* clip, no hidden: recorta igual pero NO es contenedor de scroll, así la barra
+     de selección de líneas (sticky) se pega al fondo de la vista, no de la tarjeta. */
+  overflow: clip;
   box-shadow: var(--shadow-panel);
 }
 /* Con el menú ⋮ abierto la tarjeta deja de recortar: el popover (absoluto) se
@@ -1353,6 +1579,11 @@
   border: 1px solid var(--border-main);
   background: var(--bg-surface);
   padding: var(--sp-10) var(--sp-12) var(--sp-12);
+}
+.medCard.cardSelected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent-soft) 70%, var(--bg-surface));
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 .medCardTop {
   display: flex;

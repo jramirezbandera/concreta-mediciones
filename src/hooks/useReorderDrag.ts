@@ -18,13 +18,19 @@
 
    El teclado y el táctil NO usan esto: tienen «Subir/Bajar» en los menús ⋮
    (HTML5 DnD no existe en táctil y no es operable por teclado).
+
+   Tres clases de arrastre (`kind`): partidas (dentro de su capítulo),
+   contenedores (entre hermanos) y líneas de medición (`'medline'`, dentro de
+   su partida: `scope` = id de partida; mueve UNA línea, la agarrada, aunque
+   haya selección — los bloques van con Alt+↑/↓ o la barra de selección).
    =========================================================================== */
 import { useCallback, useState, type DragEvent } from 'react';
 
 /** Qué se está arrastrando. `scope` acota dónde se puede soltar: el capítulo
- *  dueño (partidas) o el contenedor padre (capítulos/subcapítulos). */
+ *  dueño (partidas), el contenedor padre (capítulos/subcapítulos) o la partida
+ *  (líneas de medición). */
 export interface ReorderDrag {
-  kind: 'partida' | 'contenedor';
+  kind: 'partida' | 'contenedor' | 'medline';
   id: string;
   scope: string;
 }

@@ -18,6 +18,7 @@ import { fmtNum, round2, sumCents, toEur, type Cents } from '../../core/money';
 import type { CertExtra, MedLine, Partida, Chapter } from '../../core/types';
 import { useObraStore, type CertMode } from '../../store';
 import { PctBar } from './PctBar';
+import check from '../../styles/lineCheck.module.css';
 import styles from './Certificaciones.module.css';
 
 /** No propagar el click al `<tr>` (que despliega) desde las celdas editables. */
@@ -64,7 +65,7 @@ export function CertDetail({ p }: { p: Partida }) {
                   role="checkbox"
                   aria-checked={marked}
                   aria-label={`Marcar línea ejecutada: ${l.comment || 'sin comentario'}`}
-                  className={`tap-target ${styles.lineCheck} ${marked ? styles.on : ''}`}
+                  className={`tap-target ${check.lineCheck} ${marked ? check.on : ''}`}
                   onClick={() => setCertLine(p.id, l.id, marked ? null : parcial)}
                 >
                   {marked && <Icon name="check" size={12} />}
@@ -84,7 +85,7 @@ export function CertDetail({ p }: { p: Partida }) {
                 role="checkbox"
                 aria-checked
                 aria-label="Desmarcar línea eliminada de la medición"
-                className={`tap-target ${styles.lineCheck} ${styles.on}`}
+                className={`tap-target ${check.lineCheck} ${check.on}`}
                 onClick={() => setCertLine(p.id, id, null)}
               >
                 <Icon name="check" size={12} />

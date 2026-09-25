@@ -70,6 +70,13 @@ let future: DomainSnapshot[] = [];
 let suspended = false;
 /** Fin (Date.now()) de la ventana de throttle en curso. */
 let throttleUntil = 0;
+/**
+ * Revisión MONÓTONA del dominio: sube con CADA cambio de dominio que ve la
+ * suscripción, también los coalescidos, los de undo/redo y los de una carga.
+ * Un «Deshacer» ofrecido tras una acción guarda la revisión de ese momento y
+ * solo actúa si nadie ha tocado la obra después (si no, desharía otra cosa).
+ */
+let domainRevision = 0;
 
 /** Booleans reactivos para la UI (botones Deshacer/Rehacer). Exponemos ESTO, no
  *  las pilas `past`/`future` (acoplaría la UI a los snapshots retenidos). */
@@ -137,6 +144,11 @@ function applyDomain(snap: DomainSnapshot): void {
 
 /** Listener de cambios de dominio: registra el estado PREVIO a la ráfaga. */
 function onDomainChange(_next: DomainSnapshot, prev: DomainSnapshot): void {
+  domainRevision++;
+  // Un aviso con «Deshacer» atado a una revisión muere en cuanto la obra cambia:
+  // nunca se enseña un Deshacer que ya desharía otra cosa.
+  const toast = useToastStore.getState();
+  if (toast.rev != null && toast.rev !== domainRevision) toast.clear();
   if (suspended) return;
   future = []; // cualquier edición nueva invalida el rehacer
   const now = Date.now();
@@ -196,6 +208,21 @@ export function redo(): void {
   suspend(() => applyDomain(target));
   throttleUntil = 0;
   notify();
+}
+
+/**
+ * Cierra la ráfaga en curso: el próximo cambio de dominio abre entrada propia.
+ * Las acciones estructurales de medición (pegar, duplicar, reordenar, borrar en
+ * bloque) la llaman ANTES y DESPUÉS de su `set`, así cada una es exactamente un
+ * paso de Deshacer y nunca se funde con una edición de celda contigua (<700 ms).
+ */
+export function historyCheckpoint(): void {
+  throttleUntil = 0;
+}
+
+/** Revisión actual del dominio (ver `domainRevision`). */
+export function getDomainRevision(): number {
+  return domainRevision;
 }
 
 /** Vacía el historial (cambio/carga de obra: un undo no debe cruzar obras). */

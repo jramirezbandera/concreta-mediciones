@@ -11,10 +11,16 @@ const ARROWS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
  * misma columna de la fila vecina. Dentro del input/textarea de EDICIÓN no
  * intercepta nada: ahí las flechas mueven el caret, y Enter/Esc ya confirman
  * o cancelan. Tab sigue funcionando de serie (todas las celdas son focables).
+ *
+ * Solo flechas SIN modificadores: Alt/Shift+↑↓ son de las líneas de medición
+ * (`useMedLineKeys`) y Ctrl/⌘ del sistema. Un evento que ya movió el foco
+ * (`defaultPrevented`: el grid interior de la medición) no se vuelve a tratar
+ * en el grid exterior (la tabla de partidas lo envuelve).
  */
 export function useGridNav(): (e: KeyboardEvent<HTMLElement>) => void {
   return useCallback((e: KeyboardEvent<HTMLElement>) => {
     if (!ARROWS.includes(e.key)) return;
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || e.defaultPrevented) return;
     const t = e.target as HTMLElement;
     if (t.dataset?.editcell == null) return;
     const root = e.currentTarget;

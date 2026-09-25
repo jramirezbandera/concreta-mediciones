@@ -21,8 +21,13 @@ export interface StatusBarProps {
 /** Barra de estado inferior (24px, mono): conteos + portapapeles + PEM/PEC. */
 export function StatusBar({ counts, pem, pec, onHelp }: StatusBarProps) {
   const clip = useClipboardStore((s) => s.items);
+  const medClip = useClipboardStore((s) => s.medLines);
   const clearClip = useClipboardStore((s) => s.clear);
   const clipHead = clip?.[0]?.partida;
+  const nLines = medClip?.lines.length ?? 0;
+  const linesLabel = medClip
+    ? `${nLines} ${nLines === 1 ? 'línea' : 'líneas'} · ${medClip.source.code} ${medClip.source.title}`.trim()
+    : '';
   return (
     <footer className={`mono no-print ${styles.bar}`}>
       <div className={styles.group}>
@@ -46,6 +51,21 @@ export function StatusBar({ counts, pem, pec, onHelp }: StatusBarProps) {
               {clipHead.code} {clipHead.title}
             </span>
             {clip && clip.length > 1 && <span className={styles.clipMore}>+{clip.length - 1}</span>}
+            <button
+              type="button"
+              className={styles.clipClear}
+              onClick={clearClip}
+              aria-label="Vaciar el portapapeles"
+              title="Vaciar el portapapeles"
+            >
+              <Icon name="x" size={12} />
+            </button>
+          </span>
+        )}
+        {medClip && (
+          <span className={styles.clip} title={`En el portapapeles: ${linesLabel}`}>
+            <Icon name="copy" size={12} />
+            <span className={styles.clipName}>{linesLabel}</span>
             <button
               type="button"
               className={styles.clipClear}
