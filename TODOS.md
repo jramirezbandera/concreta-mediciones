@@ -121,4 +121,70 @@ expansiones que las revisiones CEO, diseño e ingeniería dejaron fuera a propó
 
 ---
 
-_Backlog: 1 TODO (mutaciones en pestaña readonly) + 5 aplazados del plan de líneas de medición. El pase de diseño móvil y la navegación de teclado en certificaciones están hechos._
+## Mejoras de producto (revisión de la app, 2026-09-25)
+
+Salen de repasar qué le cambiaría más la vida al usuario, más allá de pulir la
+tabla de medición. Descartadas en la misma revisión: versiones del presupuesto con
+diferencias y «Emitir» certificación (T-2 sigue aplazado).
+
+### Que la obra no pueda perderse
+
+Todo vive en IndexedDB del navegador; la única red era acordarse de exportar el .json.
+
+- ~~**Almacenamiento persistente**~~ — HECHO (2026-09-25). `persist/durability.ts`:
+  se pide `navigator.storage.persist()` con el primer guardado de la sesión (nunca
+  al cargar: Firefox pregunta) y no se insiste tras un «No permitir». El estado se
+  ve en la tarjeta de copia de seguridad (`ProjectBackup`). Chrome lo concede por
+  uso (marcadores, instalada) y Safari casi solo a la app de pantalla de inicio, así
+  que lo normal en una web nueva es seguir en `best-effort`.
+
+- **Recordatorio de copia (P1).**
+  - **Qué:** «Última copia: hace 12 días» con botón para hacerla. Más visible
+    (no solo en el modal de obra) cuando `durability` no es `persisted`.
+  - **Por qué:** con `best-effort`, el navegador puede borrar las obras; y ni con
+    `persisted` se salvan de un equipo roto o perdido.
+  - **Contexto:** hay que guardar la fecha del último `exportObraJson` por obra (la
+    meta del registro es el sitio natural). Decidir cada cuántos días avisar.
+
+- **Guardar la obra en una carpeta elegida (P2).**
+  - **Qué:** autoguardar la obra como fichero en una carpeta (File System Access
+    API), p. ej. la de la obra dentro de OneDrive, Drive o Dropbox.
+  - **Por qué:** copia, historial de versiones y la obra en otro ordenador, sin
+    servidor.
+  - **Contexto:** solo Chrome y Edge de escritorio; el resto sigue con el .json.
+    Pensar qué pasa si dos equipos editan el mismo fichero (hoy el candado
+    multi-pestaña, T-19, solo cubre un navegador).
+
+- **Obra en el móvil (P3, decisión de producto).**
+  - **Qué:** que la obra llegue al móvil (sincronización) y que la app abra sin
+    cobertura (PWA; hoy no hay service worker ni manifest).
+  - **Por qué:** el pase de diseño móvil está hecho, pero la obra solo vive en el
+    navegador del ordenador; pasarla es exportar e importar el .json a mano.
+  - **Contexto:** sincronizar exige servidor y cuentas (p. ej. Supabase): cambia
+    privacidad, coste y el «100 % en el navegador» del README.
+
+### Medir sobre planos PDF (P2, grande)
+
+- **Qué:** visor de PDF con escala calibrada; clic en longitudes, superficies o
+  recuentos y cada medida entra como línea con su comentario («P1 · Salón») y sus
+  dimensiones. Desde una línea, volver a la zona del plano de donde salió.
+- **Por qué:** donde se va el tiempo al medir es en leer el plano y teclear cifras.
+- **Contexto:** encaja con `expr` (de dónde sale cada número) y con «Medir por»
+  (qué columnas). Hay que decidir dónde se guardan los PDF (pesan: ¿IndexedDB
+  aparte de la obra?). Pasarlo por `/autoplan` antes de empezar.
+
+### Documentos que aún obligan a volver a Presto o a Excel (P2)
+
+Hoy se exportan presupuesto, resumen y certificaciones (`ExportModal`). Los datos de
+estos ya están calculados:
+
+- **Mediciones sin precios** para pedir ofertas, y **comparativo de ofertas** por
+  partida: importar el .bc3 o el Excel de cada constructora y ver dónde se desvía.
+- **Cuadro de precios nº 1 (en letra) y nº 2 (descompuestos).** La letra ya existe
+  (`core/numeroALetras`).
+- **Liquidación final:** presupuestado frente a ejecutado a origen, con exceso o
+  defecto por partida. El exceso ya lo detecta `certPctState`.
+
+---
+
+_Backlog: 1 TODO (mutaciones en pestaña readonly) + 5 aplazados del plan de líneas de medición + mejoras de producto (recordatorio de copia, guardar en carpeta, obra en el móvil, medir sobre planos, documentos). El pase de diseño móvil y la navegación de teclado en certificaciones están hechos._
