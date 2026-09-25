@@ -70,4 +70,55 @@ Informe completo: `~/.gstack/projects/jramirezbandera-concreta-mediciones/design
 
 ---
 
-_Backlog: 1 TODO (mutaciones en pestaña readonly). El pase de diseño móvil y la navegación de teclado en certificaciones están hechos._
+## Aplazados del plan «reordenar, copiar y duplicar líneas de medición» (autoplan 2026-09-24)
+
+Contexto común: plan `docs/plan-lineas-medicion-orden-copiar.md`. Son las
+expansiones que las revisiones CEO, diseño e ingeniería dejaron fuera a propósito.
+
+### Copiar o duplicar una partida CON su medición (P2)
+
+- **Qué:** decidir el contrato de «Copiar partida». Hoy copia la definición de
+  precio con `med: []` (`copySlice.ts`, `applyCopy`); `RefPartida` no lleva medición.
+  Opción recomendada: una acción aparte, «Duplicar con medición», con ids de línea
+  nuevos y sin arrastrar nada de certificación.
+- **Por qué:** para reutilizar una partida medida (misma perfilería, otro acabado)
+  hoy hay que copiar la partida y después sus líneas: dos portapapeles distintos, y
+  la última copia pisa a la primera.
+- **Depende de:** el portapapeles de líneas del plan citado.
+
+### Guardar comentario y dimensiones al certificar por líneas (P2)
+
+- **Qué:** al marcar una línea en la certificación (`setCertLine`), congelar también
+  su comentario y sus dimensiones, no solo la cantidad (`Cert.lineQty`).
+- **Por qué:** si luego se borra o se mueve la línea, `CertDetail` enseña «Línea
+  eliminada de la medición» con la cantidad, pero sin decir qué era. La cert es un
+  documento de cobro (T-2).
+- **Contexto:** cambia el modelo de certificación, así que necesita migración de
+  esquema. D-09 ya pinta las líneas certificadas que han desaparecido.
+
+### Mediciones vinculadas entre partidas (P3)
+
+- **Qué:** una línea o una medición que referencia otra partida (p. ej. «Pintura
+  intumescente» mide lo mismo que «Acero en vigas») y se actualiza sola.
+- **Por qué:** las copias se desincronizan tras la primera revisión estructural.
+- **Contexto:** sin evidencia de uso todavía. El portapapeles de líneas ya guarda la
+  procedencia (obra, partida y forma), que es el punto de partida.
+
+### Conservar la cantidad fija como primera línea al empezar a medir (P3)
+
+- **Qué:** al añadir o pegar la primera línea en una partida con cantidad fija,
+  ofrecer convertir esa cantidad en una línea en vez de sustituirla.
+- **Por qué:** hoy `partidaCantidad` pasa de la cantidad fija a la suma de las
+  líneas; el plan solo lo hace visible (aviso «fija A → medida B»).
+- **Contexto:** cambia también «Añadir línea», que es comportamiento existente.
+
+### Pegar desde Excel sobrescribiendo celdas (P3)
+
+- **Qué:** pegar un rango sobre las celdas desde la que tiene el foco, como una hoja
+  de cálculo, en vez de insertar líneas nuevas.
+- **Por qué:** es lo siguiente que pedirá quien use el intercambio TSV con Excel.
+- **Depende de:** la Etapa B del plan citado (TSV del sistema).
+
+---
+
+_Backlog: 1 TODO (mutaciones en pestaña readonly) + 5 aplazados del plan de líneas de medición. El pase de diseño móvil y la navegación de teclado en certificaciones están hechos._
