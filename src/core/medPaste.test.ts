@@ -12,6 +12,7 @@ import {
   prepararMovimiento,
   prepararPegado,
 } from './medPaste';
+import { lineasATsv } from './medTsv';
 import type { Cert, MedLine, Partida } from './types';
 
 const line = (id: string, over: Partial<MedLine> = {}): MedLine => ({
@@ -252,5 +253,57 @@ describe('prepararMovimiento', () => {
     expect(necesitaRevision(mueve)).toBe(false);
     expect(prepararMovimiento({ ...base, lineIds: ['a'], afterId: null }).mover!.noop).toBe(false);
     expect(prepararMovimiento({ ...base, lineIds: ['c'], afterId: 'b' }).mover!.noop).toBe(true);
+  });
+});
+
+/* ---- líneas medidas en un plano (§1.3) ---------------------------------------- */
+describe('líneas con `origen` (planos PDF)', () => {
+  const origen = {
+    planoId: 'pl-1',
+    huella: 'h',
+    pagina: 1,
+    formaId: 'f-1',
+    herramienta: 'longitud' as const,
+    puntos: [
+      [0, 0],
+      [10, 0],
+    ] as [number, number][],
+    calRev: 'c',
+    mPorUnidad: 0.5,
+    n: 50,
+    magnitud: 'longitud' as const,
+    slots: ['largo' as const],
+    valores: { largo: 5 },
+    at: 'x',
+  };
+  const medida = (): MedLine => line('m', { comment: 'P1 · Tabique', uds: 1, largo: 5, expr: { largo: '5' }, origen });
+
+  it('lineaParaDestino clona el `origen` en profundidad (misma formaId)', () => {
+    const src = medida();
+    const out = lineaParaDestino(src, 'lin');
+    expect(out.origen).toEqual(src.origen);
+    expect(out.origen).not.toBe(src.origen);
+    expect((out.origen as typeof origen).puntos).not.toBe(src.origen!.puntos);
+  });
+
+  it('el TSV nunca lleva el `origen`', () => {
+    expect(lineasATsv([medida()])).toBe('P1 · Tabique\t1\t5\t\t');
+  });
+
+  it('pegar en una obra sin el plano lo quita y conserva los números', () => {
+    const p = { id: 'd', med: [], ud: 'm', code: 'X' } as unknown as Partida;
+    const base = { destino: p, chapterId: 'c', destinoForma: 'lin' as const, lines: [medida()], origen: { code: 'Y', forma: 'lin' as const, ud: 'm' }, afterId: null, coefK: 1 };
+    expect(prepararPegado({ ...base, planoIds: ['pl-1'] }).lines[0]!.origen).toBeTruthy();
+    const sin = prepararPegado({ ...base, planoIds: ['otro'] }).lines[0]!;
+    expect(sin.origen).toBeUndefined();
+    expect(sin.largo).toBe(5);
+  });
+
+  it('pegar en otra forma de medir lo quita (una partida por Superficie directa)', () => {
+    const p = { id: 'd', med: [], ud: 'm²', code: 'X' } as unknown as Partida;
+    const prep = prepararPegado({ destino: p, chapterId: 'c', destinoForma: 'area', lines: [medida()], origen: { code: 'Y', forma: 'lin', ud: 'm' }, afterId: null, coefK: 1, planoIds: ['pl-1'] });
+    expect(prep.compat.compatible).toBe(false);
+    expect(prep.lines[0]!.origen).toBeUndefined();
+    expect(prep.lines[0]!.largo).toBe(5);
   });
 });

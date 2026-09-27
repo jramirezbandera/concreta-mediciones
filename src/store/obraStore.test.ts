@@ -1784,3 +1784,47 @@ describe('tombstones de partidas borradas (schema v3)', () => {
     expect(state().bajas).toEqual({});
   });
 });
+
+describe('certificación por líneas con signo (E12, antes de Restar)', () => {
+  /** Partida p111 con dos líneas: +100 y un hueco de −10 (Restar = uds −1). */
+  const conHueco = () => {
+    const p = allPartidas().find((x) => x.id === 'p111')!;
+    useObraStore.setState((s) => {
+      const q = Object.values(s.partidas).flat().find((x) => x.id === 'p111')!;
+      q.med = [
+        { id: 'l-mas', comment: 'Muro', uds: 1, largo: 100, ancho: '', alto: '' },
+        { id: 'l-menos', comment: 'Hueco', uds: -1, largo: 10, ancho: '', alto: '' },
+      ];
+    });
+    return p.id;
+  };
+
+  it('«Completada» certifica la suma con signo: +100 y −10 dan 90', () => {
+    const id = conHueco();
+    state().setCurCert(0);
+    state().onCertEdit(id, 0, 'origen');
+    state().completePartida(id);
+    const c = state().certs[0]!;
+    expect(c.lineQty![id]).toEqual({ 'l-mas': 100, 'l-menos': -10 });
+    expect(c.data[id]).toBe(90);
+  });
+
+  it('setCertLine guarda una cantidad negativa y solo el 0 desmarca', () => {
+    const id = conHueco();
+    state().setCurCert(0);
+    state().onCertEdit(id, 0, 'origen');
+    state().setCertLine(id, 'l-mas', 100);
+    state().setCertLine(id, 'l-menos', -10);
+    expect(state().certs[0]!.lineQty![id]).toEqual({ 'l-mas': 100, 'l-menos': -10 });
+    expect(state().certs[0]!.data[id]).toBe(90);
+    state().setCertLine(id, 'l-menos', 0);
+    expect(state().certs[0]!.lineQty![id]).toEqual({ 'l-mas': 100 });
+    expect(state().certs[0]!.data[id]).toBe(100);
+  });
+
+  it('las líneas positivas se certifican igual que antes', () => {
+    state().setCurCert(0);
+    state().setCertLine('p111', 'p111-m1', 61.2);
+    expect(state().certs[0]!.lineQty!.p111).toEqual({ 'p111-m1': 61.2 });
+  });
+});

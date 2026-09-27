@@ -50,6 +50,7 @@ import { rawUuid } from '../core/id';
 import type { Partida } from '../core/types';
 import { useClipboardStore, type MedClip } from './clipboardStore';
 import { selectionOf, useMedUiStore, type FocusRequest } from './medUiStore';
+import { textoResultado } from './motivos';
 import { useObraStore, type MedResult } from './obraStore';
 import { getDomainRevision, undo } from './temporal';
 import { useToastStore } from './toastStore';
@@ -87,6 +88,12 @@ export function pasteAnchor(p: Partida, focusLineId: string | null): string | nu
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 const coefK = () => useObraStore.getState().rates.coefK;
+/** Planos de la obra en pantalla: una línea pegada que apunta a otro pierde su `origen`. */
+const planoIds = () =>
+  useObraStore
+    .getState()
+    .planos.map((p) => (p as { id?: unknown }).id)
+    .filter((id): id is string => typeof id === 'string');
 const toast = () => useToastStore.getState();
 const clipStore = () => useClipboardStore.getState();
 
@@ -99,11 +106,8 @@ export function cambioCantidad(antes: ResumenCantidad, despues: ResumenCantidad,
   return `${fmtNum(antes.cantidad)} → ${fmtNum(despues.cantidad)} ${ud}`;
 }
 
-function failText(reason: MedResult['reason']): string {
-  return reason === 'no-partida'
-    ? 'No se pudo pegar: la partida ya no existe'
-    : 'No se pudo pegar: la medición cambió mientras tanto. Vuelve a intentarlo';
-}
+/** Texto de un pegado que no se aplicó (módulo de motivos, §4.3). */
+const failText = (reason: MedResult['reason']): string => textoResultado({ reason }, 'pegar');
 
 /** Aviso con «Deshacer» atado a la revisión del dominio de ESTE momento. */
 function toastWithUndo(msg: string, focusAfterUndo: FocusRequest): void {
@@ -371,6 +375,7 @@ export function pasteLines(
     origen: { code: clip.source.code, forma: clip.source.forma, ud: clip.source.ud },
     afterId,
     coefK: coefK(),
+    planoIds: planoIds(),
   });
   if (necesitaRevision(prep)) {
     ui.openReview({ kind: 'paste', prep, nota });
@@ -395,6 +400,7 @@ function prepareMove(clip: MedClip, loc: { chapterId: string; partida: Partida }
       origen: { code: clip.source.code, forma: clip.source.forma, ud: clip.source.ud },
       afterId,
       coefK: coefK(),
+      planoIds: planoIds(),
     });
     ui.openReview({ kind: 'paste', prep: { ...prep, copiaGuardada: true } });
     return;

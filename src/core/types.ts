@@ -31,6 +31,13 @@ export interface MedLine {
    * (`editMedLine`), así que nunca contradice al valor.
    */
   expr?: Partial<Record<MedDim, string>>;
+  /**
+   * De qué plano, página y geometría sale la línea (medir sobre planos PDF,
+   * schema v6). Opcional: una línea sin `origen` es una línea de siempre. Lo que
+   * cuenta sigue siendo el número de cada casilla; `origen.valores` guarda lo
+   * que escribió el plano, así una casilla retocada a mano se ve.
+   */
+  origen?: OrigenPlano;
 }
 
 /**
@@ -294,3 +301,116 @@ export type Banco = Record<string, Recurso>;
 
 /** Partidas agrupadas por id de capítulo. */
 export type PartidasMap = Record<string, Partida[]>;
+
+/* ---- Planos (medir sobre planos PDF, schema v6) -----------------------------
+   Contrato de la «Especificación · Etapa A» (docs/plan-medir-planos-pdf.md,
+   §1.2). Los PDF no viven en la obra: su huella apunta al almacén
+   `concreta-planos` (persist/planos). v6 trae desde el principio los campos de
+   A1 y B, así las subetapas siguientes no suben la versión. */
+
+/** sha256 de los bytes del fichero, en hexadecimal minúsculo (64 caracteres). */
+export type Huella = string;
+
+/** Punto en coordenadas de página: espacio de usuario del PDF, con la y hacia
+ *  arriba, SIN rotar (independiente del zoom y de /Rotate), redondeado a 0,01. */
+export type Punto = [number, number];
+
+/** Un plano adjunto a la obra (sus bytes van aparte, por `huella`). */
+export interface PlanoMeta {
+  id: string;
+  /** 'imagen' llega en la Etapa B. */
+  tipo: 'pdf' | 'imagen';
+  /** Nombre editable («Planta primera»). */
+  nombre: string;
+  /** Nombre original del fichero. */
+  archivo: string;
+  /** Bytes del fichero. */
+  tamano: number;
+  /** Clave de sus bytes en el almacén. */
+  huella: Huella;
+  /** [A1] huellas anteriores («Usar este PDF para este plano»), de más antigua a más nueva. */
+  huellasAnteriores?: Huella[];
+  /** ≥ 1. */
+  paginas: number;
+  /** Rótulo corto por página («P1»): prefijo del comentario. */
+  etiquetas?: Record<number, string>;
+  /** UNA calibración activa por página calibrada. */
+  escalas: Record<number, Escala>;
+  /** [A1] «Rev. B». */
+  revision?: string;
+  /** [A1] id del plano de la revisión anterior. */
+  sustituye?: string;
+  /** ISO: fuera de las listas, se conserva por la procedencia de sus líneas. */
+  quitado?: string;
+}
+
+/** Calibración de una página. */
+export interface Escala {
+  /** Id nuevo en CADA calibración; `origen.calRev` lo copia. */
+  rev: string;
+  /** Metros por unidad de página; finito y > 0. */
+  mPorUnidad: number;
+  /** N de «1:N», con 1 decimal. Solo para enseñar. */
+  n: number;
+  /** La cota de calibración. */
+  ref: { a: Punto; b: Punto; metros: number };
+  /** En A0 siempre presente; en A1 puede faltar («sin comprobar»). */
+  comprobacion?: Comprobacion;
+  /** [A1] la N de «1:N» leída del cajetín. */
+  escalaDeclarada?: number;
+  /** [A1] `mPorUnidad` llevada a la declarada exacta (< 1 %). */
+  ajustada?: boolean;
+  at: string;
+}
+
+/** `desviacion` es una fracción: 0,003 = 0,3 %. */
+export type Comprobacion =
+  | { fuente: 'cota'; a: Punto; b: Punto; metros: number; medidos: number; desviacion: number }
+  | { fuente: 'cajetin'; escalaDeclarada: number; desviacion: number };
+
+export type Herramienta = 'longitud' | 'superficie' | 'rectangulo' | 'recuento';
+export type Magnitud = 'recuento' | 'longitud' | 'perimetro' | 'area' | 'lados' | 'longitudPorFactor';
+
+export interface OrigenComun {
+  planoId: string;
+  /** La del PDF con el que se midió: manda en «Ver en plano». */
+  huella: Huella;
+  /** Desde 1. */
+  pagina: number;
+  /** Identidad de UNA geometría inmutable: misma `formaId` ⇒ mismos puntos. */
+  formaId: string;
+  magnitud: Magnitud;
+  /** Casillas que salen del plano, fijadas al medir. */
+  slots: MedDim[];
+  /** Lo escrito en cada casilla de `slots` al medir. */
+  valores: Partial<Record<MedDim, number>>;
+  /** Dimensiones fijas escritas en casillas. */
+  fijas?: Partial<Record<MedDim, number>>;
+  /** Solo el multiplicador dentro de `expr` (la h de «(tramos)×h»). */
+  factor?: number;
+  /** [A1] «Aceptar valores actuales». */
+  aceptada?: boolean;
+  at: string;
+}
+export interface OrigenConEscala extends OrigenComun {
+  /** `Escala.rev` con la que se midió. */
+  calRev: string;
+  /** Escala congelada al medir. */
+  mPorUnidad: number;
+  /** Su «1:N», para enseñar. */
+  n: number;
+  /** [A1] la escala estaba ajustada al cajetín. */
+  escalaAjustada?: boolean;
+}
+export type OrigenPlano =
+  | (OrigenConEscala & { herramienta: 'longitud'; puntos: Punto[] })
+  | (OrigenConEscala & { herramienta: 'superficie'; puntos: Punto[] })
+  | (OrigenConEscala & { herramienta: 'rectangulo'; puntos: [Punto, Punto, Punto, Punto] })
+  | (OrigenComun & { herramienta: 'recuento'; puntos: Punto[]; mPorUnidad: 1 });
+
+/** Dato de planos que rompería el render y se aparta al cargar, con su valor
+ *  crudo y su ruta (`planos/3`, `partidas/c01/p-12/med/l-4/origen`). */
+export interface Ilegible {
+  donde: string;
+  valor: unknown;
+}

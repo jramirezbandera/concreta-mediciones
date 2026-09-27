@@ -14,6 +14,7 @@ import {
 } from '../../components';
 import { useTheme } from '../../hooks/useTheme';
 import { useTweaks } from '../../hooks/useTweaks';
+import { abrirEjemploPlanos } from '../planos/ejemplo';
 import styles from './Sandbox.module.css';
 
 const ACCENTS = ['#38bdf8', '#0284c7', '#0d9488', '#7c3aed', '#ea580c'];
@@ -98,6 +99,17 @@ export function Sandbox({ onBack }: { onBack: () => void }) {
       </div>
 
       <div className={styles.content}>
+        <Section title="Planos (ejemplo)">
+          <Cell label="Un plano A3 a 1:50 ya calibrado, con un tabique de 5,00 m y una estancia de 20,00 m². Esta pestaña deja de guardar: recarga para volver a tu obra.">
+            <GhostBtn
+              onClick={() => {
+                void abrirEjemploPlanos().then(onBack);
+              }}
+            >
+              <Icon name="plano" size={14} /> Abrir el ejemplo de planos
+            </GhostBtn>
+          </Cell>
+        </Section>
         <Section title="Badges de recurso">
           <Badge type="MO" />
           <Badge type="MQ" />

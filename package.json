@@ -11,6 +11,7 @@
     "lint": "eslint .",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "test": "vitest run",
+    "test:node": "vitest run -c vitest.node.config.ts",
     "test:watch": "vitest",
     "eval:ia": "vitest run -c vitest.eval.config.ts",
     "coverage": "vitest run --coverage"
@@ -22,6 +23,7 @@
     "immer": "^11.1.8",
     "lucide-react": "^0.469.0",
     "openai": "^6.48.0",
+    "pdfjs-dist": "6.3.289",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "write-excel-file": "^4.1.1",

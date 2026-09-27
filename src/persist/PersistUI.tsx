@@ -7,7 +7,7 @@ import { Icon } from '../components';
 import { useToastStore } from '../store';
 import { RELOAD_FAILED, reloadToLatest } from '../update/appVersion';
 import { OBRA_KEY, loadRaw } from './persist';
-import { discardRecovery, flushPending } from './sync';
+import { abrirCambiosAntiguos, discardRecovery, flushPending, ignorarCambiosAntiguos } from './sync';
 import { lockSupported } from './tabLock';
 import { usePersistStore } from './persistStore';
 import { useSessionStore } from './sessionStore';
@@ -119,6 +119,33 @@ function MasNuevaBanner() {
   );
 }
 
+/** Una versión antigua de Concreta siguió guardando en la copia v5 de la obra
+ *  en pantalla después de migrarla a v6 (planos PDF, §1.1). La v6 está intacta;
+ *  esos cambios se pueden abrir como obra aparte. */
+function CambiosAntiguosBanner() {
+  const aviso = usePersistStore((s) => s.cambiosAntiguos);
+  const [busy, setBusy] = useState(false);
+  if (!aviso) return null;
+  const run = (fn: () => Promise<unknown>) => {
+    setBusy(true);
+    void fn().finally(() => setBusy(false));
+  };
+  return (
+    <div className={`${styles.banner} no-print`} role="alert">
+      <Icon name="alert" size={16} />
+      <span className={styles.bannerText}>
+        Una versión antigua de Concreta guardó cambios en esta obra después de actualizarla.
+      </span>
+      <button type="button" className={styles.bannerBtn} disabled={busy} onClick={() => run(abrirCambiosAntiguos)}>
+        Abrir esos cambios como obra aparte
+      </button>
+      <button type="button" className={styles.bannerBtn} disabled={busy} onClick={() => run(ignorarCambiosAntiguos)}>
+        Ignorar
+      </button>
+    </div>
+  );
+}
+
 const READONLY_TEXT = {
   'otra-pestana':
     'Esta obra está abierta en otra pestaña. Aquí no se guardan los cambios; cierra la otra pestaña para editar en esta.',
@@ -166,6 +193,7 @@ export function PersistUI() {
     <>
       <RecoveryBanner />
       <MasNuevaBanner />
+      <CambiosAntiguosBanner />
       <ReadonlyBanner />
       <NoLockWarning />
       <SaveChip />

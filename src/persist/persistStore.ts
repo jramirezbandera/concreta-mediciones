@@ -19,10 +19,14 @@ interface PersistState {
   /** Obra guardada por una versión MÁS NUEVA de Concreta (Etapa 0): ni se carga
    *  ni se ofrece descartarla; el aviso pide recargar la página. */
   masNueva: MasNueva | null;
+  /** Una versión antigua de Concreta guardó cambios en la copia v5 de esta obra
+   *  después de migrarla a v6 (planos PDF, §1.1): la v6 está intacta. */
+  cambiosAntiguos: MasNueva | null;
   setStatus: (s: SaveStatus) => void;
   setRecovery: (raw: unknown | null, key?: string | null) => void;
   setDurability: (d: Durability) => void;
   setMasNueva: (m: MasNueva | null) => void;
+  setCambiosAntiguos: (m: MasNueva | null) => void;
 }
 
 /** Qué obra se guardó con una versión más nueva (id y nombre para el aviso). */
@@ -37,8 +41,10 @@ export const usePersistStore = create<PersistState>((set) => ({
   recoveryKey: null,
   durability: 'unknown',
   masNueva: null,
+  cambiosAntiguos: null,
   setStatus: (status) => set({ status }),
   setRecovery: (recovery, recoveryKey = null) => set({ recovery, recoveryKey }),
   setDurability: (durability) => set({ durability }),
   setMasNueva: (masNueva) => set({ masNueva }),
+  setCambiosAntiguos: (cambiosAntiguos) => set({ cambiosAntiguos }),
 }));

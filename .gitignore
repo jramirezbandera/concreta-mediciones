@@ -52,3 +52,6 @@ Desktop.ini
 docs/spike/samples/
 docs/spike/import/data.generated.js
 .gstack/
+
+# Planos PDF de obras reales para probar el visor (NO subir: datos de cliente)
+ejemplos pdf/

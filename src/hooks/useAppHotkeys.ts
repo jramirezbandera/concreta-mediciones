@@ -118,6 +118,15 @@ export function useAppHotkeys({ onHelp }: { onHelp: () => void }): void {
           e.preventDefault();
           return;
         }
+        // Visor de planos: con el foco DENTRO lo gestiona el propio visor (su ciclo,
+        // pantalla completa, cerrar) y corta la propagación; si el Esc llega aquí
+        // con el foco fuera, cierra el visor como Referencia y el asistente.
+        if (s.lateral === 'planos') {
+          if ((e.target as HTMLElement | null)?.closest?.('[data-planos-viewer]')) return;
+          s.setPlanosOpen(false);
+          e.preventDefault();
+          return;
+        }
         if (s.openPartidaId) {
           s.togglePartida(s.openPartidaId);
           e.preventDefault();

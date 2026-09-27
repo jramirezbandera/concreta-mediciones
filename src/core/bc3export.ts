@@ -151,7 +151,9 @@ const TYPE_NUM: Record<ResourceType, number> = { MO: 1, MQ: 2, MAT: 3, '%CI': 0 
 
 /* ---- líneas de medición del ~M ---------------------------------------------
    Cada línea son 6 subcampos `TIPO\COMENTARIO\UDS\LARGO\ANCHO\ALTO\` (TIPO
-   vacío = línea normal). Dims hasta 3 dec; dimensión vacía viaja vacía
+   vacío = línea normal). Dims hasta 4 dec (`num` quita los ceros de cola: las
+   de ≤ 3 dec salen idénticas y un «(tramos)×h» medido en un plano, con 3,
+   viaja entero: 25,515); dimensión vacía viaja vacía
    (factor 1 en ambos motores). Una línea con las CUATRO vacías viaja vacía
    TAMBIÉN: es una línea de SECCIÓN (un comentario que no mide) y su parcial
    aquí es 0 — el import la descarta y el Σ sigue cuadrando con la cantidad.
@@ -159,7 +161,7 @@ const TYPE_NUM: Record<ResourceType, number> = { MO: 1, MQ: 2, MAT: 3, '%CI': 0 
    que contaba 1 la línea en blanco; corregido eso, forzarlo INVENTABA una
    unidad en el fichero exportado.) */
 function medLine(l: MedLine): string {
-  const d = (v: number | '') => (v === '' ? '' : num(v, 3));
+  const d = (v: number | '') => (v === '' ? '' : num(v, 4));
   return `\\${field(l.comment)}\\${d(l.uds)}\\${d(l.largo)}\\${d(l.ancho)}\\${d(l.alto)}\\`;
 }
 

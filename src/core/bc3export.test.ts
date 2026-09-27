@@ -708,3 +708,21 @@ describe.skipIf(!existsSync(REAL))('gate capa 4: round-trip del .bc3 real (local
     });
   });
 });
+
+/* ---- dimensiones a 4 decimales (planos PDF, §4.5) ------------------------------ */
+describe('obraToBc3 — dimensiones hasta 4 decimales', () => {
+  it('un «(tramos)×h» de 3 decimales viaja entero y vuelve igual', () => {
+    const o = mini({ ud: 'm²', med: [{ id: 'm1', comment: 'P1 · Tabique', uds: 1, largo: 25.515, ancho: '', alto: '' }] });
+    expect(rec(o, '~M|1#')).toContain('\\P1 · Tabique\\1\\25.515\\\\\\');
+    const back = bc3ToObra(obraToBc3(o));
+    const l = Object.values(back.data.partidas).flat()[0]!.med[0]!;
+    expect(l.largo).toBe(25.515);
+  });
+
+  it('4 decimales de ida y vuelta; las de ≤ 3 decimales salen idénticas', () => {
+    const o = mini({ med: [{ id: 'm1', comment: 'x', uds: 2, largo: 1.2345, ancho: 0.5, alto: 2.6 }] });
+    expect(rec(o, '~M|1#')).toContain('\\x\\2\\1.2345\\0.5\\2.6\\');
+    const back = bc3ToObra(obraToBc3(o));
+    expect(Object.values(back.data.partidas).flat()[0]!.med[0]!.largo).toBe(1.2345);
+  });
+});

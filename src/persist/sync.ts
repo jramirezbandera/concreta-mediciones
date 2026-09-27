@@ -9,6 +9,11 @@
      · Conmutar/crear/borrar obra (PR2): orquestadas aquí porque tocan a la vez
        persistencia (registry), dominio (loadObra) y autosave (suppression). La
        UI (selector) solo llama a estas funciones y lee `sessionStore`.
+     · Migrar a v6 (planos PDF): una obra que aún está en su clave v5 se carga
+       migrada en memoria; al volverse DUEÑA, esta pestaña la escribe en v6
+       (`saveActiveObra` con `migracion`). Luego mira si una versión antigua
+       siguió guardando en la copia v5 (aviso de cambios antiguos) y, en reposo,
+       limpia las copias v5 de más de 30 días.
    =========================================================================== */
 import { shallow } from 'zustand/shallow';
 import type { ImportedObra } from '../core/bc3import';
@@ -25,13 +30,17 @@ import { DOMAIN_KEYS } from '../store/schema';
 import { __resetHistoryForTests } from '../store/temporal';
 import { OBRA_KEY, OBRA_KEY_PREFIX, clearObra, flush, loadObraEnvelope, obraKey } from './persist';
 import {
+  abrirCambiosAntiguos as registryAbrirCambiosAntiguos,
   createObra,
   deleteObra as registryDeleteObra,
+  hayCambiosAntiguos,
+  limpiarCopiasV5,
   loadObraData,
   metaOf,
   migrateLegacy,
   newObraId,
   reconcile,
+  resellarMigracion,
   saveActiveObra,
   setActiveId as persistActiveId,
   setUltimaCopia,
@@ -78,6 +87,10 @@ let lastPersist: Promise<boolean> = Promise.resolve(true);
  *  defecto `true` y solo baja a `false` si la sonda del lock encuentra contienda,
  *  así la pestaña dueña no parpadea a solo-lectura en cada arranque. */
 let isOwner = true;
+/** La obra en pantalla se leyó de su clave v5 (migrada en memoria) y aún no
+ *  está escrita en v6: su próximo guardado ES la migración (§1.1). Solo lo
+ *  hace la pestaña dueña; una de solo lectura nunca escribe. */
+let porMigrar: { id: string; savedAt: string; indiceSavedAt: string } | null = null;
 
 /** Programa un guardado: debounce → idle → `persistNow`. Reinicia el anterior. */
 function scheduleSave(): void {
@@ -131,8 +144,13 @@ function persistNow(): Promise<boolean> {
     useSessionStore.getState().setActiveId(id);
   }
   const target = id;
+  const migracion = porMigrar?.id === target ? porMigrar : null;
   usePersistStore.getState().setStatus('saving');
-  lastPersist = saveActiveObra(target, data).then(
+  lastPersist = saveActiveObra(
+    target,
+    data,
+    migracion ? { savedAt: migracion.savedAt, indiceSavedAt: migracion.indiceSavedAt } : undefined,
+  ).then(
     (res) => {
       if (res.kind === 'version-conflict') {
         // TERMINAL (Etapa 0): en disco hay una versión más nueva de esta obra y
@@ -145,6 +163,7 @@ function persistNow(): Promise<boolean> {
         usePersistStore.getState().setStatus('idle');
         return true;
       }
+      if (migracion && porMigrar === migracion) porMigrar = null; // ya está en v6
       // saveActiveObra ya devuelve el índice escrito → refresca el selector sin re-leer.
       useSessionStore.getState().setObras(res.index.obras);
       usePersistStore.getState().setStatus('saved');
@@ -179,11 +198,29 @@ function enterReadonly(motivo: ReadonlyMotivo): void {
   useSessionStore.getState().setReadonly(true, motivo);
 }
 
-/** Esta pestaña pasa a ser la dueña de la obra activa: autosave activo. */
+/** Esta pestaña pasa a ser la dueña de la obra activa: autosave activo. Si la
+ *  obra aún no está en v6, la migra ya (solo la dueña escribe); después mira si
+ *  una versión antigua guardó cambios en su copia v5. */
 function becomeOwner(): void {
   isOwner = true;
   useSessionStore.getState().setReadonly(false);
   armAutosave();
+  const id = activeId();
+  if (id && porMigrar?.id === id) void persistNow();
+  if (id) void revisarCambiosAntiguos(id);
+}
+
+/** Aviso de cambios antiguos (§1.1) si la copia v5 de la obra `id` cambió
+ *  después de migrarla. No lanza: un fallo de lectura no enseña nada. */
+async function revisarCambiosAntiguos(id: string): Promise<void> {
+  const meta = useSessionStore.getState().obras.find((m) => m.id === id);
+  if (!meta?.migracionV5) return;
+  try {
+    if (activeId() === id && (await hayCambiosAntiguos(meta)))
+      usePersistStore.getState().setCambiosAntiguos({ id, nombre: meta.name });
+  } catch {
+    // índice v5 ilegible: sin aviso
+  }
 }
 
 /** Anota que la obra `id` la guardó una versión MÁS NUEVA de Concreta: aviso sin
@@ -265,21 +302,25 @@ export function cancelPending(): void {
 
 /* ---- carga de una obra en el store de dominio ----------------------------- */
 /** Vuelca un `ObraData` ya decodificado en el store con el autosave SUPRIMIDO
- *  durante la mutación (loadObra muta el dominio y no debe disparar guardado). */
-function loadDataIntoStore(data: ObraData): void {
+ *  durante la mutación (loadObra muta el dominio y no debe disparar guardado).
+ *  Con `v5`, la obra salió de su clave v5 y queda «por migrar». */
+function loadDataIntoStore(data: ObraData, v5?: { id: string; savedAt: string; indiceSavedAt: string }): void {
   suppress = true;
   try {
     useObraStore.getState().loadObra(data);
   } finally {
     suppress = false;
   }
+  porMigrar = v5 ?? null;
+  const aviso = usePersistStore.getState().cambiosAntiguos;
+  if (aviso && aviso.id !== v5?.id) usePersistStore.getState().setCambiosAntiguos(null);
 }
 
 /** Carga el blob de `id` en el store (migrando schema) si se puede leer; si no,
  *  deja el store como estaba y devuelve por qué. */
 async function loadObraIntoStore(id: string): Promise<LoadObraResult> {
   const res = await loadObraData(id);
-  if (res.kind === 'ok') loadDataIntoStore(res.data);
+  if (res.kind === 'ok') loadDataIntoStore(res.data, res.v5 ? { id, ...res.v5 } : undefined);
   return res;
 }
 
@@ -292,12 +333,21 @@ function orderActiveFirst(idx: ObraIndex): string[] {
   return ids;
 }
 
+/** Limpieza de las copias v5 de más de 30 días (§1.1), en tiempo ocioso tras
+ *  arrancar. Un fallo no se enseña: se reintenta en el siguiente arranque. */
+function limpiarEnReposo(): void {
+  requestIdle(() => {
+    limpiarCopiasV5().catch(() => undefined);
+  });
+}
+
 /** Migra/reconcilia el registro y carga la obra activa. Llamar antes de render. */
 export async function hydrate(): Promise<void> {
   try {
     await migrateLegacy(); // one-shot, idempotente
     const idx = await reconcile();
     useSessionStore.getState().setObras(idx.obras);
+    limpiarEnReposo();
 
     // Instalación nueva (sin obras): demo en memoria, arma autosave. La 1ª
     // edición creará el registro; la demo NO se fosiliza hasta entonces.
@@ -418,7 +468,7 @@ export function importObraAsReference(data: ImportedObra): Promise<string> {
   return serializeOp(() => importObraAsReferenceImpl(data));
 }
 async function importObraAsReferenceImpl(data: ImportedObra): Promise<string> {
-  const obraData: ObraData = { schemaVersion: SCHEMA_VERSION, bajas: {}, ...data };
+  const obraData: ObraData = { schemaVersion: SCHEMA_VERSION, bajas: {}, planos: [], ...data };
   const id = await createObra(obraData, 'reference');
   useSessionStore.getState().upsertObra(metaOf(id, obraData, 'reference'));
   return id;
@@ -611,6 +661,40 @@ async function importarSobreActivaImpl(data: ObraData): Promise<ImportarResult> 
   return { kind: 'ok' };
 }
 
+/* ---- cambios antiguos en la copia v5 (§1.1) ------------------------------- */
+/** «Abrir esos cambios como obra aparte»: crea una obra v6 nueva desde la copia
+ *  v5 (sin tocar la obra en pantalla) y vuelve a sellar la migración. */
+export function abrirCambiosAntiguos(): Promise<boolean> {
+  return serializeOp(async () => {
+    const aviso = usePersistStore.getState().cambiosAntiguos;
+    if (!aviso) return false;
+    const res = await registryAbrirCambiosAntiguos(aviso.id, aviso.nombre);
+    usePersistStore.getState().setCambiosAntiguos(null);
+    if (!res) {
+      useToastStore.getState().show('No se pudo leer la copia antigua de esta obra.', undefined, { tone: 'error' });
+      return false;
+    }
+    useSessionStore.getState().setObras(res.index.obras);
+    useToastStore.getState().show(`Creada «${res.meta.name}»: ábrela desde el selector de obras.`);
+    return true;
+  });
+}
+
+/** «Ignorar»: vuelve a sellar la migración, así el aviso no se repite por los
+ *  mismos cambios y la limpieza cuenta 30 días desde ahora. */
+export function ignorarCambiosAntiguos(): Promise<void> {
+  return serializeOp(async () => {
+    const aviso = usePersistStore.getState().cambiosAntiguos;
+    if (!aviso) return;
+    usePersistStore.getState().setCambiosAntiguos(null);
+    try {
+      useSessionStore.getState().setObras((await resellarMigracion(aviso.id)).obras);
+    } catch {
+      // índice no disponible: el aviso volverá en el próximo arranque
+    }
+  });
+}
+
 /** Tras una importación que no llegó a disco: recarga en pantalla la obra activa
  *  tal como está guardada (la anterior). `false` si no se pudo leer. */
 export function volverAObraGuardada(): Promise<boolean> {
@@ -625,6 +709,13 @@ export function volverAObraGuardada(): Promise<boolean> {
   });
 }
 
+/** Sandbox «Planos (ejemplo)»: esta pestaña deja de escribir (la obra de
+ *  ejemplo no toca las guardadas). Para volver a la obra real, se recarga. */
+export function aislarPestana(): void {
+  isOwner = false;
+  cancelPending();
+}
+
 /** Reset de testing: desuscribe, olvida armado/debounce/activa/supresión. */
 export function __resetSyncForTests(): void {
   if (unsub) unsub();
@@ -636,6 +727,7 @@ export function __resetSyncForTests(): void {
   lastPersist = Promise.resolve(true);
   releaseActiveLock(); // T-19: suelta el lock de obra entre pestañas
   isOwner = true;
+  porMigrar = null;
   useSessionStore.setState({
     obras: [],
     activeId: null,
@@ -643,7 +735,7 @@ export function __resetSyncForTests(): void {
     readonly: false,
     readonlyMotivo: null,
   });
-  usePersistStore.setState({ masNueva: null });
+  usePersistStore.setState({ masNueva: null, cambiosAntiguos: null });
   // El historial de undo es plumbing hermano del autosave (misma suscripción de
   // dominio): resetear uno sin el otro filtraría suscripción + pilas entre tests
   // (seam exigido por el diseño; auditoría 2026-07-05).

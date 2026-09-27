@@ -46,7 +46,7 @@ export function CertDetail({ p }: { p: Partida }) {
   // (snapshot), pero sin fila no había checkbox con el que desmarcarla — el
   // único escape era el override manual, que arrasa TODO el lineQty.
   const deletedMarked = Object.entries(lineQty ?? {}).filter(
-    ([id, qty]) => qty > 0 && !med.some((l) => l.id === id),
+    ([id, qty]) => qty !== 0 && !med.some((l) => l.id === id),
   );
   return (
     <div className={styles.detail}>
@@ -57,7 +57,7 @@ export function CertDetail({ p }: { p: Partida }) {
         <div className={styles.detailMed}>
           {med.map((l) => {
             const parcial = lineParcial(l);
-            const marked = (lineQty?.[l.id] ?? 0) > 0;
+            const marked = (lineQty?.[l.id] ?? 0) !== 0; // E12: las de Restar, negativas
             return (
               <div key={l.id} className={`${styles.detailMedRow} ${marked ? styles.lineOn : ''}`}>
                 <button

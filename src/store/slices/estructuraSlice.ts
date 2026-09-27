@@ -10,17 +10,19 @@ import type { Cert, Chapter, MedDim, MedForma, MedLine, Partida, PartidaBaja, Su
 import { round2 } from '../../core/money';
 import { medFormaDe, pesoDesdeComentario } from '../../core/medForma';
 import {
+  compatibilidad,
   indiceInsercion,
   lineaParaDestino,
   ordenTrasDesplazar,
   ordenTrasMover,
   ordenTrasMoverBloque,
+  sinOrigenAjeno,
 } from '../../core/medPaste';
 import { mainTypeOf, precioSegunModo } from '../../core/banco';
 import { findNode, flattenContainers, subtreeIds } from '../../core/tree';
 import { nextPos, renumberChapter } from '../../core/numbering';
 import { rawUuid } from '../../core/id';
-import { ALL, nextMedLineId, nextPartidaId, nextRecursoCode, subIn } from '../base';
+import { ALL, nextFormaId, nextMedLineId, nextPartidaId, nextRecursoCode, subIn } from '../base';
 import type { MedResult, ObraSlice, ObraState } from '../obraStore';
 import { historyCheckpoint } from '../temporal';
 
@@ -247,10 +249,26 @@ function applyLineOrder(p: Partida, order: readonly string[]): boolean {
   return true;
 }
 
+/**
+ * Copias de líneas medidas en un plano (duplicar, pegar): cada una es una forma
+ * NUEVA (§1.3), así que su `origen` recibe una `formaId` nueva. Las que
+ * compartían forma entre sí la siguen compartiendo en la copia.
+ */
+function conFormasNuevas(lines: MedLine[]): MedLine[] {
+  const nuevas = new Map<string, string>();
+  return lines.map((l) => {
+    const o = l.origen as { formaId?: unknown } | undefined;
+    if (!o || typeof o !== 'object' || typeof o.formaId !== 'string') return l;
+    const f = nuevas.get(o.formaId) ?? nextFormaId();
+    nuevas.set(o.formaId, f);
+    return { ...l, origen: { ...l.origen!, formaId: f } };
+  });
+}
+
 /** Una acción estructural de medición = exactamente UN paso de Deshacer: corta
  *  la ráfaga del historial antes y después (no se funde con una edición
  *  contigua de <700 ms). */
-function structural(fn: () => void): void {
+export function structural(fn: () => void): void {
   historyCheckpoint();
   try {
     fn();
@@ -741,9 +759,10 @@ export const createEstructuraSlice: ObraSlice<EstructuraSlice> = (set, get) => (
     if (!p) return { ids: [], reason: 'no-partida' };
     if (lines.length === 0) return { ids: [], reason: 'no-lines' };
     // Copias PROFUNDAS con id nuevo: el id de origen es clave de `Cert.lineQty`
-    // y repetirlo haría que la línea pegada naciera ya certificada.
+    // y repetirlo haría que la línea pegada naciera ya certificada. Una línea
+    // medida en un plano pasa a ser una forma nueva (`formaId` nueva).
     const forma = medFormaDe(p);
-    const nuevas = lines.map((l) => ({ ...lineaParaDestino(l, forma), id: nextMedLineId() }));
+    const nuevas = conFormasNuevas(lines.map((l) => ({ ...lineaParaDestino(l, forma), id: nextMedLineId() })));
     let ok = false;
     structural(() =>
       set((s) => {
@@ -817,8 +836,12 @@ export const createEstructuraSlice: ObraSlice<EstructuraSlice> = (set, get) => (
     }
 
     // A otra partida: ids NUEVOS (el viejo sigue siendo clave de la cert del origen).
+    // Mover conserva la forma (misma `formaId`) salvo que la partida destino
+    // cambie el significado de las casillas: entonces la línea pierde su `origen`.
     const forma = medFormaDe(dst);
-    const nuevas = moving.map((l) => ({ ...lineaParaDestino(l, forma), id: nextMedLineId() }));
+    const copias = moving.map((l) => ({ ...lineaParaDestino(l, forma), id: nextMedLineId() }));
+    const compat = compatibilidad(copias, { forma: medFormaDe(src), ud: src.ud }, { forma, ud: dst.ud });
+    const nuevas = sinOrigenAjeno(copias, compat, undefined);
     let ok = false;
     structural(() =>
       set((s) => {

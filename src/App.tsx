@@ -6,6 +6,10 @@ import { PresupuestoView } from './features/presupuesto';
 import { type PrintTarget } from './features/print';
 import { ConflictModal, ReferenciaPanel, refStyles } from './features/referencia';
 import { AsistenteChat } from './features/asistente';
+import { planosActivos } from './features/planos/flag';
+import { PlanosLateral } from './features/planos/PlanosLateral';
+import { usePlanoUiStore } from './store/planoUiStore';
+import { disposicionPlanos } from './layout/disposicionPlanos';
 import { ImportPartidaButton } from './features/importar/ImportPartidaButton';
 import { Icon } from './components';
 import { ClipboardToast } from './layout/ClipboardToast';
@@ -113,6 +117,12 @@ export default function App() {
   const [helpTab, setHelpTab] = useState<HelpTab | null>(null);
   const openHelp = useCallback((tab: HelpTab = 'inicio') => setHelpTab(tab), []);
   useAppHotkeys({ onHelp: () => setHelpTab('atajos') }); // Ctrl/Cmd+K · Supr · Esc · ?
+  // «?» de los mensajes del visor de planos: abre la ayuda en su pestaña.
+  useEffect(() => {
+    const onAyuda = (e: Event) => setHelpTab((e as CustomEvent<HelpTab | undefined>).detail ?? 'inicio');
+    window.addEventListener('concreta:ayuda', onAyuda);
+    return () => window.removeEventListener('concreta:ayuda', onAyuda);
+  }, []);
 
   // La vista activa vive en el store (única fuente; el sandbox sigue local).
   const view = useObraStore((s) => s.view);
@@ -141,6 +151,22 @@ export default function App() {
   const asistenteOpen = lateral === 'asistente';
   const setAsistenteOpen = useObraStore((s) => s.setAsistenteOpen);
 
+  // Visor de planos (medir sobre planos PDF): detrás de su interruptor hasta la
+  // puerta cronometrada. Abrirlo cierra Referencia y el asistente (mismo hueco).
+  const planosOn = planosActivos();
+  const planosOpen = lateral === 'planos';
+  const setPlanosOpen = useObraStore((s) => s.setPlanosOpen);
+  const planosAncho = usePlanoUiStore((s) => s.ancho);
+  const planosFull = usePlanoUiStore((s) => s.pantallaCompleta);
+  const cerrarPlanos = useCallback(() => {
+    setPlanosOpen(false);
+    usePlanoUiStore.getState().setPantallaCompleta(false);
+    // Al cerrar el visor, el foco vuelve a su botón (o al menú «Más» en compacto).
+    requestAnimationFrame(() =>
+      document.querySelector<HTMLElement>('[data-boton-planos]:not([hidden])')?.focus(),
+    );
+  }, [setPlanosOpen]);
+
   // Redimensionar el panel en split: se arrastra el tirador (320–640 lo clampa el store).
   const startRefResize = useCallback(
     (e: React.PointerEvent) => {
@@ -159,8 +185,35 @@ export default function App() {
   // Pantalla completa (solo Referencia): el panel tapa sidebar + presupuesto
   // (bajo el topbar). Tiene prioridad sobre split/overlay, que solo aplican sin
   // maximizar.
+  const planosDisp = disposicionPlanos(bp.w, bp.isDesktop, planosAncho);
   const lateralModo: LateralModo =
-    lateral === 'ref' && refMaximized ? 'full' : bp.w >= SPLIT_WIDTH ? 'split' : 'overlay';
+    lateral === 'planos'
+      ? planosFull
+        ? 'full'
+        : planosDisp.split
+          ? 'split'
+          : 'overlay'
+      : lateral === 'ref' && refMaximized
+        ? 'full'
+        : bp.w >= SPLIT_WIDTH
+          ? 'split'
+          : 'overlay';
+  const startPlanosResize = useCallback(
+    (e: React.PointerEvent) => {
+      e.preventDefault();
+      const onMove = (ev: PointerEvent) => {
+        const d = disposicionPlanos(window.innerWidth, true, window.innerWidth - ev.clientX);
+        usePlanoUiStore.getState().setAncho(d.width);
+      };
+      const onUp = () => {
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+      };
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+    },
+    [],
+  );
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [obraOpen, setObraOpen] = useState(false);
@@ -284,6 +337,8 @@ export default function App() {
         onToggleRef={() => setRefOpen()}
         asistenteOpen={asistenteOpen}
         onToggleAsistente={() => setAsistenteOpen()}
+        planosOpen={planosOpen}
+        onTogglePlanos={planosOn ? () => (planosOpen ? cerrarPlanos() : setPlanosOpen(true)) : undefined}
         onExport={() => setExportOpen(true)}
         onObra={() => setObraOpen(true)}
         onHelp={() => openHelp('inicio')}
@@ -387,10 +442,17 @@ export default function App() {
         {/* Hueco lateral: Referencia o el asistente de IA, nunca los dos (lo
             garantiza la forma de `lateral`). El `key` separa un panel del otro;
             dentro, cambiar de tamaño no lo desmonta (ver LateralAside). */}
-        {lateral && (
-          <LateralAside key={lateral} modo={lateralModo} width={refWidth} onResizeStart={startRefResize}>
+        {lateral && (lateral !== 'planos' || planosOn) && (
+          <LateralAside
+            key={lateral}
+            modo={lateralModo}
+            width={lateral === 'planos' ? planosDisp.width : refWidth}
+            onResizeStart={lateral === 'planos' ? startPlanosResize : startRefResize}
+          >
             {lateral === 'ref' ? (
               <ReferenciaPanel onImport={() => setRefImportOpen(true)} />
+            ) : lateral === 'planos' ? (
+              <PlanosLateral estrecha={bp.w < 1024} onCerrar={cerrarPlanos} />
             ) : (
               <AsistenteChat />
             )}

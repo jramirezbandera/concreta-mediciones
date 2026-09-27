@@ -42,7 +42,7 @@
 import { blank, medTotal, partidaImporte } from './medicion';
 import { MED_SLOTS, medFormaDef, pesoDesdeComentario } from './medForma';
 import type { Cents } from './money';
-import type { Cert, MedDim, MedForma, MedLine, Partida } from './types';
+import type { Cert, MedDim, MedForma, MedLine, OrigenPlano, Partida } from './types';
 
 /** Rótulos de siempre, para una casilla con datos que la forma no usa. */
 const GENERICOS = ['Uds', 'Longitud', 'Anchura', 'Altura'];
@@ -64,10 +64,12 @@ export function normalizarUd(ud: string): string {
 }
 
 /**
- * Copia PROFUNDA de una línea lista para su partida destino: `expr` clonado y,
- * si el destino mide por Peso, el kg/m del perfil que nombre el comentario. El
- * id se conserva; el store le da uno nuevo al insertarla. Es el helper único de
- * construcción de líneas (`addMedLines` e `insertMedLines` pasan por aquí).
+ * Copia PROFUNDA de una línea lista para su partida destino: `expr` y `origen`
+ * clonados y, si el destino mide por Peso, el kg/m del perfil que nombre el
+ * comentario. El id se conserva; el store le da uno nuevo al insertarla. Es el
+ * helper único de construcción de líneas (`addMedLines`, `insertMedLines` y las
+ * líneas medidas en un plano pasan por aquí). La `formaId` del `origen` NO nace
+ * aquí: la renuevan las llamadas que crean una forma nueva (duplicar, pegar).
  */
 export function lineaParaDestino(line: MedLine, forma: MedForma): MedLine {
   const out: MedLine = {
@@ -79,6 +81,8 @@ export function lineaParaDestino(line: MedLine, forma: MedForma): MedLine {
     alto: line.alto ?? '',
   };
   if (line.expr && Object.keys(line.expr).length > 0) out.expr = { ...line.expr };
+  // JSON y no structuredClone: `origen` es JSON puro y puede venir de un draft de Immer.
+  if (line.origen !== undefined) out.origen = JSON.parse(JSON.stringify(line.origen)) as OrigenPlano;
   const cambio = pesoDesdeComentario(forma, out);
   if (cambio) {
     out[cambio.slot] = cambio.value;
@@ -157,6 +161,29 @@ export function indiceInsercion(med: readonly MedLine[], afterId: string | null)
   return i < 0 ? med.length : i + 1;
 }
 
+/**
+ * Quita el `origen` (conservando los números) de las líneas que ya no pueden
+ * decir de dónde salen: las que apuntan a un plano que la obra destino no
+ * tiene, o todas si la partida destino cambia el significado o la unidad de
+ * las casillas. Así un recálculo nunca escribe una magnitud geométrica donde
+ * la unidad ya es otra (§1.3).
+ */
+export function sinOrigenAjeno(
+  lines: MedLine[],
+  compat: Compatibilidad,
+  planoIds: readonly string[] | undefined,
+): MedLine[] {
+  return lines.map((l) => {
+    if (l.origen === undefined) return l;
+    const planoId = (l.origen as { planoId?: unknown } | null)?.planoId;
+    const ajeno = !compat.compatible || (planoIds !== undefined && !planoIds.includes(planoId as string));
+    if (!ajeno) return l;
+    const c = { ...l };
+    delete c.origen;
+    return c;
+  });
+}
+
 /** Datos de la partida de origen que enseña el diálogo. */
 export interface OrigenPegado {
   code: string;
@@ -219,11 +246,15 @@ export function prepararPegado(args: {
   origen: OrigenPegado | null;
   afterId: string | null;
   coefK: number;
+  /** Planos de la obra destino: un `origen` que apunta a otro se quita. */
+  planoIds?: readonly string[];
 }): PegadoPreparado {
   const { destino, destinoForma, coefK } = args;
   const afterId =
     args.afterId != null && destino.med.some((l) => l.id === args.afterId) ? args.afterId : null;
-  const lines = args.lines.map((l) => lineaParaDestino(l, destinoForma));
+  const copias = args.lines.map((l) => lineaParaDestino(l, destinoForma));
+  const compat = compatibilidad(copias, args.origen, { forma: destinoForma, ud: destino.ud });
+  const lines = sinOrigenAjeno(copias, compat, args.planoIds);
   const at = indiceInsercion(destino.med, afterId);
   const med = [...destino.med.slice(0, at), ...lines, ...destino.med.slice(at)];
   return {
@@ -237,7 +268,7 @@ export function prepararPegado(args: {
     origen: args.origen,
     afterId,
     lines,
-    compat: compatibilidad(lines, args.origen, { forma: destinoForma, ud: destino.ud }),
+    compat,
     antes: resumenCantidad(destino, coefK),
     despues: resumenCantidad({ ...destino, med }, coefK),
   };
@@ -315,7 +346,10 @@ export function prepararMovimiento(args: {
 
   const afterId =
     args.afterId != null && destino.med.some((l) => l.id === args.afterId) ? args.afterId : null;
-  const lines = vivas.map((l) => lineaParaDestino(l, destinoForma));
+  const copias = vivas.map((l) => lineaParaDestino(l, destinoForma));
+  const compat = compatibilidad(copias, { forma: args.srcForma, ud: src.ud }, { forma: destinoForma, ud: destino.ud });
+  // Mover dentro de la obra conserva el plano; solo una forma incompatible quita el `origen`.
+  const lines = sinOrigenAjeno(copias, compat, undefined);
   const at = indiceInsercion(destino.med, afterId);
   const med = [...destino.med.slice(0, at), ...lines, ...destino.med.slice(at)];
   const cert = lineasCertificadas(args.certs, src.id, ids);
@@ -323,7 +357,7 @@ export function prepararMovimiento(args: {
     ...base,
     afterId,
     lines,
-    compat: compatibilidad(lines, { forma: args.srcForma, ud: src.ud }, { forma: destinoForma, ud: destino.ud }),
+    compat,
     antes: resumenCantidad(destino, coefK),
     despues: resumenCantidad({ ...destino, med }, coefK),
     mover: mover({
@@ -342,7 +376,7 @@ export function necesitaRevision(prep: PegadoPreparado): boolean {
 }
 
 /**
- * Líneas certificadas: su id tiene `lineQty > 0` en alguna certificación de la
+ * Líneas certificadas: su id tiene `lineQty ≠ 0` en alguna certificación de la
  * obra. Devuelve cuáles (en el orden pedido) y en qué certificaciones (nº). Una
  * partida certificada A MANO (sin `lineQty`) no cuenta: su cantidad no depende
  * de las líneas, así que borrarlas no le quita nada.
@@ -358,7 +392,7 @@ export function lineasCertificadas(
     const q = c.lineQty?.[partidaId];
     if (!q) continue;
     for (const id of lineIds) {
-      if ((q[id] ?? 0) > 0) {
+      if ((q[id] ?? 0) !== 0) {
         hit.add(id);
         nums.add(c.num);
       }

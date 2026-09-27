@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { Icon } from '../components';
-import { useToastStore } from '../store';
+import { useObraStore, useToastStore } from '../store';
 import styles from './Toast.module.css';
 
 /**
@@ -21,6 +21,9 @@ export function Toast() {
   const [heldTick, setHeldTick] = useState<number | null>(null);
   const held = heldTick === tick;
   const ref = useRef<HTMLDivElement>(null);
+  // Con el visor de planos abierto el aviso se ancla a la izquierda del área
+  // principal: no tapa ni la franja ni el lienzo del plano (§5.3).
+  const planos = useObraStore((s) => s.lateral === 'planos');
 
   // Apilado de abajo arriba: barras inferiores, barra de selección de líneas,
   // aviso. Solo si la barra de selección ocupa el hueco del aviso (pegada al
@@ -49,7 +52,7 @@ export function Toast() {
     <div
       key={tick}
       ref={ref}
-      className={`no-print ${styles.toast} ${styles[tone]}`}
+      className={`no-print ${styles.toast} ${styles[tone]} ${planos ? styles.izquierda : ''}`}
       role={tone === 'error' ? 'alert' : 'status'}
       aria-live={tone === 'error' ? 'assertive' : 'polite'}
       onMouseEnter={hold}

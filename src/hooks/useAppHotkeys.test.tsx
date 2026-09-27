@@ -53,6 +53,29 @@ describe('useAppHotkeys', () => {
     expect(has('p111')).toBe(true);
   });
 
+  it('Supr dentro del visor de planos no borra la partida aunque falle su stopPropagation', () => {
+    useObraStore.getState().togglePartida('p111');
+    render(<Harness />);
+    // un nodo cualquiera DENTRO de la raíz del visor, sin manejador propio
+    const visor = document.createElement('div');
+    visor.setAttribute('data-planos-viewer', '');
+    const hijo = document.createElement('div');
+    visor.appendChild(hijo);
+    document.body.appendChild(visor);
+    fireEvent.keyDown(hijo, { key: 'Delete' });
+    expect(has('p111')).toBe(true);
+    visor.remove();
+  });
+
+  it('Esc con el foco fuera del visor de planos lo cierra (y deja la partida abierta)', () => {
+    useObraStore.getState().togglePartida('p111');
+    useObraStore.getState().setPlanosOpen(true);
+    render(<Harness />);
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(useObraStore.getState().lateral).toBeNull();
+    expect(useObraStore.getState().openPartidaId).toBe('p111');
+  });
+
   it('Esc deselecciona la partida abierta', () => {
     useObraStore.getState().togglePartida('p111');
     render(<Harness />);

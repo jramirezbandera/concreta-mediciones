@@ -2,7 +2,7 @@
 ## Implementation plan
 # Plan · Medir sobre planos PDF
 
-> Estado: APROBADO (/autoplan, 2026-09-25). Etapa 0 hecha (`30d99eb`, pendiente de publicar). X0 hecho (2026-09-25): la «Especificación · Etapa A» es la fuente única; lo que sustituye está en «Historial» y en el «Registro de la revisión». Orden: Etapa 0 → X0 → A0 → puerta cronometrada → A1 → Etapa B.
+> Estado: APROBADO (/autoplan, 2026-09-25). Etapa 0 hecha y publicada (`30d99eb`). X0 hecho (`f0a5552`): la «Especificación · Etapa A» es la fuente única; lo que sustituye está en «Historial» y en el «Registro de la revisión». A0 hecha (2026-09-26, sin publicar): lector y escritor v6, visor detrás del interruptor; sus desviaciones de la especificación, en §14. Orden: Etapa 0 → X0 → A0 → puerta cronometrada → A1 → Etapa B.
 
 ## Petición
 
@@ -1192,7 +1192,15 @@ Lo que esta especificación decide donde el plan no llegaba o se contradecía. C
 
 ### 14. Cambios a la especificación
 
-(Vacío. Cada cambio posterior: fecha, qué cambia y por qué.)
+Cada cambio posterior: fecha, qué cambia y por qué.
+
+- **2026-09-26 (A0) · `migracionV5` va en la meta del índice v6, no en el sobre.** El sobre se reescribe entero en cada guardado y se perdería; el índice es pequeño, se lee al arrancar y la meta ya se fusiona (Etapa 0). Así el aviso de cambios antiguos y la limpieza de los 30 días no leen ningún sobre v6. Se sella con el guardado que migra (`saveActiveObra` con `migracion`), que además escribe `concreta.version.<id> = 6`. §1.1 y §1.2: donde dice «en el sobre», léase «en `ObraMeta`».
+- **2026-09-26 (A0) · pdf.js 6.3.289.** `isEvalSupported` ya no existe (la librería no evalúa código); se publica también `iccUrl` (perfiles ICC); el sandbox de scripting (`quickjs`) no se publica. El worker se carga con `import …?url` de Vite (la forma que resuelve un especificador de paquete), no con `new URL(…, import.meta.url)`. pdf.js no deja dos `render()` sobre el mismo lienzo aunque el primero esté cancelado: el adaptador encola los pintados por lienzo (StrictMode).
+- **2026-09-26 (A0) · `DocPdf.pagina(n)` es asíncrona.** pdf.js carga cada página bajo demanda; hacerla síncrona obligaba a cargar las 2 000 páginas al abrir.
+- **2026-09-26 (A0) · Ciclo (§5.3).** `reposo` guarda `sustituye` («Volver a medir» armado: el primer clic empieza la forma nueva y Esc restaura). Nuevo evento `moverVertice` (arrastrar un vértice antes de confirmar; en Superficie, sin cruzar la forma). El motivo de un clic es cualquier `{ motivo }`: el visor suma `sin-partida`, `solo-lectura`, `estrecha` y `pintando`.
+- **2026-09-26 (A0) · Ficheros.** Las guardas y `apartarIlegibles` en `core/planoDatos.ts`; los textos de motivos en `store/motivos.ts`; la capa y la lupa dentro de `PlanoLienzo.tsx` (no `PlanoOverlay` ni `Lupa` aparte); además `PlanosLateral` (frontera de errores, en el bundle principal), `herramientas`, `capa`, `textos`, `motor`, `usePlanoDoc`, `adjuntar` (+ `huellaWorker`), `ejemplo` y `pdfTipos`. `editGridNav` y `useMedGridTab` no cambian: el marcador no lleva los marcadores de celda. Los tests de E12 van en `obraStore.test.ts`.
+- **2026-09-26 (A0) · Redondeo.** También los puntos de la cota y de la comprobación se guardan a 0,01.
+- **2026-09-26 (A0) · Interruptor.** `?planos=1` y `?planos=0` se recuerdan en `localStorage['concreta.planos']`.
 
 ## Historial
 
@@ -3989,6 +3997,7 @@ Nuevas:
   - 11 (T10): «Usar este PDF para este plano» con historial de huellas. La huella de `origen` manda en «Ver en plano» y cuenta como referencia.
   - 12 (T11): certificación por líneas con signo (E12) antes de habilitar Restar.
 - **Siguiente paso:** implementar la Etapa 0 (tareas E0, E1, E15 y E16) y escribir X0 antes de la primera línea de A0.
+- **A0 hecha (2026-09-26), sin publicar.** Esquema v6 en `concreta6.*` con migración perezosa por la pestaña dueña, almacén `concreta-planos`, E12, geometría, tabla herramienta × forma, ciclo, acciones del store con `expect`, motor pdf.js 6.3.289 (contrato con el doble), visor detrás del interruptor, marcador de origen, ayuda y «Planos (ejemplo)». Probada en el navegador con pdf.js real (medir, calibrar, adjuntar, 1440/1024/390 px y el build con el `base` de Pages). Desviaciones en §14. Siguiente: publicarla y escribir `docs/spike/03-planos-cronometrado.md` ANTES de la puerta cronometrada (§11).
 - **X0 hecho (2026-09-25):** «Especificación · Etapa A» al principio del documento, con fixtures en `src/test/fixtures/planos/` comprobados por `fixtures.test.ts`. Siguiente: publicar la Etapa 0 y empezar A0.
 - **Etapa 0 implementada (2026-09-25), pendiente de publicar.** Clave de versión por obra `concreta.version.<id>`; `newObra` también deja de sustituir una obra sin guardar; `lateral: 'ref' | 'asistente' | null` (A0 añade `'planos'`). Tests con el fixture v7 en `persist/sync.etapa0.test.ts`. Siguiente: publicarla sola y escribir X0.
 

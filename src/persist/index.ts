@@ -12,6 +12,9 @@ export {
   descargarCopia,
   importarSobreActiva,
   volverAObraGuardada,
+  abrirCambiosAntiguos,
+  ignorarCambiosAntiguos,
+  aislarPestana,
   __resetSyncForTests,
   type ImportarResult,
 } from './sync';
@@ -26,6 +29,9 @@ export {
   obraKey,
   obraKeys,
   versionKey,
+  v5ObraKey,
+  v5VersionKey,
+  V5_OBRA_KEY_PREFIX,
   newerVersionOf,
   OBRA_KEY,
   OBRA_KEY_PREFIX,
@@ -35,6 +41,7 @@ export {
 } from './persist';
 export {
   INDEX_KEY,
+  V5_INDEX_KEY,
   listObras,
   loadIndex,
   getActiveId,
@@ -47,6 +54,8 @@ export {
   newObraId,
   loadObraData,
   setUltimaCopia,
+  limpiarCopiasV5,
+  type MigracionV5,
   type ObraMeta,
   type ObraIndex,
   type LoadObraResult,

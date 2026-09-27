@@ -1,7 +1,8 @@
 /* ===========================================================================
    Fixtures de la «Especificación · Etapa A» (docs/plan-medir-planos-pdf.md,
    §1). Son el contrato de lo que se guarda en v6: el lector y el escritor v6
-   (A0) tienen que leerlos y devolverlos iguales. Este test comprueba que los
+   (A0) tienen que leerlos y devolverlos iguales (que la app v5 de la Etapa 0 los
+   trata como «más nueva» lo cubren sus tests con una v7). Este test comprueba que los
    propios fixtures cumplen las reglas de la especificación, recalculando cada
    valor desde los puntos con una implementación de referencia mínima (la de A0,
    `valoresDesdeOrigen`, tendrá que dar lo mismo) y cada `expr` con el
@@ -11,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 import { evalEsExpr } from '../../../core/expresion';
 import { round2 } from '../../../core/money';
 import { isObraData, newerVersionOf } from '../../../persist/persist';
+import { SCHEMA_VERSION, fromSerializable, type ObraData } from '../../../store/schema';
 import a0 from './obra-v6-a0.json';
 import a1 from './obra-v6-a1.json';
 
@@ -122,10 +124,13 @@ describe.each(FIXTURES)('%s cumple el contrato v6', (_n, obra) => {
   const medidas = lineas.filter((l): l is Linea & { origen: Origen } => !!l.origen);
   const plano = (id: string) => obra.planos.find((p) => p.id === id)!;
 
-  it('es v6 y la app v5 (Etapa 0) la reconoce como «más nueva», no como dañada', () => {
-    expect(obra.schemaVersion).toBe(6);
-    expect(newerVersionOf({ schemaVersion: 6, savedAt: 'x', appVersion: 'x', data: obra })).toBe(6);
+  it('es v6: esta app la lee tal cual, sin migrar ni apartar nada', () => {
+    expect(obra.schemaVersion).toBe(SCHEMA_VERSION);
+    expect(newerVersionOf({ schemaVersion: 6, savedAt: 'x', appVersion: 'x', data: obra })).toBeNull();
     expect(isObraData(obra)).toBe(true); // forma v5 intacta: v6 solo añade campos
+    const leida = fromSerializable(structuredClone(obra) as unknown as ObraData);
+    expect(leida._ilegible).toBeUndefined();
+    expect(leida).toEqual(obra); // lo que A0 no entiende (A1) se conserva igual
   });
 
   it('claves de página enteras de 1 a `paginas`', () => {

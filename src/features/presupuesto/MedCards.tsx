@@ -12,6 +12,8 @@ import { useMedUiStore } from '../../store/medUiStore';
 import check from '../../styles/lineCheck.module.css';
 import { FUERA_TITLE, decOf } from './format';
 import { MedComment, MedNum } from './MedCells';
+import { MedOrigen } from './MedOrigen';
+import { conMarcador } from './origen';
 import { CutTag } from './MedLineRow';
 import { useIsCut } from './useIsCut';
 import styles from './Presupuesto.module.css';
@@ -93,6 +95,7 @@ const MedLineCard = memo(function MedLineCard({
           />
         </span>
         {cut && <CutTag />}
+        {line.origen !== undefined && conMarcador({ med: [line] }) && <MedOrigen line={line} numero={index + 1} chip />}
         <button
           type="button"
           title="Eliminar línea"

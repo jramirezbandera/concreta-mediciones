@@ -18,6 +18,9 @@ export interface TopBarProps {
   onToggleRef?: () => void;
   asistenteOpen?: boolean;
   onToggleAsistente?: () => void;
+  /** Visor de planos (medir sobre planos PDF): solo con su interruptor encendido. */
+  planosOpen?: boolean;
+  onTogglePlanos?: () => void;
   onExport?: () => void;
   onObra?: () => void;
   /** Abre el Centro de Ayuda. Punto de entrada universal (también en móvil). */
@@ -49,6 +52,8 @@ export function TopBar({
   onToggleRef,
   asistenteOpen = false,
   onToggleAsistente,
+  planosOpen = false,
+  onTogglePlanos,
   onExport,
   onObra,
   onHelp,
@@ -275,6 +280,19 @@ export function TopBar({
                   Referencia · copiar partidas
                 </button>
               )}
+              {onTogglePlanos && (
+                <button
+                  type="button"
+                  role="menuitemcheckbox"
+                  aria-checked={planosOpen}
+                  data-boton-planos=""
+                  onClick={onTogglePlanos}
+                  className={`tcol ${styles.menuItem} ${planosOpen ? styles.menuItemOn : ''}`}
+                >
+                  <Icon name="plano" size={16} />
+                  Planos · ver el PDF
+                </button>
+              )}
               {importAction && <div className={styles.menuSlot}>{importAction}</div>}
               {onObra && (
                 <button type="button" role="menuitem" onClick={onObra} className={`tcol ${styles.menuItem}`}>
@@ -304,6 +322,36 @@ export function TopBar({
             </div>
           </div>
         )}
+        {!useMenu &&
+          onTogglePlanos &&
+          (roomy ? (
+            <button
+              type="button"
+              onClick={onTogglePlanos}
+              title="Medir sobre planos PDF"
+              aria-pressed={planosOpen}
+              data-boton-planos=""
+              className={`tcol ${styles.refBtn} ${planosOpen ? styles.on : ''}`}
+            >
+              <Icon name="plano" size={15} /> Planos
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onTogglePlanos}
+              title="Planos: medir sobre el PDF"
+              aria-label="Planos"
+              aria-pressed={planosOpen}
+              data-boton-planos=""
+              className="tcol icon-btn"
+              style={{
+                background: planosOpen ? 'var(--accent-soft)' : undefined,
+                color: planosOpen ? 'var(--accent)' : undefined,
+              }}
+            >
+              <Icon name="plano" size={16} />
+            </button>
+          ))}
         {!useMenu &&
           onToggleRef &&
           (roomy ? (

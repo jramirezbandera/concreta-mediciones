@@ -5,6 +5,7 @@
    `AyudaCenter`.
    =========================================================================== */
 import type { IconName } from '../components';
+import { planosActivos } from '../features/planos/flag';
 
 export type HelpTab = 'inicio' | 'funcionalidades' | 'atajos';
 export type GoView = 'import' | 'presupuesto' | 'certificaciones' | 'resumen';
@@ -63,6 +64,14 @@ export interface Feature {
   desc: string;
 }
 
+/** «Medir sobre planos» (§10 de la especificación): qué herramienta para qué
+ *  partida, el ciclo, calibrar, una escala por página y las líneas retocadas. */
+const MEDIR_SOBRE_PLANOS: Feature = {
+  icon: 'plano',
+  title: 'Medir sobre planos',
+  desc: 'Botón «Planos»: adjunta el PDF, calibra cada página con una cota conocida y compruébala con otra (a más de 45° si se puede), y mide con clic… Enter para cerrar la forma y Enter para aceptar el comentario: cada medida entra como línea de la partida abierta, con su «P1 · Salón» y de dónde sale. Qué herramienta para qué partida: por Unidades, Recuento; por Longitud, Longitud (o el perímetro de una Superficie o un Rectángulo); por Longitud × Anchura, Rectángulo (largo y ancho) o Longitud con la altura del paramento fija; por Superficie directa, Superficie o Rectángulo, o Longitud × altura para paramentos; por Peso, Longitud con el kg/m fijo o el perfil del comentario. Restar (D) mide huecos que descuentan. Cada página tiene UNA escala: para un detalle a otra escala, adjunta el PDF otra vez. Una línea retocada a mano lleva «✎» en su marcador y en el plano; su número de la izquierda es «Ver en plano». El PDF se queda en este navegador: la copia .json lleva las líneas y los datos de los planos, no los PDF.',
+};
+
 export const FEATURES: Feature[] = [
   {
     icon: 'ruler',
@@ -89,6 +98,8 @@ export const FEATURES: Feature[] = [
     title: 'Exportar',
     desc: '.bc3 FIEBDC-3 para Presto/Arquímedes, además de PDF, Excel y Word.',
   },
+  // Medir sobre planos PDF: detrás de su interruptor hasta la puerta cronometrada.
+  ...(planosActivos() ? [MEDIR_SOBRE_PLANOS] : []),
 ];
 
 export interface ShortcutRow {
@@ -114,6 +125,30 @@ export function shortcutGroups(mod: string): ShortcutGroup[] {
         { keys: ['?'], label: 'Abrir esta ayuda' },
       ],
     },
+    ...(planosActivos()
+      ? [
+          {
+            title: 'Visor de planos',
+            rows: [
+              { keys: ['M'], label: 'Mano: mover y seleccionar' },
+              { keys: ['L'], label: 'Longitud' },
+              { keys: ['S'], label: 'Superficie' },
+              { keys: ['R'], label: 'Rectángulo (tres clics)' },
+              { keys: ['N'], label: 'Recuento' },
+              { keys: ['D'], label: 'Restar (descontar), conmutador' },
+              { keys: ['C'], label: 'Calibrar la página' },
+              { keys: ['F'], label: 'Ajustar a la ventana' },
+              { keys: ['+', '−'], label: 'Acercar y alejar (también Ctrl + rueda, al cursor)' },
+              { keys: ['Espacio'], label: 'Mantener y arrastrar para desplazar (también botón central)' },
+              { keys: ['Enter'], label: 'Cerrar la forma; en el comentario, crear la línea' },
+              { keys: ['Retroceso'], label: 'Quitar el último punto (no toca el historial)' },
+              { keys: ['Mayús'], label: 'Forzar 0/45/90°' },
+              { keys: ['Supr'], label: 'Con Mano, borrar la línea de la forma seleccionada' },
+              { keys: ['Esc'], label: 'Descartar la forma; en reposo, cerrar el visor' },
+            ],
+          },
+        ]
+      : []),
     {
       title: 'Líneas de medición',
       rows: [

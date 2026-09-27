@@ -89,12 +89,13 @@ function completeDraft(s: ObraState, p: Partida): void {
   const current = cert.data[p.id] ?? 0;
   const med = p.med ?? [];
   if (med.length > 0) {
-    // Marca cada línea a su parcial (>0; una línea de parcial 0 no se certifica,
-    // como en `setCertLine`). ofertada>0 garantiza ≥1 parcial positivo.
+    // Marca cada línea a su parcial CON SIGNO (E12): un hueco medido con Restar
+    // (parcial < 0) se certifica también, así +100 y −10 certifican 90. Solo la
+    // de parcial 0 se queda sin marcar, como en `setCertLine`.
     const lines: Record<string, number> = {};
     for (const l of med) {
       const parcial = lineParcial(l);
-      if (parcial > 0) lines[l.id] = parcial;
+      if (parcial !== 0) lines[l.id] = parcial;
     }
     (cert.lineQty ??= {})[p.id] = lines;
     cert.data[p.id] = round2(Math.max(sumLineQty(lines), current, prev));
@@ -149,7 +150,9 @@ export const createCertSlice: ObraSlice<CertSlice> = (set) => ({
       if (!cert) return;
       const lineQty = (cert.lineQty ??= {});
       const lines = (lineQty[partidaId] ??= {});
-      if (qty == null || qty <= 0) {
+      // E12: una línea negativa (Restar) se certifica con su cantidad negativa;
+      // solo el 0 desmarca.
+      if (qty == null || qty === 0 || !Number.isFinite(qty)) {
         delete lines[lineId];
       } else {
         lines[lineId] = round2(qty);

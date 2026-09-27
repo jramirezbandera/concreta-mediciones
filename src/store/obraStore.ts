@@ -21,7 +21,7 @@
 import { create, type StateCreator } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import type { Agente, Cert, MedForma, MedLine, Partida, Rates, ResourceType } from '../core/types';
+import type { Agente, Cert, Escala, MedForma, MedLine, Partida, PlanoMeta, Rates, ResourceType } from '../core/types';
 import { composeCertFirmantes, firmaCertDefinitiva } from '../core/listado';
 import { ancestorIds, findNode } from '../core/tree';
 import { rawUuid } from '../core/id';
@@ -34,6 +34,14 @@ import { DOMAIN_KEYS, SCHEMA_VERSION, blankObraData, seedObraData, type ObraData
 import { createCertSlice } from './slices/certSlice';
 import { createCopySlice, type PendingCopy } from './slices/copySlice';
 import { createEstructuraSlice } from './slices/estructuraSlice';
+import {
+  createPlanosSlice,
+  type DestinoPlano,
+  type ExpectDoc,
+  type ExpectMedida,
+  type ExpectRemedir,
+} from './slices/planosSlice';
+import type { NewPlanoLine } from '../core/planoMedida';
 // Historial de Deshacer/Rehacer (undo/redo global): `loadObra`/`reset` envuelven
 // su `set` en `pauseHistory` para NO registrar la carga y vaciar el historial (un
 // undo no cruza obras, análogo D-08). Import de un solo sentido: `temporal` solo
@@ -48,6 +56,7 @@ export type { DomainKey } from './schema';
 export { copyTargetOf } from './slices/copySlice';
 export type { ObraData };
 export type { CopyTarget, PendingCopy } from './slices/copySlice';
+export type { DestinoPlano, ExpectDoc, ExpectMedida, ExpectRemedir } from './slices/planosSlice';
 
 /** Modo de edición de una certificación: importe a origen vs. de esta cert. */
 export type CertMode = 'origen' | 'esta';
@@ -73,16 +82,39 @@ export interface NewMedLine {
  */
 export interface MedResult {
   ids: string[];
-  reason?: 'no-partida' | 'no-lines' | 'noop' | 'stale';
+  /** Los de siempre y, con los planos (§4.3): `no-plano`, `sin-calibrar`,
+   *  `no-encaja`, `certificada`, `falta-dimension` y `has-lines`. Los textos,
+   *  con problema, causa y arreglo, en `store/motivos`. */
+  reason?:
+    | 'no-partida'
+    | 'no-lines'
+    | 'noop'
+    | 'stale'
+    | 'no-plano'
+    | 'sin-calibrar'
+    | 'no-encaja'
+    | 'certificada'
+    | 'falta-dimension'
+    | 'has-lines';
+  /** Lo que el texto del motivo necesita: qué cambió (`stale`), cuántas líneas
+   *  (`has-lines`), qué línea y en qué certificaciones (`certificada`). */
+  detalle?: {
+    cambio?: 'obra' | 'plano' | 'escala' | 'forma' | 'linea';
+    n?: number;
+    linea?: number;
+    certNums?: number[];
+    partidaId?: string;
+  };
 }
 
 /** Salida del copy-on-write: forkar copia privada vs. editar el compartido en todas. */
 export type CowChoice = 'copy' | 'all';
 
-/** Qué ocupa el hueco lateral: Referencia, el asistente de IA o nada. UN solo
- *  campo: que abrir uno cierre el otro sale de la forma, no de mantener a mano
- *  booleanos excluyentes (regla única del hueco lateral, diseño D4). */
-export type Lateral = 'ref' | 'asistente' | null;
+/** Qué ocupa el hueco lateral: Referencia, el asistente de IA, el visor de
+ *  planos o nada. UN solo campo: que abrir uno cierre el otro sale de la forma,
+ *  no de mantener a mano booleanos excluyentes (regla única del hueco lateral,
+ *  diseño D4). */
+export type Lateral = 'ref' | 'asistente' | 'planos' | null;
 
 export interface ObraState extends ObraData {
   /* ---- estado de UI ---- */
@@ -181,7 +213,8 @@ export interface ObraState extends ObraData {
   /**
    * Marca/desmarca una línea de medición como ejecutada en la cert en curso
    * (dogfood #3). `qty` = cantidad A ORIGEN de la línea (su parcial si entera;
-   * menos si se certifica una parte); `null`/≤0 la desmarca. Resincroniza
+   * menos si se certifica una parte; negativa en una línea de Restar, E12);
+   * `null`/0 la desmarca. Resincroniza
    * `data[partidaId] = Σ lineQty[partidaId]` (a-origen, regla §1). La marca es
    * SIEMPRE a-origen, independiente del modo A origen/Esta cert (regla §2).
    */
@@ -257,6 +290,9 @@ export interface ObraState extends ObraData {
   /** Abre/cierra el panel del asistente de IA; sin argumento alterna. Abrirlo
    *  pliega Referencia (regla única del hueco lateral, diseño D4). */
   setAsistenteOpen: (open?: boolean) => void;
+  /** Abre/cierra el visor de planos; sin argumento alterna. Abrirlo cierra
+   *  Referencia y el asistente (mismo hueco lateral). */
+  setPlanosOpen: (open?: boolean) => void;
   /** Selecciona la fuente de referencia activa (id de `REF_SOURCES`). */
   setRefSource: (id: string) => void;
   /** Fija el ancho del panel en split (se clampa a 320–640). */
@@ -552,6 +588,25 @@ export interface ObraState extends ObraData {
    */
   freezeCertFirmantes: (index: number, nowIso?: string) => void;
 
+  /* ---- planos PDF (medir sobre planos, §4 de la especificación) ----
+     Un `set` dentro de `structural()` = UN paso de Deshacer; `expect` con lo
+     que el usuario revisó (si ya no cuadra: `stale` sin tocar nada). */
+  /** Publica un plano (tras guardar sus bytes). Si hay uno QUITADO con la misma
+   *  huella, lo revive con sus escalas y líneas (salvo `nuevo`: «Adjuntar otra
+   *  vez (para otra escala)», otro plano con los mismos bytes). */
+  attachPlano: (a: { meta: PlanoMeta; expect: ExpectDoc; nuevo?: boolean }) => MedResult;
+  /** Pone `quitado`: sale de las listas; sus líneas conservan números y `origen`. */
+  removePlano: (a: { planoId: string; expect: ExpectDoc }) => MedResult;
+  renamePlano: (a: { planoId: string; nombre: string; expect: ExpectDoc }) => MedResult;
+  /** Rótulo corto de una página («P1»); vacío lo quita. */
+  setPlanoPageLabel: (a: { planoId: string; pagina: number; etiqueta: string; expect: ExpectDoc }) => MedResult;
+  /** Calibración nueva de una página. `has-lines` si ya tiene líneas medidas con escala. */
+  setPlanoPageScale: (a: { planoId: string; pagina: number; escala: Escala; expect: ExpectDoc }) => MedResult;
+  /** Alta de líneas medidas (y, si toca, del cambio a Superficie directa), todo o nada. */
+  addPlanoLines: (a: { destinos: DestinoPlano[]; expect: ExpectMedida }) => MedResult;
+  /** «Volver a medir»: sustituye valores, `expr` y `origen` (formaId nueva) de una línea. */
+  remeasureLine: (a: { lineId: string; preparada: NewPlanoLine; expect: ExpectRemedir }) => MedResult;
+
   /** Restaura el estado sembrado (datos + UI). Útil en tests y para "nueva obra". */
   reset: () => void;
 }
@@ -567,7 +622,7 @@ export type ObraSlice<T> = StateCreator<
 
 /** Hueco lateral tras abrir (`open` true), cerrar (false) o alternar (sin
  *  argumento) el panel `cual`. Cerrar un panel que no está abierto no toca el otro. */
-function toggleLateral(actual: Lateral, cual: 'ref' | 'asistente', open?: boolean): Lateral {
+function toggleLateral(actual: Lateral, cual: Exclude<Lateral, null>, open?: boolean): Lateral {
   if (open ?? actual !== cual) return cual;
   return actual === cual ? null : actual;
 }
@@ -690,6 +745,8 @@ export const useObraStore = create<ObraState>()(
 
       setAsistenteOpen: (open) => get().setLateral(toggleLateral(get().lateral, 'asistente', open)),
 
+      setPlanosOpen: (open) => get().setLateral(toggleLateral(get().lateral, 'planos', open)),
+
       setRefSource: (id) =>
         set((s) => {
           s.refSourceId = id;
@@ -718,9 +775,10 @@ export const useObraStore = create<ObraState>()(
         // importar/restaurar/conmutar no debe resucitar la obra anterior — D-08).
         pauseHistory(() =>
           set((s) => {
-            // `bajas: {}` por delante: un `ImportedObra` (.bc3) no trae tombstones
-            // y sin el default arrastraría los de la obra ANTERIOR (v3).
-            Object.assign(s, { schemaVersion: SCHEMA_VERSION, bajas: {}, ...data });
+            // `bajas: {}` y `planos: []` por delante: un `ImportedObra` (.bc3) no
+            // trae tombstones ni planos, y sin el default arrastraría los de la
+            // obra ANTERIOR (v3, v6). Lo apartado por ilegible tampoco se hereda.
+            Object.assign(s, { schemaVersion: SCHEMA_VERSION, bajas: {}, planos: [], _ilegible: undefined, ...data });
             Object.assign(s, seedUi(data.certs));
             const first = data.chapters[0]?.id;
             s.view = 'presupuesto';
@@ -795,6 +853,7 @@ export const useObraStore = create<ObraState>()(
       ...createCertSlice(set, get, store),
       ...createCopySlice(set, get, store),
       ...createEstructuraSlice(set, get, store),
+      ...createPlanosSlice(set, get, store),
     };
   }),
   ),

@@ -16,6 +16,7 @@ import { FUERA_TITLE } from './format';
 import { MedCards } from './MedCards';
 import { MedFormaSelect } from './MedFormaSelect';
 import { MedLineRow } from './MedLineRow';
+import { conMarcador } from './origen';
 import { MedPasteReview } from './MedPasteReview';
 import { MedSelectionBar } from './MedSelectionBar';
 import { PriceJustif } from './PriceJustif';
@@ -185,6 +186,8 @@ export function DetailPanel({
   const forma = medFormaDe(p);
   // Memoizado: las filas (`MedLineRow`, memo) no se re-renderizan al seleccionar.
   const cols = useMemo(() => medColumnas(forma, p.med ?? []), [forma, p.med]);
+  // Marcador de origen (planos PDF): solo con el visor encendido y alguna línea medida en un plano.
+  const marcador = useMemo(() => conMarcador({ med: p.med ?? [] }), [p.med]);
   const touch = isTouchOnly();
   const formaSelect = (
     <MedFormaSelect forma={p.medForma} ud={p.ud} onChange={(f) => setMedForma(chapterId, p.id, f)} />
@@ -281,6 +284,7 @@ export function DetailPanel({
                 <thead>
                   <tr>
                     <th className={`${styles.medTh} ${styles.medThSel}`} aria-label="Selección" />
+                    {marcador && <th className={`${styles.medTh} ${styles.medThOrigen}`} aria-label="Plano" />}
                     <th className={`${styles.medTh} ${styles.medThComment}`}>Comentario</th>
                     {cols.map((c) => (
                       <th
@@ -306,11 +310,12 @@ export function DetailPanel({
                       partidaId={p.id}
                       nextId={med[i + 1]?.id ?? null}
                       touch={touch}
+                      marcador={marcador}
                     />
                   ))}
                   {med.length === 0 && (
                     <tr>
-                      <td colSpan={cols.length + 4} className={styles.medEmpty}>
+                      <td colSpan={cols.length + 4 + (marcador ? 1 : 0)} className={styles.medEmpty}>
                         {emptyText}
                       </td>
                     </tr>

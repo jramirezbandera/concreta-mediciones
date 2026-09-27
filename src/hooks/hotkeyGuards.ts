@@ -51,7 +51,10 @@ export function isInteractiveTarget(e: KeyboardEvent): boolean {
       tag === 'SELECT' ||
       n.getAttribute('role') === 'button' ||
       n.dataset.editcell != null ||
-      n.closest('[data-editgrid]') != null
+      n.closest('[data-editgrid]') != null ||
+      // El visor de planos: Supr borra una FORMA, nunca la partida, aunque falle
+      // su stopPropagation (defensa en profundidad, §5.9).
+      n.closest('[data-planos-viewer]') != null
     );
   });
 }

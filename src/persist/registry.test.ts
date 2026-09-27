@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto';
 import { clear, get, set } from 'idb-keyval';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { SCHEMA_VERSION, seedObraData, toSerializable, type ObraData } from '../store';
-import { OBRA_KEY, loadObraEnvelope, obraKey, saveObra } from './persist';
+import { OBRA_KEY, loadObraEnvelope, obraKey, saveObra, versionKey } from './persist';
 import { usePersistStore } from './persistStore';
 import {
   INDEX_KEY,
@@ -191,7 +191,7 @@ describe('registry · meta FUSIONADA (Etapa 0)', () => {
     await setActiveId(id);
     const futuro = { schemaVersion: SCHEMA_VERSION + 1, savedAt: 'x', appVersion: '9', data: {} };
     await set(obraKey(id), futuro);
-    await set(`concreta.version.${id}`, SCHEMA_VERSION + 1);
+    await set(versionKey(obraKey(id)), SCHEMA_VERSION + 1);
     const before = await loadIndex();
     expect(await saveActiveObra(id, data('Pisaría'))).toEqual({ kind: 'version-conflict' });
     expect(await loadIndex()).toEqual(before);

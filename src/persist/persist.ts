@@ -20,23 +20,39 @@
      Concreta posterior se reconoce ANTES de validar su forma (`newer`, nunca
      `corrupt`) y `saveObra` no lo pisa (`version-conflict`). Así una pestaña con
      la app antigua pasa a solo lectura en vez de borrar o reinterpretar la obra.
+   · Espacio de claves PROPIO de v6 (planos PDF): `concreta6.obra.<id>`,
+     `concreta6.version.<id>` y `concreta6.obras.index`, que el código v5 no
+     lista ni escribe. Las claves v5 (`concreta.obra.<id>`…) solo se leen para
+     migrar, salvo tres escrituras: el sello de versión al migrar, la limpieza
+     de los 30 días y borrar una obra (ver `registry`).
    =========================================================================== */
 import { createStore, delMany, get, keys as idbKeys, promisifyRequest } from 'idb-keyval';
 import type { ObraData } from '../store';
 import { SCHEMA_VERSION } from '../store/schema';
 
 /** Clave LEGACY del proyecto único (pre multi-obra). La migración (registry) la
- *  mueve a `concreta.obra.<id>` y la borra. Exportada para esa ruta y para tests. */
+ *  mueve al registro y la borra. Exportada para esa ruta y para tests. */
 export const OBRA_KEY = 'concreta.obra.v1';
-/** Prefijo de las claves de obra por id (multi-obra, T-10). */
-export const OBRA_KEY_PREFIX = 'concreta.obra.';
+/** Prefijo de las claves de obra por id (multi-obra T-10; espacio v6). */
+export const OBRA_KEY_PREFIX = 'concreta6.obra.';
 /** Clave del blob de una obra por id. */
 export const obraKey = (id: string): string => `${OBRA_KEY_PREFIX}${id}`;
+/** Prefijo de las claves de obra v5: solo se leen para migrar. */
+export const V5_OBRA_KEY_PREFIX = 'concreta.obra.';
+/** Clave del blob v5 de una obra (la copia v5 tras migrar). */
+export const v5ObraKey = (id: string): string => `${V5_OBRA_KEY_PREFIX}${id}`;
+/** Clave pequeña de versión v5 (la de la Etapa 0): al migrar se sella a 6 para
+ *  que una pestaña con la Etapa 0 que intente guardar la obra en v5 reciba
+ *  `version-conflict` y pase a solo lectura. */
+export const v5VersionKey = (id: string): string => `concreta.version.${id}`;
 /** Clave PEQUEÑA con el `schemaVersion` del último sobre escrito en `key`: el
  *  guardado compara contra ella sin leer el sobre entero. Fuera del prefijo de
  *  obra para que `obraKeys` no la liste como una obra. */
-export const versionKey = (key: string): string =>
-  `concreta.version.${key.startsWith(OBRA_KEY_PREFIX) ? key.slice(OBRA_KEY_PREFIX.length) : key}`;
+export const versionKey = (key: string): string => {
+  if (key.startsWith(OBRA_KEY_PREFIX)) return `concreta6.version.${key.slice(OBRA_KEY_PREFIX.length)}`;
+  if (key.startsWith(V5_OBRA_KEY_PREFIX)) return v5VersionKey(key.slice(V5_OBRA_KEY_PREFIX.length));
+  return `concreta6.version.${key}`;
+};
 /** Versión de la app estampada en los sobres (diagnóstico). FUENTE ÚNICA:
  *  `transfer` la importa de aquí (antes había dos literales que podían divergir). */
 export const APP_VERSION = '0.6';
@@ -78,6 +94,10 @@ export function isObraData(x: unknown): x is ObraData {
   // `bajas` (tombstones, v3) es opcional AQUÍ: un blob v2 no lo trae y la
   // migración lo estrena; si viene, que al menos sea un mapa.
   if (o.bajas != null && !isRecord(o.bajas)) return false;
+  // `planos` (v6): solo se exige que sea un array. Un plano mal formado NUNCA
+  // manda la obra a recuperación: lo ilegible se aparta o se queda opaco al
+  // cargar (`core/planoDatos`). Antes de v6 no existe (la migración lo estrena).
+  if ((o.schemaVersion as number) >= 6 && !Array.isArray(o.planos)) return false;
   // Un nivel MÁS de forma (auditoría A-02): `certs: [null]`, `chapters: [null]`
   // o un recurso nulo pasaban el gate, hidrataban SIN banner de recuperación y
   // el primer selector reventaba en render — con el blob recargándose «sano» en
@@ -143,13 +163,19 @@ export async function loadObraEnvelope(key: string): Promise<LoadResult> {
   return { kind: 'corrupt', raw };
 }
 
-/** Lista las claves de blobs de obra por id (baratо: solo claves, sin leer
- *  valores). Excluye la clave LEGACY. Lo usa `registry.reconcile`. */
+/** Lista las claves de blobs de obra v6 por id (baratо: solo claves, sin leer
+ *  valores). Lo usa `registry.reconcile`. */
 export async function obraKeys(): Promise<string[]> {
   const ks = await idbKeys();
+  return ks.filter((k): k is string => typeof k === 'string' && k.startsWith(OBRA_KEY_PREFIX));
+}
+
+/** Claves de blobs de obra v5 (sin la LEGACY): saber qué obras «por migrar»
+ *  siguen teniendo su sobre. */
+export async function v5ObraKeys(): Promise<string[]> {
+  const ks = await idbKeys();
   return ks.filter(
-    (k): k is string =>
-      typeof k === 'string' && k.startsWith(OBRA_KEY_PREFIX) && k !== OBRA_KEY,
+    (k): k is string => typeof k === 'string' && k.startsWith(V5_OBRA_KEY_PREFIX) && k !== OBRA_KEY,
   );
 }
 

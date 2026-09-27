@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { Icon } from '../../components/Icon';
+import { planoLegible } from '../../core/planoDatos';
 import {
   ImportError,
   descargarCopia,
@@ -10,6 +11,7 @@ import {
   volverAObraGuardada,
   type ImportarResult,
 } from '../../persist';
+import { useObraStore } from '../../store';
 import { useEstadoCopia } from './recordatorioCopia';
 import styles from './ProjectBackup.module.css';
 
@@ -17,6 +19,8 @@ const ERROR_MSG: Record<string, string> = {
   malformado: 'El archivo no es un proyecto Concreta válido (JSON dañado o con otra estructura).',
   'version-desconocida':
     'El archivo viene de una versión más nueva de Concreta y aún no se puede abrir aquí.',
+  'demasiado-grande':
+    'El archivo tiene más planos o medidas de las que Concreta admite (máx. 200 planos, 50 000 líneas medidas).',
 };
 
 /** Por qué la importación no terminó bien (todo menos `ok`). */
@@ -70,6 +74,9 @@ export function ProjectBackup({ onImported }: ProjectBackupProps) {
   const [puedeVolver, setPuedeVolver] = useState(false);
   const [busy, setBusy] = useState(false);
   const copia = useEstadoCopia();
+  // La copia .json lleva las líneas con su procedencia y los datos de los
+  // planos, pero NO los PDF (§9.1).
+  const conPlanos = useObraStore((s) => s.planos.some((p) => planoLegible(p) && !p.quitado));
 
   async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -131,6 +138,13 @@ export function ProjectBackup({ onImported }: ProjectBackupProps) {
         </div>
       )}
       <DurabilityNote />
+      {conPlanos && (
+        <div className={styles.note}>
+          <Icon name="alert" size={14} />
+          Los planos no van en esta copia: si se pierden, vuelve a adjuntar el PDF. Las líneas
+          medidas conservan sus números.
+        </div>
+      )}
       <div className={styles.actions}>
         <button
           type="button"

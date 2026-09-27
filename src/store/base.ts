@@ -33,6 +33,11 @@ export const nextMedLineId = (): string => uid('m');
 export const nextExtraId = (): string => uid('x');
 export const nextAjusteId = (): string => uid('a');
 export const nextAgenteId = (): string => uid('ag');
+/** Identidad de una forma medida en un plano (`OrigenPlano.formaId`). */
+export const nextFormaId = (): string => uid('f');
+export const nextPlanoId = (): string => uid('pl');
+/** `Escala.rev`: nueva en CADA calibración. */
+export const nextCalRev = (): string => uid('cal');
 
 /** Sub del capítulo por id, a CUALQUIER profundidad (jerarquía N niveles). */
 export function subIn(ch: Chapter, subId: string): SubChapter | undefined {

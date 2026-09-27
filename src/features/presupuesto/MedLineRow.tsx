@@ -12,6 +12,7 @@ import check from '../../styles/lineCheck.module.css';
 import { decOf } from './format';
 import { useIsCut } from './useIsCut';
 import { MedComment, MedNum } from './MedCells';
+import { MedOrigen } from './MedOrigen';
 import styles from './Presupuesto.module.css';
 
 /** Etiqueta de texto de una línea cortada (no solo color: se lee). */
@@ -37,6 +38,7 @@ export const MedLineRow = memo(function MedLineRow({
   partidaId,
   nextId,
   touch,
+  marcador = false,
 }: {
   line: MedLine;
   index: number;
@@ -47,6 +49,8 @@ export const MedLineRow = memo(function MedLineRow({
   nextId: string | null;
   /** Solo táctil: sin asa (no hay arrastre) y casilla y X siempre visibles. */
   touch: boolean;
+  /** La partida pinta la columna del marcador de origen (planos PDF). */
+  marcador?: boolean;
 }) {
   const editMedLine = useObraStore((s) => s.editMedLine);
   const selected = useMedUiStore((s) => s.partidaId === partidaId && s.selected.includes(line.id));
@@ -111,6 +115,11 @@ export const MedLineRow = memo(function MedLineRow({
           </button>
         </div>
       </td>
+      {marcador && (
+        <td className={`${styles.medTd} ${styles.medOrigenTd}`}>
+          {line.origen !== undefined && <MedOrigen line={line} numero={index + 1} />}
+        </td>
+      )}
       <td className={`${styles.medTd} ${styles.medTdComment}`} data-editfield="" data-col="0">
         <div className={styles.medCommentWrap}>
           <MedComment

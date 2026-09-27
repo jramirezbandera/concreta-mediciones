@@ -79,3 +79,17 @@
     transform: translateY(0);
   }
 }
+
+/* Visor de planos abierto: a la izquierda del área principal (tras la barra
+   lateral en escritorio), fuera del hueco del visor. */
+.izquierda {
+  right: auto;
+  left: 12px;
+  margin: 0;
+  max-width: min(480px, calc(100vw - 24px));
+}
+@media (min-width: 1024px) {
+  .izquierda {
+    left: calc(var(--sidebar-w, 286px) + 16px);
+  }
+}

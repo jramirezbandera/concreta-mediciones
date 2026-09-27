@@ -7,7 +7,8 @@
    la capa de persistencia (`persist/`) lo consume sin arrastrar las ~53
    acciones del store.
    =========================================================================== */
-import type { Banco, Cert, Chapter, Obra, PartidaBaja, PartidasMap, Rates } from '../core/types';
+import type { Banco, Cert, Chapter, Ilegible, Obra, PartidaBaja, PartidasMap, PlanoMeta, Rates } from '../core/types';
+import { apartarIlegibles } from '../core/planoDatos';
 import { buildRecursos, precioCuadraDescompuesto, recursoUsage } from '../core/banco';
 import { CHAPTERS, DEFAULT_OBRA, DEFAULT_RATES, PARTIDAS, makeCertsInit } from '../core/seed';
 import { nextAgenteId } from './base';
@@ -38,8 +39,16 @@ import { nextAgenteId } from './base';
  *   sobre los costes directos, DENTRO del PEM). Migración: `ci: 0` — la obra
  *   guardada se presupuestó sin esa línea, así que su PEM no puede moverse al
  *   abrirla; quien quiera el CI lo pone en la hoja Resumen.
+ *
+ *   v5 → v6 (2026-09-26, medir sobre planos PDF): `planos` (los PDF adjuntos,
+ *   sus escalas y etiquetas) y `MedLine.origen` (de qué plano sale cada línea).
+ *   Migración: `planos: []`. v6 guarda en su propio espacio de claves
+ *   (`concreta6.*`, ver persist) y trae desde ya los campos de A1 y B, así las
+ *   subetapas siguientes no suben la versión. Regla: todo cambio que amplíe las
+ *   formas o los valores válidos que se guardan sube `SCHEMA_VERSION`, para que
+ *   el código anterior pase a solo lectura (Etapa 0) en vez de reinterpretar.
  */
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 /** Estado de dominio de la obra (lo que persistiría en F6). Serializable. */
 export interface ObraData {
@@ -55,6 +64,13 @@ export interface ObraData {
    *  certs las muestran CON NOMBRE en «Eliminado del presupuesto». Ver
    *  `PartidaBaja` (core/types). */
   bajas: Record<string, PartidaBaja>;
+  /** Planos adjuntos (v6): metadatos, escalas y etiquetas. Los bytes del PDF
+   *  van aparte, en el almacén `concreta-planos`, por su huella. */
+  planos: PlanoMeta[];
+  /** Datos de planos que romperían el render y se apartaron al cargar, con su
+   *  valor crudo y su ruta. Se escriben de vuelta tal cual (ver
+   *  `core/planoDatos.apartarIlegibles`). Ausente = ninguno. */
+  _ilegible?: Ilegible[];
 }
 
 /**
@@ -73,6 +89,8 @@ export const DOMAIN_KEYS = [
   'rates',
   'obra',
   'bajas',
+  'planos',
+  '_ilegible',
 ] as const satisfies readonly (keyof ObraData)[];
 export type DomainKey = (typeof DOMAIN_KEYS)[number];
 
@@ -111,6 +129,7 @@ export function seedObraData(): ObraData {
     rates: { ...DEFAULT_RATES },
     obra: { ...DEFAULT_OBRA },
     bajas: {},
+    planos: [],
   };
 }
 
@@ -130,6 +149,7 @@ export function blankObraData(name = 'Obra nueva'): ObraData {
     rates: { ...DEFAULT_RATES },
     obra: { denominacion: name, direccion: '', localidad: '' },
     bajas: {},
+    planos: [],
   };
 }
 
@@ -157,6 +177,8 @@ export function toSerializable(s: ObraData): ObraData {
     rates: s.rates,
     obra: s.obra,
     bajas: s.bajas,
+    planos: s.planos ?? [],
+    ...(s._ilegible?.length ? { _ilegible: s._ilegible } : {}),
   };
 }
 
@@ -194,12 +216,16 @@ const MIGRATIONS: Record<number, (d: ObraData) => ObraData> = {
   // v4 → v5 (costes indirectos de obra): estrena `rates.ci` en 0 — el PEM de una
   // obra ya guardada no se mueve al abrirla (ver SCHEMA_VERSION).
   4: (d) => ({ ...d, rates: { ...d.rates, ci: 0 }, schemaVersion: 5 }),
+  // v5 → v6 (planos PDF): la obra no tenía planos; sus líneas, ningún `origen`.
+  5: (d) => ({ ...d, planos: [], schemaVersion: 6 }),
 };
 
 /**
  * Valida/migra un `ObraData` cargado (hydrate de IndexedDB e import .json).
  * Migra en cadena las versiones antiguas; rechaza las desconocidas (más nuevas
- * que la app, o tan viejas que no hay ruta).
+ * que la app, o tan viejas que no hay ruta). Después aparta a `_ilegible` los
+ * datos de planos que romperían el render (sin guardar nada: se escriben con el
+ * siguiente guardado real) y deja opaco en su sitio lo demás.
  */
 export function fromSerializable(data: ObraData): ObraData {
   let d = data;
@@ -213,5 +239,5 @@ export function fromSerializable(data: ObraData): ObraData {
       `schemaVersion ${data.schemaVersion} no soportada (esperada ≤ ${SCHEMA_VERSION}); sin ruta de migración.`,
     );
   }
-  return d;
+  return apartarIlegibles(d);
 }

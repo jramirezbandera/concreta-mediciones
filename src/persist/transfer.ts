@@ -9,6 +9,7 @@
      desconocida). La operación es DESTRUCTIVA (reemplaza el proyecto), así que la
      confirmación + el backup previo viven en la UI (ProjectBackup).
    =========================================================================== */
+import { excedeTopes } from '../core/planoDatos';
 import { fromSerializable, toSerializable, useObraStore, type ObraData } from '../store';
 import { APP_VERSION, isObraData, newerVersionOf } from './persist';
 
@@ -51,8 +52,10 @@ function triggerDownload(text: string, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
-/** Motivo de un import fallido, en mensaje legible. */
-export type ImportErrorKind = 'malformado' | 'version-desconocida';
+/** Motivo de un import fallido, en mensaje legible. `demasiado-grande`: pasa
+ *  de los topes de planos (§1.4), que protegen el validador y la capa de un
+ *  fichero manipulado. */
+export type ImportErrorKind = 'malformado' | 'version-desconocida' | 'demasiado-grande';
 
 export class ImportError extends Error {
   constructor(public kind: ImportErrorKind) {
@@ -91,6 +94,7 @@ export function parseObraJson(text: string): ObraData {
   if (newerVersionOf(parsed) !== null) throw new ImportError('version-desconocida');
   const candidate = pickObraData(parsed);
   if (!candidate) throw new ImportError('malformado');
+  if (excedeTopes(candidate)) throw new ImportError('demasiado-grande');
   try {
     return fromSerializable(candidate); // gate de schemaVersion
   } catch {
