@@ -52,7 +52,7 @@ import { adjuntarPlano } from './adjuntar';
 import { CalibrarPasos, CampoMetros } from './CalibrarPasos';
 import { BotonAyuda } from './BotonAyuda';
 import { textoEscala } from './textos';
-import { cajaDe, formasDeLineas, otrasPaginas, type FormaCapa } from './capa';
+import { cajaDe, formasDeLineas, otrasPaginas, paginasAPrecargar, type FormaCapa } from './capa';
 import {
   HERRAMIENTAS_MEDIR,
   leerFactor,
@@ -66,6 +66,7 @@ import { PlanoLienzo, type Ancla, type LienzoApi } from './PlanoLienzo';
 import { PlanoToolbar } from './PlanoToolbar';
 import { SelectorPartida } from './SelectorPartida';
 import { usePaginaPdf, usePlanoDoc } from './usePlanoDoc';
+import { PAGINAS_EN_MEMORIA } from './pdfTipos';
 import styles from './Planos.module.css';
 
 const TEXTO_DESCARTE: Record<string, string> = {
@@ -114,11 +115,14 @@ export function PlanoViewer({
   plano,
   estrecha,
   onCerrarVisor,
+  paginasConMedidas,
 }: {
   plano: PlanoMeta;
   /** Por debajo de 1024 px solo se ve: medir está deshabilitado. */
   estrecha: boolean;
   onCerrarVisor: () => void;
+  /** Páginas de este plano con líneas medidas (de cualquier partida). */
+  paginasConMedidas?: readonly number[];
 }) {
 
   const partidas = useObraStore((s) => s.partidas);
@@ -647,6 +651,17 @@ export function PlanoViewer({
     () => (partida ? formasDeLineas(partida.med, plano.id, pagina) : []),
     [partida, plano.id, pagina],
   );
+  // Tras pintar, en reposo: las vecinas y las páginas con escala o medidas.
+  const precarga = useMemo(
+    () =>
+      paginasAPrecargar(
+        pagina,
+        plano.paginas,
+        [...Object.keys(plano.escalas).map(Number), ...(paginasConMedidas ?? [])],
+        PAGINAS_EN_MEMORIA - 1,
+      ),
+    [pagina, plano.paginas, plano.escalas, paginasConMedidas],
+  );
   const vacioOtras = useMemo(
     () => (partida && !formas.length ? otrasPaginas(partida.med, plano.id, pagina) : []),
     [partida, formas.length, plano.id, pagina],
@@ -811,6 +826,7 @@ export function PlanoViewer({
             onMoverCota={(cual, p) => dispatch({ tipo: 'moverPunto', cual, p })}
             onCursor={(p) => setCursor(p)}
             onPintado={(est, causa) => setPintado({ estado: est, causa })}
+            precargar={precarga}
           />
         )}
         {doc && pintado.estado === 'pintando' && <div className={styles.pintando}>Pintando…</div>}

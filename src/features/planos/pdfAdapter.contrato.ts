@@ -72,6 +72,17 @@ export function contratoPdfAdapter(nombre: string, crear: () => PdfAdapter): voi
       expect(() => doc.cerrar()).not.toThrow();
     });
 
+    it('precargar nunca falla: con la señal abortada, página inexistente o tras cerrar', async () => {
+      const doc = await abrir(crear(), [{ mediaBox: [0, 0, 100, 100] }, { mediaBox: [0, 0, 100, 100] }]);
+      await expect(doc.precargar(2, new AbortController().signal)).resolves.toBeUndefined();
+      const ac = new AbortController();
+      ac.abort();
+      await expect(doc.precargar(1, ac.signal)).resolves.toBeUndefined();
+      await expect(doc.precargar(9, new AbortController().signal)).resolves.toBeUndefined();
+      doc.cerrar();
+      await expect(doc.precargar(1, new AbortController().signal)).resolves.toBeUndefined();
+    });
+
     it('abrir con la señal ya abortada: `cancelado`', async () => {
       const ac = new AbortController();
       ac.abort();

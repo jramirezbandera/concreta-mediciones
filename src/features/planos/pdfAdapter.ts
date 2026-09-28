@@ -11,9 +11,15 @@
      texto CID del cajetín sale mal y los escaneos salen en blanco.
    · Cada pintado se cancela con su señal (`renderTask.cancel()`): solo pinta
      la última petición, y `cerrar` se puede llamar dos veces (StrictMode).
+   · Rendimiento (planos CAD de un millón de operaciones por página):
+     - un solo worker para todos los documentos (arrancarlo cuesta ~200 ms);
+     - `precargar` prepara en el worker la lista de operaciones de una página
+       sin pintar nada, así el cambio a esa página solo pinta;
+     - solo las últimas `PAGINAS_EN_MEMORIA` páginas guardan su lista: una
+       página pesada ocupa decenas de MB.
    =========================================================================== */
 import { paginaALienzo, type Caja, type Rotacion } from '../../core/planoGeom';
-import { ErrorPdf, type DocPdf, type PaginaPdf, type PdfAdapter, type TextoPdf } from './pdfTipos';
+import { ErrorPdf, PAGINAS_EN_MEMORIA, type DocPdf, type PaginaPdf, type PdfAdapter, type TextoPdf } from './pdfTipos';
 
 type PdfJs = typeof import('pdfjs-dist/legacy/build/pdf.mjs');
 
@@ -66,6 +72,9 @@ function aErrorPdf(e: unknown): ErrorPdf {
 const rotacionDe = (r: number): Rotacion => ((((r % 360) + 360) % 360) as Rotacion);
 
 export function crearAdapterPdfjs(cargar: () => Promise<PdfJs> = cargarPdfjs, opciones = recursos): PdfAdapter {
+  // Un worker para todos los documentos: cerrar un documento no lo cierra, y
+  // si falla, la siguiente apertura arranca otro.
+  let trabajador: InstanceType<PdfJs['PDFWorker']> | null = null;
   return {
     async abrir(datos, { signal }) {
       if (datos.byteLength === 0) throw new ErrorPdf('vacio');
@@ -76,11 +85,13 @@ export function crearAdapterPdfjs(cargar: () => Promise<PdfJs> = cargarPdfjs, op
         throw new ErrorPdf('worker', (e as Error)?.message);
       }
       if (signal.aborted) throw new ErrorPdf('cancelado');
+      if (!trabajador || trabajador.destroyed) trabajador = new pdfjs.PDFWorker();
       const tarea = pdfjs.getDocument({
         data: new Uint8Array(datos),
         ...opciones(),
         enableXfa: false,
         useSystemFonts: false,
+        worker: trabajador,
       });
       const cancelar = () => void tarea.destroy();
       signal.addEventListener('abort', cancelar, { once: true });
@@ -88,7 +99,12 @@ export function crearAdapterPdfjs(cargar: () => Promise<PdfJs> = cargarPdfjs, op
       try {
         doc = await tarea.promise;
       } catch (e) {
-        throw signal.aborted ? new ErrorPdf('cancelado') : aErrorPdf(e);
+        const err = signal.aborted ? new ErrorPdf('cancelado') : aErrorPdf(e);
+        if (err.tipo === 'worker') {
+          trabajador?.destroy();
+          trabajador = null;
+        }
+        throw err;
       } finally {
         signal.removeEventListener('abort', cancelar);
       }
@@ -111,6 +127,19 @@ function documento(pdfjs: PdfJs, doc: import('pdfjs-dist/legacy/build/pdf.mjs').
   const paginas = new Map<number, Promise<Pagina>>();
   const textos = new Map<number, Promise<TextoPdf[]>>();
   let cerrado = false;
+  // Uso reciente, la última al final: `tocar` la pone al final y suelta la
+  // lista de operaciones de la más antigua si hay demasiadas.
+  const usadas: number[] = [];
+  const tocar = (n: number) => {
+    const i = usadas.indexOf(n);
+    if (i >= 0) usadas.splice(i, 1);
+    usadas.push(n);
+    while (usadas.length > PAGINAS_EN_MEMORIA) {
+      const vieja = usadas.shift()!;
+      // `cleanup` espera a que terminen sus pintados en curso.
+      void paginas.get(vieja)?.then((p) => p.cleanup(), () => undefined);
+    }
+  };
   const pagina = (n: number): Promise<Pagina> => {
     if (cerrado) return Promise.reject(new ErrorPdf('cancelado'));
     let p = paginas.get(n);
@@ -147,6 +176,7 @@ function documento(pdfjs: PdfJs, doc: import('pdfjs-dist/legacy/build/pdf.mjs').
         if (signal.aborted) throw new ErrorPdf('cancelado');
         const p = await pagina(n);
         if (signal.aborted) throw new ErrorPdf('cancelado');
+        tocar(n);
         const i = info(p);
         const vista = { caja: i.vista, rotacion: i.rotacion, pxPorUnidad: escala };
         const a = paginaALienzo([region[0], region[1]], vista);
@@ -175,6 +205,34 @@ function documento(pdfjs: PdfJs, doc: import('pdfjs-dist/legacy/build/pdf.mjs').
       } finally {
         soltar();
         if (enCurso.get(lienzo) === turno) enCurso.delete(lienzo);
+      }
+    },
+    async precargar(n, signal) {
+      // Sin DOM (tests en node) no hay lienzo: no hay nada que adelantar.
+      if (cerrado || signal.aborted || typeof document === 'undefined') return;
+      const p = await pagina(n).catch(() => null);
+      if (!p || cerrado || signal.aborted) return;
+      tocar(n);
+      // Un pintado que no dibuja ninguna operación: pdf.js pide y guarda la
+      // lista entera (la MISMA caché que el pintado de verdad) sin tocar la
+      // pantalla. Si luego se pinta esa página mientras tanto, la comparten.
+      const lienzo = document.createElement('canvas');
+      lienzo.width = 1;
+      lienzo.height = 1;
+      const tarea = p.render({
+        canvas: lienzo,
+        viewport: p.getViewport({ scale: 0.01 }),
+        annotationMode: pdfjs.AnnotationMode.DISABLE,
+        operationsFilter: () => false,
+      });
+      const cancelar = () => tarea.cancel();
+      signal.addEventListener('abort', cancelar, { once: true });
+      try {
+        await tarea.promise;
+      } catch {
+        // cancelada o fallida: precargar es solo una ayuda
+      } finally {
+        signal.removeEventListener('abort', cancelar);
       }
     },
     textos(n) {

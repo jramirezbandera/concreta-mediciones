@@ -13,10 +13,12 @@ import { __resetPlanosForTests } from '../../persist/planos';
 import { useObraStore, useToastStore } from '../../store';
 import { usePlanoUiStore } from '../../store/planoUiStore';
 import { __historyState, __resetHistoryForTests, initHistory, undo } from '../../store/temporal';
-import { METRO_1_50 } from '../../test/pdfMinimo';
+import { A3, METRO_1_50, pdfMinimo } from '../../test/pdfMinimo';
+import { huellaDe } from '../../core/sha256';
+import { registrarBytesEnMemoria } from '../../persist/planos';
 import { EJEMPLO, abrirEjemploPlanos } from './ejemplo';
 import { __setMotorPdfForTests } from './motor';
-import { crearAdapterFake } from './pdfAdapter.fake';
+import { crearAdapterFake, registroFake } from './pdfAdapter.fake';
 import { PlanosPanel } from './PlanosPanel';
 import { FronteraPlanos } from './PlanosLateral';
 import { esFalloDeChunk } from './textos';
@@ -266,6 +268,32 @@ describe('calibrar desde la interfaz', () => {
     tecla(visor, 'c');
     expect((await screen.findAllByText(/Esta página ya tiene 1 línea medida con esta escala/)).length).toBeGreaterThan(0);
     expect(screen.queryByText('1 Cota')).toBeNull();
+  });
+});
+
+describe('precarga de páginas', () => {
+  it('con la página pintada, en reposo, precarga la vecina y las que tienen escala', async () => {
+    await montar();
+    const buf = pdfMinimo([1, 2, 3, 4, 5, 6].map(() => ({ mediaBox: A3 }))).buffer as ArrayBuffer;
+    const huella = await huellaDe(buf);
+    registrarBytesEnMemoria(huella, buf);
+    const escala = escalaDe(st().planos[0]!, 1)!;
+    const meta: PlanoMeta = {
+      id: 'pl-seis',
+      tipo: 'pdf',
+      nombre: 'Seis páginas',
+      archivo: 'seis.pdf',
+      tamano: buf.byteLength,
+      huella,
+      paginas: 6,
+      escalas: { 6: escala },
+    };
+    registroFake.precargas.length = 0;
+    act(() => {
+      st().attachPlano({ meta, expect: { docToken: st().docToken } });
+      usePlanoUiStore.getState().abrirPlano('pl-seis', 2);
+    });
+    await waitFor(() => expect(registroFake.precargas).toEqual([3, 1, 6]), { timeout: 3000 });
   });
 });
 

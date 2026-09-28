@@ -2,7 +2,7 @@
 ## Implementation plan
 # Plan · Medir sobre planos PDF
 
-> Estado: APROBADO (/autoplan, 2026-09-25). Etapa 0 hecha y publicada (`30d99eb`). X0 hecho (`f0a5552`): la «Especificación · Etapa A» es la fuente única; lo que sustituye está en «Historial» y en el «Registro de la revisión». A0 hecha (2026-09-26, sin publicar): lector y escritor v6, visor detrás del interruptor; sus desviaciones de la especificación, en §14. Orden: Etapa 0 → X0 → A0 → puerta cronometrada → A1 → Etapa B.
+> Estado: APROBADO (/autoplan, 2026-09-25). Etapa 0 hecha y publicada (`30d99eb`). X0 hecho (`f0a5552`): la «Especificación · Etapa A» es la fuente única; lo que sustituye está en «Historial» y en el «Registro de la revisión». A0 hecha y publicada (`8af65d9`): lector y escritor v6, visor detrás del interruptor; sus desviaciones de la especificación, en §14. Sin puerta cronometrada por decisión del usuario (2026-09-27, §11). Orden: Etapa 0 → X0 → A0 → A1 → Etapa B.
 
 ## Petición
 
@@ -1054,6 +1054,15 @@ type Caja = [number, number, number, number]; // x0, y0, x1, y1 en coordenadas d
 
 ### 11. Puerta cronometrada (entre A0 y A1)
 
+> **Anulada por decisión del usuario (2026-09-27): no se hace la prueba.** Manda esto sobre el resto de la sección y sobre toda mención de la puerta en el documento:
+>
+> - A1 empieza sin la puerta.
+> - **Precisión:** la comprueba un test con planos reales (calibrar con una cota, medir otras del mismo plano y comparar con lo que pone el plano), con las tolerancias de abajo.
+> - **Pintado:** es la primera tarea de A1, medida con un plano CAD pesado real y con el presupuesto de abajo (primera página < 2 s, cambio de página < 1 s, zoom nítido < 1,5 s).
+> - **Si compensa frente a medir a mano:** lo juzga el usuario usándolo en obra.
+> - El interruptor sigue apagado en producción hasta terminar A1 (regla 14 de §13).
+> - La Etapa B la decide el usuario después de usar A1; ya no depende de la puerta.
+
 Sin `docs/spike/03-planos-cronometrado.md` con la meta cumplida no empieza A1. El documento se escribe ANTES de medir, con:
 
 - **La prueba:** las dos partidas del objetivo (12 tabiques, 8 estancias de solado), medidas como hoy (visor de PDF y tecleo) y con Concreta.
@@ -1186,7 +1195,7 @@ Lo que esta especificación decide donde el plan no llegaba o se contradecía. C
 11. **Calibración:** una calibración a medias no se guarda; en A0 toda `Escala` lleva `comprobacion`. «Sin comprobar» solo aparece en A1, por dos caminos: «Usar este PDF para este plano» (T10) y «Usar esta calibración en otras páginas».
 12. **Reenlazar con otra huella en A0:** solo explica y cancela; el plano nuevo se adjunta desde el menú.
 13. **Medir por debajo de 1024 px:** herramientas deshabilitadas con su motivo (tablet y móvil solo ven en la Etapa A).
-14. **Interruptor:** encendido por defecto en desarrollo y apagado en producción hasta la puerta.
+14. **Interruptor:** encendido por defecto en desarrollo y apagado en producción hasta terminar A1 (sin puerta: §11).
 15. **Teclado en campos de texto:** los atajos de una tecla no actúan con el foco en un campo, y en el comentario las teclas de edición son nativas (el visor solo corta su propagación). Corrige el «consume» del bloque CEO, que habría bloqueado Retroceso y Ctrl+Z dentro del texto.
 16. **PDF de un .zip con la huella mal:** se descarta ese PDF y su plano queda «no disponible» (bloque CEO); el resto de la copia se restaura.
 
@@ -1201,6 +1210,13 @@ Cada cambio posterior: fecha, qué cambia y por qué.
 - **2026-09-26 (A0) · Ficheros.** Las guardas y `apartarIlegibles` en `core/planoDatos.ts`; los textos de motivos en `store/motivos.ts`; la capa y la lupa dentro de `PlanoLienzo.tsx` (no `PlanoOverlay` ni `Lupa` aparte); además `PlanosLateral` (frontera de errores, en el bundle principal), `herramientas`, `capa`, `textos`, `motor`, `usePlanoDoc`, `adjuntar` (+ `huellaWorker`), `ejemplo` y `pdfTipos`. `editGridNav` y `useMedGridTab` no cambian: el marcador no lleva los marcadores de celda. Los tests de E12 van en `obraStore.test.ts`.
 - **2026-09-26 (A0) · Redondeo.** También los puntos de la cota y de la comprobación se guardan a 0,01.
 - **2026-09-26 (A0) · Interruptor.** `?planos=1` y `?planos=0` se recuerdan en `localStorage['concreta.planos']`.
+- **2026-09-28 (A1) · Pintado de páginas pesadas** (§8.1, §8.2). Medido con `202_PL_INSTALACIONES` (A3, páginas de 1,3 millones de operaciones) en Chromium sin GPU:
+  - un solo `PDFWorker` para todos los documentos: abrir un PDF pasa de ~240 ms a ~10 ms; adjuntar hasta ver la pág. 1, 0,3 s;
+  - `DocPdf.precargar(n, signal)` (contrato nuevo): un pintado con `operationsFilter: () => false` que deja en la caché de pdf.js la lista de operaciones de la página sin dibujar nada. Tras pintar, en reposo (400 ms), se precargan una a una las vecinas y las páginas con escala o medidas (`paginasAPrecargar`, como mucho 5);
+  - `PAGINAS_EN_MEMORIA = 6`: las demás sueltan su lista (`page.cleanup()`);
+  - resultado: página vecina o con trabajo, 0,2–0,6 s; zoom nítido, 0,5–0,7 s. El salto a una página pesada nunca vista sigue en 1,6–2,3 s: es el tiempo del worker de pdf.js para analizarla, y solo se adelanta si se sabe a dónde se va;
+  - `recordOperations` + `operationsFilter` (pintar solo las operaciones de la zona) bajaría el zoom a ~0,1 s, pero cuesta ~0,4 s en el primer pintado de una página pesada: no hace falta con el zoom ya en presupuesto.
+- **2026-09-28 (A1) · Precisión con planos reales** (§11). `src/features/planos/planosReales.node.test.ts`, solo en local (`ejemplos pdf/` no se sube): empareja cada texto de cota con su línea de cota del dibujo, calibra con la más larga, comprueba con otra y mide las demás con `prepararMedida`. `PROYECTO BASICO.pdf`, págs. 9, 10, 11, 13 y 15 (1:100 y 1:150): 137 de 138 cotas dentro de tolerancia, comprobaciones de 0,00–0,05 %. La que falla es del plano: «6,65» escrito sobre una línea que mide 6,59 m. La prueba admite hasta un 5 % de cotas así por página.
 
 ## Historial
 
@@ -3997,6 +4013,8 @@ Nuevas:
   - 11 (T10): «Usar este PDF para este plano» con historial de huellas. La huella de `origen` manda en «Ver en plano» y cuenta como referencia.
   - 12 (T11): certificación por líneas con signo (E12) antes de habilitar Restar.
 - **Siguiente paso:** implementar la Etapa 0 (tareas E0, E1, E15 y E16) y escribir X0 antes de la primera línea de A0.
+- **Sin puerta cronometrada (2026-09-27), decisión del usuario.** A1 empieza ya, por el pintado de páginas pesadas; la precisión se comprueba con planos reales en tests; el interruptor sigue apagado en producción hasta terminar A1; la Etapa B la decide el usuario tras usar A1. Detalle en §11.
+- **A0 publicada (2026-09-27, `8af65d9`).**
 - **A0 hecha (2026-09-26), sin publicar.** Esquema v6 en `concreta6.*` con migración perezosa por la pestaña dueña, almacén `concreta-planos`, E12, geometría, tabla herramienta × forma, ciclo, acciones del store con `expect`, motor pdf.js 6.3.289 (contrato con el doble), visor detrás del interruptor, marcador de origen, ayuda y «Planos (ejemplo)». Probada en el navegador con pdf.js real (medir, calibrar, adjuntar, 1440/1024/390 px y el build con el `base` de Pages). Desviaciones en §14. Siguiente: publicarla y escribir `docs/spike/03-planos-cronometrado.md` ANTES de la puerta cronometrada (§11).
 - **X0 hecho (2026-09-25):** «Especificación · Etapa A» al principio del documento, con fixtures en `src/test/fixtures/planos/` comprobados por `fixtures.test.ts`. Siguiente: publicar la Etapa 0 y empezar A0.
 - **Etapa 0 implementada (2026-09-25), pendiente de publicar.** Clave de versión por obra `concreta.version.<id>`; `newObra` también deja de sustituir una obra sin guardar; `lateral: 'ref' | 'asistente' | null` (A0 añade `'planos'`). Tests con el fixture v7 en `persist/sync.etapa0.test.ts`. Siguiente: publicarla sola y escribir X0.

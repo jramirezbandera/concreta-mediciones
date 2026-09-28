@@ -4,7 +4,8 @@
    · Pintado (§8.2): la página entera a la resolución de «ajustar» y, al hacer
      zoom, solo la zona visible a la resolución del zoom (con retardo),
      enseñando mientras la imagen escalada. Nunca un lienzo de más de 16 MP.
-     Los lienzos se liberan al cambiar de página.
+     Los lienzos se liberan al cambiar de página. Con la página pintada, en
+     reposo, se precargan una a una las páginas de `precargar`.
    · Vista: escala (px por unidad de página) y desplazamiento propios; rueda
      = desplazar, Ctrl + rueda = zoom al cursor (listener nativo, no pasivo),
      arrastrar con Mano, con el botón central o con Espacio = desplazar.
@@ -26,6 +27,9 @@ const MAX_PX = 16_000_000;
 const MARGEN = 16;
 /** Tamaño de reserva cuando el contenedor aún no tiene tamaño (jsdom, primer render). */
 const TAM_RESERVA: [number, number] = [800, 600];
+/** Espera tras pintar antes de precargar otras páginas (que no compita con
+ *  el zoom o el desplazamiento que suelen seguir a un cambio de página). */
+const PRECARGA_TRAS_MS = 400;
 
 export interface LienzoApi {
   ajustar(): void;
@@ -86,6 +90,7 @@ export function PlanoLienzo({
   onMoverCota,
   onCursor,
   onPintado,
+  precargar = [],
 }: {
   apiRef: Ref<LienzoApi>;
   doc: DocPdf;
@@ -108,6 +113,8 @@ export function PlanoLienzo({
   onMoverCota: (cual: 'a' | 'b', p: Punto) => void;
   onCursor: (p: Punto | null, px: number) => void;
   onPintado: (estado: 'pintando' | 'listo' | 'error', causa?: string) => void;
+  /** Páginas que precargar en reposo tras pintar esta, por orden. */
+  precargar?: number[];
 }) {
   const cajaRef = useRef<HTMLDivElement>(null);
   const baseRef = useRef<HTMLCanvasElement>(null);
@@ -212,6 +219,7 @@ export function PlanoLienzo({
   // Solo la escala de «ajustar» cuenta (redondeada): un cambio de tamaño que no
   // la mueve no vuelve a pintar.
   const sAjuste = Math.round(ajustada().s * 1000) / 1000;
+  const [pintada, setPintada] = useState<{ doc: DocPdf; n: number } | null>(null);
   useEffect(() => {
     const lienzo = baseRef.current;
     if (!lienzo) return;
@@ -225,7 +233,9 @@ export function PlanoLienzo({
     const pintar = (): Promise<void> =>
       doc.pintar(n, lienzo, info.vista, s, ac.signal).then(
         () => {
-          if (!ac.signal.aborted) onPintadoRef.current('listo');
+          if (ac.signal.aborted) return;
+          onPintadoRef.current('listo');
+          setPintada({ doc, n });
         },
         (e: unknown) => {
           if (ac.signal.aborted || (e as { tipo?: string })?.tipo === 'cancelado') return;
@@ -255,6 +265,24 @@ export function PlanoLienzo({
       }
     };
   }, [doc, n]);
+
+  /* ---- precarga de otras páginas, en reposo y de una en una ---------------- */
+  const clavePrecarga = precargar.join(',');
+  const listo = pintada?.doc === doc && pintada.n === n;
+  useEffect(() => {
+    if (!listo || !clavePrecarga) return;
+    const ac = new AbortController();
+    const t = setTimeout(async () => {
+      for (const m of clavePrecarga.split(',').map(Number)) {
+        if (ac.signal.aborted) return;
+        await doc.precargar(m, ac.signal);
+      }
+    }, PRECARGA_TRAS_MS);
+    return () => {
+      clearTimeout(t);
+      ac.abort();
+    };
+  }, [doc, listo, clavePrecarga]);
 
   /* ---- pintado de la zona visible a la resolución del zoom ------------------ */
   useEffect(() => {

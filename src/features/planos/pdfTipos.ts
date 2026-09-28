@@ -15,6 +15,11 @@
 import type { Caja, Rotacion } from '../../core/planoGeom';
 import type { Punto } from '../../core/types';
 
+/** Páginas que conservan su lista de operaciones en el motor (la actual, las
+ *  precargadas y las últimas vistas). Al pasarse, la más antigua la suelta:
+ *  la de una página CAD pesada ocupa decenas de MB. */
+export const PAGINAS_EN_MEMORIA = 6;
+
 export interface PaginaPdf {
   vista: Caja;
   rotacion: Rotacion;
@@ -37,6 +42,10 @@ export interface DocPdf {
    *  px por unidad. El lienzo toma el tamaño de la región. Cancelable: con la
    *  señal abortada rechaza con `ErrorPdf('cancelado')`. */
   pintar(n: number, lienzo: HTMLCanvasElement, region: Caja, escala: number, signal: AbortSignal): Promise<void>;
+  /** Adelanta el trabajo del worker de una página (su lista de operaciones)
+   *  sin pintar nada, para que el cambio a ella sea rápido. Nunca falla: con
+   *  la señal abortada, o si algo va mal, simplemente no adelanta nada. */
+  precargar(n: number, signal: AbortSignal): Promise<void>;
   textos(n: number): Promise<TextoPdf[]>;
   /** [B] imán a la geometría vectorial: en la interfaz, sin implementar en A. */
   trazados?(n: number): Promise<[Punto, Punto][]>;

@@ -59,7 +59,7 @@ export interface OpcionesFake {
 }
 
 /** Documentos abiertos y cerrados por el doble (para los tests). */
-export const registroFake = { abiertos: 0, cerrados: 0, pintados: 0 };
+export const registroFake = { abiertos: 0, cerrados: 0, pintados: 0, precargas: [] as number[] };
 
 export function crearAdapterFake(opts: OpcionesFake = {}): PdfAdapter {
   return {
@@ -99,6 +99,11 @@ export function crearAdapterFake(opts: OpcionesFake = {}): PdfAdapter {
           await Promise.resolve();
           if (signal.aborted) throw new ErrorPdf('cancelado');
           registroFake.pintados++;
+        },
+        async precargar(n, signal) {
+          if (cerrado || signal.aborted || !paginas[n - 1]) return;
+          await Promise.resolve();
+          if (!signal.aborted) registroFake.precargas.push(n);
         },
         async textos(n) {
           return pagina(n).textos.map((t) => ({ ...t, caja: [...t.caja] as Caja }));

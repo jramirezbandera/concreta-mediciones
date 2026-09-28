@@ -106,3 +106,15 @@ export function anclaInsignia(f: Pick<FormaCapa, 'herramienta' | 'puntos'>): Pun
   }
   return f.puntos[0]!;
 }
+
+/** Páginas que conviene precargar tras pintar `n`: las vecinas primero (se
+ *  pasa de una a otra) y después las que tienen trabajo (escala o medidas), de
+ *  la más cercana a la más lejana; como mucho `max`, sin `n` ni repetidas. */
+export function paginasAPrecargar(n: number, paginas: number, conTrabajo: Iterable<number>, max: number): number[] {
+  const out: number[] = [];
+  const valida = (p: number) => Number.isInteger(p) && p >= 1 && p <= paginas && p !== n && !out.includes(p);
+  for (const p of [n + 1, n - 1]) if (valida(p) && out.length < max) out.push(p);
+  const resto = [...new Set(conTrabajo)].filter(valida).sort((a, b) => Math.abs(a - n) - Math.abs(b - n) || a - b);
+  for (const p of resto) if (out.length < max) out.push(p);
+  return out;
+}

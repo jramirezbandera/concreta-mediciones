@@ -100,6 +100,8 @@ export function PlanosPanel({
   }, [menu]);
   const adjuntar = useAdjuntar();
   const medidas = useMedidas();
+  const medidasPlano = plano ? medidas.get(plano.id) : undefined;
+  const paginasConMedidas = useMemo(() => [...(medidasPlano?.keys() ?? [])], [medidasPlano]);
 
   return (
     <div className={styles.panel}>
@@ -253,7 +255,13 @@ export function PlanosPanel({
       {adjuntar.resultado && <ResultadoBanda r={adjuntar.resultado} onCerrar={adjuntar.limpiar} onOtraVez={adjuntar.otraVez} />}
 
       {plano ? (
-        <PlanoViewer key={plano.id} plano={plano} estrecha={estrecha} onCerrarVisor={onCerrar} />
+        <PlanoViewer
+          key={plano.id}
+          plano={plano}
+          estrecha={estrecha}
+          onCerrarVisor={onCerrar}
+          paginasConMedidas={paginasConMedidas}
+        />
       ) : (
         <PlanosLista planos={planos} medidas={medidas} onAdjuntar={adjuntar.elegir} onSoltar={adjuntar.soltar} readonly={readonly} />
       )}
