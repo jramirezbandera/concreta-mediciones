@@ -324,6 +324,46 @@ describe('[A1] cajetín: ajustar y copiar la calibración', () => {
   });
 });
 
+describe('[A1] aceptar valores y desvincular', () => {
+  const retocar = () =>
+    useObraStore.setState((s) => {
+      const l = s.partidas.c01!.find((p) => p.id === 'p-tabique')!.med[0]!;
+      l.largo = 9.5;
+      delete l.expr;
+    });
+  const expectL = () => {
+    const l = P('p-tabique').med[0]!;
+    return { ...doc(), valores: { uds: l.uds, largo: l.largo, ancho: l.ancho, alto: l.alto } };
+  };
+
+  it('aceptar: `aceptada`, `valores` sigue siendo el de la geometría, un paso de Deshacer; sin retocar, nada', () => {
+    expect(st().acceptLineValues({ lineId: 'l-tabique', expect: expectL() })).toMatchObject({ reason: 'noop' });
+    retocar();
+    const pasado = __historyState().past;
+    expect(st().acceptLineValues({ lineId: 'l-tabique', expect: { ...expectL(), valores: { ...expectL().valores, largo: 1 } } })).toMatchObject({
+      reason: 'stale',
+    });
+    expect(st().acceptLineValues({ lineId: 'l-tabique', expect: expectL() })).toEqual({ ids: ['l-tabique'] });
+    expect(P('p-tabique').med[0]!.origen).toMatchObject({ aceptada: true, valores: { largo: 9.45 } });
+    expect(__historyState().past).toBe(pasado + 1);
+    // sale de los recálculos
+    const e = escalaDe(plano(), 1)!;
+    const plan = planRecalculo(st(), plano().id, 1, { ...e, rev: 'otra', mPorUnidad: e.mPorUnidad * 2 });
+    expect(plan.aparte).toContainEqual(expect.objectContaining({ lineId: 'l-tabique', motivo: 'aceptada' }));
+    undo();
+    expect((P('p-tabique').med[0]!.origen as OrigenPlano).aceptada).toBeUndefined();
+  });
+
+  it('desvincular: quita `origen` y conserva números y `expr`; Deshacer lo devuelve', () => {
+    expect(st().unlinkLineOrigen({ lineId: 'l-tabique', expect: expectL() })).toEqual({ ids: ['l-tabique'] });
+    expect(P('p-tabique').med[0]).toMatchObject({ largo: 9.45, expr: { largo: '3,2+4,15+2,1' } });
+    expect(P('p-tabique').med[0]!.origen).toBeUndefined();
+    expect(st().unlinkLineOrigen({ lineId: 'l-tabique', expect: expectL() })).toMatchObject({ reason: 'noop' });
+    undo();
+    expect(P('p-tabique').med[0]!.origen).toBeTruthy();
+  });
+});
+
 describe('[A1] sin comprobar', () => {
   const sinComprobar = () =>
     useObraStore.setState((s) => {

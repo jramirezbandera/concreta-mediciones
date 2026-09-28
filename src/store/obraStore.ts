@@ -39,6 +39,7 @@ import {
   type DestinoPlano,
   type ExpectDoc,
   type ExpectMedida,
+  type ExpectLinea,
   type ExpectRecalculo,
   type ExpectRemedir,
 } from './slices/planosSlice';
@@ -57,7 +58,7 @@ export type { DomainKey } from './schema';
 export { copyTargetOf } from './slices/copySlice';
 export type { ObraData };
 export type { CopyTarget, PendingCopy } from './slices/copySlice';
-export type { DestinoPlano, ExpectDoc, ExpectMedida, ExpectRecalculo, ExpectRemedir } from './slices/planosSlice';
+export type { DestinoPlano, ExpectDoc, ExpectLinea, ExpectMedida, ExpectRecalculo, ExpectRemedir } from './slices/planosSlice';
 
 /** Modo de edición de una certificación: importe a origen vs. de esta cert. */
 export type CertMode = 'origen' | 'esta';
@@ -617,6 +618,11 @@ export interface ObraState extends ObraData {
     lineIds: string[];
     expect: ExpectRecalculo;
   }) => MedResult;
+  /** [A1] «Aceptar valores actuales» de una línea retocada: `aceptada`, sale de
+   *  los recálculos automáticos; solo «Volver a medir» la devuelve al plano. */
+  acceptLineValues: (a: { lineId: string; expect: ExpectLinea }) => MedResult;
+  /** [A1] «Desvincular del plano»: quita `origen` y conserva los números. */
+  unlinkLineOrigen: (a: { lineId: string; expect: ExpectLinea }) => MedResult;
   /** [A1] Ajuste al cajetín (`ajustada`) o «Usar la calibrada». `rev` nueva;
    *  con líneas medidas devuelve `has-lines` (van por `rescalePlanoPage`). */
   setPlanoScaleAdjusted: (a: {

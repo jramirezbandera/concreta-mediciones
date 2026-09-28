@@ -8,6 +8,8 @@
 
    Estados: normal · «✎» retocada · atenuado (plano no disponible, quitado o
    `origen` ilegible). Su popover no lleva `role="dialog"` (apagaría Ctrl+Z).
+   [A1] En una retocada ofrece [Aceptar valores actuales] (sale de los
+   recálculos) y [Desvincular del plano] (quita `origen`, conserva números).
    =========================================================================== */
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '../../components';
@@ -18,7 +20,8 @@ import type { MedLine, OrigenPlano, PlanoMeta } from '../../core/types';
 import { tienePlano } from '../../persist/planos';
 import { verEnPlano, volverAMedir } from './origen';
 import { useSessionStore } from '../../persist';
-import { useObraStore } from '../../store';
+import { useObraStore, useToastStore, type MedResult } from '../../store';
+import { textoResultado } from '../../store/motivos';
 import { usePlanoUiStore } from '../../store/planoUiStore';
 import styles from './Presupuesto.module.css';
 
@@ -58,6 +61,17 @@ export function MedOrigen({ line, numero, chip = false }: { line: MedLine; numer
 
   if (o === undefined) return null;
   const retocada = legible && lineaRetocada(line);
+  const aceptada = legible && !!o.aceptada;
+  const expectLinea = () => ({
+    docToken: useObraStore.getState().docToken,
+    valores: { uds: line.uds, largo: line.largo, ancho: line.ancho, alto: line.alto },
+  });
+  const accion = (hacer: () => MedResult, hecho: string) => {
+    setAbierto(false);
+    const r = hacer();
+    if (r.ids.length) useToastStore.getState().show(hecho);
+    else useToastStore.getState().show(textoResultado(r), undefined, { tone: 'error' });
+  };
   const quitado = !!plano?.quitado;
   const atenuado = !legible || !plano || quitado || disponible === false;
   const estado = !legible
@@ -66,9 +80,11 @@ export function MedOrigen({ line, numero, chip = false }: { line: MedLine; numer
       ? 'plano quitado'
       : disponible === false
         ? 'plano no disponible'
-        : retocada
-          ? 'retocada a mano'
-          : 'medida en el plano';
+        : aceptada
+          ? 'valores aceptados'
+          : retocada
+            ? 'retocada a mano'
+            : 'medida en el plano';
 
   return (
     <span ref={ref} className={styles.origenWrap}>
@@ -107,7 +123,12 @@ export function MedOrigen({ line, numero, chip = false }: { line: MedLine; numer
                 {o.herramienta === 'recuento' ? 'Recuento' : `1:${fmtNum(o.n, o.n % 1 ? 1 : 0)}${o.escalaAjustada ? ' ajustada' : ''}`} ·{' '}
                 {NOMBRE_HERRAMIENTA[o.herramienta]} · {new Date(o.at).toLocaleDateString('es-ES')}
               </div>
-              {retocada && <p className={styles.origenPopAviso}>Retocada a mano: alguna casilla no es la que dio el plano.</p>}
+              {retocada && !aceptada && <p className={styles.origenPopAviso}>Retocada a mano: alguna casilla no es la que dio el plano.</p>}
+              {aceptada && (
+                <p className={styles.origenPopTexto}>
+                  Valores aceptados: los recálculos no la tocan. «Volver a medir» la devuelve al plano.
+                </p>
+              )}
               {(!plano || quitado || disponible === false) && (
                 <p className={styles.origenPopAviso}>
                   {quitado || !plano
@@ -140,6 +161,34 @@ export function MedOrigen({ line, numero, chip = false }: { line: MedLine; numer
                     }}
                   >
                     Volver a medir
+                  </button>
+                )}
+                {!readonly && retocada && !aceptada && (
+                  <button
+                    type="button"
+                    className={styles.origenPopBtn}
+                    onClick={() =>
+                      accion(
+                        () => useObraStore.getState().acceptLineValues({ lineId: line.id, expect: expectLinea() }),
+                        `Línea ${numero}: valores aceptados`,
+                      )
+                    }
+                  >
+                    Aceptar valores actuales
+                  </button>
+                )}
+                {!readonly && retocada && (
+                  <button
+                    type="button"
+                    className={styles.origenPopBtn}
+                    onClick={() =>
+                      accion(
+                        () => useObraStore.getState().unlinkLineOrigen({ lineId: line.id, expect: expectLinea() }),
+                        `Línea ${numero} desvinculada del plano: conserva sus números`,
+                      )
+                    }
+                  >
+                    Desvincular del plano
                   </button>
                 )}
               </div>

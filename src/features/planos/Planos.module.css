@@ -1082,3 +1082,68 @@ button.chip {
   cursor: pointer;
   border: 0;
 }
+
+/* ---- «Añadir también a…» (A1) ------------------------------------------------ */
+.anadir {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+  min-width: min(560px, 80vw);
+}
+.anadirElegidas,
+.anadirOpciones {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+}
+.anadirOpciones {
+  max-height: 220px;
+  overflow: auto;
+}
+.anadirFila {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+  padding: var(--sp-8);
+  border: 1px solid var(--border-main);
+  border-radius: 8px;
+}
+.anadirFilaMal {
+  border-color: var(--state-warn);
+}
+.anadirCab {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  font-size: var(--fs-body);
+}
+.anadirTitulo {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.anadirCuerpo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8);
+  font-size: var(--fs-table);
+}
+.anadirResultado {
+  font-size: var(--fs-table);
+  color: var(--text-secondary);
+}
+.anadirBusca {
+  width: 100%;
+  height: 30px;
+  padding: 0 var(--sp-8);
+  border: 1px solid var(--border-main);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}

@@ -227,7 +227,12 @@ export type MotivoMedida =
   | { motivo: 'demasiados-puntos' };
 
 export interface EntradaMedida {
+  /** Con qué se dibujó la forma (su geometría). */
   herramienta: Herramienta;
+  /** [A1] Fila de la tabla con la que se interpreta (§5.7): una Superficie o
+   *  un Rectángulo entran por la fila Longitud como su perímetro CERRADO.
+   *  Por defecto, la de la herramienta. */
+  fila?: Herramienta;
   /** En coordenadas de página (se redondean a 0,01 aquí). */
   puntos: Punto[];
   plano: Pick<PlanoMeta, 'id' | 'huella'>;
@@ -307,7 +312,8 @@ const fijaValida = (v: ValorFijo | undefined): v is ValorFijo => !!v && Number.i
 export function prepararMedida(e: EntradaMedida): ResultadoMedida {
   const puntos = e.puntos.map(redondearPunto);
   if (puntos.length > TOPES.puntosPorOrigen) return { ok: false, motivo: 'demasiados-puntos' };
-  const previo = motivoHerramienta(e.herramienta, {
+  const fila = e.fila ?? e.herramienta;
+  const previo = motivoHerramienta(fila, {
     partida: e.partida,
     escala: e.escala,
     fijas: e.fijas,
@@ -320,9 +326,12 @@ export function prepararMedida(e: EntradaMedida): ResultadoMedida {
   if (e.herramienta === 'superficie' && cruzaLaForma(puntos, null, true)) return { ok: false, motivo: 'forma-cruzada' };
 
   const formaPartida = medFormaDe(e.partida);
-  const cambioForma = TABLA_MEDIDA[e.herramienta][formaPartida].encaja === 'pasa-a-area' ? ('area' as const) : undefined;
+  const cambioForma = TABLA_MEDIDA[fila][formaPartida].encaja === 'pasa-a-area' ? ('area' as const) : undefined;
   const forma: MedForma = cambioForma ?? formaPartida;
-  const celda = celdaDe(e.herramienta, forma) as Extract<CeldaMedida, { encaja: true }>;
+  const celda = celdaDe(fila, forma) as Extract<CeldaMedida, { encaja: true }>;
+  // Una forma cerrada por la fila Longitud: su perímetro (cerrado).
+  const magnitud: Magnitud =
+    celda.magnitud === 'longitud' && e.herramienta !== 'longitud' && e.herramienta !== 'recuento' ? 'perimetro' : celda.magnitud;
 
   // Dimensiones fijas (y el kg/m de Peso, que puede salir del comentario).
   const fijas: Partial<Record<MedDim, ValorFijo>> = {};
@@ -346,7 +355,7 @@ export function prepararMedida(e: EntradaMedida): ResultadoMedida {
     huella: e.plano.huella,
     pagina: e.pagina,
     formaId: e.formaId,
-    magnitud: celda.magnitud,
+    magnitud,
     slots: [...celda.slots],
     valores: {} as Partial<Record<MedDim, number>>,
     ...(Object.keys(fijas).length
@@ -394,6 +403,58 @@ export function prepararMedida(e: EntradaMedida): ResultadoMedida {
     ...(cambioForma ? { cambioForma } : {}),
     resumen: { parcial: lineParcial(linea), antes, despues },
   };
+}
+
+/* ---- «Añadir también a…» (§5.7) ------------------------------------------------ */
+
+/** Cómo entra una forma en otra partida: su área (la fila de su herramienta),
+ *  su perímetro (la fila Longitud), su longitud o su recuento. */
+export type Interpretacion = 'area' | 'perimetro' | 'longitud' | 'recuento';
+
+/** La fila de la tabla de cada interpretación de una forma. */
+export function filaDe(herramienta: Herramienta, i: Interpretacion): Herramienta {
+  if (i === 'perimetro' || i === 'longitud') return 'longitud';
+  if (i === 'recuento') return 'recuento';
+  return herramienta;
+}
+
+/** Interpretaciones que ofrece una forma: una cerrada, área y perímetro. */
+export function interpretacionesDe(herramienta: Herramienta): Interpretacion[] {
+  if (herramienta === 'recuento') return ['recuento'];
+  if (herramienta === 'longitud') return ['longitud'];
+  return ['area', 'perimetro'];
+}
+
+/** Las que encajan en una partida (por su forma de medir). «Área» solo si la
+ *  celda da un área: en una partida por metros, la fila Superficie da el
+ *  perímetro, que ya es la otra. */
+export function interpretacionesPara(herramienta: Herramienta, partida: Pick<Partida, 'medForma' | 'ud'>): Interpretacion[] {
+  const forma = medFormaDe(partida);
+  return interpretacionesDe(herramienta).filter((i) => {
+    const fila = filaDe(herramienta, i);
+    if (TABLA_MEDIDA[fila][forma].encaja === false) return false;
+    if (i !== 'area') return true;
+    const c = celdaDe(fila, forma);
+    return c.encaja === true && (c.magnitud === 'area' || c.magnitud === 'lados');
+  });
+}
+
+/** En castellano, qué se lleva a la partida: «área», «perímetro × 2,7»,
+ *  «perímetro (con la Anchura como altura del paramento)»… */
+export function textoInterpretacion(
+  herramienta: Herramienta,
+  i: Interpretacion,
+  partida: Pick<Partida, 'medForma' | 'ud'>,
+  factor?: number,
+): string {
+  const forma = medFormaDe(partida);
+  const fila = filaDe(herramienta, i);
+  const c = celdaDe(fila, forma);
+  if (c.encaja !== true) return i === 'area' ? 'área' : i;
+  const base = i === 'area' ? (c.magnitud === 'lados' ? 'largo y ancho' : 'área') : i === 'recuento' ? 'recuento' : i === 'perimetro' ? 'perímetro' : 'longitud';
+  if (c.factor) return `${base} × ${factor && Number.isFinite(factor) ? cifra(round2(factor)) : 'altura'}`;
+  if (forma === 'sup' && (i === 'perimetro' || i === 'longitud')) return `${base} × Anchura (altura del paramento)`;
+  return base;
 }
 
 /** kg/m de Peso: el campo fijo (número o perfil) o el perfil del comentario. */

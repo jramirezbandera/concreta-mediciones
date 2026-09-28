@@ -19,7 +19,7 @@ import { medFormaDe } from '../../core/medForma';
 import { indiceInsercion, lineaParaDestino, lineasCertificadas } from '../../core/medPaste';
 import { DESVIACION_MAX } from '../../core/planoGeom';
 import { TOPES, escalaDe, escalaLegible, origenLegible, paginaValida, planoLegible } from '../../core/planoDatos';
-import { lineasConEscala, valoresDesdeOrigen, type NewPlanoLine } from '../../core/planoMedida';
+import { lineaRetocada, lineasConEscala, valoresDesdeOrigen, type NewPlanoLine } from '../../core/planoMedida';
 import { planRecalculo, recalcularLinea } from '../../core/planoRecalculo';
 import { escalaConAjuste } from '../../core/planoTexto';
 import type { Comprobacion, Escala, MedDim, MedForma, MedLine, Partida, PlanoMeta } from '../../core/types';
@@ -64,6 +64,11 @@ export interface ExpectRemedir extends ExpectMedida {
   certificadaOk?: boolean;
 }
 
+/** Una línea tal como el usuario la vio (sus casillas). */
+export interface ExpectLinea extends ExpectDoc {
+  valores: Pick<MedLine, 'uds' | 'largo' | 'ancho' | 'alto'>;
+}
+
 /** Lo que el usuario revisó en la pregunta de recalcular (§4.2, §4.4). */
 export interface ExpectRecalculo extends ExpectDoc {
   huella: string;
@@ -86,6 +91,8 @@ type PlanosSlice = Pick<
   | 'setPlanoPageCheck'
   | 'setPlanoScaleAdjusted'
   | 'copyPlanoPageScale'
+  | 'acceptLineValues'
+  | 'unlinkLineOrigen'
 >;
 
 const stale = (cambio: NonNullable<MedResult['detalle']>['cambio'], extra: Partial<NonNullable<MedResult['detalle']>> = {}): MedResult => ({
@@ -117,6 +124,9 @@ function lineaPorId(s: Pick<ObraState, 'partidas'>, lineId: string): { partida: 
     }
   return null;
 }
+
+const mismasCasillas = (l: MedLine, v: Pick<MedLine, 'uds' | 'largo' | 'ancho' | 'alto'>) =>
+  l.uds === v.uds && l.largo === v.largo && l.ancho === v.ancho && l.alto === v.alto;
 
 const iguales = (a: Partial<Record<MedDim, number>>, b: Partial<Record<MedDim, number>>) => {
   const ka = Object.keys(a).sort();
@@ -349,6 +359,44 @@ export const createPlanosSlice: ObraSlice<PlanosSlice> = (set, get) => ({
       }),
     );
     return { ids: [planoId, ...ids] };
+  },
+
+  acceptLineValues: ({ lineId, expect }) => {
+    const s0 = get();
+    if (expect.docToken !== s0.docToken) return stale('obra');
+    const hit = lineaPorId(s0, lineId);
+    if (!hit) return { ids: [], reason: 'no-lines' };
+    const l0 = hit.partida.med[hit.index]!;
+    if (!mismasCasillas(l0, expect.valores)) return stale('linea', { linea: hit.index + 1 });
+    const o = l0.origen;
+    if (!origenLegible(o) || o.aceptada || !lineaRetocada(l0)) return { ids: [], reason: 'noop' };
+    structural(() =>
+      set((s) => {
+        const h = lineaPorId(s, lineId);
+        const og = h?.partida.med[h.index]?.origen;
+        if (og && origenLegible(og)) og.aceptada = true; // `valores` sigue siendo lo que dio la geometría
+      }),
+    );
+    return { ids: [lineId] };
+  },
+
+  unlinkLineOrigen: ({ lineId, expect }) => {
+    const s0 = get();
+    if (expect.docToken !== s0.docToken) return stale('obra');
+    const hit = lineaPorId(s0, lineId);
+    if (!hit) return { ids: [], reason: 'no-lines' };
+    const l0 = hit.partida.med[hit.index]!;
+    if (!mismasCasillas(l0, expect.valores)) return stale('linea', { linea: hit.index + 1 });
+    if (l0.origen === undefined) return { ids: [], reason: 'noop' };
+    structural(() =>
+      set((s) => {
+        const h = lineaPorId(s, lineId);
+        if (!h) return;
+        delete h.partida.med[h.index]!.origen; // los números (y su `expr`) se quedan
+        h.partida.fromBase = false;
+      }),
+    );
+    return { ids: [lineId] };
   },
 
   setPlanoScaleAdjusted: ({ planoId, pagina, ajustada, userUnit, expect }) => {

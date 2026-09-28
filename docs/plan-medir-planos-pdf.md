@@ -1235,6 +1235,8 @@ Lo sustituido por la «Especificación · Etapa A». Se conserva tal cual para s
 
 ### Qué ya existe (reuso)
 
+- **2026-09-28 (A1) · «Añadir también a…»** (§5.7). `EntradaMedida.fila`: la fila de la tabla con la que se interpreta la forma (por defecto, la de su herramienta); una Superficie o un Rectángulo por la fila Longitud dan su perímetro CERRADO (`magnitud: 'perimetro'`). `Interpretacion` (`area` | `perimetro` | `longitud` | `recuento`), `interpretacionesPara` («Área» solo donde la celda da un área: por metros, la fila Superficie ya es el perímetro) y `textoInterpretacion`. La hoja `AnadirTambien.tsx` usa las dimensiones fijas por partida de `planoUiStore` y crea todo con un `addPlanoLines` de varios destinos. Se ofrece en CREADA y en el popover de la forma, que además dice «También en: …» (las otras partidas con la misma `formaId`); el contorno punteado de la misma forma en la capa queda para la capa de toda la obra (Etapa B).
+- **2026-09-28 (A1) · Aceptar valores y desvincular** (§1.3, §5.6). `acceptLineValues` y `unlinkLineOrigen` reciben `ExpectLinea` (el `docToken` y las casillas de la línea tal como se vieron). Solo se ofrecen en el popover del marcador de una línea retocada; una aceptada se rotula «valores aceptados» y sigue con «✎». Desvincular conserva también el `expr`.
 - **Línea de medición** (`core/types.ts`): `MedLine { id, comment, uds, largo, ancho,
   alto, expr? }`. `expr` es la operación de la que sale el número de una casilla, y el
   invariante es que el valor = `evalEsExpr(expr)` (`editMedLine` borra el `expr` al

@@ -53,6 +53,33 @@ describe('marcador de origen', () => {
     expect(m).toHaveTextContent('✎');
   });
 
+  it('[A1] retocada: «Aceptar valores actuales» y «Desvincular del plano»', async () => {
+    useObraStore.setState((s) => {
+      s.partidas.c01!.find((p) => p.id === 'p-solado')!.med[0]!.largo = 21;
+    });
+    const r = panel('p-solado');
+    fireEvent.click(await screen.findByRole('button', { name: /^Línea 1: retocada a mano/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Aceptar valores actuales' }));
+    const l = () => partida('p-solado').med[0]!;
+    expect(l().origen).toMatchObject({ aceptada: true, valores: { largo: 20 } });
+    expect(l().largo).toBe(21);
+    r.unmount();
+    panel('p-solado');
+    fireEvent.click(await screen.findByRole('button', { name: /^Línea 1: valores aceptados/ }));
+    expect(screen.getByText(/Valores aceptados: los recálculos no la tocan/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Aceptar valores actuales' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Desvincular del plano' }));
+    expect(l().origen).toBeUndefined();
+    expect(l().largo).toBe(21); // los números se quedan
+  });
+
+  it('una línea sin retocar no ofrece aceptar ni desvincular', async () => {
+    panel('p-solado');
+    fireEvent.click(await screen.findByRole('button', { name: /^Línea 1: medida en el plano/ }));
+    expect(screen.queryByRole('button', { name: 'Aceptar valores actuales' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Desvincular del plano' })).toBeNull();
+  });
+
   it('atenuado: plano quitado, no disponible en este navegador o procedencia ilegible', async () => {
     st().removePlano({ planoId: 'pl-p1', expect: { docToken: st().docToken } });
     const r1 = panel('p-solado');

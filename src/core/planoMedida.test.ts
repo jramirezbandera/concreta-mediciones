@@ -9,6 +9,9 @@ import {
   prepararMedida,
   prefijoComentario,
   valoresDesdeOrigen,
+  filaDe,
+  interpretacionesPara,
+  textoInterpretacion,
   type EntradaMedida,
 } from './planoMedida';
 import type { Herramienta, MedForma, MedLine, OrigenPlano, Partida, PlanoMeta, Punto } from './types';
@@ -336,5 +339,67 @@ describe('los fixtures salen de las mismas reglas', () => {
     const acep = lineas(A1).find(({ l }) => (l.origen as OrigenPlano).aceptada)!.l;
     expect(lineaRetocada(acep)).toBe(true);
     expect(NOMBRE_HERRAMIENTA.rectangulo).toBe('Rectángulo');
+  });
+});
+
+describe('[A1] «Añadir también a…»: la misma forma por otra fila (§5.7)', () => {
+  const M = 283.46 / 5; // 1 m a 1:50
+  const salon: Punto[] = [
+    [0, 0],
+    [5 * M, 0],
+    [5 * M, 4 * M],
+    [0, 4 * M],
+  ];
+  const otra = (partidaDestino: Partida, i: 'area' | 'perimetro', extra: Partial<EntradaMedida> = {}) =>
+    prepararMedida(
+      entrada({
+        herramienta: 'superficie',
+        fila: filaDe('superficie', i),
+        puntos: salon,
+        partida: partidaDestino,
+        comentario: 'P1 · Salón',
+        formaId: 'f-salon',
+        ...extra,
+      }),
+    );
+
+  it('el polígono del solado entra como perímetro en Rodapié y como perímetro × 2,70 en Pintura', () => {
+    const rodapie = otra(partida('m'), 'perimetro');
+    if (!rodapie.ok) throw new Error(JSON.stringify(rodapie));
+    expect(rodapie.lineas[0]).toMatchObject({ largo: 18, expr: { largo: '5+4+5+4' } });
+    expect(rodapie.lineas[0]!.origen).toMatchObject({ herramienta: 'superficie', magnitud: 'perimetro', formaId: 'f-salon' });
+    const pintura = otra(partida('m²', 'area'), 'perimetro', { factor: 2.7 });
+    if (!pintura.ok) throw new Error(JSON.stringify(pintura));
+    expect(pintura.lineas[0]).toMatchObject({ largo: 48.6, expr: { largo: '(5+4+5+4)×2,7' } });
+    expect(pintura.lineas[0]!.origen).toMatchObject({ magnitud: 'longitudPorFactor', factor: 2.7 });
+    // su área, en Sup. directa
+    const solado = otra(partida('m²', 'area'), 'area');
+    expect(solado.ok && solado.lineas[0]!.largo).toBe(20);
+  });
+
+  it('perímetro en L×A: con la Anchura fija como altura del paramento', () => {
+    const r = otra(partida('m²', 'sup'), 'perimetro', { fijas: { ancho: { value: 2.7 } } });
+    if (!r.ok) throw new Error(JSON.stringify(r));
+    expect(r.lineas[0]).toMatchObject({ largo: 18, ancho: 2.7 });
+    expect(textoInterpretacion('superficie', 'perimetro', partida('m²', 'sup'))).toBe('perímetro × Anchura (altura del paramento)');
+  });
+
+  it('Restar se conserva: un hueco entra como hueco', () => {
+    const r = otra(partida('m'), 'perimetro', { restar: true });
+    expect(r.ok && r.lineas[0]!.uds).toBe(-1);
+  });
+
+  it('qué se ofrece en cada partida; por Unidades, nada', () => {
+    expect(interpretacionesPara('superficie', partida('ud'))).toEqual([]);
+    expect(interpretacionesPara('superficie', partida('m'))).toEqual(['perimetro']); // por metros, el área no es un área
+    expect(interpretacionesPara('superficie', partida('m²', 'area'))).toEqual(['area', 'perimetro']);
+    expect(interpretacionesPara('superficie', partida('m²', 'sup'))).toEqual(['area', 'perimetro']); // pasa a Sup. directa
+    expect(interpretacionesPara('superficie', partida('kg', 'peso'))).toEqual(['perimetro']);
+    expect(interpretacionesPara('rectangulo', partida('m³', 'vol'))).toEqual(['area', 'perimetro']);
+    expect(interpretacionesPara('longitud', partida('m²', 'area'))).toEqual(['longitud']);
+    expect(interpretacionesPara('recuento', partida('ud'))).toEqual(['recuento']);
+    expect(textoInterpretacion('superficie', 'perimetro', partida('m²', 'area'), 2.7)).toBe('perímetro × 2,7');
+    expect(textoInterpretacion('rectangulo', 'area', partida('m²', 'sup'))).toBe('largo y ancho');
+    expect(textoInterpretacion('superficie', 'area', partida('m²', 'area'))).toBe('área');
   });
 });

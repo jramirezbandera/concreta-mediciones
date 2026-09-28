@@ -416,6 +416,49 @@ describe('[A1] texto de la página', () => {
   });
 });
 
+describe('[A1] «Añadir también a…»', () => {
+  it('el solado del salón entra en Tabique como su perímetro: misma forma, un paso de Deshacer, «También en»', async () => {
+    const { lienzo, visor } = await montar();
+    act(() => {
+      useObraStore.setState({ openPartidaId: EJEMPLO.solado });
+    });
+    herramienta('Superficie');
+    for (const p of [
+      [150, 200],
+      [150 + 5 * m, 200],
+      [150 + 5 * m, 200 + 4 * m],
+      [150, 200 + 4 * m],
+    ] as Punto[])
+      clic(lienzo, p);
+    tecla(visor, 'Enter');
+    tecla(screen.getByRole('textbox', { name: 'Comentario de la línea' }), 'Enter');
+    await screen.findByText(/Línea 1 ·/);
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir también a…' }));
+    const hoja = await screen.findByRole('dialog', { name: /Añadir también a/ });
+    fireEvent.click(within(hoja).getByRole('button', { name: /Tabique de ladrillo hueco doble/ }));
+    const fila = within(hoja).getByRole('list', { name: 'Partidas elegidas' });
+    expect(within(fila).getByText('Perímetro')).toBeInTheDocument(); // por metros, solo el perímetro
+    expect(within(fila).getByText(/18,00 m · cantidad 0,00 → 18,00 m/)).toBeInTheDocument();
+    const pasado = __historyState().past;
+    fireEvent.click(within(hoja).getByRole('button', { name: 'Añadir a 1 partida' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    const tabique = st().partidas[EJEMPLO.capitulo]!.find((p) => p.id === EJEMPLO.tabique)!;
+    const solado = st().partidas[EJEMPLO.capitulo]!.find((p) => p.id === EJEMPLO.solado)!;
+    expect(tabique.med).toHaveLength(1);
+    expect(tabique.med[0]).toMatchObject({ comment: 'PB · Salon', largo: 18, expr: { largo: '5+4+5+4' } });
+    expect((tabique.med[0]!.origen as OrigenPlano).formaId).toBe((solado.med[0]!.origen as OrigenPlano).formaId);
+    expect((tabique.med[0]!.origen as OrigenPlano).magnitud).toBe('perimetro');
+    expect(__historyState().past).toBe(pasado + 1);
+    // con Mano, el popover de la forma dice dónde más está
+    tecla(visor, 'Escape');
+    herramienta('Mano');
+    clic(lienzo, [150 + 2.5 * m, 200 + 2 * m]);
+    expect(await screen.findByText(/También en: 1\.1 Tabique de ladrillo hueco doble/)).toBeInTheDocument();
+    act(() => undo());
+    expect(st().partidas[EJEMPLO.capitulo]!.find((p) => p.id === EJEMPLO.tabique)!.med).toHaveLength(0);
+  });
+});
+
 describe('precarga de páginas', () => {
   it('con la página pintada, en reposo, precarga la vecina y las que tienen escala', async () => {
     await montar();

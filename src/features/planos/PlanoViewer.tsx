@@ -51,6 +51,7 @@ import { usePlanoUiStore } from '../../store/planoUiStore';
 import { getDomainRevision, undo } from '../../store/temporal';
 import { adjuntarPlano } from './adjuntar';
 import { CalibrarPasos, CampoMetros } from './CalibrarPasos';
+import { AnadirTambien } from './AnadirTambien';
 import { DialogoRecalcular } from './DialogoRecalcular';
 import { DialogoCopiarEscala, PopoverAjuste } from './EscalaCajetin';
 import { comentarioPropuesto, desviacionCajetin, escalaCalibrada, escalaDeclarada, etiquetaPropuesta } from '../../core/planoTexto';
@@ -255,6 +256,8 @@ export function PlanoViewer({
   /** Calibración nueva de una página con líneas, pendiente de la pregunta de recalcular. */
   const [recalculo, setRecalculo] = useState<{ escala: Escala; etiqueta: string; detalle: string; verbo: string } | null>(null);
   const [ajusteAbierto, setAjusteAbierto] = useState(false);
+  /** «Añadir también a…» abierto para esta línea (A1). */
+  const [anadir, setAnadir] = useState<string | null>(null);
   const [copiarAbierto, setCopiarAbierto] = useState(false);
   const comentarioSugeridoRef = useRef(false);
   const formaIdRef = useRef<string>('');
@@ -734,6 +737,18 @@ export function PlanoViewer({
     dispatch({ tipo: 'confirmar', px: lienzoApi.current?.escala() ?? 1, userUnit: info?.userUnit ?? 1, cajetin: declarada });
   }
 
+  /** Otras partidas con líneas de la misma forma (`formaId`), para el popover. */
+  function tambienEn(l: MedLine): string[] {
+    const o = l.origen;
+    if (!origenLegible(o)) return [];
+    const out: string[] = [];
+    for (const ps of Object.values(partidas))
+      for (const p of ps)
+        if (p.med.some((x) => x.id !== l.id && origenLegible(x.origen) && x.origen.formaId === o.formaId)) out.push(`${p.pos} ${p.title}`);
+    return out;
+  }
+  const anadirLinea = anadir && partida ? (partida.med.find((l) => l.id === anadir && origenLegible(l.origen)) ?? null) : null;
+
   /* ---- capa ------------------------------------------------------------------------------ */
   const formas: FormaCapa[] = useMemo(
     () => (partida ? formasDeLineas(partida.med, plano.id, pagina) : []),
@@ -789,6 +804,8 @@ export function PlanoViewer({
             linea={l}
             numero={f.numero}
             partida={partida}
+            tambienEn={tambienEn(l)}
+            onAnadir={() => setAnadir(l.id)}
             soloLectura={!!soloLectura || estrecha}
             onVerLinea={() => document.querySelector(`[data-lineid="${l.id}"]`)?.scrollIntoView?.({ block: 'center' })}
             onRemedir={() => {
@@ -1047,7 +1064,7 @@ export function PlanoViewer({
               }}
             />
           ) : estado.fase === 'creada' ? (
-            <Creada lineId={estado.lineId} partida={partida} />
+            <Creada lineId={estado.lineId} partida={partida} onAnadir={soloLectura || estrecha ? undefined : () => setAnadir(estado.lineId)} />
           ) : (
             <Reposo
               armada={armada}
@@ -1084,6 +1101,24 @@ export function PlanoViewer({
             setRecalculo(null);
             raizRef.current?.focus();
             rematarCalibracion(r.escala, r.etiqueta, `${r.detalle} · ${n} ${n === 1 ? 'línea recalculada' : 'líneas recalculadas'}`, r.verbo);
+          }}
+        />
+      )}
+      {anadirLinea && partida && (
+        <AnadirTambien
+          plano={plano}
+          pagina={pagina}
+          linea={anadirLinea}
+          partidaOrigenId={partida.id}
+          onCerrar={() => {
+            setAnadir(null);
+            raizRef.current?.focus();
+          }}
+          onHecho={(texto) => {
+            setAnadir(null);
+            raizRef.current?.focus();
+            useToastStore.getState().show(texto);
+            decir(texto);
           }}
         />
       )}
@@ -1271,7 +1306,7 @@ function Nombrando({
 }
 
 /** CREADA: «✓ Línea 7 · 18,40 m²» y [Ver línea], hasta el siguiente vértice. */
-function Creada({ lineId, partida }: { lineId: string; partida: Partida | null }) {
+function Creada({ lineId, partida, onAnadir }: { lineId: string; partida: Partida | null; onAnadir?: () => void }) {
   const i = partida?.med.findIndex((l) => l.id === lineId) ?? -1;
   const l = i >= 0 ? partida!.med[i]! : null;
   if (!l || !partida) return null;
@@ -1287,6 +1322,11 @@ function Creada({ lineId, partida }: { lineId: string; partida: Partida | null }
       >
         Ver línea
       </button>
+      {onAnadir && (
+        <button type="button" className={styles.btn} onClick={onAnadir}>
+          Añadir también a…
+        </button>
+      )}
       <span className={styles.pistas}>Clic para la siguiente medida · Esc termina</span>
     </div>
   );
@@ -1297,18 +1337,23 @@ function PopoverForma({
   linea,
   numero,
   partida,
+  tambienEn,
   soloLectura,
   onVerLinea,
   onRemedir,
   onBorrar,
+  onAnadir,
 }: {
   linea: MedLine;
   numero: number;
   partida: Partida;
+  /** Otras partidas con la misma forma («2.3 Rodapié»). */
+  tambienEn: string[];
   soloLectura: boolean;
   onVerLinea: () => void;
   onRemedir: () => void;
   onBorrar: () => void;
+  onAnadir: () => void;
 }) {
   const dims = (['uds', 'largo', 'ancho', 'alto'] as const)
     .filter((s) => linea[s] !== '')
@@ -1322,6 +1367,7 @@ function PopoverForma({
       <div className={`mono ${styles.popFormaDims}`}>
         {dims} = {fmtNum(lineParcial(linea))} {partida.ud}
       </div>
+      {tambienEn.length > 0 && <div className={styles.franjaTexto}>También en: {tambienEn.join(', ')}</div>}
       <div className={styles.popFormaBtns}>
         <button type="button" className={styles.btn} onClick={onVerLinea}>
           Ver línea
@@ -1330,6 +1376,9 @@ function PopoverForma({
           <>
             <button type="button" className={styles.btn} onClick={onRemedir}>
               Volver a medir
+            </button>
+            <button type="button" className={styles.btn} onClick={onAnadir}>
+              Añadir también a…
             </button>
             <button type="button" className={`${styles.btn} ${styles.btnPeligro}`} onClick={onBorrar}>
               Borrar
