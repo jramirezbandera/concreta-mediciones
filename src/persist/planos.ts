@@ -14,6 +14,11 @@
    coordinador de adjuntar (features/planos) publica el metadato SOLO después de
    que los bytes estén aquí. Nunca queda un metadato que apunte a bytes sin
    guardar. A0 no borra ningún PDF (ni marcas ni «Liberar espacio»).
+
+   [A1] Restaurar una copia .zip (§9.2) escribe los PDF anotados con el token
+   de ESA restauración; si la obra no llega a guardarse, se retiran solo los
+   que siguen siendo suyos. Adjuntar o restaurar la misma huella después la
+   ADOPTA (quita el token) y ya no se retira.
    =========================================================================== */
 
 const DB = 'concreta-planos';
@@ -87,10 +92,30 @@ export function esCuotaLlena(e: unknown): boolean {
 /**
  * Guarda los bytes de un plano bajo su huella, en UNA transacción sobre los dos
  * almacenes: escribe los bytes solo si faltan y actualiza siempre `meta`
- * (sella `tocadoEn` y [A1] quita la marca de sin referencia). Idempotente por
- * huella: reintentar no duplica nada ni reescribe los bytes.
+ * (sella `tocadoEn` y [A1] quita la marca de sin referencia y el token de
+ * restauración: la huella queda adoptada). Idempotente por huella: reintentar
+ * no duplica nada ni reescribe los bytes.
  */
 export async function guardarPlano(huella: string, bytes: ArrayBuffer, tipo: string): Promise<void> {
+  await escribir(huella, bytes, tipo, null);
+}
+
+/**
+ * [A1] Como `guardarPlano`, para restaurar una copia: si los bytes FALTABAN,
+ * los escribe anotados con `token` y dice `nuevo: true` (se podrán retirar si
+ * la restauración no termina). Si ya estaban, los adopta como `guardarPlano`.
+ */
+export async function restaurarPlano(
+  huella: string,
+  bytes: ArrayBuffer,
+  tipo: string,
+  token: string,
+): Promise<{ nuevo: boolean }> {
+  return { nuevo: await escribir(huella, bytes, tipo, token) };
+}
+
+/** Escribe (si faltan) y sella `meta`. Devuelve si los bytes eran nuevos. */
+async function escribir(huella: string, bytes: ArrayBuffer, tipo: string, token: string | null): Promise<boolean> {
   const db = await abrir();
   const tx = db.transaction([META, BYTES], 'readwrite');
   const hecho = fin(tx);
@@ -111,22 +136,50 @@ export async function guardarPlano(huella: string, bytes: ArrayBuffer, tipo: str
       }
     }
   };
+  let nuevo = false;
   const cuenta = sBytes.count(huella);
   cuenta.onsuccess = () => {
-    if (cuenta.result === 0) intentar(() => sBytes.put(bytes, huella));
-  };
-  const prev = sMeta.get(huella);
-  prev.onsuccess = () => {
-    const p = (prev.result ?? {}) as Partial<PlanoAlmacenMeta>;
-    const meta: PlanoAlmacenMeta = { ...p, tamano: bytes.byteLength, tipo, tocadoEn: new Date().toISOString() };
-    delete meta.sinReferenciaDesde;
-    intentar(() => sMeta.put(meta, huella));
+    nuevo = cuenta.result === 0;
+    if (nuevo) intentar(() => sBytes.put(bytes, huella));
+    if (fallo) return; // transacción ya abortada
+    // `meta` DESPUÉS de saber si los bytes eran nuevos (mismo orden de peticiones).
+    const prev = sMeta.get(huella);
+    prev.onsuccess = () => {
+      const p = (prev.result ?? {}) as Partial<PlanoAlmacenMeta>;
+      const meta: PlanoAlmacenMeta = { ...p, tamano: bytes.byteLength, tipo, tocadoEn: new Date().toISOString() };
+      delete meta.sinReferenciaDesde;
+      delete meta.restauracion;
+      if (nuevo && token) meta.restauracion = token;
+      intentar(() => sMeta.put(meta, huella));
+    };
   };
   try {
     await hecho;
   } catch (e) {
     throw fallo ?? e;
   }
+  return nuevo;
+}
+
+/**
+ * [A1] Retira un PDF escrito por la restauración `token` que no terminó: en
+ * UNA transacción, relee `meta` y borra bytes y meta SOLO si siguen siendo de
+ * esa restauración (nadie los adoptó entretanto). Devuelve si lo retiró.
+ */
+export async function retirarRestaurado(huella: string, token: string): Promise<boolean> {
+  const db = await abrir();
+  const tx = db.transaction([META, BYTES], 'readwrite');
+  const hecho = fin(tx);
+  let retirado = false;
+  const m = tx.objectStore(META).get(huella);
+  m.onsuccess = () => {
+    if ((m.result as PlanoAlmacenMeta | undefined)?.restauracion !== token) return;
+    tx.objectStore(META).delete(huella);
+    tx.objectStore(BYTES).delete(huella);
+    retirado = true;
+  };
+  await hecho;
+  return retirado;
 }
 
 /** Planos que viven solo en memoria (el ejemplo del sandbox): nunca se escriben

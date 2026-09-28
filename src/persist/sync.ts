@@ -14,9 +14,13 @@
        (`saveActiveObra` con `migracion`). Luego mira si una versión antigua
        siguió guardando en la copia v5 (aviso de cambios antiguos) y, en reposo,
        limpia las copias v5 de más de 30 días.
+     · [A1] Copia .zip con planos y su restauración POR ETAPAS (§9.2): los PDF
+       primero (anotados con el token de la restauración), luego la obra, y
+       nada se anuncia hasta que la obra está en disco.
    =========================================================================== */
 import { shallow } from 'zustand/shallow';
 import type { ImportedObra } from '../core/bc3import';
+import { huellasParaCopia, planoLegible } from '../core/planoDatos';
 import {
   SCHEMA_VERSION,
   blankObraData,
@@ -26,9 +30,12 @@ import {
   type ObraData,
   type ObraState,
 } from '../store';
+import { usePlanoUiStore } from '../store/planoUiStore';
 import { DOMAIN_KEYS } from '../store/schema';
 import { __resetHistoryForTests } from '../store/temporal';
+import { calcularHuella } from './huella';
 import { OBRA_KEY, OBRA_KEY_PREFIX, clearObra, flush, loadObraEnvelope, obraKey } from './persist';
+import { esCuotaLlena, restaurarPlano, retirarRestaurado, tienePlano } from './planos';
 import {
   abrirCambiosAntiguos as registryAbrirCambiosAntiguos,
   createObra,
@@ -50,7 +57,7 @@ import {
 import { usePersistStore } from './persistStore';
 import { useSessionStore, type ReadonlyMotivo } from './sessionStore';
 import { claimObra, releaseActiveLock } from './tabLock';
-import { exportObraJson } from './transfer';
+import { construirCopiaZip, descargarBlob, exportObraJson, planCopiaZip, type CopiaZip } from './transfer';
 
 /** T1.3a: debounce más largo (la edición llega en ráfagas; no hace falta guardar a
  *  media palabra) + el guardado pesado se difiere a `requestIdleCallback` para no
@@ -649,7 +656,7 @@ async function importarSobreActivaImpl(data: ObraData): Promise<ImportarResult> 
   if (!isOwner) return { kind: 'solo-lectura' };
   if (!(await flushPending())) return { kind: 'sin-guardar-actual' };
   const prevId = activeId();
-  descargarCopia('concreta-copia-antes-de-importar.json');
+  await descargarCopiaPrevia();
   // Se guarda a mano, sin esperar al autosave: puede no estar armado (IndexedDB
   // no respondía al arrancar) y entonces nada la guardaría. `isOwner` puede caer
   // durante el guardado (una versión más nueva en disco), y en solo lectura
@@ -659,6 +666,162 @@ async function importarSobreActivaImpl(data: ObraData): Promise<ImportarResult> 
   const id = activeId();
   if (id) await sellarCopia(id, null);
   return { kind: 'ok' };
+}
+
+/* ---- [A1] copia .zip con planos y su restauración (§9.2) ------------------ */
+/** Cómo acabó la copia .zip. */
+export type CopiaZipResult =
+  /** Descargada. `faltan`: planos cuyo PDF no estaba en este navegador (la
+   *  copia sale «incompleta»). */
+  | { kind: 'ok'; tamano: number; planos: number; faltan: string[] }
+  /** Pasa de los topes: una copia .zip no se podría restaurar. */
+  | { kind: 'no-cabe'; motivo: string }
+  | { kind: 'error' };
+
+/**
+ * Descarga la copia .zip de la obra en pantalla (presupuesto + PDF) y sella su
+ * `ultimaCopia`, como la .json. Comprueba los topes ANTES de empezar. El id se
+ * captura al exportar.
+ */
+export async function descargarCopiaZip(
+  filename = 'concreta-obra.zip',
+  onProgreso?: (hechos: number, total: number) => void,
+): Promise<CopiaZipResult> {
+  const id = activeId();
+  const data = toSerializable(useObraStore.getState());
+  try {
+    const plan = await planCopiaZip(data);
+    if (plan.noCabe) return { kind: 'no-cabe', motivo: plan.noCabe };
+    const { blob, faltan } = await construirCopiaZip(data, plan, onProgreso);
+    descargarBlob(blob, filename);
+    if (id) await sellarCopia(id, new Date().toISOString());
+    return { kind: 'ok', tamano: blob.size, planos: plan.planos, faltan };
+  } catch {
+    return { kind: 'error' };
+  }
+}
+
+/** La copia automática antes de importar: .zip si la obra tiene planos (si el
+ *  .zip no sale, la .json); si no, la .json. Sella la obra ANTERIOR. */
+async function descargarCopiaPrevia(): Promise<void> {
+  const conPlanos = useObraStore.getState().planos.some((p) => planoLegible(p) && !p.quitado);
+  if (conPlanos && (await descargarCopiaZip('concreta-copia-antes-de-importar.zip')).kind === 'ok') return;
+  descargarCopia('concreta-copia-antes-de-importar.json');
+}
+
+/** Por qué un plano quedó «no disponible» tras restaurar. */
+export type MotivoNoRestaurado = 'huella' | 'danado' | 'cuota' | 'falta' | 'error';
+
+/** Una línea del resumen de la restauración, plano a plano. */
+export interface PlanoRestaurado {
+  planoId: string;
+  nombre: string;
+  disponible: boolean;
+  motivo?: MotivoNoRestaurado;
+}
+
+/** Cómo acabó restaurar un .zip sobre la obra activa. */
+export type RestaurarResult =
+  /** La obra está en pantalla y en disco; `planos`, uno a uno. */
+  | { kind: 'ok'; planos: PlanoRestaurado[] }
+  | { kind: 'solo-lectura' }
+  /** La obra actual no llegó a disco: no se restaura nada. */
+  | { kind: 'sin-guardar-actual' }
+  /** La obra de la copia no se pudo guardar ni sin sus PDF: se retiraron los
+   *  que se habían escrito y vuelve la obra anterior. */
+  | { kind: 'revertida' };
+
+/**
+ * Restaura una copia .zip YA validada (`leerCopiaZip`) sustituyendo la obra
+ * activa, por etapas (§9.2):
+ *   1. escribe los PDF uno a uno, con la huella CALCULADA, anotados con el
+ *      token de esta restauración (los que ya estaban en este equipo no son
+ *      suyos); uno que no cuadra con su huella se descarta;
+ *   2. si se acaba la cuota, deja de escribir PDF;
+ *   3. carga la obra y la guarda antes de anunciar nada; si no cabe, retira
+ *      PDF nuevos (el más grande primero) hasta que quepa;
+ *   4. si ni así, retira los nuevos que sigan siendo suyos, vuelve a la obra
+ *      anterior (la instantánea en memoria, no la de disco) y lo dice.
+ * Antes, como importar un .json: guarda la actual y descarga su copia.
+ */
+export function restaurarZipSobreActiva(
+  copia: CopiaZip,
+  onProgreso?: (hechos: number, total: number) => void,
+): Promise<RestaurarResult> {
+  return serializeOp(() => restaurarZipImpl(copia, onProgreso));
+}
+async function restaurarZipImpl(
+  copia: CopiaZip,
+  onProgreso?: (hechos: number, total: number) => void,
+): Promise<RestaurarResult> {
+  if (!isOwner) return { kind: 'solo-lectura' };
+  if (!(await flushPending())) return { kind: 'sin-guardar-actual' };
+  await descargarCopiaPrevia();
+  const anterior = toSerializable(useObraStore.getState());
+  const token = `rst-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
+  // 1-2. Los PDF, uno a uno.
+  const estado = new Map<string, MotivoNoRestaurado | 'ok'>();
+  const nuevos: { huella: string; tamano: number }[] = [];
+  let sinCuota = false;
+  const yaEsta = (h: string) => tienePlano(h).catch(() => false);
+  const uno = async (h: string): Promise<MotivoNoRestaurado | 'ok'> => {
+    if (!copia.pdfs.has(h)) return (await yaEsta(h)) ? 'ok' : 'falta';
+    if (sinCuota) return (await yaEsta(h)) ? 'ok' : 'cuota';
+    let bytes: ArrayBuffer;
+    try {
+      bytes = await copia.leerPdf(h);
+    } catch {
+      return (await yaEsta(h)) ? 'ok' : 'danado';
+    }
+    if ((await calcularHuella(bytes)) !== h) return (await yaEsta(h)) ? 'ok' : 'huella';
+    try {
+      if ((await restaurarPlano(h, bytes, 'application/pdf', token)).nuevo) nuevos.push({ huella: h, tamano: bytes.byteLength });
+      return 'ok';
+    } catch (e) {
+      if (esCuotaLlena(e)) sinCuota = true;
+      return (await yaEsta(h)) ? 'ok' : esCuotaLlena(e) ? 'cuota' : 'error';
+    }
+  };
+  const huellas = huellasParaCopia(copia.data);
+  for (const [i, h] of huellas.entries()) {
+    onProgreso?.(i, huellas.length);
+    estado.set(h, await uno(h));
+  }
+
+  // 3. La obra, en pantalla y EN DISCO antes de anunciar nada.
+  const guardada = async () => (await persistNow()) && isOwner;
+  loadDataIntoStore(copia.data);
+  let ok = await guardada();
+  const porRetirar = [...nuevos].sort((a, b) => b.tamano - a.tamano);
+  while (!ok && isOwner && porRetirar.length) {
+    const n = porRetirar.shift()!;
+    if (await retirarRestaurado(n.huella, token).catch(() => false)) estado.set(n.huella, 'cuota');
+    ok = await guardada();
+  }
+
+  // 4. Ni así: fuera los PDF nuevos que sigan siendo suyos y vuelve la anterior.
+  if (!ok) {
+    cancelPending();
+    for (const n of porRetirar) await retirarRestaurado(n.huella, token).catch(() => false);
+    loadDataIntoStore(anterior);
+    if (isOwner) await persistNow(); // por si la importada llegó a medias (sobre sí, índice no)
+    return { kind: 'revertida' };
+  }
+
+  const id = activeId();
+  if (id) await sellarCopia(id, null);
+  const ui = usePlanoUiStore.getState();
+  for (const [h, e] of estado) ui.setDisponible(h, e === 'ok');
+  const planos = copia.data.planos
+    .filter((p) => planoLegible(p) && !p.quitado)
+    .map((p): PlanoRestaurado => {
+      const e = estado.get(p.huella) ?? 'falta';
+      return e === 'ok'
+        ? { planoId: p.id, nombre: p.nombre, disponible: true }
+        : { planoId: p.id, nombre: p.nombre, disponible: false, motivo: e };
+    });
+  return { kind: 'ok', planos };
 }
 
 /* ---- cambios antiguos en la copia v5 (§1.1) ------------------------------- */

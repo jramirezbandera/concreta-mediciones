@@ -15,8 +15,14 @@ export {
   abrirCambiosAntiguos,
   ignorarCambiosAntiguos,
   aislarPestana,
+  descargarCopiaZip,
+  restaurarZipSobreActiva,
   __resetSyncForTests,
   type ImportarResult,
+  type CopiaZipResult,
+  type RestaurarResult,
+  type PlanoRestaurado,
+  type MotivoNoRestaurado,
 } from './sync';
 export { useSessionStore, type ReadonlyMotivo } from './sessionStore';
 export {
@@ -75,6 +81,13 @@ export {
   parseObraJson,
   readFileText,
   ImportError,
+  TOPES_ZIP,
+  esCopiaZip,
+  leerCopiaZip,
+  planCopiaZip,
+  descargarPdfsSueltos,
   type ObraExport,
   type ImportErrorKind,
+  type CopiaZip,
+  type PlanCopiaZip,
 } from './transfer';

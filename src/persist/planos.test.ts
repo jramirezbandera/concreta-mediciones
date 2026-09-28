@@ -39,7 +39,7 @@ describe('almacén de planos (concreta-planos)', () => {
     expect((await leerMetaPlano('h1'))!.tocadoEn).toBe('2026-09-27T10:00:00.000Z');
   });
 
-  it('el `update` de `meta` quita la marca de sin referencia [A1] y conserva lo demás', async () => {
+  it('el `update` de `meta` quita la marca de sin referencia y el token de restauración [A1]', async () => {
     await guardarPlano('h1', bytes(4), 'application/pdf');
     // lo que dejaría «Liberar espacio» [A1]
     const req = indexedDB.open('concreta-planos', 1);
@@ -56,7 +56,9 @@ describe('almacén de planos (concreta-planos)', () => {
     await guardarPlano('h1', bytes(4), 'application/pdf');
     const m = await leerMetaPlano('h1');
     expect(m).not.toHaveProperty('sinReferenciaDesde');
-    expect(m!.restauracion).toBe('r1');
+    // adjuntarlo lo ADOPTA: una restauración que no termina ya no lo retira
+    expect(m).not.toHaveProperty('restauracion');
+    expect(m).toMatchObject({ tamano: 4, tipo: 'application/pdf' });
   });
 
   it('cuota llena: la escritura rechaza con un error reconocible', async () => {

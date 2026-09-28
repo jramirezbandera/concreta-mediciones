@@ -16,9 +16,10 @@
    =========================================================================== */
 import { fmtNum } from '../../core/money';
 import { planoLegible } from '../../core/planoDatos';
-import { huellaDe } from '../../core/sha256';
 import type { PlanoMeta } from '../../core/types';
+import { calcularHuella } from '../../persist/huella';
 import { esCuotaLlena, espacioNavegador, guardarPlano, tienePlano } from '../../persist/planos';
+import { TOPES_ZIP } from '../../persist/transfer';
 import { useObraStore } from '../../store';
 import { nextPlanoId } from '../../store/base';
 import { usePlanoUiStore } from '../../store/planoUiStore';
@@ -70,27 +71,6 @@ function leerArchivo(file: Blob): Promise<ArrayBuffer> {
   });
 }
 
-/** Huella en un worker (la implementación propia bloquearía el hilo); si no
- *  hay workers o el worker falla, en el hilo. */
-async function calcularHuella(bytes: ArrayBuffer): Promise<string> {
-  if (typeof Worker === 'undefined') return huellaDe(bytes);
-  try {
-    const w = new Worker(new URL('./huellaWorker.ts', import.meta.url), { type: 'module' });
-    try {
-      return await new Promise<string>((resolve, reject) => {
-        w.onmessage = (e: MessageEvent<{ ok: boolean; huella?: string; error?: string }>) =>
-          e.data.ok ? resolve(e.data.huella!) : reject(new Error(e.data.error));
-        w.onerror = (e) => reject(new Error(e.message));
-        w.postMessage(bytes); // copia: los bytes se guardan después
-      });
-    } finally {
-      w.terminate();
-    }
-  } catch {
-    return huellaDe(bytes);
-  }
-}
-
 const planosVivos = () => useObraStore.getState().planos.filter((p): p is PlanoMeta => planoLegible(p));
 
 /**
@@ -110,7 +90,16 @@ export async function adjuntarPlano(
       kind: 'error',
       texto: `«${nombre}» pesa ${mb(file.size)}: el máximo es 500 MB. Divide el plano o expórtalo con menos resolución.`,
     };
-  const aviso = file.size > AVISO_BYTES ? `«${nombre}» pesa ${mb(file.size)}: la copia de la obra será grande.` : undefined;
+  // [A1] Un solo contrato con la copia .zip (§9.2): si con este plano la obra
+  // pasa de sus topes, se avisa ya (la copia se hará como .json y PDF sueltos).
+  const enObra = new Map(planosVivos().filter((p) => !p.quitado).map((p) => [p.huella, p.tamano]));
+  const conEste = [...enObra.values()].reduce((s, n) => s + n, 0) + file.size;
+  const aviso =
+    conEste > TOPES_ZIP.total
+      ? `Con «${nombre}», los planos de la obra pasan de 2 GB: la copia completa (.zip) no cabrá y tendrás que guardar los PDF por separado.`
+      : file.size > AVISO_BYTES
+        ? `«${nombre}» pesa ${mb(file.size)}: la copia de la obra será grande.`
+        : undefined;
 
   opts.onFase?.('leyendo');
   let bytes: ArrayBuffer;

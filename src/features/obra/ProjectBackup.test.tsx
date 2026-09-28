@@ -2,8 +2,12 @@ import 'fake-indexeddb/auto';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProjectBackup } from './ProjectBackup';
-import { toSerializable, useObraStore } from '../../store';
-import { usePersistStore, useSessionStore, type ImportarResult } from '../../persist';
+import { huellaDe } from '../../core/sha256';
+import { toSerializable, useObraStore, useToastStore } from '../../store';
+import { parseObraJson, usePersistStore, useSessionStore, type ImportarResult } from '../../persist';
+import { __resetPlanosForTests, guardarPlano } from '../../persist/planos';
+import { EscritorZip } from '../../persist/zip';
+import a0 from '../../test/fixtures/planos/obra-v6-a0.json';
 
 // Por defecto, la implementación real; cada test puede forzar un resultado.
 const importarSobreActiva = vi.hoisted(() => vi.fn());
@@ -49,7 +53,7 @@ describe('ProjectBackup (F6.3)', () => {
     const onImported = vi.fn();
     render(<ProjectBackup onImported={onImported} />);
 
-    fireEvent.change(screen.getByLabelText('Importar proyecto .json'), {
+    fireEvent.change(screen.getByLabelText('Importar copia (.zip o .json)'), {
       target: { files: [importableJson('Obra Importada')] },
     });
 
@@ -65,7 +69,7 @@ describe('ProjectBackup (F6.3)', () => {
     const onImported = vi.fn();
     render(<ProjectBackup onImported={onImported} />);
 
-    fireEvent.change(screen.getByLabelText('Importar proyecto .json'), {
+    fireEvent.change(screen.getByLabelText('Importar copia (.zip o .json)'), {
       target: { files: [importableJson('No debería entrar')] },
     });
 
@@ -79,7 +83,7 @@ describe('ProjectBackup (F6.3)', () => {
     render(<ProjectBackup onImported={onImported} />);
 
     const bad = new File(['{ esto no es json'], 'x.json', { type: 'application/json' });
-    fireEvent.change(screen.getByLabelText('Importar proyecto .json'), {
+    fireEvent.change(screen.getByLabelText('Importar copia (.zip o .json)'), {
       target: { files: [bad] },
     });
 
@@ -94,7 +98,7 @@ describe('ProjectBackup (F6.3)', () => {
 
     const future = { ...toSerializable(state()), schemaVersion: 99 };
     const file = new File([JSON.stringify(future)], 'f.json', { type: 'application/json' });
-    fireEvent.change(screen.getByLabelText('Importar proyecto .json'), {
+    fireEvent.change(screen.getByLabelText('Importar copia (.zip o .json)'), {
       target: { files: [file] },
     });
 
@@ -142,7 +146,7 @@ describe('ProjectBackup (F6.3)', () => {
     const onImported = vi.fn();
     render(<ProjectBackup onImported={onImported} />);
 
-    fireEvent.change(screen.getByLabelText('Importar proyecto .json'), {
+    fireEvent.change(screen.getByLabelText('Importar copia (.zip o .json)'), {
       target: { files: [importableJson('Obra Importada')] },
     });
 
@@ -158,7 +162,7 @@ describe('ProjectBackup (F6.3)', () => {
     importarSobreActiva.mockResolvedValueOnce({ kind: 'sin-guardar-actual' });
     const onImported = vi.fn();
     render(<ProjectBackup onImported={onImported} />);
-    fireEvent.change(screen.getByLabelText('Importar proyecto .json'), {
+    fireEvent.change(screen.getByLabelText('Importar copia (.zip o .json)'), {
       target: { files: [importableJson('Obra Importada')] },
     });
     await waitFor(() =>
@@ -166,5 +170,96 @@ describe('ProjectBackup (F6.3)', () => {
     );
     expect(screen.queryByRole('button', { name: 'Volver a la obra anterior' })).toBeNull();
     expect(onImported).not.toHaveBeenCalled();
+  });
+});
+
+describe('ProjectBackup · copia .zip con planos [A1]', () => {
+  const pdf = (t: string) => new TextEncoder().encode(`%PDF-1.4\n${t}\n%%EOF`).buffer;
+  /** La obra A0 con la huella de `bytes`; con `guardar`, esos bytes en el almacén. */
+  async function obraConPlano(bytes: ArrayBuffer, guardar = true): Promise<string> {
+    const h = await huellaDe(bytes);
+    const huellaA0 = (a0 as { planos: { huella: string }[] }).planos[0]!.huella;
+    state().loadObra(parseObraJson(JSON.stringify(a0).split(huellaA0).join(h)));
+    if (guardar) await guardarPlano(h, bytes, 'application/pdf');
+    return h;
+  }
+  async function zipDe(entradas: [string, Uint8Array][]): Promise<File> {
+    const z = new EscritorZip();
+    for (const [n, d] of entradas) await z.anadir(n, d, n === 'obra.json');
+    return new File([z.cerrar()], 'copia.zip', { type: 'application/zip' });
+  }
+
+  beforeEach(async () => {
+    await __resetPlanosForTests();
+    useToastStore.setState({ msg: null, action: null, tick: 0 });
+  });
+
+  it('con planos, la copia completa (.zip) es la principal y dice su tamaño', async () => {
+    await obraConPlano(pdf('planta'));
+    render(<ProjectBackup />);
+    expect(screen.getByText('Calculando…')).toBeInTheDocument();
+    expect(await screen.findByText(/MB · 1 plano$/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Solo presupuesto (.json)' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Copia completa con planos (.zip)' }));
+    await waitFor(() => expect(useToastStore.getState().msg).toMatch(/^Copia completa \(.* MB\)$/));
+    expect(HTMLAnchorElement.prototype.click).toHaveBeenCalledTimes(1);
+  });
+
+  it('un plano sin su PDF en este navegador: avisa de que saldrá incompleta', async () => {
+    await obraConPlano(pdf('no está'), false);
+    render(<ProjectBackup />);
+    expect(await screen.findByText(/Saldrá incompleta: falta Planta primera/)).toBeInTheDocument();
+  });
+
+  it('un .zip con un nombre desconocido se rechaza con su causa', async () => {
+    const onImported = vi.fn();
+    render(<ProjectBackup onImported={onImported} />);
+    const file = await zipDe([
+      ['obra.json', new TextEncoder().encode(JSON.stringify(toSerializable(state())))],
+      ['notas.txt', new Uint8Array([1])],
+    ]);
+    fireEvent.change(screen.getByLabelText('Importar copia (.zip o .json)'), { target: { files: [file] } });
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'No se puede restaurar esta copia. Nombre desconocido en la copia: notas.txt',
+      ),
+    );
+    expect(onImported).not.toHaveBeenCalled();
+  });
+
+  it('restauración parcial: no cierra y enseña el resumen plano a plano, con [Adjuntar PDF]', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const h = await obraConPlano(pdf('buena'), false);
+    const file = await zipDe([
+      ['obra.json', new TextEncoder().encode(JSON.stringify(toSerializable(state())))],
+      [`planos/${h}.pdf`, new Uint8Array(pdf('manipulada'))], // otros bytes con ese nombre
+    ]);
+    state().reset();
+    const onImported = vi.fn();
+    render(<ProjectBackup onImported={onImported} />);
+    fireEvent.change(screen.getByLabelText('Importar copia (.zip o .json)'), { target: { files: [file] } });
+
+    expect(await screen.findByText('Obra restaurada · planos disponibles: 0 de 1')).toBeInTheDocument();
+    expect(screen.getByText(/el PDF no cuadra con su huella: vuelve a adjuntarlo/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Adjuntar PDF' })).toBeInTheDocument();
+    expect(onImported).not.toHaveBeenCalled();
+    expect(state().planos).toHaveLength(1); // la obra sí está restaurada
+    expect(window.confirm).toHaveBeenCalledWith(expect.stringMatching(/^Restaurar esta copia \(con 1 plano\)/));
+  });
+
+  it('una restauración completa cierra y lo dice', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const bytes = pdf('completa');
+    const h = await obraConPlano(bytes, false);
+    const file = await zipDe([
+      ['obra.json', new TextEncoder().encode(JSON.stringify(toSerializable(state())))],
+      [`planos/${h}.pdf`, new Uint8Array(bytes)],
+    ]);
+    state().reset();
+    const onImported = vi.fn();
+    render(<ProjectBackup onImported={onImported} />);
+    fireEvent.change(screen.getByLabelText('Importar copia (.zip o .json)'), { target: { files: [file] } });
+    await waitFor(() => expect(onImported).toHaveBeenCalledTimes(1));
+    expect(useToastStore.getState().msg).toBe('Copia restaurada: la obra y 1 plano');
   });
 });

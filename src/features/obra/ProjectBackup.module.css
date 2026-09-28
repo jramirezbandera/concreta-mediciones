@@ -96,3 +96,63 @@
   opacity: 0.55;
   cursor: default;
 }
+
+/* [A1] La copia completa (.zip) como acción principal, con su tamaño. */
+.principal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8);
+}
+.btnPrimario {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.meta {
+  font-size: var(--fs-table);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* [A1] Resumen de una restauración parcial, plano a plano. */
+.resumen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+  padding: var(--sp-10);
+  border: 1px solid var(--border-main);
+  border-radius: 8px;
+  background: var(--bg-surface);
+}
+.resumenLista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.resumenFila {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-6);
+  font-size: var(--fs-table);
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+.resumenFila > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--state-warn);
+}
+.resumenOk > svg {
+  color: var(--state-ok);
+}
+.resumenTexto {
+  flex: 1;
+  min-width: 0;
+}
+.resumenTexto strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}

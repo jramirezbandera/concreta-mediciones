@@ -238,3 +238,20 @@ export function excedeTopes(d: { planos: unknown; partidas: PartidasMap }): keyo
   }
   return null;
 }
+
+/**
+ * [A1] Las huellas cuyos PDF necesita una copia completa de la obra (§9.2): la
+ * de cada plano que no está quitado y la de cada línea medida sobre él (una
+ * línea medida con un PDF anterior conserva su `origen.huella`, que manda en
+ * «Ver en plano»). Primero las de los planos, en su orden.
+ */
+export function huellasParaCopia(d: { planos: unknown; partidas: PartidasMap }): string[] {
+  const vivos = (Array.isArray(d.planos) ? d.planos : []).filter((p): p is PlanoMeta => planoLegible(p) && !p.quitado);
+  const ids = new Set(vivos.map((p) => p.id));
+  const out = new Set(vivos.map((p) => p.huella));
+  for (const { line } of lineasDe(d.partidas)) {
+    const o = line.origen;
+    if (origenLegible(o) && ids.has(o.planoId)) out.add(o.huella);
+  }
+  return [...out];
+}

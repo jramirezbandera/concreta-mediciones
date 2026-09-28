@@ -1,7 +1,11 @@
 import 'fake-indexeddb/auto';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { usePersistStore, useSessionStore, type ObraMeta } from '../../persist';
+import { huellaDe } from '../../core/sha256';
+import { parseObraJson, usePersistStore, useSessionStore, type ObraMeta } from '../../persist';
+import { __resetPlanosForTests, guardarPlano } from '../../persist/planos';
+import { useObraStore, useToastStore } from '../../store';
+import a0 from '../../test/fixtures/planos/obra-v6-a0.json';
 import { CopiaRecordatorio } from './CopiaRecordatorio';
 
 const DIA = 86_400_000;
@@ -60,5 +64,29 @@ describe('CopiaRecordatorio (Etapa 0)', () => {
     usePersistStore.setState({ durability: 'best-effort' });
     render(<CopiaRecordatorio variant="bar" />);
     expect(screen.queryByRole('button')).toBeNull();
+  });
+});
+
+describe('CopiaRecordatorio con planos [A1]', () => {
+  afterEach(() => useObraStore.getState().reset());
+
+  it('la copia es la completa (.zip) y lo dice', async () => {
+    await __resetPlanosForTests();
+    const bytes = new TextEncoder().encode('%PDF-1.4 recordatorio').buffer;
+    const h = await huellaDe(bytes);
+    const huellaA0 = (a0 as { planos: { huella: string }[] }).planos[0]!.huella;
+    useObraStore.getState().loadObra(parseObraJson(JSON.stringify(a0).split(huellaA0).join(h)));
+    await guardarPlano(h, bytes, 'application/pdf');
+    const nombres: string[] = [];
+    vi.mocked(HTMLAnchorElement.prototype.click).mockImplementation(function (this: HTMLAnchorElement) {
+      nombres.push(this.download);
+    });
+
+    // (el sellado asíncrono de la copia del primer test puede haber vaciado la lista)
+    useSessionStore.setState({ obras: [meta()], activeId: 'o1' });
+    render(<CopiaRecordatorio variant="bar" />);
+    fireEvent.click(screen.getByRole('button', { name: /Descargar copia completa de la obra, con sus planos \(\.zip\)/ }));
+    await waitFor(() => expect(useToastStore.getState().msg).toMatch(/^Copia completa \(/));
+    expect(nombres).toEqual(['concreta-obra.zip']);
   });
 });

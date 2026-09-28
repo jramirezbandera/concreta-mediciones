@@ -91,14 +91,19 @@ describe('exportObraJson (descarga)', () => {
     const revokeURL = vi.fn();
     vi.stubGlobal('URL', { createObjectURL: createURL, revokeObjectURL: revokeURL });
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    vi.useFakeTimers();
 
     exportObraJson('mi-obra.json');
 
     expect(createURL).toHaveBeenCalledTimes(1);
     expect(createURL.mock.calls[0]![0]).toBeInstanceOf(Blob);
     expect(click).toHaveBeenCalledTimes(1);
+    // la URL se suelta después: el navegador lee el fichero tras el clic
+    expect(revokeURL).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(60_000);
     expect(revokeURL).toHaveBeenCalledTimes(1);
 
+    vi.useRealTimers();
     click.mockRestore();
     vi.unstubAllGlobals();
   });
