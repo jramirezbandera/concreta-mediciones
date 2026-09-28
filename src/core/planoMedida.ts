@@ -215,6 +215,8 @@ export interface ValorFijo {
  *  `features/planos/motivos` (§7.2). */
 export type MotivoMedida =
   | { motivo: 'sin-calibrar' }
+  /** [A1] La escala de la página no tiene comprobación: sin comprobación no se mide. */
+  | { motivo: 'sin-comprobar' }
   | { motivo: 'no-encaja'; forma: MedForma; usa: Herramienta }
   | { motivo: 'superficie-en-sup' }
   | { motivo: 'falta-dimension'; slot: MedDim | 'factor'; rotulo: string }
@@ -275,6 +277,7 @@ export function motivoHerramienta(
   },
 ): MotivoMedida | null {
   if (herramienta !== 'recuento' && !ctx.escala) return { motivo: 'sin-calibrar' };
+  if (herramienta !== 'recuento' && !ctx.escala!.comprobacion) return { motivo: 'sin-comprobar' };
   const forma = medFormaDe(ctx.partida);
   const raw = TABLA_MEDIDA[herramienta][forma];
   if (raw.encaja === false) return { motivo: 'no-encaja', forma, usa: raw.usa };

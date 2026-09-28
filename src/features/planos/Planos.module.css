@@ -1007,3 +1007,78 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* ---- «¿La escala anterior estaba mal?» (recalcular, A1) ---------------------- */
+.recalculo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+}
+.recalculo p {
+  margin: 0;
+}
+.recalculoPartidas {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+  font-size: var(--fs-table);
+}
+.recalculoPartidas li {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--sp-8);
+}
+.recalculoCantidad {
+  margin-left: auto;
+  color: var(--text-secondary);
+}
+.recalculoAviso {
+  flex-basis: 100%;
+  color: var(--state-warn);
+  font-size: var(--fs-table);
+}
+.chipAviso {
+  color: var(--state-warn);
+  background: color-mix(in srgb, var(--state-warn) 12%, transparent);
+}
+
+/* ---- escala del cajetín (A1) --------------------------------------------------- */
+.popoverAjuste {
+  position: absolute;
+  top: var(--sp-8);
+  right: var(--sp-8);
+  z-index: 6;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+  padding: 10px 12px;
+  border: 1px solid var(--border-main);
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-float);
+  font-size: var(--fs-table);
+}
+.popoverAjuste p {
+  margin: 0;
+}
+.popoverAcciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-6);
+  justify-content: flex-end;
+}
+.checkLinea {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-6);
+  cursor: pointer;
+}
+button.chip {
+  cursor: pointer;
+  border: 0;
+}

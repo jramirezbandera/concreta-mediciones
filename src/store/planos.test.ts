@@ -3,7 +3,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { medFormaDe } from '../core/medForma';
 import { escalaDe } from '../core/planoDatos';
-import { prepararMedida, type NewPlanoLine } from '../core/planoMedida';
+import { motivoHerramienta, prepararMedida, type NewPlanoLine } from '../core/planoMedida';
+import { lineasConOtraEscala, planRecalculo } from '../core/planoRecalculo';
 import type { Escala, MedForma, OrigenPlano, Partida, PlanoMeta } from '../core/types';
 import a0 from '../test/fixtures/planos/obra-v6-a0.json';
 import { applyPaste, copyLines, pasteLines } from './medLineOps';
@@ -171,7 +172,7 @@ describe('escala', () => {
     expect(res).toEqual({ ids: [], reason: 'has-lines', detalle: { n: 6 } });
     expect(escalaDe(plano(), 1)!.rev).toBe('cal-p1-1');
     expect(textoResultado(res)).toBe(
-      'Esta página ya tiene 6 líneas medidas con esta escala. Recalcularlas llega más adelante; para medir a otra escala, adjunta el PDF otra vez.',
+      'Esta página ya tiene 6 líneas medidas: al cambiar la escala se recalculan. Para medir un detalle a otra escala, adjunta el PDF otra vez.',
     );
   });
 
@@ -184,6 +185,201 @@ describe('escala', () => {
       ids: [plano().id],
     });
     expect(escalaDe(plano(), 1)!.rev).toBe('cal-2');
+  });
+});
+
+describe('[A1] recalcular al cambiar la escala', () => {
+  /** 1:100: cada longitud ×2. */
+  const doble = (): Escala => {
+    const e = escalaDe(plano(), 1)!;
+    return { ...structuredClone(e), rev: 'cal-2', mPorUnidad: e.mPorUnidad * 2, n: 100 };
+  };
+  const preguntar = (escala: Escala) => {
+    const plan = planRecalculo(st(), plano().id, 1, escala);
+    const valores = Object.fromEntries(
+      plan.candidatas.map((c) => {
+        const l = P(c.partidaId).med.find((x) => x.id === c.lineId)!;
+        return [c.lineId, { uds: l.uds, largo: l.largo, ancho: l.ancho, alto: l.alto }];
+      }),
+    );
+    return {
+      lineIds: plan.candidatas.map((c) => c.lineId),
+      expect: { ...doc(), huella: plano().huella, calRev: escalaDe(plano(), 1)!.rev, valores },
+    };
+  };
+
+  it('escala nueva y líneas recalculadas en UN paso; Deshacer lo revierte todo', () => {
+    const e = doble();
+    const q = preguntar(e);
+    const antes = __historyState().past;
+    const res = st().rescalePlanoPage({ planoId: plano().id, pagina: 1, escala: e, ...q });
+    expect(res.ids).toHaveLength(7); // el plano y 6 líneas
+    expect(escalaDe(plano(), 1)!.rev).toBe('cal-2');
+    expect(P('p-tabique').med[0]).toMatchObject({ largo: 18.9, expr: { largo: '6,4+8,3+4,2' } });
+    expect(P('p-enchufes').med[0]!.uds).toBe(6); // Recuento no se toca
+    expect(__historyState().past).toBe(antes + 1);
+    undo();
+    expect(escalaDe(plano(), 1)!.rev).toBe('cal-p1-1');
+    expect(P('p-tabique').med[0]).toMatchObject({ largo: 9.45, expr: { largo: '3,2+4,15+2,1' } });
+  });
+
+  it('`stale` sin tocar nada: otra escala activa, otras candidatas o una casilla cambiada', () => {
+    const e = doble();
+    const q = preguntar(e);
+    const pasado = __historyState().past;
+    expect(
+      st().rescalePlanoPage({ planoId: plano().id, pagina: 1, escala: e, ...q, expect: { ...q.expect, calRev: 'otra' } }),
+    ).toMatchObject({ reason: 'stale', detalle: { cambio: 'escala' } });
+    expect(
+      st().rescalePlanoPage({ planoId: plano().id, pagina: 1, escala: e, lineIds: q.lineIds.slice(1), expect: q.expect }),
+    ).toMatchObject({ reason: 'stale', detalle: { cambio: 'lineas' } });
+    // Una línea se retoca a mano mientras se pregunta: sale de las candidatas.
+    useObraStore.setState((s) => {
+      const l = s.partidas.c01!.find((p) => p.id === 'p-tabique')!.med[0]!;
+      l.largo = 9.5;
+      delete l.expr;
+    });
+    const trasRetocar = __historyState().past;
+    expect(st().rescalePlanoPage({ planoId: plano().id, pagina: 1, escala: e, ...q })).toMatchObject({
+      reason: 'stale',
+      detalle: { cambio: 'lineas' },
+    });
+    expect(escalaDe(plano(), 1)!.rev).toBe('cal-p1-1');
+    expect(__historyState().past).toBe(trasRetocar);
+    expect(trasRetocar).toBe(pasado + 1); // solo el retoque de la prueba
+  });
+
+  it('las retocadas conservan su escala («escala histórica») y se cuentan como «con otra escala»', () => {
+    useObraStore.setState((s) => {
+      const l = s.partidas.c01!.find((p) => p.id === 'p-tabique')!.med[0]!;
+      l.largo = 9.5;
+      delete l.expr;
+    });
+    const e = doble();
+    const q = preguntar(e);
+    expect(q.lineIds).not.toContain('l-tabique');
+    st().rescalePlanoPage({ planoId: plano().id, pagina: 1, escala: e, ...q });
+    expect(P('p-tabique').med[0]).toMatchObject({ largo: 9.5, origen: { calRev: 'cal-p1-1' } });
+    expect(lineasConOtraEscala(st().partidas, plano())).toBe(1);
+  });
+});
+
+describe('[A1] cajetín: ajustar y copiar la calibración', () => {
+  /** La escala del fixture (1:50) como calibrada a 1:49,7 con «E 1:50» en el cajetín. */
+  const conCajetin = (ajustada: boolean) =>
+    useObraStore.setState((s) => {
+      const e = s.planos[0]!.escalas[1]!;
+      e.escalaDeclarada = 50;
+      e.ref = { a: [0, 0], b: [283.46 * (50 / 49.7), 0], metros: 5 }; // la cota da 1:49,7
+      if (ajustada) {
+        e.ajustada = true;
+        e.mPorUnidad = (50 * 0.0254) / 72;
+        e.n = 50;
+      }
+    });
+
+  it('setPlanoScaleAdjusted: con líneas, `has-lines`; sin líneas, la calibrada con `rev` nueva', () => {
+    conCajetin(true);
+    const rev = escalaDe(plano(), 1)!.rev;
+    const exp = { ...doc(), calRev: rev };
+    expect(st().setPlanoScaleAdjusted({ planoId: plano().id, pagina: 1, ajustada: false, userUnit: 1, expect: exp })).toMatchObject({
+      reason: 'has-lines',
+    });
+    useObraStore.setState((s) => {
+      for (const ps of Object.values(s.partidas)) for (const p of ps) p.med = [];
+    });
+    expect(st().setPlanoScaleAdjusted({ planoId: plano().id, pagina: 1, ajustada: true, userUnit: 1, expect: exp })).toMatchObject({
+      reason: 'noop',
+    });
+    expect(st().setPlanoScaleAdjusted({ planoId: plano().id, pagina: 1, ajustada: false, userUnit: 1, expect: exp })).toEqual({
+      ids: [plano().id],
+    });
+    const e = escalaDe(plano(), 1)!;
+    expect(e.rev).not.toBe(rev);
+    expect(e.ajustada).toBeUndefined();
+    expect(e.n).toBeCloseTo(49.7, 1);
+    expect(st().setPlanoScaleAdjusted({ planoId: plano().id, pagina: 1, ajustada: true, userUnit: 1, expect: { ...doc(), calRev: e.rev } })).toEqual({
+      ids: [plano().id],
+    });
+    expect(escalaDe(plano(), 1)).toMatchObject({ n: 50, ajustada: true });
+  });
+
+  it('copyPlanoPageScale: copia a otras páginas «sin comprobar», con `rev` nueva, en UN paso', () => {
+    useObraStore.setState((s) => {
+      s.planos[0]!.paginas = 4;
+    });
+    const e0 = escalaDe(plano(), 1)!;
+    const exp = { ...doc(), calRev: e0.rev };
+    const pasado = __historyState().past;
+    expect(st().copyPlanoPageScale({ planoId: plano().id, desde: 1, paginas: [2, 3, 1, 9], expect: exp })).toEqual({ ids: [plano().id] });
+    const e2 = escalaDe(plano(), 2)!;
+    const e3 = escalaDe(plano(), 3)!;
+    expect(e2).toMatchObject({ mPorUnidad: e0.mPorUnidad, n: e0.n });
+    expect(e2.comprobacion).toBeUndefined();
+    expect(new Set([e0.rev, e2.rev, e3.rev]).size).toBe(3);
+    expect(escalaDe(plano(), 4)).toBeNull();
+    expect(__historyState().past).toBe(pasado + 1);
+    // una página ya calibrada no se pisa
+    expect(st().copyPlanoPageScale({ planoId: plano().id, desde: 1, paginas: [2], expect: exp })).toMatchObject({ reason: 'stale' });
+  });
+});
+
+describe('[A1] sin comprobar', () => {
+  const sinComprobar = () =>
+    useObraStore.setState((s) => {
+      delete s.planos[0]!.escalas[1]!.comprobacion;
+    });
+
+  it('medir en una página sin comprobar: la herramienta sale con su motivo y el store la rechaza', () => {
+    sinComprobar();
+    const pl = plano();
+    const p = P('p-tabique');
+    expect(motivoHerramienta('longitud', { partida: p, escala: escalaDe(pl, 1), fijas: {} })).toEqual({ motivo: 'sin-comprobar' });
+    expect(motivoHerramienta('recuento', { partida: P('p-enchufes'), escala: escalaDe(pl, 1), fijas: {} })).toBeNull();
+    const r = prepararMedida({
+      herramienta: 'longitud',
+      puntos: [
+        [100, 100],
+        [383.46, 100],
+      ],
+      plano: pl,
+      pagina: 1,
+      escala: escalaDe(pl, 1),
+      partida: p,
+      fijas: {},
+      restar: false,
+      comentario: 'P1 · x',
+      formaId: 'f-x',
+      at: '2026-09-28T00:00:00.000Z',
+    });
+    expect(r).toMatchObject({ ok: false, motivo: 'sin-comprobar' });
+  });
+
+  it('setPlanoPageCheck añade la comprobación sin cambiar la escala ni su `rev`; las líneas siguen al día', () => {
+    sinComprobar();
+    const e0 = escalaDe(plano(), 1)!;
+    const comprobacion = { fuente: 'cota' as const, a: [0, 0] as [number, number], b: [0, 170.08] as [number, number], metros: 3, medidos: 3.0001, desviacion: 0.00003 };
+    const expectC = { ...doc(), calRev: e0.rev };
+    expect(st().setPlanoPageCheck({ planoId: plano().id, pagina: 1, comprobacion, expect: { ...expectC, calRev: 'otra' } })).toMatchObject({
+      reason: 'stale',
+    });
+    expect(st().setPlanoPageCheck({ planoId: plano().id, pagina: 1, comprobacion: { ...comprobacion, desviacion: 0.02 }, expect: expectC })).toMatchObject({
+      reason: 'noop',
+    });
+    expect(st().setPlanoPageCheck({ planoId: plano().id, pagina: 1, comprobacion, expect: expectC })).toEqual({ ids: [plano().id] });
+    const e1 = escalaDe(plano(), 1)!;
+    expect(e1).toMatchObject({ rev: e0.rev, mPorUnidad: e0.mPorUnidad, comprobacion: { metros: 3 } });
+    expect(lineasConOtraEscala(st().partidas, plano())).toBe(0);
+    expect(st().setPlanoPageCheck({ planoId: plano().id, pagina: 1, comprobacion, expect: expectC })).toMatchObject({ reason: 'noop' });
+    undo();
+    expect(escalaDe(plano(), 1)!.comprobacion).toBeUndefined();
+  });
+
+  it('textos: sin comprobar, líneas que cambiaron', () => {
+    expect(textoResultado({ reason: 'sin-comprobar' })).toBe('Comprueba la escala de esta página con otra cota antes de medir.');
+    expect(textoResultado({ reason: 'stale', detalle: { cambio: 'lineas' } })).toBe(
+      'Las líneas de esta página cambiaron mientras confirmabas: revisa el recálculo.',
+    );
   });
 });
 

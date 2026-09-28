@@ -5,11 +5,11 @@
    precisión, los avisos con sus acciones y la etiqueta de la página.
    =========================================================================== */
 import { useEffect, useRef } from 'react';
-import { fmtNum } from '../../core/money';
+import { fmtNum, parseEsNumber } from '../../core/money';
 import type { EstadoCiclo } from '../../core/planoCiclo';
-import { dist, precisionCota } from '../../core/planoGeom';
+import { dist, escalaN, mPorUnidadDeCota, precisionCota } from '../../core/planoGeom';
 import { BotonAyuda } from './BotonAyuda';
-import { textoAvisoCalibrar } from './textos';
+import { textoAvisoCalibrar, textoEscala } from './textos';
 import styles from './Planos.module.css';
 
 type Calibrando = Extract<EstadoCiclo, { fase: 'calibrando' }>;
@@ -65,6 +65,8 @@ export function CalibrarPasos({
   onRehacerComprobacion,
   onEsCorrecta,
   onCancelar,
+  declarada = null,
+  userUnit = 1,
 }: {
   estado: Calibrando;
   /** Píxeles de pantalla por unidad de página (precisión de la cota). */
@@ -76,8 +78,17 @@ export function CalibrarPasos({
   onRehacerComprobacion: () => void;
   onEsCorrecta: () => void;
   onCancelar: () => void;
+  /** [A1] La N de «1:N» del cajetín, si la página declara una. */
+  declarada?: number | null;
+  userUnit?: number;
 }) {
   const t = estado[estado.paso];
+  // [A1] Con escala en el cajetín, la cota se compara en vivo con ella.
+  const metrosCota = parseEsNumber(estado.cota.metros.trim());
+  const nCota =
+    declarada && estado.paso === 'cota' && estado.cota.a && estado.cota.b && metrosCota && metrosCota > 0
+      ? escalaN(mPorUnidadDeCota(estado.cota.a, estado.cota.b, metrosCota), userUnit)
+      : null;
   const largoPx = t.a && t.b ? dist(t.a, t.b) * px : 0;
   const a = estado.aviso;
   return (
@@ -92,9 +103,17 @@ export function CalibrarPasos({
       <p className={styles.franjaTexto}>
         {estado.paso === 'cota'
           ? 'Marca los dos extremos de una cota conocida y escribe su distancia real (arrastra un punto para afinarlo).'
-          : 'Comprueba con otra cota, mejor a más de 45° de la primera; si la página no tiene otra, repite la misma en otra zona.'}
+          : estado.soloComprobar
+            ? 'Esta escala no está comprobada: marca otra cota conocida, mejor a más de 45° de la de calibrar, y escribe su distancia real.'
+            : 'Comprueba con otra cota, mejor a más de 45° de la primera; si la página no tiene otra, repite la misma en otra zona.'}
         {largoPx > 0 && (
           <span className={`mono ${styles.precision}`}> · {fmtNum(largoPx, 0)} px · precisión ≈ ±{pct(precisionCota(largoPx))}</span>
+        )}
+        {nCota !== null && declarada && (
+          <span className={`mono ${styles.precision}`}>
+            {' '}
+            · calibrada {textoEscala(nCota)} · el plano dice {textoEscala(declarada)}
+          </span>
         )}
       </p>
       {a && (
@@ -139,7 +158,7 @@ export function CalibrarPasos({
           Cancelar
         </button>
         <button type="button" className={`${styles.btn} ${styles.btnPrimario}`} onClick={onConfirmar}>
-          {estado.paso === 'cota' ? 'Siguiente' : 'Calibrar'}
+          {estado.paso === 'cota' ? 'Siguiente' : estado.soloComprobar ? 'Comprobar' : 'Calibrar'}
         </button>
       </div>
     </div>

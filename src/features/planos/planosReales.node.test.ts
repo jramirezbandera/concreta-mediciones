@@ -27,7 +27,9 @@ import { pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { desviacion, dist, escalaN, mPorUnidadDeCota, redondearPunto } from '../../core/planoGeom';
 import { prepararMedida } from '../../core/planoMedida';
+import { comentarioPropuesto, escalaDeclarada, etiquetaPropuesta } from '../../core/planoTexto';
 import type { Escala, Partida, Punto } from '../../core/types';
+import { crearAdapterPdfjs } from './pdfAdapter';
 
 const raiz = resolve(__dirname, '../../..');
 const CARPETA = resolve(raiz, 'ejemplos pdf');
@@ -228,4 +230,56 @@ describe.skipIf(!existsSync(CARPETA))('precisión con planos reales (ejemplos pd
         );
         expect(fuera.length, `cotas que no cuadran: ${fuera.join(', ')}`).toBeLessThanOrEqual(Math.floor(resto.length * CUOTA_DEL_PLANO));
       });
+});
+
+describe.skipIf(!existsSync(CARPETA))('texto de planos reales (ejemplos pdf/)', () => {
+  const motor = crearAdapterPdfjs(
+    async () => {
+      const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+      pdfjs.GlobalWorkerOptions.workerSrc = pathToFileURL(resolve(pdfjsDir, 'legacy/build/pdf.worker.mjs')).href;
+      return pdfjs;
+    },
+    () => ({
+      cMapUrl: `${resolve(pdfjsDir, 'cmaps')}/`,
+      cMapPacked: true,
+      standardFontDataUrl: `${resolve(pdfjsDir, 'standard_fonts')}/`,
+      wasmUrl: `${resolve(pdfjsDir, 'wasm')}/`,
+      iccUrl: `${resolve(pdfjsDir, 'iccs')}/`,
+    }),
+  );
+  const abrir = (fichero: string) =>
+    motor.abrir(new Uint8Array(readFileSync(resolve(CARPETA, fichero))).buffer as ArrayBuffer, { signal: new AbortController().signal });
+
+  it('etiqueta propuesta desde el título de la planta', async () => {
+    const basico = await abrir('PROYECTO BASICO.pdf');
+    expect(etiquetaPropuesta(await basico.textos(9))).toBe('CUB');
+    expect(etiquetaPropuesta(await basico.textos(10))).toBe('PS');
+    expect(etiquetaPropuesta(await basico.textos(11))).toBe('PB');
+    expect(etiquetaPropuesta(await basico.textos(13))).toBeNull(); // alzados
+    basico.cerrar();
+    const inst = await abrir('202_PL_INSTALACIONES.pdf'); // páginas giradas 270°
+    expect(etiquetaPropuesta(await inst.textos(24))).toBe('PB');
+    inst.cerrar();
+  });
+
+  it('comentario propuesto: el nombre de la estancia dentro del polígono, sin su superficie', async () => {
+    const basico = await abrir('PROYECTO BASICO.pdf');
+    const textos = await basico.textos(11);
+    const dorm = textos.find((t) => t.texto === 'DORMITORIO 2')!;
+    const [cx, cy] = [(dorm.caja[0] + dorm.caja[2]) / 2, (dorm.caja[1] + dorm.caja[3]) / 2];
+    const estancia: Punto[] = [
+      [cx - 25, cy - 20],
+      [cx + 25, cy - 20],
+      [cx + 25, cy + 20],
+      [cx - 25, cy + 20],
+    ];
+    expect(comentarioPropuesto(textos, estancia)).toBe('Dormitorio 2');
+    basico.cerrar();
+  });
+
+  it('estos planos llevan el cajetín dibujado, sin texto: no se lee ninguna escala (y no pasa nada)', async () => {
+    const basico = await abrir('PROYECTO BASICO.pdf');
+    for (const n of [9, 10, 11]) expect(escalaDeclarada(await basico.textos(n))).toEqual({ tipo: 'ninguna' });
+    basico.cerrar();
+  });
 });

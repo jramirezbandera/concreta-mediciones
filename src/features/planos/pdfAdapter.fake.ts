@@ -45,7 +45,7 @@ function leerPdf(bytes: Uint8Array): PaginaFake[] {
       const x = Number(t[2]);
       const y = Number(t[3]);
       const texto = t[4]!.replace(/\\(.)/g, '$1');
-      return { texto, caja: [x, y, x + 0.5 * tamano * texto.length, y + tamano], tamano };
+      return { texto, caja: [x, y, x + 0.5 * tamano * texto.length, y + tamano], tamano, dir: [1, 0] };
     });
     return { vista, rotacion: ((((rot % 360) + 360) % 360) as Rotacion), userUnit, textos };
   });
@@ -106,7 +106,7 @@ export function crearAdapterFake(opts: OpcionesFake = {}): PdfAdapter {
           if (!signal.aborted) registroFake.precargas.push(n);
         },
         async textos(n) {
-          return pagina(n).textos.map((t) => ({ ...t, caja: [...t.caja] as Caja }));
+          return pagina(n).textos.map((t) => ({ ...t, caja: [...t.caja] as Caja, dir: [...t.dir] as [number, number] }));
         },
         cerrar() {
           if (cerrado) return;

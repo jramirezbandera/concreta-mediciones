@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { leerBytes } from '../../persist/planos';
 import { usePlanoUiStore } from '../../store/planoUiStore';
 import { motorPdf } from './motor';
-import { ErrorPdf, type DocPdf, type PaginaPdf } from './pdfTipos';
+import { ErrorPdf, type DocPdf, type PaginaPdf, type TextoPdf } from './pdfTipos';
 
 export type EstadoDoc =
   | { estado: 'cargando' }
@@ -72,4 +72,22 @@ export function usePaginaPdf(doc: DocPdf | null, n: number): PaginaPdf | null {
     };
   }, [doc, n]);
   return info && info.doc === doc && info.n === n ? info.info : null;
+}
+
+/** Textos de una página (el motor los cachea mientras el plano está abierto).
+ *  Si no se pueden leer, vacío: sin propuestas ni cajetín, y sin aviso (§7.1). */
+export function useTextosPagina(doc: DocPdf | null, n: number): TextoPdf[] | null {
+  const [t, setT] = useState<{ doc: DocPdf; n: number; textos: TextoPdf[] } | null>(null);
+  useEffect(() => {
+    if (!doc) return;
+    let vivo = true;
+    doc.textos(n).then(
+      (textos) => vivo && setT({ doc, n, textos }),
+      () => vivo && setT({ doc, n, textos: [] }),
+    );
+    return () => {
+      vivo = false;
+    };
+  }, [doc, n]);
+  return t && t.doc === doc && t.n === n ? t.textos : null;
 }

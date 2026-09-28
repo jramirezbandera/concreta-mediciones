@@ -218,9 +218,9 @@ function createEventSpy(el: HTMLElement, key: string, extra: Partial<KeyboardEve
 }
 
 describe('calibrar desde la interfaz', () => {
-  it('cota, comprobación y etiqueta → escala nueva en un paso de Deshacer', async () => {
-    const { lienzo, visor } = await montar();
-    // otra página sin calibrar: el mismo PDF adjunto otra vez
+  /** Otra página sin calibrar (el mismo PDF adjunto otra vez), con zoom y en el paso 1 de calibrar. */
+  async function calibrarOtraPagina() {
+    await montar();
     const pl = st().planos[0]! as PlanoMeta;
     act(() => {
       st().attachPlano({ meta: { ...structuredClone(pl), id: 'pl-2', escalas: {}, etiquetas: {} }, expect: { docToken: st().docToken }, nuevo: true });
@@ -228,35 +228,60 @@ describe('calibrar desde la interfaz', () => {
     });
     const l2 = await screen.findByRole('application');
     await waitFor(() => expect(screen.queryByText('Pintando…')).toBeNull());
-    void lienzo;
-    void visor;
     const visor2 = document.querySelector<HTMLElement>('[data-planos-viewer]')!;
-    // zoom para que la cota pase de 300 px
     tecla(visor2, '+');
     tecla(visor2, '+');
     tecla(visor2, 'c');
     expect(screen.getByText('1 Cota')).toBeInTheDocument();
+    // la etiqueta propuesta desde el texto («PLANTA BAJA E 1:50»)
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Etiqueta de la página' })).toHaveValue('PB'));
     clic(l2, [100, 120]);
     clic(l2, [100 + 10 * m, 120]);
+    return { l2, plano2: () => st().planos.find((p) => planoLegible(p) && p.id === 'pl-2') as PlanoMeta };
+  }
+
+  it('[A1] cajetín «E 1:50» y una cota que cuadra: termina ajustada, sin segunda cota, con la etiqueta propuesta', async () => {
+    const { plano2 } = await calibrarOtraPagina();
     const metros = screen.getByRole('textbox', { name: 'Distancia real en metros' });
     fireEvent.change(metros, { target: { value: '10' } });
+    expect(screen.getByText(/calibrada 1:50 · el plano dice 1:50/)).toBeInTheDocument();
+    tecla(metros, 'Enter');
+    expect(screen.queryByText('2 Comprobación')).toBeNull();
+    const e = escalaDe(plano2(), 1)!;
+    expect(e).toMatchObject({ n: 50, ajustada: true, escalaDeclarada: 50, comprobacion: { fuente: 'cajetin', escalaDeclarada: 50 } });
+    expect(e.mPorUnidad).toBeCloseTo((50 * 0.0254) / 72, 12); // la exacta: sin el error del clic
+    expect(plano2().etiquetas).toEqual({ 1: 'PB' });
+    expect(screen.getByRole('button', { name: /1:50 ajustada/ })).toBeInTheDocument();
+  });
+
+  it('una cota que no cuadra con el cajetín pide la comprobación; se guarda con la escala declarada y avisa', async () => {
+    const { l2, plano2 } = await calibrarOtraPagina();
+    const metros = screen.getByRole('textbox', { name: 'Distancia real en metros' });
+    fireEvent.change(metros, { target: { value: '10,5' } }); // 1:52,5 frente a «E 1:50»
     tecla(metros, 'Enter');
     expect(screen.getByText('2 Comprobación')).toBeInTheDocument();
     clic(l2, [1000, 100]);
     clic(l2, [1000, 100 + 6 * m]);
     const metros2 = screen.getByRole('textbox', { name: 'Distancia real en metros' });
-    fireEvent.change(metros2, { target: { value: '6' } });
+    fireEvent.change(metros2, { target: { value: '6,3' } });
     fireEvent.change(screen.getByRole('textbox', { name: 'Etiqueta de la página' }), { target: { value: 'P1' } });
     tecla(metros2, 'Enter');
-    const p2 = st().planos.find((p) => planoLegible(p) && p.id === 'pl-2') as PlanoMeta;
-    const e = escalaDe(p2, 1)!;
-    expect(e.n).toBeCloseTo(50, 0);
-    expect(e.comprobacion?.fuente).toBe('cota');
-    expect(p2.etiquetas).toEqual({ 1: 'P1' });
+    // 1:52,5 no es una escala habitual: la plausibilidad pide confirmarla
+    fireEvent.click(screen.getByRole('button', { name: 'Sí, es correcta' }));
+    const e = escalaDe(plano2(), 1)!;
+    expect(e.n).toBeCloseTo(52.5, 0);
+    expect(e).toMatchObject({ escalaDeclarada: 50, comprobacion: { fuente: 'cota' } });
+    expect(e.ajustada).toBeUndefined();
+    expect(plano2().etiquetas).toEqual({ 1: 'P1' });
     expect(e.ref.a).toEqual(e.ref.a.map((x) => Math.round(x * 100) / 100)); // puntos a 0,01
+    expect(screen.getByRole('button', { name: /no cuadra con el cajetín/ })).toBeInTheDocument();
+    expect(
+      screen.getAllByText('La calibración no cuadra con la escala del plano: ¿el PDF está a otro tamaño?').length,
+    ).toBeGreaterThan(0);
   });
 
-  it('Calibrar en una página con líneas medidas: no calibra y lo dice', async () => {
+  /** Mide el tabique de 5 m y recalibra la página a 1:100 (la cota de 10 m del dibujo, tecleada como 20). */
+  async function recalibrarConLinea() {
     const { lienzo, visor } = await montar();
     herramienta('Longitud');
     clic(lienzo, EJEMPLO.tabiqueDe);
@@ -265,9 +290,129 @@ describe('calibrar desde la interfaz', () => {
     tecla(screen.getByRole('textbox', { name: 'Comentario de la línea' }), 'Enter');
     await screen.findByText(/Línea 1 ·/);
     tecla(visor, 'Escape');
+    tecla(visor, '+');
+    tecla(visor, '+');
     tecla(visor, 'c');
-    expect((await screen.findAllByText(/Esta página ya tiene 1 línea medida con esta escala/)).length).toBeGreaterThan(0);
-    expect(screen.queryByText('1 Cota')).toBeNull();
+    expect(screen.getByText('1 Cota')).toBeInTheDocument();
+    clic(lienzo, [100, 120]);
+    clic(lienzo, [100 + 10 * m, 120]);
+    const metros = screen.getByRole('textbox', { name: 'Distancia real en metros' });
+    fireEvent.change(metros, { target: { value: '20' } });
+    tecla(metros, 'Enter');
+    clic(lienzo, [1000, 100]);
+    clic(lienzo, [1000, 100 + 6 * m]);
+    const metros2 = screen.getByRole('textbox', { name: 'Distancia real en metros' });
+    fireEvent.change(metros2, { target: { value: '12' } });
+    tecla(metros2, 'Enter');
+    return screen.findByRole('dialog', { name: '¿La escala anterior estaba mal?' });
+  }
+  const tabique = () => st().partidas[EJEMPLO.capitulo]!.find((p) => p.id === EJEMPLO.tabique)!.med[0]!;
+
+  it('[A1] recalibrar una página con líneas pregunta; Cancelar (el foco por defecto) la deja como estaba', async () => {
+    const dialogo = await recalibrarConLinea();
+    expect(within(dialogo).getByText(/pasa de/)).toHaveTextContent('pasa de 1:50 a 1:100');
+    expect(within(dialogo).getByText(/Se recalcula/)).toHaveTextContent('Se recalcula 1 línea (1 a 1:50).');
+    expect(within(dialogo).getByText(/1 línea · 5,00 → 10,00 m/)).toBeInTheDocument();
+    const cancelar = within(dialogo).getByRole('button', { name: 'Cancelar' });
+    expect(cancelar).toHaveFocus(); // Enter cancela
+    fireEvent.click(cancelar);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(escalaDe(st().planos[0]!, 1)!.n).toBe(50);
+    expect(tabique().largo).toBe(5);
+  });
+
+  it('[A1] «Recalcular 1 línea»: escala y línea en UN paso de Deshacer', async () => {
+    const dialogo = await recalibrarConLinea();
+    const pasado = __historyState().past;
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Recalcular 1 línea' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(escalaDe(st().planos[0]!, 1)!.n).toBeCloseTo(100, 0);
+    expect(tabique()).toMatchObject({ largo: 10, expr: { largo: '10' } });
+    expect((await screen.findAllByText(/recalibrada 1:100 · comprobada .* · 1 línea recalculada/)).length).toBeGreaterThan(0);
+    expect(__historyState().past).toBe(pasado + 1);
+    act(() => undo());
+    expect(escalaDe(st().planos[0]!, 1)!.n).toBe(50);
+    expect(tabique().largo).toBe(5);
+  });
+
+  it('[A1] página sin comprobar: chip, aviso con [Comprobar] y medir bloqueado hasta comprobar', async () => {
+    await montar();
+    act(() => {
+      useObraStore.setState((s) => {
+        delete (s.planos[0] as PlanoMeta).escalas[1]!.comprobacion;
+      });
+    });
+    expect(await screen.findByText(/sin comprobar/)).toBeInTheDocument();
+    expect(screen.getAllByText('Comprueba la escala de esta página con otra cota antes de medir.').length).toBeGreaterThan(0);
+    expect(screen.getByRole('radio', { name: 'Longitud' })).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'Comprobar' }));
+    expect(screen.getByText(/Esta escala no está comprobada/)).toBeInTheDocument();
+    const lienzo = screen.getByRole('application');
+    const visor = document.querySelector<HTMLElement>('[data-planos-viewer]')!;
+    tecla(visor, '+');
+    tecla(visor, '+');
+    clic(lienzo, [1000, 100]);
+    clic(lienzo, [1000, 100 + 6 * m]);
+    const metros = screen.getByRole('textbox', { name: 'Distancia real en metros' });
+    fireEvent.change(metros, { target: { value: '6' } });
+    const rev = escalaDe(st().planos[0]!, 1)!.rev;
+    fireEvent.click(screen.getByRole('button', { name: 'Comprobar' }));
+    const e = escalaDe(st().planos[0]!, 1)!;
+    expect(e.rev).toBe(rev); // la misma escala
+    expect(e.comprobacion).toMatchObject({ fuente: 'cota', metros: 6 });
+    expect(screen.getByRole('radio', { name: 'Longitud' })).not.toHaveAttribute('aria-disabled', 'true');
+  });
+});
+
+describe('[A1] texto de la página', () => {
+  it('Superficie sobre la estancia: el comentario propone «Salon» (el texto dentro), seleccionado', async () => {
+    const { lienzo, visor } = await montar();
+    act(() => {
+      useObraStore.setState({ openPartidaId: EJEMPLO.solado });
+    });
+    herramienta('Superficie');
+    const [x0, y0] = [150, 200];
+    for (const p of [
+      [x0, y0],
+      [x0 + 5 * m, y0],
+      [x0 + 5 * m, y0 + 4 * m],
+      [x0, y0 + 4 * m],
+    ] as Punto[])
+      clic(lienzo, p);
+    tecla(visor, 'Enter');
+    const comentario = screen.getByRole('textbox', { name: 'Comentario de la línea' }) as HTMLInputElement;
+    expect(comentario).toHaveValue('Salon');
+    expect(comentario.selectionStart).toBe(0);
+    expect(comentario.selectionEnd).toBe('Salon'.length);
+  });
+
+  it('«Usar esta calibración en otras páginas»: las del mismo tamaño y la misma escala en el cajetín, «sin comprobar»', async () => {
+    await montar();
+    const pag = (texto: string, caja = A3) => ({ mediaBox: caja, textos: [{ x: 980, y: 60, tamano: 10, texto }] });
+    const buf = pdfMinimo([pag('PLANTA BAJA  E 1:50'), pag('PLANTA PRIMERA  E 1:50'), pag('DETALLE  E 1:20'), pag('E 1:50', [0, 0, 841.89, 594.96])])
+      .buffer as ArrayBuffer;
+    const huella = await huellaDe(buf);
+    registrarBytesEnMemoria(huella, buf);
+    const escala = { ...structuredClone(escalaDe(st().planos[0]!, 1)!), escalaDeclarada: 50 };
+    act(() => {
+      st().attachPlano({
+        meta: { id: 'pl-4', tipo: 'pdf', nombre: 'Cuatro', archivo: 'cuatro.pdf', tamano: buf.byteLength, huella, paginas: 4, escalas: { 1: escala } },
+        expect: { docToken: st().docToken },
+      });
+      usePlanoUiStore.getState().abrirPlano('pl-4', 1);
+    });
+    await screen.findByRole('application');
+    fireEvent.click(screen.getByRole('button', { name: 'Más acciones de planos' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /Usar esta calibración en otras páginas/ }));
+    const dialogo = await screen.findByRole('dialog', { name: 'Usar esta calibración en otras páginas' });
+    // solo la pág. 2: la 3 dice 1:20 y la 4 es A4
+    expect(await within(dialogo).findByRole('checkbox', { name: 'Pág. 2' })).toBeChecked();
+    expect(within(dialogo).getAllByRole('checkbox')).toHaveLength(1);
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Copiar a 1 página' }));
+    const p4 = st().planos.find((p) => planoLegible(p) && p.id === 'pl-4') as PlanoMeta;
+    expect(escalaDe(p4, 2)).toMatchObject({ n: escala.n, escalaDeclarada: 50 });
+    expect(escalaDe(p4, 2)!.comprobacion).toBeUndefined();
+    expect(escalaDe(p4, 3)).toBeNull();
   });
 });
 

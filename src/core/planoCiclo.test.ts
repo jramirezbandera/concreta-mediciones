@@ -371,3 +371,92 @@ describe('calibrar', () => {
     expect(r).toEqual({ estado: REPOSO, efectos: [] });
   });
 });
+
+describe('[A1] cajetín al calibrar (T9)', () => {
+  const cota = (metros: string, cajetin: number | null) =>
+    correr(
+      correr(REPOSO, { tipo: 'calibrar' }).estado,
+      clic([0, 0]),
+      clic([283.46, 0]), // 5 m a 1:50
+      { tipo: 'metros', cual: 'cota', texto: metros },
+      { tipo: 'confirmar', px: PX, userUnit: 1, cajetin },
+    );
+
+  it('una cota que cuadra con «E 1:50» (< 1 %) termina: ajustada a la exacta, el cajetín hace de comprobación', () => {
+    const r = cota('4,98', 50); // 1:49,8
+    expect(r.estado).toEqual(REPOSO);
+    const c = r.efectos.find((x) => x.tipo === 'calibrada');
+    if (c?.tipo !== 'calibrada') throw new Error('sin calibrada');
+    expect(c.datos).toMatchObject({ n: 50, ajustada: true, escalaDeclarada: 50, comprobacion: { fuente: 'cajetin', escalaDeclarada: 50 } });
+    expect(c.datos.mPorUnidad).toBeCloseTo((50 * 0.0254) / 72, 12);
+    expect(c.datos.comprobacion.desviacion).toBeCloseTo(0.004, 3);
+  });
+
+  it('una cota que no cuadra (1:47) pasa a la comprobación; al terminar guarda la declarada sin ajustar', () => {
+    const r = cota('4,7', 50);
+    expect(r.estado).toMatchObject({ paso: 'comprobacion' });
+    const fin = correr(
+      r.estado,
+      clic([0, 0]),
+      clic([0, 170.08]),
+      { tipo: 'metros', cual: 'comprobacion', texto: '2,82' },
+      { tipo: 'confirmar', px: PX, userUnit: 1, cajetin: 50 },
+      { tipo: 'esCorrecta', px: PX, userUnit: 1, cajetin: 50 },
+    );
+    const c = fin.efectos.find((x) => x.tipo === 'calibrada');
+    if (c?.tipo !== 'calibrada') throw new Error('sin calibrada');
+    expect(c.datos).toMatchObject({ escalaDeclarada: 50, comprobacion: { fuente: 'cota' } });
+    expect(c.datos.ajustada).toBeUndefined();
+    expect(c.datos.n).toBeCloseTo(47, 0);
+  });
+
+  it('sin cajetín, lo de siempre: a la comprobación', () => {
+    expect(cota('5', null).estado).toMatchObject({ paso: 'comprobacion' });
+  });
+});
+
+describe('[A1] comprobar una escala sin comprobación', () => {
+  // 1:50: 283,46 unidades = 5 m
+  const M = 5 / 283.46;
+  const comprobar = () =>
+    correr(REPOSO, { tipo: 'comprobar', mPorUnidad: M, ref: { a: [0, 0], b: [283.46, 0], metros: 5 } }).estado;
+
+  it('empieza en el paso 2 con la cota de la escala ya puesta', () => {
+    expect(comprobar()).toMatchObject({
+      fase: 'calibrando',
+      paso: 'comprobacion',
+      cota: { a: [0, 0], b: [283.46, 0], metros: '5' },
+      soloComprobar: { mPorUnidad: M },
+    });
+  });
+
+  it('desviación ≤ 1 % → reposo y `comprobada` (la escala no cambia: no hay `calibrada`)', () => {
+    const r = correr(
+      comprobar(),
+      clic([0, 0]),
+      clic([0, 170.08]),
+      { tipo: 'metros', cual: 'comprobacion', texto: '3' },
+      { tipo: 'confirmar', px: PX, userUnit: 1 },
+    );
+    expect(r.estado).toEqual(REPOSO);
+    expect(r.efectos.map((x) => x.tipo)).toEqual(['comprobada']);
+    const c = r.efectos[0];
+    if (c?.tipo !== 'comprobada') return;
+    expect(c.comprobacion).toMatchObject({ fuente: 'cota', a: [0, 0], b: [0, 170.08], metros: 3 });
+    expect(c.comprobacion.desviacion).toBeLessThan(0.001);
+  });
+
+  it('desviación > 1 % → aviso; [Rehacer cota] pasa a calibrar de nuevo', () => {
+    const r = correr(
+      comprobar(),
+      clic([0, 0]),
+      clic([0, 170.08]),
+      { tipo: 'metros', cual: 'comprobacion', texto: '3,2' },
+      { tipo: 'confirmar', px: PX, userUnit: 1 },
+    );
+    expect(r.estado).toMatchObject({ paso: 'comprobacion', aviso: { tipo: 'desviacion' } });
+    const cota = correr(r.estado, { tipo: 'rehacerCota' }).estado;
+    expect(cota).toMatchObject({ paso: 'cota', cota: { a: null } });
+    expect(cota).not.toHaveProperty('soloComprobar');
+  });
+});

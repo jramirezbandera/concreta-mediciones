@@ -21,6 +21,7 @@ import { escalaDe, etiquetaDe, origenLegible } from '../../core/planoDatos';
 import {
   areaLazo,
   dist,
+  DESVIACION_MAX,
   escalaN,
   longitudPolilinea,
   perimetroCerrado,
@@ -50,6 +51,9 @@ import { usePlanoUiStore } from '../../store/planoUiStore';
 import { getDomainRevision, undo } from '../../store/temporal';
 import { adjuntarPlano } from './adjuntar';
 import { CalibrarPasos, CampoMetros } from './CalibrarPasos';
+import { DialogoRecalcular } from './DialogoRecalcular';
+import { DialogoCopiarEscala, PopoverAjuste } from './EscalaCajetin';
+import { comentarioPropuesto, desviacionCajetin, escalaCalibrada, escalaDeclarada, etiquetaPropuesta } from '../../core/planoTexto';
 import { BotonAyuda } from './BotonAyuda';
 import { textoEscala } from './textos';
 import { cajaDe, formasDeLineas, otrasPaginas, paginasAPrecargar, type FormaCapa } from './capa';
@@ -65,7 +69,7 @@ import {
 import { PlanoLienzo, type Ancla, type LienzoApi } from './PlanoLienzo';
 import { PlanoToolbar } from './PlanoToolbar';
 import { SelectorPartida } from './SelectorPartida';
-import { usePaginaPdf, usePlanoDoc } from './usePlanoDoc';
+import { usePaginaPdf, usePlanoDoc, useTextosPagina } from './usePlanoDoc';
 import { PAGINAS_EN_MEMORIA } from './pdfTipos';
 import styles from './Planos.module.css';
 
@@ -142,6 +146,11 @@ export function PlanoViewer({
   const docE = usePlanoDoc(plano.huella, plano.archivo, intentoDoc);
   const doc = docE.estado === 'listo' ? docE.doc : null;
   const info = usePaginaPdf(doc, pagina);
+  // Texto de la página [A1]: escala del cajetín y propuestas de etiqueta y comentario.
+  const textosPagina = useTextosPagina(doc, pagina);
+  const cajetin = useMemo(() => (textosPagina ? escalaDeclarada(textosPagina) : null), [textosPagina]);
+  const declarada = cajetin?.tipo === 'una' ? cajetin.n : null;
+  const etiquetaSugerida = useMemo(() => (textosPagina ? etiquetaPropuesta(textosPagina) : null), [textosPagina]);
   const escala = escalaDe(plano, pagina);
 
   // Partida abierta: la única fuente del destino (§5.4).
@@ -243,6 +252,11 @@ export function PlanoViewer({
   const [selectorAbierto, setSelectorAbierto] = useState(false);
   const [destacada, setDestacada] = useState<string | null>(null);
   const [etiqueta, setEtiqueta] = useState('');
+  /** Calibración nueva de una página con líneas, pendiente de la pregunta de recalcular. */
+  const [recalculo, setRecalculo] = useState<{ escala: Escala; etiqueta: string; detalle: string; verbo: string } | null>(null);
+  const [ajusteAbierto, setAjusteAbierto] = useState(false);
+  const [copiarAbierto, setCopiarAbierto] = useState(false);
+  const comentarioSugeridoRef = useRef(false);
   const formaIdRef = useRef<string>('');
   const atRef = useRef<string>('');
 
@@ -364,26 +378,71 @@ export function PlanoViewer({
     if (!info) return;
     const store = useObraStore.getState();
     const r = redondearPunto;
+    const c = datos.comprobacion;
     const esc: Escala = {
       rev: nextCalRev(),
       mPorUnidad: datos.mPorUnidad,
       n: escalaN(datos.mPorUnidad, info.userUnit),
       ref: { ...datos.ref, a: r(datos.ref.a), b: r(datos.ref.b) },
-      comprobacion: { ...datos.comprobacion, a: r(datos.comprobacion.a), b: r(datos.comprobacion.b) },
+      comprobacion: c.fuente === 'cota' ? { ...c, a: r(c.a), b: r(c.b) } : { ...c },
+      ...(datos.escalaDeclarada ? { escalaDeclarada: datos.escalaDeclarada } : {}),
+      ...(datos.ajustada ? { ajustada: true } : {}),
       at: new Date().toISOString(),
     };
+    const et = etiqueta.trim();
+    const detalle =
+      c.fuente === 'cajetin'
+        ? `ajustada al plano (la cota daba ${textoEscala(escalaCalibrada(esc, info.userUnit).n)})`
+        : `comprobada ${fmtNum(c.desviacion * 100, 1)} %`;
+    // Con líneas medidas, la pregunta «¿La escala anterior estaba mal?» (§2, §4.4).
+    if (lineasConEscala(store.partidas, plano.id, pagina) > 0) {
+      setRecalculo({ escala: esc, etiqueta: et, detalle, verbo: 'recalibrada' });
+      return;
+    }
     const res = store.setPlanoPageScale({ planoId: plano.id, pagina, escala: esc, expect: { docToken: store.docToken } });
     if (!res.ids.length) {
       avisar(textoResultado(res), 'error');
       return;
     }
-    const et = etiqueta.trim();
+    rematarCalibracion(esc, et, detalle);
+  }
+
+  /** Tras guardar una escala: la etiqueta de la página y el aviso. */
+  function rematarCalibracion(esc: Escala, et: string, detalle: string, verbo = 'calibrada'): void {
+    const store = useObraStore.getState();
     if (et !== (etiquetaDe(plano, pagina) ?? ''))
       store.setPlanoPageLabel({ planoId: plano.id, pagina, etiqueta: et, expect: { docToken: store.docToken } });
-    const nombre = et || `Pág. ${pagina}`;
-    const texto = `${nombre} calibrada ${textoEscala(esc.n)} · comprobada ${fmtNum(datos.comprobacion.desviacion * 100, 1)} %`;
+    const texto = `${et || `Pág. ${pagina}`} ${verbo} ${textoEscala(esc.n)} · ${detalle}`;
     useToastStore.getState().show(texto);
     decir(texto);
+  }
+
+  /** «Comprobar» una escala que no tiene comprobación (A1). */
+  function comprobarEscala(): void {
+    if (motivoCalibrar) {
+      avisar(motivoCalibrar);
+      return;
+    }
+    if (!escala) return;
+    setEtiqueta(etiquetaDe(plano, pagina) ?? '');
+    dispatch({ tipo: 'comprobar', mPorUnidad: escala.mPorUnidad, ref: escala.ref });
+  }
+
+  function guardarComprobacion(c: Extract<EfectoCiclo, { tipo: 'comprobada' }>['comprobacion']): void {
+    if (!escala) return;
+    const store = useObraStore.getState();
+    const r = redondearPunto;
+    const res = store.setPlanoPageCheck({
+      planoId: plano.id,
+      pagina,
+      comprobacion: { ...c, a: r(c.a), b: r(c.b) },
+      expect: { docToken: store.docToken, calRev: escala.rev },
+    });
+    if (!res.ids.length) {
+      avisar(textoResultado(res), 'error');
+      return;
+    }
+    rematarCalibracion(escala, etiqueta.trim(), `${fmtNum(c.desviacion * 100, 1)} %`, 'comprobada');
   }
 
   // Los efectos se leen con los cierres de ESTE render.
@@ -409,6 +468,22 @@ export function PlanoViewer({
           if (antes.fase === 'dibujando') {
             formaIdRef.current = nextFormaId();
             atRef.current = new Date().toISOString();
+            comentarioSugeridoRef.current = false;
+            // [A1] En Superficie y Rectángulo, el texto de la página dentro del
+            // polígono entra seleccionado: lo que se teclea lo sustituye.
+            if (
+              nuevo.fase === 'nombrando' &&
+              !nuevo.sustituye &&
+              (nuevo.armada === 'superficie' || nuevo.armada === 'rectangulo') &&
+              textosPagina
+            ) {
+              const sugerido = comentarioPropuesto(textosPagina, nuevo.puntos);
+              if (sugerido) {
+                comentarioSugeridoRef.current = true;
+                estadoRef.current = { ...nuevo, texto: sugerido };
+                setEstado(estadoRef.current);
+              }
+            }
             // «Volver a medir»: el comentario de la línea sin su prefijo.
             if (nuevo.fase === 'nombrando' && nuevo.sustituye && partida) {
               const l = partida.med.find((x) => x.id === nuevo.sustituye);
@@ -436,13 +511,16 @@ export function PlanoViewer({
         case 'calibrada':
           guardarCalibracion(ef.datos);
           break;
+        case 'comprobada':
+          guardarComprobacion(ef.comprobacion);
+          break;
       }
     }
   };
 
   /** Qué hace el visor con un motivo: decirlo y, si lo hay, su arreglo (§7.2). */
   function atenderMotivo(mo: MotivoVisor | MotivoMedida): void {
-    avisar(textoMotivoVisor(mo), 'warn', mo.motivo === 'no-encaja' || mo.motivo === 'sin-calibrar');
+    avisar(textoMotivoVisor(mo), 'warn', mo.motivo === 'no-encaja' || mo.motivo === 'sin-calibrar' || mo.motivo === 'sin-comprobar');
     if (mo.motivo === 'no-encaja') dispatch({ tipo: 'herramienta', armada: mo.usa });
     else if (mo.motivo === 'sin-partida') setSelectorAbierto(true);
     else if (mo.motivo === 'falta-dimension' || mo.motivo === 'kgm-sin-resolver')
@@ -471,11 +549,20 @@ export function PlanoViewer({
     if (que) dispatch({ tipo: 'contexto', que });
   }, [partidaId, pagina, plano.id, escala?.rev, dispatch]);
 
-  // Etiqueta propuesta al calibrar: la actual o «P<n>».
+  // Etiqueta al calibrar: la actual o, si no hay, la propuesta desde el texto (A1).
   useEffect(() => {
-    if (estado.fase === 'calibrando') setEtiqueta((t) => t || etiquetaDe(plano, pagina) || '');
+    if (estado.fase === 'calibrando') setEtiqueta((t) => t || etiquetaDe(plano, pagina) || etiquetaSugerida || '');
     else setEtiqueta('');
-  }, [estado.fase, plano, pagina]);
+  }, [estado.fase, plano, pagina, etiquetaSugerida]);
+
+  /* ---- peticiones de la cabecera: chip de escala y menú ⋯ (A1) ---------------------- */
+  const pedido = usePlanoUiStore((s) => s.pedido);
+  useEffect(() => {
+    if (!pedido) return;
+    usePlanoUiStore.getState().limpiarPedido();
+    if (pedido.que === 'ajuste' && escala?.escalaDeclarada) setAjusteAbierto(true);
+    if (pedido.que === 'copiarEscala' && escala?.escalaDeclarada && doc) setCopiarAbierto(true);
+  }, [pedido, escala, doc]);
 
   /* ---- «Ver en plano» y «Volver a medir» pedidos desde el presupuesto ---------- */
   useEffect(() => {
@@ -518,6 +605,11 @@ export function PlanoViewer({
       empezarCalibrar();
       return;
     }
+    if (mo.motivo === 'sin-comprobar') {
+      avisar(textoMotivoVisor(mo));
+      comprobarEscala();
+      return;
+    }
     atenderMotivo(mo);
   }
 
@@ -526,11 +618,7 @@ export function PlanoViewer({
       avisar(motivoCalibrar);
       return;
     }
-    const n = lineasConEscala(useObraStore.getState().partidas, plano.id, pagina);
-    if (n > 0) {
-      avisar(textoResultado({ reason: 'has-lines', detalle: { n } }));
-      return;
-    }
+    // Con líneas medidas también se calibra: al terminar, la pregunta de recalcular.
     dispatch({ tipo: 'calibrar' });
   }
 
@@ -643,7 +731,7 @@ export function PlanoViewer({
   }
 
   function confirmarCalibracion(): void {
-    dispatch({ tipo: 'confirmar', px: lienzoApi.current?.escala() ?? 1, userUnit: info?.userUnit ?? 1 });
+    dispatch({ tipo: 'confirmar', px: lienzoApi.current?.escala() ?? 1, userUnit: info?.userUnit ?? 1, cajetin: declarada });
   }
 
   /* ---- capa ------------------------------------------------------------------------------ */
@@ -735,11 +823,32 @@ export function PlanoViewer({
     ayuda?: boolean;
   } | null = mensaje ? { texto: mensaje.texto, tono: mensaje.tono, ayuda: mensaje.ayuda } : null;
   if (!aviso && docE.estado === 'no-disponible') aviso = null; // lo explica el cuerpo
+  if (
+    !aviso &&
+    docE.estado === 'listo' &&
+    escala?.escalaDeclarada &&
+    !escala.ajustada &&
+    info &&
+    desviacionCajetin(escalaCalibrada(escala, info.userUnit).n, escala.escalaDeclarada) > DESVIACION_MAX &&
+    estado.fase !== 'calibrando'
+  )
+    aviso = {
+      texto: 'La calibración no cuadra con la escala del plano: ¿el PDF está a otro tamaño?',
+      tono: 'warn',
+      ayuda: true,
+      accion: motivoCalibrar ? undefined : { texto: 'Rehacer cota', run: empezarCalibrar },
+    };
   if (!aviso && docE.estado === 'listo' && !escala && estado.fase !== 'calibrando')
     aviso = {
       texto: 'Calibra esta página para medir longitudes y superficies. Recuento funciona sin escala.',
       tono: 'info',
       accion: motivoCalibrar ? undefined : { texto: 'Calibrar', run: empezarCalibrar },
+    };
+  if (!aviso && docE.estado === 'listo' && escala && !escala.comprobacion && estado.fase !== 'calibrando')
+    aviso = {
+      texto: 'Comprueba la escala de esta página con otra cota antes de medir.',
+      tono: 'warn',
+      accion: motivoCalibrar ? undefined : { texto: 'Comprobar', run: comprobarEscala },
     };
   if (!aviso && ilegibles > 0)
     aviso = { texto: `${ilegibles} datos de planos no se pueden leer; las líneas conservan sus números.`, tono: 'warn' };
@@ -792,6 +901,22 @@ export function PlanoViewer({
       />
 
       <div className={styles.lienzoWrap}>
+        {ajusteAbierto && escala?.escalaDeclarada && info && (
+          <PopoverAjuste
+            plano={plano}
+            pagina={pagina}
+            escala={escala}
+            userUnit={info.userUnit}
+            readonly={!!motivoCalibrar}
+            onCerrar={() => setAjusteAbierto(false)}
+            onRecalcular={(nueva, detalle) => setRecalculo({ escala: nueva, etiqueta: etiquetaDe(plano, pagina) ?? '', detalle, verbo: 'con escala' })}
+            onRehacerCota={empezarCalibrar}
+            onHecho={(texto) => {
+              useToastStore.getState().show(texto);
+              decir(texto);
+            }}
+          />
+        )}
         {docE.estado === 'cargando' && <div className={styles.estadoLienzo}>Abriendo el plano…</div>}
         {docE.estado === 'error' && (
           <div className={styles.estadoLienzo} role="alert">
@@ -889,7 +1014,11 @@ export function PlanoViewer({
               onConfirmar={confirmarCalibracion}
               onRehacerCota={() => dispatch({ tipo: 'rehacerCota' })}
               onRehacerComprobacion={() => dispatch({ tipo: 'rehacerComprobacion' })}
-              onEsCorrecta={() => dispatch({ tipo: 'esCorrecta', px: lienzoApi.current?.escala() ?? 1, userUnit: info?.userUnit ?? 1 })}
+              onEsCorrecta={() =>
+                dispatch({ tipo: 'esCorrecta', px: lienzoApi.current?.escala() ?? 1, userUnit: info?.userUnit ?? 1, cajetin: declarada })
+              }
+              declarada={declarada}
+              userUnit={info?.userUnit ?? 1}
               onCancelar={() => dispatch({ tipo: 'esc' })}
             />
           ) : estado.fase === 'dibujando' ? (
@@ -909,6 +1038,7 @@ export function PlanoViewer({
               preparada={preparada}
               partida={partida}
               inputRef={comentarioRef}
+              seleccionar={comentarioSugeridoRef.current}
               onTexto={(texto) => dispatch({ tipo: 'texto', texto })}
               onCrear={() => intentarCrear(false)}
               onCancelar={() => {
@@ -939,6 +1069,35 @@ export function PlanoViewer({
         {anuncio.n % 2 ? ' ' : ''}
       </div>
       {pantallaCompleta && <span hidden data-pantalla-completa="" />}
+      {recalculo && (
+        <DialogoRecalcular
+          plano={plano}
+          pagina={pagina}
+          nombrePagina={recalculo.etiqueta || etiquetaDe(plano, pagina) || `Pág. ${pagina}`}
+          escala={recalculo.escala}
+          onCancelar={() => {
+            setRecalculo(null);
+            raizRef.current?.focus();
+          }}
+          onHecho={(n) => {
+            const r = recalculo;
+            setRecalculo(null);
+            raizRef.current?.focus();
+            rematarCalibracion(r.escala, r.etiqueta, `${r.detalle} · ${n} ${n === 1 ? 'línea recalculada' : 'líneas recalculadas'}`, r.verbo);
+          }}
+        />
+      )}
+      {copiarAbierto && doc && (
+        <DialogoCopiarEscala
+          doc={doc}
+          plano={plano}
+          pagina={pagina}
+          onCerrar={() => {
+            setCopiarAbierto(false);
+            raizRef.current?.focus();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -1049,6 +1208,7 @@ function Nombrando({
   preparada,
   partida,
   inputRef,
+  seleccionar,
   onTexto,
   onCrear,
   onCancelar,
@@ -1058,12 +1218,16 @@ function Nombrando({
   preparada: ResultadoMedida | null;
   partida: Partida | null;
   inputRef: React.RefObject<HTMLInputElement | null>;
+  /** El texto es una propuesta: entra seleccionado. */
+  seleccionar: boolean;
   onTexto: (t: string) => void;
   onCrear: () => void;
   onCancelar: () => void;
 }) {
+  const seleccionarAlEntrar = useRef(seleccionar);
   useEffect(() => {
     inputRef.current?.focus();
+    if (seleccionarAlEntrar.current) inputRef.current?.select();
   }, [inputRef]);
   let previa: React.ReactNode = null;
   if (preparada?.ok && partida) {

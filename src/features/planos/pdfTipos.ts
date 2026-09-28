@@ -31,6 +31,9 @@ export interface TextoPdf {
   caja: Caja;
   /** Tamaño de letra en unidades de página. */
   tamano: number;
+  /** Dirección de la escritura en la página (vector unitario): [1, 0] en un
+   *  texto horizontal; sirve para unir fragmentos contiguos («1» «:» «50»). */
+  dir: [number, number];
 }
 
 export interface DocPdf {

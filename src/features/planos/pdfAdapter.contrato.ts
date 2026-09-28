@@ -55,6 +55,8 @@ export function contratoPdfAdapter(nombre: string, crear: () => PdfAdapter): voi
       expect(t.caja[0]).toBeCloseTo(400, 0);
       expect(t.caja[1]).toBeCloseTo(50, -1);
       expect(t.tamano).toBeCloseTo(10, 0);
+      expect(t.dir[0]).toBeCloseTo(1, 5);
+      expect(t.dir[1]).toBeCloseTo(0, 5);
       doc.cerrar();
     });
 

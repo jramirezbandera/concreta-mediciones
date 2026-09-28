@@ -50,6 +50,9 @@ export interface PlanoUiState {
   destacar: Destacar | null;
   /** «Volver a medir» pedido desde el marcador de una línea. */
   remedir: { lineId: string; nonce: number } | null;
+  /** [A1] Algo que pide la cabecera (chip de escala, menú ⋯) y abre el visor,
+   *  que es quien conoce el PDF (su `userUnit`, las páginas iguales). */
+  pedido: { que: 'ajuste' | 'copiarEscala'; nonce: number } | null;
 
   abrirPlano: (planoId: string | null, pagina?: number) => void;
   setPagina: (pagina: number) => void;
@@ -65,6 +68,8 @@ export interface PlanoUiState {
   pedirDestacar: (d: Omit<Destacar, 'nonce'>) => void;
   pedirRemedir: (lineId: string) => void;
   limpiarRemedir: () => void;
+  pedirAlVisor: (que: 'ajuste' | 'copiarEscala') => void;
+  limpiarPedido: () => void;
   /** Tras Deshacer o cambiar de obra: el plano que se ve sigue existiendo. */
   reconciliar: (planos: readonly unknown[], docToken: string) => void;
   reset: () => void;
@@ -85,6 +90,7 @@ const INICIAL = {
   disponibles: {},
   destacar: null,
   remedir: null,
+  pedido: null,
 } satisfies Partial<PlanoUiState>;
 
 let nonce = 0;
@@ -112,6 +118,8 @@ export const usePlanoUiStore = create<PlanoUiState>((set, get) => ({
   pedirDestacar: (d) => set({ destacar: { ...d, nonce: ++nonce }, planoId: d.planoId, pagina: d.pagina }),
   pedirRemedir: (lineId) => set({ remedir: { lineId, nonce: ++nonce } }),
   limpiarRemedir: () => set({ remedir: null }),
+  pedirAlVisor: (que) => set({ pedido: { que, nonce: ++nonce } }),
+  limpiarPedido: () => set({ pedido: null }),
   reconciliar: (planos, docToken) => {
     const s = get();
     if (s.docToken === null) set({ docToken }); // la primera vez solo se adopta

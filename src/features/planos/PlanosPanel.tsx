@@ -9,6 +9,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Icon, Modal } from '../../components';
 import { fmtNum } from '../../core/money';
 import { escalaDe, etiquetaDe, origenLegible, planoLegible } from '../../core/planoDatos';
+import { DESVIACION_MAX } from '../../core/planoGeom';
+import { lineasConOtraEscala } from '../../core/planoRecalculo';
+import { desviacionCajetin } from '../../core/planoTexto';
 import type { PlanoMeta } from '../../core/types';
 import { useSessionStore } from '../../persist';
 import { espacioNavegador } from '../../persist/planos';
@@ -45,7 +48,28 @@ const mb = (bytes: number) => `${fmtNum(bytes / 1048576, 1)} MB`;
 function ChipEscala({ plano, pagina }: { plano: PlanoMeta; pagina: number }) {
   const e = escalaDe(plano, pagina);
   if (!e) return <span className={`${styles.chip} ${styles.chipNeutro}`}>Sin calibrar</span>;
-  const d = e.comprobacion?.desviacion;
+  if (!e.comprobacion)
+    return (
+      <span className={`mono ${styles.chip} ${styles.chipAviso}`} title="Comprueba la escala con otra cota antes de medir">
+        {textoEscala(e.n)} · sin comprobar
+      </span>
+    );
+  // [A1] Con escala en el cajetín, el chip abre la comparación (lo pinta el visor).
+  if (e.escalaDeclarada) {
+    const noCuadra = !e.ajustada && desviacionCajetin(e.n, e.escalaDeclarada) > DESVIACION_MAX;
+    return (
+      <button
+        type="button"
+        className={`mono ${styles.chip} ${noCuadra ? styles.chipAviso : styles.chipAccent}`}
+        title={`El plano dice ${textoEscala(e.escalaDeclarada)}`}
+        onClick={() => usePlanoUiStore.getState().pedirAlVisor('ajuste')}
+      >
+        {textoEscala(e.n)}
+        {e.ajustada ? ' ajustada' : noCuadra ? ' · no cuadra con el cajetín' : ` · ±${fmtNum(e.comprobacion.desviacion * 100, 1)} %`}
+      </button>
+    );
+  }
+  const d = e.comprobacion.desviacion;
   return (
     <span className={`mono ${styles.chip} ${styles.chipAccent}`} title="Escala calibrada y comprobada">
       {textoEscala(e.n)}
@@ -233,6 +257,17 @@ export function PlanosPanel({
                   <button type="button" role="menuitem" className={styles.menuItem} disabled={readonly} onClick={() => (setMenu(null), setDialogo('etiquetas'))}>
                     <Icon name="list" size={14} /> Etiquetas de página
                   </button>
+                  {escalaDe(plano, pagina)?.escalaDeclarada && (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className={styles.menuItem}
+                      disabled={readonly}
+                      onClick={() => (setMenu(null), usePlanoUiStore.getState().pedirAlVisor('copiarEscala'))}
+                    >
+                      <Icon name="ruler" size={14} /> Usar esta calibración en otras páginas…
+                    </button>
+                  )}
                   <button
                     type="button"
                     role="menuitem"
@@ -359,6 +394,7 @@ function PlanosLista({
 }) {
   const disponibles = usePlanoUiStore((s) => s.disponibles);
   const ilegibles = useObraStore((s) => s._ilegible?.length ?? 0);
+  const partidas = useObraStore((s) => s.partidas);
   const [espacio, setEspacio] = useState<{ usado: number; cuota: number } | null>(null);
   const [encima, setEncima] = useState(false);
   useEffect(() => {
@@ -402,6 +438,7 @@ function PlanosLista({
         const med = medidas.get(p.id);
         const noDisp = disponibles[p.huella] === false;
         const calibradas = Object.keys(p.escalas).filter((k) => escalaDe(p, Number(k))).length;
+        const otraEscala = lineasConOtraEscala(partidas, p);
         return (
           <button
             key={p.id}
@@ -417,6 +454,12 @@ function PlanosLista({
                 {total(med)} medidas · {mb(p.tamano)}
                 {noDisp && ' · no disponible en este navegador'}
               </span>
+              {otraEscala > 0 && (
+                <span className={`${styles.fichaPaginas} ${styles.recalculoAviso}`}>
+                  {otraEscala} {otraEscala === 1 ? 'línea con otra escala' : 'líneas con otra escala'} (retocadas, aceptadas o certificadas al
+                  recalibrar)
+                </span>
+              )}
               {med && med.size > 0 && (
                 <span className={styles.fichaPaginas}>
                   {[...med.entries()]

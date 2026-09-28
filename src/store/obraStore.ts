@@ -21,7 +21,7 @@
 import { create, type StateCreator } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import type { Agente, Cert, Escala, MedForma, MedLine, Partida, PlanoMeta, Rates, ResourceType } from '../core/types';
+import type { Agente, Cert, Comprobacion, Escala, MedForma, MedLine, Partida, PlanoMeta, Rates, ResourceType } from '../core/types';
 import { composeCertFirmantes, firmaCertDefinitiva } from '../core/listado';
 import { ancestorIds, findNode } from '../core/tree';
 import { rawUuid } from '../core/id';
@@ -39,6 +39,7 @@ import {
   type DestinoPlano,
   type ExpectDoc,
   type ExpectMedida,
+  type ExpectRecalculo,
   type ExpectRemedir,
 } from './slices/planosSlice';
 import type { NewPlanoLine } from '../core/planoMedida';
@@ -56,7 +57,7 @@ export type { DomainKey } from './schema';
 export { copyTargetOf } from './slices/copySlice';
 export type { ObraData };
 export type { CopyTarget, PendingCopy } from './slices/copySlice';
-export type { DestinoPlano, ExpectDoc, ExpectMedida, ExpectRemedir } from './slices/planosSlice';
+export type { DestinoPlano, ExpectDoc, ExpectMedida, ExpectRecalculo, ExpectRemedir } from './slices/planosSlice';
 
 /** Modo de edición de una certificación: importe a origen vs. de esta cert. */
 export type CertMode = 'origen' | 'esta';
@@ -92,6 +93,7 @@ export interface MedResult {
     | 'stale'
     | 'no-plano'
     | 'sin-calibrar'
+    | 'sin-comprobar'
     | 'no-encaja'
     | 'certificada'
     | 'falta-dimension'
@@ -99,7 +101,7 @@ export interface MedResult {
   /** Lo que el texto del motivo necesita: qué cambió (`stale`), cuántas líneas
    *  (`has-lines`), qué línea y en qué certificaciones (`certificada`). */
   detalle?: {
-    cambio?: 'obra' | 'plano' | 'escala' | 'forma' | 'linea';
+    cambio?: 'obra' | 'plano' | 'escala' | 'forma' | 'linea' | 'lineas';
     n?: number;
     linea?: number;
     certNums?: number[];
@@ -606,6 +608,41 @@ export interface ObraState extends ObraData {
   addPlanoLines: (a: { destinos: DestinoPlano[]; expect: ExpectMedida }) => MedResult;
   /** «Volver a medir»: sustituye valores, `expr` y `origen` (formaId nueva) de una línea. */
   remeasureLine: (a: { lineId: string; preparada: NewPlanoLine; expect: ExpectRemedir }) => MedResult;
+  /** [A1] Escala nueva de una página CON líneas y recálculo de `lineIds` (las
+   *  candidatas de `planRecalculo`, en varias partidas), en UN paso (§4.4). */
+  rescalePlanoPage: (a: {
+    planoId: string;
+    pagina: number;
+    escala: Escala;
+    lineIds: string[];
+    expect: ExpectRecalculo;
+  }) => MedResult;
+  /** [A1] Ajuste al cajetín (`ajustada`) o «Usar la calibrada». `rev` nueva;
+   *  con líneas medidas devuelve `has-lines` (van por `rescalePlanoPage`). */
+  setPlanoScaleAdjusted: (a: {
+    planoId: string;
+    pagina: number;
+    ajustada: boolean;
+    userUnit: number;
+    expect: ExpectDoc & { calRev: string };
+  }) => MedResult;
+  /** [A1] «Usar esta calibración en otras páginas»: copia la escala de `desde`
+   *  a `paginas` (sin escala), con `rev` nueva y SIN comprobación: cada página
+   *  pide la suya. UN paso de Deshacer. */
+  copyPlanoPageScale: (a: {
+    planoId: string;
+    desde: number;
+    paginas: number[];
+    expect: ExpectDoc & { calRev: string };
+  }) => MedResult;
+  /** [A1] Añade la comprobación a una escala «sin comprobar», sin cambiar la
+   *  escala ni su `rev`: las líneas siguen al día. */
+  setPlanoPageCheck: (a: {
+    planoId: string;
+    pagina: number;
+    comprobacion: Comprobacion;
+    expect: ExpectDoc & { calRev: string };
+  }) => MedResult;
 
   /** Restaura el estado sembrado (datos + UI). Útil en tests y para "nueva obra". */
   reset: () => void;

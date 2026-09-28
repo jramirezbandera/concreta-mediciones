@@ -17,10 +17,13 @@
    =========================================================================== */
 import { medFormaDe } from '../../core/medForma';
 import { indiceInsercion, lineaParaDestino, lineasCertificadas } from '../../core/medPaste';
+import { DESVIACION_MAX } from '../../core/planoGeom';
 import { TOPES, escalaDe, escalaLegible, origenLegible, paginaValida, planoLegible } from '../../core/planoDatos';
 import { lineasConEscala, valoresDesdeOrigen, type NewPlanoLine } from '../../core/planoMedida';
-import type { Escala, MedDim, MedForma, MedLine, Partida, PlanoMeta } from '../../core/types';
-import { nextMedLineId } from '../base';
+import { planRecalculo, recalcularLinea } from '../../core/planoRecalculo';
+import { escalaConAjuste } from '../../core/planoTexto';
+import type { Comprobacion, Escala, MedDim, MedForma, MedLine, Partida, PlanoMeta } from '../../core/types';
+import { nextCalRev, nextMedLineId } from '../base';
 import type { MedResult, ObraSlice, ObraState } from '../obraStore';
 import { structural } from './estructuraSlice';
 
@@ -61,6 +64,15 @@ export interface ExpectRemedir extends ExpectMedida {
   certificadaOk?: boolean;
 }
 
+/** Lo que el usuario revisó en la pregunta de recalcular (§4.2, §4.4). */
+export interface ExpectRecalculo extends ExpectDoc {
+  huella: string;
+  /** `rev` de la escala activa de la página al preguntar (null: sin calibrar). */
+  calRev: string | null;
+  /** Casillas de cada candidata al preguntar: si alguna cambió, `stale`. */
+  valores: Record<string, Pick<MedLine, 'uds' | 'largo' | 'ancho' | 'alto'>>;
+}
+
 type PlanosSlice = Pick<
   ObraState,
   | 'attachPlano'
@@ -70,6 +82,10 @@ type PlanosSlice = Pick<
   | 'setPlanoPageScale'
   | 'addPlanoLines'
   | 'remeasureLine'
+  | 'rescalePlanoPage'
+  | 'setPlanoPageCheck'
+  | 'setPlanoScaleAdjusted'
+  | 'copyPlanoPageScale'
 >;
 
 const stale = (cambio: NonNullable<MedResult['detalle']>['cambio'], extra: Partial<NonNullable<MedResult['detalle']>> = {}): MedResult => ({
@@ -120,6 +136,7 @@ function comprobarMedida(s: ObraState, expect: ExpectMedida, lineas: readonly Ne
   if (conEscala) {
     if (!escala) return { ids: [], reason: 'sin-calibrar' };
     if (escala.rev !== expect.calRev) return stale('escala');
+    if (!escala.comprobacion) return { ids: [], reason: 'sin-comprobar' };
   }
   for (const l of lineas) {
     if (!origenLegible(l.origen) || l.origen.planoId !== plano.id || l.origen.pagina !== expect.pagina)
@@ -293,5 +310,117 @@ export const createPlanosSlice: ObraSlice<PlanosSlice> = (set, get) => ({
       }),
     );
     return { ids: [lineId] };
+  },
+
+  rescalePlanoPage: ({ planoId, pagina, escala, lineIds, expect }) => {
+    const s0 = get();
+    if (expect.docToken !== s0.docToken) return stale('obra');
+    const p0 = planoDe(s0, planoId);
+    if (!p0) return { ids: [], reason: 'no-plano' };
+    if (p0.huella !== expect.huella) return stale('plano');
+    if (!paginaValida(pagina, p0.paginas) || !escalaLegible(escala)) return { ids: [], reason: 'noop' };
+    if ((escalaDe(p0, pagina)?.rev ?? null) !== expect.calRev) return stale('escala');
+    // Se vuelve a planificar contra el estado vivo con la MISMA función: solo
+    // se aplica si las candidatas y sus casillas son las que el usuario vio.
+    const plan = planRecalculo(s0, planoId, pagina, escala);
+    const ids = plan.candidatas.map((c) => c.lineId);
+    if (ids.length !== lineIds.length || ids.some((id) => !lineIds.includes(id))) return stale('lineas');
+    const nuevas = new Map<string, MedLine>();
+    for (const c of plan.candidatas) {
+      const h = lineaPorId(s0, c.lineId)!;
+      const l = h.partida.med[h.index]!;
+      const v = expect.valores[c.lineId];
+      if (!v || v.uds !== l.uds || v.largo !== l.largo || v.ancho !== l.ancho || v.alto !== l.alto)
+        return stale('linea', { linea: c.numero, partidaId: c.partidaId });
+      nuevas.set(c.lineId, recalcularLinea(l, escala));
+    }
+    const copia = JSON.parse(JSON.stringify(escala)) as Escala;
+    structural(() =>
+      set((s) => {
+        const p = planoDe(s, planoId);
+        if (!p) return;
+        p.escalas[pagina] = copia;
+        for (const [id, l] of nuevas) {
+          const h = lineaPorId(s, id);
+          if (!h) continue;
+          h.partida.med[h.index] = l;
+          h.partida.fromBase = false;
+        }
+      }),
+    );
+    return { ids: [planoId, ...ids] };
+  },
+
+  setPlanoScaleAdjusted: ({ planoId, pagina, ajustada, userUnit, expect }) => {
+    const s0 = get();
+    if (expect.docToken !== s0.docToken) return stale('obra');
+    const p0 = planoDe(s0, planoId);
+    if (!p0) return { ids: [], reason: 'no-plano' };
+    const e = escalaDe(p0, pagina);
+    if (!e) return { ids: [], reason: 'sin-calibrar' };
+    if (e.rev !== expect.calRev) return stale('escala');
+    if (!e.escalaDeclarada || !!e.ajustada === ajustada) return { ids: [], reason: 'noop' };
+    const n = lineasConEscala(s0.partidas, planoId, pagina);
+    if (n > 0) return { ids: [], reason: 'has-lines', detalle: { n } };
+    const nueva = escalaConAjuste(e, ajustada, userUnit, nextCalRev(), new Date().toISOString());
+    if (!nueva || !escalaLegible(nueva)) return { ids: [], reason: 'noop' };
+    structural(() =>
+      set((s) => {
+        const p = planoDe(s, planoId);
+        if (p) p.escalas[pagina] = nueva;
+      }),
+    );
+    return { ids: [planoId] };
+  },
+
+  copyPlanoPageScale: ({ planoId, desde, paginas, expect }) => {
+    const s0 = get();
+    if (expect.docToken !== s0.docToken) return stale('obra');
+    const p0 = planoDe(s0, planoId);
+    if (!p0) return { ids: [], reason: 'no-plano' };
+    const e = escalaDe(p0, desde);
+    if (!e) return { ids: [], reason: 'sin-calibrar' };
+    if (e.rev !== expect.calRev) return stale('escala');
+    const destino = [...new Set(paginas)].filter((n) => n !== desde && paginaValida(n, p0.paginas));
+    if (!destino.length) return { ids: [], reason: 'noop' };
+    // Solo a páginas sin escala: una página calibrada entretanto no se pisa.
+    if (destino.some((n) => escalaDe(p0, n))) return stale('escala');
+    const at = new Date().toISOString();
+    const copias = destino.map((n) => {
+      const c = JSON.parse(JSON.stringify(e)) as Escala;
+      c.rev = nextCalRev();
+      c.at = at;
+      delete c.comprobacion; // «sin comprobar»: cada página pide la suya
+      return [n, c] as const;
+    });
+    structural(() =>
+      set((s) => {
+        const p = planoDe(s, planoId);
+        if (!p) return;
+        for (const [n, c] of copias) p.escalas[n] = c;
+      }),
+    );
+    return { ids: [planoId] };
+  },
+
+  setPlanoPageCheck: ({ planoId, pagina, comprobacion, expect }) => {
+    const s0 = get();
+    if (expect.docToken !== s0.docToken) return stale('obra');
+    const p0 = planoDe(s0, planoId);
+    if (!p0) return { ids: [], reason: 'no-plano' };
+    const e = escalaDe(p0, pagina);
+    if (!e) return { ids: [], reason: 'sin-calibrar' };
+    if (e.rev !== expect.calRev) return stale('escala');
+    if (e.comprobacion) return { ids: [], reason: 'noop' };
+    if (!(comprobacion.desviacion >= 0 && comprobacion.desviacion <= DESVIACION_MAX)) return { ids: [], reason: 'noop' };
+    const copia = JSON.parse(JSON.stringify(comprobacion)) as Comprobacion;
+    structural(() =>
+      set((s) => {
+        const p = planoDe(s, planoId);
+        const esc = p?.escalas[pagina];
+        if (esc) esc.comprobacion = copia; // misma escala y misma `rev`
+      }),
+    );
+    return { ids: [planoId] };
   },
 });

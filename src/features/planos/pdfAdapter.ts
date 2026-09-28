@@ -253,7 +253,7 @@ function documento(pdfjs: PdfJs, doc: import('pdfjs-dist/legacy/build/pdf.mjs').
             const xs = [e!, e! + dir[0] * w, e! + arriba[0] * h, e! + dir[0] * w + arriba[0] * h];
             const ys = [f!, f! + dir[1] * w, f! + arriba[1] * h, f! + dir[1] * w + arriba[1] * h];
             const caja: Caja = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
-            out.push({ texto: it.str, caja, tamano: alto });
+            out.push({ texto: it.str, caja, tamano: alto, dir });
           }
           return out;
         });
