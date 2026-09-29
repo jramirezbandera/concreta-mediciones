@@ -18,37 +18,21 @@ import { CutTag } from './MedLineRow';
 import { useIsCut } from './useIsCut';
 import styles from './Presupuesto.module.css';
 
-/** Campo etiquetado (Uds/Longitud/…) para la medición en tarjeta. `col` marca la
+/** Casilla de una dimensión (Uds/Longitud/…) en la lista compacta. La etiqueta
+ *  va UNA vez en la cabecera de la lista, no en cada línea. `col` marca la
  *  columna para la navegación de teclado (Tab/Enter). */
-function MedField({
-  label,
-  col,
-  fuera = false,
-  children,
-}: {
-  label: string;
-  col: number;
-  fuera?: boolean;
-  children: ReactNode;
-}) {
+function MedField({ col, children }: { col: number; children: ReactNode }) {
   return (
-    <div className={styles.medField}>
-      <span
-        className={`caps ${styles.medFieldLabel} ${fuera ? styles.medThFuera : ''}`}
-        title={fuera ? FUERA_TITLE : undefined}
-      >
-        {label}
-      </span>
-      <div className={styles.medFieldBox} data-editfield="" data-col={col}>
-        {children}
-      </div>
+    <div className={styles.medFieldBox} data-editfield="" data-col={col}>
+      {children}
     </div>
   );
 }
 
-/** Tarjeta de UNA línea: casilla de selección + comentario + X, sus casillas y
- *  su parcial. Sin menú ⋮: la barra de selección es la única superficie de
- *  acciones (copiar, cortar, duplicar, subir, bajar, eliminar). */
+/** UNA línea de la lista: casilla de selección + comentario + parcial + X
+ *  arriba y sus casillas debajo, alineadas con la cabecera. Sin menú ⋮: la
+ *  barra de selección es la única superficie de acciones (copiar, cortar,
+ *  duplicar, subir, bajar, eliminar). */
 const MedLineCard = memo(function MedLineCard({
   line,
   index,
@@ -96,23 +80,24 @@ const MedLineCard = memo(function MedLineCard({
         </span>
         {cut && <CutTag />}
         {line.origen !== undefined && conMarcador({ med: [line] }) && <MedOrigen line={line} numero={index + 1} chip />}
+        <span className={`mono ${styles.medCardParcVal}`} title="Parcial">
+          <span className={styles.srOnly}>Parcial </span>
+          {fmtNum(lineParcial(line))}
+        </span>
         <button
           type="button"
           title="Eliminar línea"
           aria-label={`Eliminar línea: ${name}`}
           data-del=""
-          className={`tcol ${styles.medDelCard}`}
+          className={`tap-target tcol ${styles.medDelCard}`}
           onClick={() => deleteLines(partidaId, [line.id], { col: 'del' })}
         >
           <Icon name="x" size={15} />
         </button>
       </div>
-      <div
-        className={styles.medGrid}
-        style={{ gridTemplateColumns: `repeat(${Math.max(cols.length, 2)}, 1fr)` }}
-      >
+      <div className={styles.medGrid} style={gridCols(cols)}>
         {cols.map((c, ci) => (
-          <MedField key={c.slot} label={c.label} col={ci + 1} fuera={c.fuera}>
+          <MedField key={c.slot} col={ci + 1}>
             <MedNum
               value={line[c.slot]}
               expr={line.expr?.[c.slot]}
@@ -124,15 +109,15 @@ const MedLineCard = memo(function MedLineCard({
           </MedField>
         ))}
       </div>
-      <div className={styles.medCardFoot}>
-        <span className={`caps ${styles.medCardParcLabel}`}>Parcial</span>
-        <span className={`mono ${styles.medCardParcVal}`}>{fmtNum(lineParcial(line))}</span>
-      </div>
     </div>
   );
 });
 
-/** Medición en tarjetas (modo compacto, <780). Misma semántica que la tabla. */
+function gridCols(cols: MedCol[]) {
+  return { gridTemplateColumns: `repeat(${Math.max(cols.length, 2)}, minmax(0, 1fr))` };
+}
+
+/** Medición en lista compacta (modo compacto, <780). Misma semántica que la tabla. */
 export function MedCards({
   p,
   chapterId,
@@ -160,6 +145,21 @@ export function MedCards({
       onKeyDown={medTab.onKeyDown}
       {...lineKeys}
     >
+      {/* Cabecera de columnas (como la tabla de escritorio): una sola vez, no
+          repetida en cada línea. */}
+      <div className={styles.medListHead} aria-hidden="true">
+        <div className={styles.medGrid} style={gridCols(cols)}>
+          {cols.map((c) => (
+            <span
+              key={c.slot}
+              className={`caps ${styles.medFieldLabel} ${c.fuera ? styles.medThFuera : ''}`}
+              title={c.fuera ? FUERA_TITLE : undefined}
+            >
+              {c.label}
+            </span>
+          ))}
+        </div>
+      </div>
       {med.map((l, i) => (
         <MedLineCard key={l.id} line={l} index={i} cols={cols} chapterId={chapterId} partidaId={p.id} />
       ))}

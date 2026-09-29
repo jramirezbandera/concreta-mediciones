@@ -716,7 +716,8 @@
   outline-offset: -2px;
 }
 .medCard.lineCut {
-  border: 1px dashed var(--accent);
+  outline: 1px dashed var(--accent);
+  outline-offset: -2px;
 }
 .medCommentWrap {
   display: flex;
@@ -1666,20 +1667,39 @@
   color: var(--text-primary);
 }
 
-/* ---- medición en tarjetas ---- */
+/* ---- medición en lista compacta ----
+   Una caja con las líneas separadas por filetes (no una tarjeta por línea): las
+   etiquetas de columna van UNA vez arriba, como en la tabla de escritorio, y
+   cada línea son dos renglones: «☐ comentario ···· parcial ×» y sus casillas
+   debajo, alineadas con la cabecera. El pie (Añadir línea · Cantidad total)
+   se pega debajo como en escritorio. */
 .medCardList {
+  --med-indent: 26px; /* casilla 18px + hueco 8px: las casillas bajo el comentario */
   display: flex;
   flex-direction: column;
-  gap: var(--sp-10);
+  border: 1px solid var(--border-main);
+  border-radius: 9px 9px 0 0;
+  background: var(--bg-surface);
+  overflow: clip;
+}
+.medListHead {
+  padding: var(--sp-6) var(--sp-10) var(--sp-6) calc(var(--sp-10) + var(--med-indent));
+  border-bottom: 1px solid var(--border-sub);
+  background: var(--bg-elevated);
+}
+.medListHead .medFieldLabel {
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .medCard {
-  border-radius: 9px;
-  border: 1px solid var(--border-main);
-  background: var(--bg-surface);
-  padding: var(--sp-10) var(--sp-12) var(--sp-12);
+  padding: var(--sp-8) var(--sp-10) var(--sp-10);
+}
+.medCard + .medCard {
+  border-top: 1px solid var(--border-sub);
 }
 .medCard.cardSelected {
-  border-color: var(--accent);
   background: color-mix(in srgb, var(--accent-soft) 70%, var(--bg-surface));
   box-shadow: inset 3px 0 0 var(--accent);
 }
@@ -1687,25 +1707,34 @@
   display: flex;
   align-items: center;
   gap: var(--sp-8);
-  margin-bottom: var(--sp-10);
+  margin-bottom: var(--sp-6);
 }
 .medDelCard {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 24px;
+  height: 24px;
   flex-shrink: 0;
-  border-radius: 7px;
+  margin-right: calc(-1 * var(--sp-4));
+  border-radius: 6px;
   border: 0;
   cursor: pointer;
-  background: var(--bg-elevated);
+  background: transparent;
   color: var(--text-disabled);
+}
+.medDelCard:hover {
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
 }
 .medGrid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: var(--sp-8);
+  gap: var(--sp-6);
 }
+.medCard .medGrid {
+  margin-left: var(--med-indent);
+}
+/* Campo etiquetado (lo usa la justificación en tarjetas). */
 .medField {
   display: flex;
   flex-direction: column;
@@ -1717,27 +1746,15 @@
   color: var(--text-disabled);
 }
 .medFieldBox {
-  border: 1px solid var(--border-main);
-  border-radius: 7px;
+  border: 1px solid var(--border-sub);
+  border-radius: 6px;
   background: var(--bg-primary);
-  padding: 5px var(--sp-4);
-}
-.medCardFoot {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--sp-8);
-  margin-top: var(--sp-10);
-  padding-top: 9px;
-  border-top: 1px solid var(--border-sub);
-}
-.medCardParcLabel {
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  color: var(--text-disabled);
+  padding: 3px var(--sp-2);
+  min-width: 0;
 }
 .medCardParcVal {
-  font-size: var(--fs-body);
+  flex-shrink: 0;
+  font-size: var(--fs-table);
   font-weight: 600;
   color: var(--accent);
 }
@@ -1754,6 +1771,12 @@
   border-radius: 9px;
   border-top: 1px solid var(--border-main);
   margin-top: var(--sp-10);
+}
+/* Con líneas, el pie cierra la caja de la lista (sin hueco, como en escritorio). */
+.medCardList + .medFootCompact {
+  border-top: 0;
+  border-radius: 0 0 9px 9px;
+  margin-top: 0;
 }
 
 /* ---- justificación en tarjetas ---- */
