@@ -394,8 +394,8 @@ Los demás, por herramienta, en el fixture (`l-salon`, `l-hueco`, `l-dorm1`, `l-
 - **Calibrar** (en el lienzo, sin modal: `CalibrarPasos.tsx` + `Lupa.tsx`):
   1. **Cota conocida:**
      - dos clics y la distancia real en un campo anclado al segmento, en metros;
-     - la cota mide al menos 300 px en pantalla. Si no: «Acerca el zoom o elige una cota más larga: esta mide 180 px en pantalla y la precisión sería ±1,1 %»;
-     - la franja enseña la precisión: ≈ 2 px / longitud en px.
+     - la precisión de la cota es ±1 px en cada extremo, al zoom con que se marcó ese extremo (acercar, marcar y alejar no la empeora): `(1/pxA + 1/pxB) / longitud`. La franja la enseña;
+     - peor que ±5 % (≈ 40 px en pantalla) no sirve: «La cota es demasiado corta a este zoom (precisión ±6,7 %): acerca el zoom y vuelve a marcar sus extremos, o elige una más larga». [Rev. 2026-09-29: antes, ≥ 300 px en pantalla; bloqueaba cotas cortas útiles.]
   2. **Comprobación:**
      - dos clics sobre otra cota y su valor;
      - si se puede, a más de 45° de la primera. La franja lo sugiere y la lupa lo facilita;
@@ -406,7 +406,8 @@ Los demás, por herramienta, en el fixture (`l-salon`, `l-hueco`, `l-dorm1`, `l-
     - cursor en cruz con guías a todo el ancho;
     - lupa ×4, un recuadro de 120 px en la esquina opuesta al cursor;
     - los puntos se pueden arrastrar antes de confirmar.
-  - **Desviación > 1 %:** «Desviación 2,8 %» con [Rehacer cota] [Rehacer comprobación], sin empezar de cero. Rehacer la comprobación conserva la cota.
+  - **Tolerancia de la comprobación:** la suma de las precisiones de las dos cotas, entre el 1 % y el 5 %. Dos cotas cortas bien marcadas no pueden cuadrar al 1 %; una cifra mal tecleada suele fallar por mucho más. Si cuadran, la escala sale de las dos (`Σ metros / Σ longitud`) y, si una escala habitual (o la del cajetín, que manda) cae dentro de su precisión (mín. 0,5 %, máx. 3 %), se ajusta a ella exacta: «P1 calibrada 1:50 · ajustada (las cotas daban 1:50,4)». [Rev. 2026-09-29]
+  - **Fuera de tolerancia:** «La cota da 1:50 y la comprobación 1:54,2: difieren un 8,3 % y, con la precisión de los clics, se admite ±5 %. Revisa la cifra o los extremos de una de las dos.» con [Rehacer cota] [Rehacer comprobación], sin empezar de cero. Rehacer la comprobación conserva la cota.
   - **Plausibilidad:** pide confirmación antes de guardar, con [Sí, es correcta] [Rehacer cota]. Un «cm» tecleado como «m» pasa la segunda cota; esto lo caza.
     - Fuera de 1:1–1:5000: «1:5 000 000 no parece la escala de un plano: ¿la cota está en metros?».
     - Dentro, pero a más de un 3 % de todas las habituales: «1:63,5 no es una escala habitual: ¿el PDF se imprimió ajustado a la página? Si la cota es correcta, sigue».
@@ -686,10 +687,10 @@ Reductor puro `(estado, evento) → { estado, efectos }`: el visor solo lo conec
 | creada | Esc | — | reposo | — |
 | cualquiera | cambio de herramienta | — | reposo (armada la nueva) | si se dibujaba: como «cambio de partida» |
 | reposo | Calibrar | — | calibrando.cota | — |
-| calibrando.cota | clic ×2, arrastrar, metros | cota ≥ 300 px en pantalla | calibrando.comprobacion | — |
-| calibrando.cota | confirmar | cota < 300 px | calibrando.cota | «Acerca el zoom o elige una cota más larga…» |
-| calibrando.comprobacion | confirmar | desviación ≤ 1 % y escala plausible | reposo | `setPlanoPageScale`; «P1 calibrada 1:50 · comprobada 0,3 %» |
-| calibrando.comprobacion | confirmar | desviación > 1 % | calibrando.comprobacion | [Rehacer cota] [Rehacer comprobación] |
+| calibrando.cota | clic ×2, arrastrar, metros | precisión de la cota ≤ ±5 % | calibrando.comprobacion | — |
+| calibrando.cota | confirmar | precisión peor que ±5 % | calibrando.cota | «La cota es demasiado corta a este zoom…» |
+| calibrando.comprobacion | confirmar | desviación ≤ tolerancia y escala plausible | reposo | `setPlanoPageScale`; «P1 calibrada 1:50 · comprobada 0,3 %» o «· ajustada (las cotas daban 1:50,4)» |
+| calibrando.comprobacion | confirmar | desviación > tolerancia | calibrando.comprobacion | [Rehacer cota] [Rehacer comprobación] |
 | calibrando.comprobacion | confirmar | escala poco plausible | calibrando.comprobacion | pedir confirmación (§2) |
 | calibrando.* | Esc | — | reposo | cancelar; la página se queda como estaba |
 
@@ -881,9 +882,9 @@ Cada uno con problema, causa y arreglo. Los de calibración, «no encaja» y «P
 | falta una fija (`falta-dimension`) | «Indica la <Altura> fija para medir <paramentos>.» | foco en el campo |
 | kg/m sin resolver | «Indica el kg/m o nombra el perfil en el comentario (p. ej. IPE 300).» | foco en el campo |
 | perfiles en conflicto | «El comentario dice HEB 200 y el kg/m fijo es IPE 300.» | [Usar HEB 200] [Usar IPE 300] |
-| cota corta | «Acerca el zoom o elige una cota más larga: esta mide 180 px en pantalla y la precisión sería ±1,1 %.» | — |
+| cota corta (precisión peor que ±5 %) | «La cota es demasiado corta a este zoom (precisión ±6,7 %): acerca el zoom y vuelve a marcar sus extremos, o elige una más larga.» | — |
 | distancia no válida | «Escribe la distancia real en metros.» | — |
-| desviación > 1 % | «Desviación 2,8 %: la calibración no cuadra con la comprobación.» | [Rehacer cota] [Rehacer comprobación] |
+| desviación fuera de tolerancia | «La cota da 1:50 y la comprobación 1:54,2: difieren un 8,3 % y, con la precisión de los clics, se admite ±5 %. Revisa la cifra o los extremos de una de las dos.» | [Rehacer cota] [Rehacer comprobación] |
 | escala poco plausible | «1:5 000 000 no parece la escala de un plano: ¿la cota está en metros?» | [Sí, es correcta] [Rehacer cota] |
 | página con líneas (`has-lines`, A0) | «Esta página ya tiene N líneas medidas con esta escala. Recalcularlas llega más adelante; para medir a otra escala, adjunta el PDF otra vez.» | — |
 | certificada (`certificada`) | «La línea 7 está certificada en C2: revísala a mano.» | guarda de certificadas |
@@ -4060,6 +4061,7 @@ Nuevas:
 | 114 | Eng 2 | Tareas E13-E20, plan de pruebas actualizado | Mechanical | P1/P2 | Hallazgos de la segunda pasada | — |
 | 115 | Gate | D6 = A: plan aprobado tal cual | User decision | — | Respuesta del usuario en la aprobación final, tras la segunda pasada de ingeniería | B, C/D/E |
 | 116 | Gate | Elecciones de criterio 1-12 con su opción recomendada (T9 cajetín como comprobación; T10 reenlazar con historial de huellas; T11 certificación con signo antes de Restar, tarea E12) | User decision | — | Aprobadas con D6 = A | Las alternativas descritas en la aprobación final |
+| 117 | Uso real | Precisión por extremo al zoom con que se marcó; cota útil hasta ±5 %; tolerancia de la comprobación = suma de precisiones (1-5 %); escala de las dos cotas ajustada a la habitual que cae dentro de su precisión | User feedback | P1 | 2026-09-29: con cotas de 0,6 m cada intento pedía más zoom y luego «no cuadra»; el 1 % fijo no lo cumplen dos cotas cortas bien marcadas | Mantener 300 px y 1 % fijos |
 
 ### Aprobación (2026-09-25)
 

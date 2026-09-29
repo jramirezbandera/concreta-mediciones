@@ -6,6 +6,7 @@ import {
   Building2,
   Check,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   ClipboardCheck,
   ClipboardPaste,
@@ -70,6 +71,7 @@ import {
  */
 export const ICONS = {
   chevron: ChevronRight,
+  chevronLeft: ChevronLeft,
   chevronDown: ChevronDown,
   upload: Upload,
   list: List,

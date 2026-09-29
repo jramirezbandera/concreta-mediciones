@@ -180,6 +180,18 @@ export function PlanosPanel({
             </div>
           )}
         </div>
+        {plano && plano.paginas > 1 && (
+          <button
+            type="button"
+            className={`tcol icon-btn ${styles.cabIcono}`}
+            aria-label="Página anterior"
+            title="Página anterior (Re Pág)"
+            disabled={pagina <= 1}
+            onClick={() => usePlanoUiStore.getState().setPagina(pagina - 1)}
+          >
+            <Icon name="chevronLeft" size={15} />
+          </button>
+        )}
         {plano && (
           <div className={styles.menuWrap}>
             <button
@@ -217,6 +229,18 @@ export function PlanosPanel({
               </div>
             )}
           </div>
+        )}
+        {plano && plano.paginas > 1 && (
+          <button
+            type="button"
+            className={`tcol icon-btn ${styles.cabIcono}`}
+            aria-label="Página siguiente"
+            title="Página siguiente (Av Pág)"
+            disabled={pagina >= plano.paginas}
+            onClick={() => usePlanoUiStore.getState().setPagina(pagina + 1)}
+          >
+            <Icon name="chevron" size={15} />
+          </button>
         )}
         {plano && <ChipEscala plano={plano} pagina={pagina} />}
         <span className={styles.toolFill} />

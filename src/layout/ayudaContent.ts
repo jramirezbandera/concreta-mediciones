@@ -134,7 +134,8 @@ export const AYUDA_PLANOS: SeccionAyuda[] = [
     titulo: 'Calibrar y comprobar',
     puntos: [
       'Cada página se calibra con una cota conocida: clic en sus dos extremos y su distancia real en metros. Cuanto más larga en pantalla, más precisa: acerca el zoom si hace falta.',
-      'Después, otra cota para comprobar, mejor a más de 45° de la primera. Si no cuadra a menos del 1 %, algo falla: un clic desviado o el PDF impreso a otro tamaño.',
+      'Después, otra cota para comprobar, mejor a más de 45° de la primera. Se admite la imprecisión de los clics (±1 % con cotas largas, más con cortas); si no cuadran, el aviso dice qué escala da cada una: una cifra mal tecleada, un clic desviado o el PDF impreso a otro tamaño.',
+      'Si cuadran, la escala sale de las dos y, si una escala habitual (1:50, 1:100…) cae dentro de su precisión, se ajusta a ella exacta.',
       'Si el texto del plano trae su escala («E 1:50») y la cota cuadra con ella, esa es la comprobación y la escala se ajusta a la exacta («1:50 ajustada»). Si no cuadra, el visor lo avisa.',
       'Una escala «sin comprobar» (copiada con «Usar esta calibración en otras páginas» o tras usar otro PDF) no mide hasta comprobarla con otra cota. Recuento funciona sin escala.',
     ],
@@ -240,6 +241,7 @@ export function shortcutGroups(mod: string): ShortcutGroup[] {
               { keys: ['N'], label: 'Recuento' },
               { keys: ['D'], label: 'Restar (descontar), conmutador' },
               { keys: ['C'], label: 'Calibrar la página' },
+              { keys: ['Re Pág', 'Av Pág'], label: 'Página anterior y siguiente' },
               { keys: ['F'], label: 'Ajustar a la ventana' },
               { keys: ['+', '−'], label: 'Acercar y alejar (también Ctrl + rueda, al cursor)' },
               { keys: ['Espacio'], label: 'Mantener y arrastrar para desplazar (también botón central)' },

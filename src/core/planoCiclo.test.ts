@@ -315,19 +315,34 @@ describe('calibrar', () => {
     expect(cal()).toMatchObject({ fase: 'calibrando', paso: 'cota' });
   });
 
-  it('cota ≥ 300 px en pantalla → comprobación; < 300 px → aviso con la precisión', () => {
-    const corta = correr(cal(), clic([0, 0]), clic([90, 0]), { tipo: 'metros', cual: 'cota', texto: '5' }, {
+  it('una cota con precisión peor que ±5 % → aviso; mejor → comprobación', () => {
+    const corta = correr(cal(), clic([0, 0]), clic([15, 0]), { tipo: 'metros', cual: 'cota', texto: '0,3' }, {
       tipo: 'confirmar',
       px: PX,
       userUnit: 1,
     }).estado;
-    expect(corta).toMatchObject({ paso: 'cota', aviso: { tipo: 'corta', px: 180 } });
-    const ok = correr(cal(), clic([0, 0]), clic([283.46, 0]), { tipo: 'metros', cual: 'cota', texto: '10' }, {
+    expect(corta).toMatchObject({ paso: 'cota', aviso: { tipo: 'corta', cual: 'cota' } });
+    if (corta.fase !== 'calibrando' || corta.aviso?.tipo !== 'corta') throw new Error('sin aviso');
+    expect(corta.aviso.precision).toBeCloseTo(2 / 30, 6); // 30 px en pantalla
+    const ok = correr(cal(), clic([0, 0]), clic([90, 0]), { tipo: 'metros', cual: 'cota', texto: '1,6' }, {
       tipo: 'confirmar',
       px: PX,
       userUnit: 1,
     }).estado;
     expect(ok).toMatchObject({ paso: 'comprobacion', aviso: null });
+  });
+
+  it('la precisión es la del zoom con que se marcaron los extremos, no la del zoom al confirmar', () => {
+    // 15 unidades marcadas a 10 px/unidad (150 px); se confirma alejado (2 px/unidad).
+    const e = correr(cal(), clic([0, 0], { px: 10 }), clic([15, 0], { px: 10 }), { tipo: 'metros', cual: 'cota', texto: '0,3' }, {
+      tipo: 'confirmar',
+      px: PX,
+      userUnit: 1,
+    }).estado;
+    expect(e).toMatchObject({ paso: 'comprobacion', aviso: null });
+    // Arrastrar un extremo con más zoom lo afina.
+    const m = correr(cal(), clic([0, 0]), clic([15, 0]), { tipo: 'moverPunto', cual: 'b', p: [15, 0], px: 10 }).estado;
+    expect(m).toMatchObject({ cota: { pxA: PX, pxB: 10 } });
   });
 
   it('distancia no válida → «Escribe la distancia real en metros»', () => {
@@ -366,7 +381,7 @@ describe('calibrar', () => {
 
   it('desviación > 1 % → aviso con [Rehacer cota] [Rehacer comprobación]; rehacer la comprobación conserva la cota', () => {
     const r = hastaComprobacion('3,1');
-    expect(r.estado).toMatchObject({ paso: 'comprobacion', aviso: { tipo: 'desviacion' } });
+    expect(r.estado).toMatchObject({ paso: 'comprobacion', aviso: { tipo: 'desviacion', nCota: 50, tolerancia: 0.01 } });
     const rehecha = correr(r.estado, { tipo: 'rehacerComprobacion' }).estado;
     expect(rehecha).toMatchObject({
       paso: 'comprobacion',
@@ -374,6 +389,43 @@ describe('calibrar', () => {
       comprobacion: { a: null, b: null, metros: '' },
     });
     expect(correr(r.estado, { tipo: 'rehacerCota' }).estado).toMatchObject({ paso: 'cota', cota: { a: null } });
+  });
+
+  it('dos cotas cortas: se admite su imprecisión y la escala se ajusta a la habitual que cae dentro', () => {
+    // 34 unidades a 2 px/unidad = 68 px (±2,9 %); a 1:50, 0,5997 m.
+    const r = correr(
+      cal(),
+      clic([0, 0]),
+      clic([34, 0]),
+      { tipo: 'metros', cual: 'cota', texto: '0,6' },
+      { tipo: 'confirmar', px: PX, userUnit: 1 },
+      clic([0, 0]),
+      clic([0, 34]),
+      { tipo: 'metros', cual: 'comprobacion', texto: '0,61' }, // 1,7 % de diferencia
+      { tipo: 'confirmar', px: PX, userUnit: 1 },
+    );
+    expect(r.estado).toEqual(REPOSO);
+    const c = r.efectos.find((x) => x.tipo === 'calibrada');
+    if (c?.tipo !== 'calibrada') throw new Error('sin calibrada');
+    expect(c.datos.n).toBe(50);
+    expect(c.datos.mPorUnidad).toBeCloseTo((50 * 0.0254) / 72, 12);
+    expect(c.datos.nMedida).toBeCloseTo(50.4, 1);
+    expect(c.datos.ajustada).toBeUndefined(); // sin cajetín no es «ajustada al plano»
+  });
+
+  it('dos cotas cortas que no cuadran ni con su imprecisión → aviso con la escala de cada una', () => {
+    const r = correr(
+      cal(),
+      clic([0, 0]),
+      clic([34, 0]),
+      { tipo: 'metros', cual: 'cota', texto: '0,6' },
+      { tipo: 'confirmar', px: PX, userUnit: 1 },
+      clic([0, 0]),
+      clic([0, 34]),
+      { tipo: 'metros', cual: 'comprobacion', texto: '0,65' },
+      { tipo: 'confirmar', px: PX, userUnit: 1 },
+    );
+    expect(r.estado).toMatchObject({ aviso: { tipo: 'desviacion', tolerancia: 0.05, nCota: 50, nComp: 54.2 } });
   });
 
   it('escala poco plausible → pide confirmación; «Sí, es correcta» la guarda', () => {

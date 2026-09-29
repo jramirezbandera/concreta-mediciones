@@ -305,10 +305,14 @@ export function regionDeLienzo(
 
 /* ---- calibración ------------------------------------------------------------ */
 
-/** Una cota debe medir al menos esto en pantalla. */
-export const COTA_MIN_PX = 300;
-/** Desviación máxima entre la cota y la comprobación (fracción). */
+/** Desviación admitida entre la cota y la comprobación (fracción) cuando los
+ *  clics son precisos; con cotas cortas se admite su imprecisión, hasta
+ *  `DESVIACION_TOPE`. También: cuándo la calibración cuadra con el cajetín. */
 export const DESVIACION_MAX = 0.01;
+/** Por encima de esta imprecisión una cota no sirve (≈ 40 px en pantalla). */
+export const DESVIACION_TOPE = 0.05;
+/** Lo más lejos que se ajusta una calibración a una escala habitual (fracción). */
+const AJUSTE_TOPE = 0.03;
 
 /** Escalas habituales «1:N» (plausibilidad, §2). */
 export const ESCALAS_HABITUALES = [
@@ -327,9 +331,36 @@ export function escalaN(mPorUnidad: number, userUnit = 1): number {
   return Math.round((mPorUnidad / ((userUnit * 0.0254) / 72)) * 10) / 10;
 }
 
-/** Precisión aproximada de una cota que mide `px` en pantalla (fracción): ≈ 2 px / longitud. */
-export function precisionCota(px: number): number {
-  return px > 0 ? 2 / px : Infinity;
+/** Precisión (fracción) de un tramo a–b cuyos extremos se marcaron con `pxA` y
+ *  `pxB` píxeles de pantalla por unidad de página: ±1 px en cada extremo, al
+ *  zoom con que se marcó (acercar, marcar y alejar no la empeora). */
+export function precisionTramo(a: Punto, b: Punto, pxA: number, pxB: number): number {
+  const d = dist(a, b);
+  return d > 0 && pxA > 0 && pxB > 0 ? (1 / pxA + 1 / pxB) / d : Infinity;
+}
+
+/** Desviación que se admite entre dos cotas de precisiones `p1` y `p2`. */
+export function toleranciaComprobacion(p1: number, p2: number): number {
+  return Math.min(DESVIACION_TOPE, Math.max(DESVIACION_MAX, p1 + p2));
+}
+
+/** La escala habitual (o la `declarada` del cajetín, que manda) a la que se
+ *  ajusta «1:n» si está dentro de su imprecisión `precision`; null si ninguna.
+ *  Quita el error del clic: un plano de CAD está a 1:50 exacto, no a 1:50,4. */
+export function escalaParaAjustar(n: number, precision: number, declarada: number | null = null): number | null {
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const tol = Math.min(AJUSTE_TOPE, Math.max(0.005, precision));
+  const cerca = (h: number) => Math.abs(n - h) / h <= tol;
+  if (declarada && declarada > 0 && cerca(declarada)) return declarada;
+  let mejor: number | null = null;
+  for (const h of ESCALAS_HABITUALES)
+    if (cerca(h) && (mejor === null || Math.abs(n - h) / h < Math.abs(n - mejor) / mejor)) mejor = h;
+  return mejor;
+}
+
+/** Metros por unidad de página EXACTOS de «1:N» (1 unidad = `userUnit`/72 pulgadas). */
+export function mPorUnidadDeEscala(n: number, userUnit = 1): number {
+  return (n * userUnit * 0.0254) / 72;
 }
 
 /** Desviación (fracción) entre lo que da la comprobación con la escala y su valor real. */

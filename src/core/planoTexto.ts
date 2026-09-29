@@ -12,7 +12,9 @@
    contiguos antes de leer. El texto sacado del PDF solo entra en la interfaz
    como texto de React, nunca como HTML (§4.5).
    =========================================================================== */
-import { dist, escalaN, mPorUnidadDeCota, type Caja } from './planoGeom';
+import { dist, escalaN, mPorUnidadDeCota, mPorUnidadDeEscala, type Caja } from './planoGeom';
+
+export { mPorUnidadDeEscala };
 import type { Escala, Punto } from './types';
 
 export interface TextoPagina {
@@ -125,11 +127,6 @@ export function escalaDeclarada(textos: readonly TextoPagina[]): EscalaTexto {
   if (ns.size === 0) return { tipo: 'ninguna' };
   if (ns.size === 1) return { tipo: 'una', n: [...ns][0]! };
   return { tipo: 'varias', ns: [...ns].sort((a, b) => a - b) };
-}
-
-/** Metros por unidad de página EXACTOS de «1:N» (1 unidad = `userUnit`/72 pulgadas). */
-export function mPorUnidadDeEscala(n: number, userUnit = 1): number {
-  return (n * userUnit * 0.0254) / 72;
 }
 
 /** Desviación (fracción) entre la escala calibrada y la declarada. */

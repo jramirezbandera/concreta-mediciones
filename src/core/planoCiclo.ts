@@ -26,8 +26,7 @@ import { parseEsNumber } from './money';
  *  sin partida, solo lectura…). El ciclo no lo interpreta: lo devuelve como efecto. */
 export type MotivoCiclo = { motivo: string };
 import {
-  COTA_MIN_PX,
-  DESVIACION_MAX,
+  DESVIACION_TOPE,
   ajustar45,
   cifra,
   cruzaLaForma,
@@ -35,12 +34,15 @@ import {
   desviacion,
   dist,
   escalaN,
+  escalaParaAjustar,
   formaInvalida,
   mPorUnidadDeCota,
+  mPorUnidadDeEscala,
   plausibilidad,
-  precisionCota,
+  precisionTramo,
   rectanguloTresClics,
   sobrePrimerVertice,
+  toleranciaComprobacion,
   type FormaInvalida,
 } from './planoGeom';
 import { TOPES } from './planoDatos';
@@ -51,18 +53,29 @@ export type Armada = 'mano' | Herramienta;
  *  estrecha (< 1024 px), donde no se mide. */
 export type Contexto = 'partida' | 'pagina' | 'plano' | 'ocupante' | 'vista' | 'escala' | 'herramienta';
 
-/** Una cota (o la comprobación): dos puntos y la distancia real tecleada. */
+/** Una cota (o la comprobación): dos puntos y la distancia real tecleada.
+ *  `pxA`/`pxB`: píxeles de pantalla por unidad de página con que se marcó
+ *  cada extremo (su precisión; sin ellos, el zoom de ahora). */
 export interface TramoCota {
   a: Punto | null;
   b: Punto | null;
   metros: string;
+  pxA?: number;
+  pxB?: number;
+}
+
+/** Precisión (fracción) de un tramo con sus dos extremos; null si le falta alguno. */
+export function precisionDe(t: TramoCota, pxAhora: number): number | null {
+  return t.a && t.b ? precisionTramo(t.a, t.b, t.pxA ?? pxAhora, t.pxB ?? pxAhora) : null;
 }
 
 export type AvisoCalibrar =
   | { tipo: 'faltan-puntos' }
   | { tipo: 'metros' }
-  | { tipo: 'corta'; px: number; precision: number }
-  | { tipo: 'desviacion'; valor: number }
+  /** `cual`: la cota o la comprobación. */
+  | { tipo: 'corta'; cual: 'cota' | 'comprobacion'; precision: number }
+  /** `nCota`/`nComp`: la «1:N» que da cada una; `tolerancia`: lo admitido. */
+  | { tipo: 'desviacion'; valor: number; tolerancia: number; nCota: number; nComp: number }
   | { tipo: 'plausibilidad'; n: number; clase: 'fuera' | 'rara' };
 
 export type EstadoCiclo =
@@ -115,7 +128,7 @@ export type EventoCiclo =
   /** [A1] «Comprobar» una escala sin comprobación: empieza en el paso 2. */
   | { tipo: 'comprobar'; mPorUnidad: number; ref: { a: Punto; b: Punto; metros: number } }
   | { tipo: 'metros'; cual: 'cota' | 'comprobacion'; texto: string }
-  | { tipo: 'moverPunto'; cual: 'a' | 'b'; p: Punto }
+  | { tipo: 'moverPunto'; cual: 'a' | 'b'; p: Punto; px?: number }
   /** Arrastrar un vértice antes de confirmar la forma (DIBUJANDO). */
   | { tipo: 'moverVertice'; i: number; p: Punto }
   /** `cajetin`: la N de «1:N» si el texto de la página declara UNA escala (A1). */
@@ -135,8 +148,10 @@ export interface Calibrada {
     | { fuente: 'cajetin'; escalaDeclarada: number; desviacion: number };
   /** [A1] La N de «1:N» del cajetín, si la página declara una. */
   escalaDeclarada?: number;
-  /** [A1] `mPorUnidad` llevada a la declarada exacta (cuadraba a < 1 %). */
+  /** [A1] `mPorUnidad` llevada a la declarada exacta (cuadraba dentro de la precisión). */
   ajustada?: boolean;
+  /** La «1:N» que daban las cotas cuando se ajustó a una escala exacta. */
+  nMedida?: number;
 }
 
 export type EfectoCiclo =
@@ -234,11 +249,11 @@ function clicCalibrando(e: Extract<EstadoCiclo, { fase: 'calibrando' }>, ev: Ext
   if ((ev.detalle ?? 1) >= 2) return quieto(e);
   const t = e[e.paso];
   let nuevo: TramoCota;
-  if (!t.a || t.b) nuevo = { ...t, a: ev.p, b: null }; // primer clic (o empezar de nuevo)
+  if (!t.a || t.b) nuevo = { metros: t.metros, a: ev.p, b: null, pxA: ev.px }; // primer clic (o empezar de nuevo)
   else {
     const p = ev.mayus ? ajustar45(t.a, ev.p) : ev.p;
     if (demasiadoCerca(t.a, p, ev.px)) return quieto(e);
-    nuevo = { ...t, b: p };
+    nuevo = { ...t, b: p, pxB: ev.px };
   }
   return quieto({ ...e, [e.paso]: nuevo, aviso: null } as typeof e);
 }
@@ -252,30 +267,31 @@ function confirmarCalibracion(
   const conAviso = (aviso: AvisoCalibrar): Paso => quieto({ ...e, aviso });
   const cota = e.cota;
   const declarada = cajetin && cajetin > 0 ? { escalaDeclarada: cajetin } : {};
+  const redondear6 = (v: number) => Math.round(v * 1e6) / 1e6;
   if (e.paso === 'cota') {
     if (!cota.a || !cota.b) return conAviso({ tipo: 'faltan-puntos' });
     const metros = metrosDe(cota);
     if (metros === null) return conAviso({ tipo: 'metros' });
-    const largoPx = dist(cota.a, cota.b) * px;
-    if (largoPx < COTA_MIN_PX) return conAviso({ tipo: 'corta', px: largoPx, precision: precisionCota(largoPx) });
-    // [A1] T9: si el cajetín declara UNA escala y la cota cuadra con ella a
-    // menos del 1 %, el cajetín hace de comprobación y la escala se ajusta a
-    // la exacta (se quita el error del clic). Si no cuadra, la cota manda y se
-    // pide la comprobación de siempre.
+    const prec = precisionDe(cota, px)!;
+    if (!(prec <= DESVIACION_TOPE)) return conAviso({ tipo: 'corta', cual: 'cota', precision: prec });
+    // [A1] T9: si el cajetín declara UNA escala y la cota cuadra con ella
+    // dentro de su precisión, el cajetín hace de comprobación y la escala se
+    // ajusta a la exacta (se quita el error del clic). Si no cuadra, la cota
+    // manda y se pide la comprobación de siempre.
     if (cajetin && cajetin > 0 && !e.soloComprobar) {
       const nCal = escalaN(mPorUnidadDeCota(cota.a, cota.b, metros), userUnit);
       const desv = Math.abs(nCal - cajetin) / cajetin;
-      if (desv <= DESVIACION_MAX)
+      if (desv <= toleranciaComprobacion(prec, 0))
         return {
           estado: reposo(e.armada),
           efectos: [
             {
               tipo: 'calibrada',
               datos: {
-                mPorUnidad: (cajetin * userUnit * 0.0254) / 72,
+                mPorUnidad: mPorUnidadDeEscala(cajetin, userUnit),
                 n: cajetin,
                 ref: { a: cota.a, b: cota.b, metros },
-                comprobacion: { fuente: 'cajetin', escalaDeclarada: cajetin, desviacion: Math.round(desv * 1e6) / 1e6 },
+                comprobacion: { fuente: 'cajetin', escalaDeclarada: cajetin, desviacion: redondear6(desv) },
                 escalaDeclarada: cajetin,
                 ajustada: true,
               },
@@ -286,36 +302,52 @@ function confirmarCalibracion(
     return quieto({ ...e, paso: 'comprobacion', aviso: null });
   }
   const comp = e.comprobacion;
-  const redondear6 = (v: number) => Math.round(v * 1e6) / 1e6;
+  if (!comp.a || !comp.b) return conAviso({ tipo: 'faltan-puntos' });
+  const metrosComp = metrosDe(comp);
+  if (metrosComp === null) return conAviso({ tipo: 'metros' });
+  const precComp = precisionDe(comp, px)!;
+  if (!(precComp <= DESVIACION_TOPE)) return conAviso({ tipo: 'corta', cual: 'comprobacion', precision: precComp });
+  const dComp = dist(comp.a, comp.b);
+  const nComp = escalaN(metrosComp / dComp, userUnit);
   if (e.soloComprobar) {
-    if (!comp.a || !comp.b) return conAviso({ tipo: 'faltan-puntos' });
-    const metros = metrosDe(comp);
-    if (metros === null) return conAviso({ tipo: 'metros' });
-    const medidos = dist(comp.a, comp.b) * e.soloComprobar.mPorUnidad;
-    const desv = desviacion(medidos, metros);
-    if (!(desv <= DESVIACION_MAX)) return conAviso({ tipo: 'desviacion', valor: desv });
+    // La escala guardada es la referencia: solo cuenta la precisión de la comprobación.
+    const medidos = dComp * e.soloComprobar.mPorUnidad;
+    const desv = desviacion(medidos, metrosComp);
+    const tol = toleranciaComprobacion(0, precComp);
+    if (!(desv <= tol))
+      return conAviso({ tipo: 'desviacion', valor: desv, tolerancia: tol, nCota: escalaN(e.soloComprobar.mPorUnidad, userUnit), nComp });
     return {
       estado: reposo(e.armada),
       efectos: [
         {
           tipo: 'comprobada',
-          comprobacion: { fuente: 'cota', a: comp.a, b: comp.b, metros, medidos: redondear6(medidos), desviacion: redondear6(desv) },
+          comprobacion: { fuente: 'cota', a: comp.a, b: comp.b, metros: metrosComp, medidos: redondear6(medidos), desviacion: redondear6(desv) },
         },
       ],
     };
   }
   const metrosCota = metrosDe(cota);
   if (!cota.a || !cota.b || metrosCota === null) return quieto({ ...e, paso: 'cota', aviso: { tipo: 'faltan-puntos' } });
-  if (!comp.a || !comp.b) return conAviso({ tipo: 'faltan-puntos' });
-  const metrosComp = metrosDe(comp);
-  if (metrosComp === null) return conAviso({ tipo: 'metros' });
-  const m = mPorUnidadDeCota(cota.a, cota.b, metrosCota);
-  const medidos = dist(comp.a, comp.b) * m;
-  const desv = desviacion(medidos, metrosComp);
-  if (!(desv <= DESVIACION_MAX)) return conAviso({ tipo: 'desviacion', valor: desv });
-  const n = escalaN(m, userUnit);
+  const precCota = precisionDe(cota, px)!;
+  const dCota = dist(cota.a, cota.b);
+  // La desviación admitida crece con la imprecisión de las dos cotas: dos
+  // cotas cortas bien marcadas no pueden cuadrar al 1 %.
+  const tol = toleranciaComprobacion(precCota, precComp);
+  const desvCruzada = desviacion(dComp * mPorUnidadDeCota(cota.a, cota.b, metrosCota), metrosComp);
+  if (!(desvCruzada <= tol))
+    return conAviso({ tipo: 'desviacion', valor: desvCruzada, tolerancia: tol, nCota: escalaN(metrosCota / dCota, userUnit), nComp });
+  // Cuadran: la escala sale de las dos a la vez (más precisa que cualquiera)
+  // y, si una escala habitual (o la del cajetín) cae dentro de su precisión,
+  // se ajusta a ella exacta.
+  const mMedida = (metrosCota + metrosComp) / (dCota + dComp);
+  const prec = Math.hypot(precCota * dCota, precComp * dComp) / (dCota + dComp);
+  const nMedida = escalaN(mMedida, userUnit);
+  const exacta = escalaParaAjustar(nMedida, prec, cajetin);
+  const m = exacta ? mPorUnidadDeEscala(exacta, userUnit) : mMedida;
+  const n = exacta ?? nMedida;
   const clase = plausibilidad(n);
   if (clase !== 'ok' && !e.plausibleOk) return conAviso({ tipo: 'plausibilidad', n, clase });
+  const medidos = dComp * m;
   return {
     estado: reposo(e.armada),
     efectos: [
@@ -331,9 +363,11 @@ function confirmarCalibracion(
             b: comp.b,
             metros: metrosComp,
             medidos: redondear6(medidos),
-            desviacion: redondear6(desv),
+            desviacion: redondear6(desviacion(medidos, metrosComp)),
           },
           ...declarada,
+          ...(exacta && exacta === cajetin ? { ajustada: true } : {}),
+          ...(exacta && exacta !== nMedida ? { nMedida } : {}),
         },
       },
     ],
@@ -498,7 +532,8 @@ export function cicloReducer(e: EstadoCiclo, ev: EventoCiclo): Paso {
         case 'moverPunto': {
           const t = e[e.paso];
           if (!t[ev.cual]) return quieto(e);
-          return quieto({ ...e, [e.paso]: { ...t, [ev.cual]: ev.p }, aviso: null } as typeof e);
+          const zoom = ev.px ? { [ev.cual === 'a' ? 'pxA' : 'pxB']: ev.px } : {};
+          return quieto({ ...e, [e.paso]: { ...t, [ev.cual]: ev.p, ...zoom }, aviso: null } as typeof e);
         }
         case 'metros':
           return quieto({ ...e, [ev.cual]: { ...e[ev.cual], metros: ev.texto }, aviso: null } as typeof e);

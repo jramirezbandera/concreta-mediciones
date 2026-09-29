@@ -469,7 +469,7 @@ describe('[A1] sin comprobar', () => {
     expect(st().setPlanoPageCheck({ planoId: plano().id, pagina: 1, comprobacion, expect: { ...expectC, calRev: 'otra' } })).toMatchObject({
       reason: 'stale',
     });
-    expect(st().setPlanoPageCheck({ planoId: plano().id, pagina: 1, comprobacion: { ...comprobacion, desviacion: 0.02 }, expect: expectC })).toMatchObject({
+    expect(st().setPlanoPageCheck({ planoId: plano().id, pagina: 1, comprobacion: { ...comprobacion, desviacion: 0.06 }, expect: expectC })).toMatchObject({
       reason: 'noop',
     });
     expect(st().setPlanoPageCheck({ planoId: plano().id, pagina: 1, comprobacion, expect: expectC })).toEqual({ ids: [plano().id] });

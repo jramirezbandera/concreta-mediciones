@@ -17,7 +17,7 @@
    =========================================================================== */
 import { medFormaDe } from '../../core/medForma';
 import { indiceInsercion, lineaParaDestino, lineasCertificadas } from '../../core/medPaste';
-import { DESVIACION_MAX } from '../../core/planoGeom';
+import { DESVIACION_TOPE } from '../../core/planoGeom';
 import { TOPES, escalaDe, escalaLegible, origenLegible, paginaValida, planoLegible } from '../../core/planoDatos';
 import { lineaRetocada, lineasConEscala, valoresDesdeOrigen, type NewPlanoLine } from '../../core/planoMedida';
 import { planRecalculo, recalcularLinea } from '../../core/planoRecalculo';
@@ -516,7 +516,7 @@ export const createPlanosSlice: ObraSlice<PlanosSlice> = (set, get) => ({
     if (!e) return { ids: [], reason: 'sin-calibrar' };
     if (e.rev !== expect.calRev) return stale('escala');
     if (e.comprobacion) return { ids: [], reason: 'noop' };
-    if (!(comprobacion.desviacion >= 0 && comprobacion.desviacion <= DESVIACION_MAX)) return { ids: [], reason: 'noop' };
+    if (!(comprobacion.desviacion >= 0 && comprobacion.desviacion <= DESVIACION_TOPE)) return { ids: [], reason: 'noop' };
     const copia = JSON.parse(JSON.stringify(comprobacion)) as Comprobacion;
     structural(() =>
       set((s) => {

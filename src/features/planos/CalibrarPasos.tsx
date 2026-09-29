@@ -6,8 +6,8 @@
    =========================================================================== */
 import { useEffect, useRef } from 'react';
 import { fmtNum, parseEsNumber } from '../../core/money';
-import type { EstadoCiclo } from '../../core/planoCiclo';
-import { dist, escalaN, mPorUnidadDeCota, precisionCota } from '../../core/planoGeom';
+import { precisionDe, type EstadoCiclo } from '../../core/planoCiclo';
+import { DESVIACION_TOPE, escalaN, mPorUnidadDeCota } from '../../core/planoGeom';
 import { BotonAyuda } from './BotonAyuda';
 import { textoAvisoCalibrar, textoEscala } from './textos';
 import styles from './Planos.module.css';
@@ -89,7 +89,7 @@ export function CalibrarPasos({
     declarada && estado.paso === 'cota' && estado.cota.a && estado.cota.b && metrosCota && metrosCota > 0
       ? escalaN(mPorUnidadDeCota(estado.cota.a, estado.cota.b, metrosCota), userUnit)
       : null;
-  const largoPx = t.a && t.b ? dist(t.a, t.b) * px : 0;
+  const precision = precisionDe(t, px);
   const a = estado.aviso;
   return (
     <div className={styles.calibrar}>
@@ -102,12 +102,16 @@ export function CalibrarPasos({
       </div>
       <p className={styles.franjaTexto}>
         {estado.paso === 'cota'
-          ? 'Marca los dos extremos de una cota conocida y escribe su distancia real (arrastra un punto para afinarlo).'
+          ? 'Marca los dos extremos de una cota conocida y escribe su distancia real: cuanto más larga y más zoom, más precisa (arrastra un punto para afinarlo).'
           : estado.soloComprobar
             ? 'Esta escala no está comprobada: marca otra cota conocida, mejor a más de 45° de la de calibrar, y escribe su distancia real.'
             : 'Comprueba con otra cota, mejor a más de 45° de la primera; si la página no tiene otra, repite la misma en otra zona.'}
-        {largoPx > 0 && (
-          <span className={`mono ${styles.precision}`}> · {fmtNum(largoPx, 0)} px · precisión ≈ ±{pct(precisionCota(largoPx))}</span>
+        {precision !== null && Number.isFinite(precision) && (
+          <span className={`mono ${styles.precision}`}>
+            {' '}
+            · precisión ≈ ±{pct(precision)}
+            {precision > DESVIACION_TOPE ? ' · demasiado corta: acerca el zoom' : ''}
+          </span>
         )}
         {nCota !== null && declarada && (
           <span className={`mono ${styles.precision}`}>

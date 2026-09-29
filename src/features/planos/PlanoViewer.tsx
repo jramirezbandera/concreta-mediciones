@@ -457,7 +457,9 @@ export function PlanoViewer({
     const detalle =
       c.fuente === 'cajetin'
         ? `ajustada al plano (la cota daba ${textoEscala(escalaCalibrada(esc, info.userUnit).n)})`
-        : `comprobada ${fmtNum(c.desviacion * 100, 1)} %`;
+        : datos.nMedida !== undefined
+          ? `ajustada${datos.ajustada ? ' al plano' : ''} (las cotas daban ${textoEscala(datos.nMedida)})`
+          : `comprobada ${fmtNum(c.desviacion * 100, 1)} %`;
     // Con líneas medidas, la pregunta «¿La escala anterior estaba mal?» (§2, §4.4).
     if (lineasConEscala(store.partidas, plano.id, pagina) > 0) {
       setRecalculo({ escala: esc, etiqueta: et, detalle, verbo: 'recalibrada' });
@@ -888,6 +890,12 @@ export function PlanoViewer({
       return;
     }
     if (mod || e.altKey) return;
+    if (e.key === 'PageDown' || e.key === 'PageUp') {
+      consumir();
+      const n = pagina + (e.key === 'PageDown' ? 1 : -1);
+      if (n >= 1 && n <= plano.paginas) usePlanoUiStore.getState().setPagina(n);
+      return;
+    }
     const k = e.key.toLowerCase();
     const atajo: Record<string, () => void> = {
       m: () => elegirHerramienta('mano'),
@@ -1214,7 +1222,7 @@ export function PlanoViewer({
             }
             onDobleClic={() => dispatch({ tipo: 'dobleClic' })}
             onMoverVertice={(i, p) => dispatch({ tipo: 'moverVertice', i, p })}
-            onMoverCota={(cual, p) => dispatch({ tipo: 'moverPunto', cual, p })}
+            onMoverCota={(cual, p) => dispatch({ tipo: 'moverPunto', cual, p, px: lienzoApi.current?.escala() })}
             onCursor={(p) => {
               setCursor(p);
               if (p && cursorTecRef.current) ponerCursorTec(null); // mover el ratón lo apaga

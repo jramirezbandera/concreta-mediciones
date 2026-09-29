@@ -18,7 +18,9 @@ import {
   paginaALienzo,
   perimetroCerrado,
   plausibilidad,
-  precisionCota,
+  escalaParaAjustar,
+  precisionTramo,
+  toleranciaComprobacion,
   rectanguloTresClics,
   redondearPunto,
   regionDeLienzo,
@@ -253,9 +255,26 @@ describe('calibración', () => {
     expect(escalaN(m, 2)).toBe(25); // userUnit 2 dobla la unidad
   });
 
-  it('precisión de la cota: ≈ 2 px / longitud en px', () => {
-    expect(precisionCota(200)).toBe(0.01);
-    expect(precisionCota(180)).toBeCloseTo(0.0111, 4);
+  it('precisión de un tramo: ±1 px en cada extremo, al zoom con que se marcó', () => {
+    expect(precisionTramo([0, 0], [100, 0], 2, 2)).toBeCloseTo(0.01, 12); // 200 px
+    expect(precisionTramo([0, 0], [100, 0], 2, 10)).toBeCloseTo(0.006, 12);
+    expect(precisionTramo([0, 0], [0, 0], 2, 2)).toBe(Infinity);
+  });
+
+  it('tolerancia de la comprobación: la suma de precisiones, entre el 1 % y el 5 %', () => {
+    expect(toleranciaComprobacion(0.002, 0.003)).toBe(0.01);
+    expect(toleranciaComprobacion(0.01, 0.015)).toBeCloseTo(0.025, 12);
+    expect(toleranciaComprobacion(0.03, 0.03)).toBe(0.05);
+  });
+
+  it('escala para ajustar: la habitual (o la declarada) dentro de la precisión', () => {
+    expect(escalaParaAjustar(50.4, 0.01)).toBe(50);
+    expect(escalaParaAjustar(50.2, 0.002)).toBe(50); // 0,5 % mínimo
+    expect(escalaParaAjustar(51, 0.002)).toBeNull();
+    expect(escalaParaAjustar(47, 0.01)).toBeNull();
+    expect(escalaParaAjustar(47, 0.1)).toBeNull(); // tope 3 %: 50 queda a 6 %
+    expect(escalaParaAjustar(63.7, 0.01, 64)).toBe(64); // la del cajetín manda
+    expect(escalaParaAjustar(Number.NaN, 0.01)).toBeNull();
   });
 
   it('desviación entre comprobación y valor real', () => {

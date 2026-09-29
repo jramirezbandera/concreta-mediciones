@@ -19,9 +19,9 @@ export function textoAvisoCalibrar(a: AvisoCalibrar): string {
     case 'metros':
       return 'Escribe la distancia real en metros.';
     case 'corta':
-      return `Acerca el zoom o elige una cota más larga: esta mide ${fmtNum(a.px, 0)} px en pantalla y la precisión sería ±${pct(a.precision)}.`;
+      return `${a.cual === 'cota' ? 'La cota es demasiado corta' : 'La comprobación es demasiado corta'} a este zoom (precisión ±${pct(a.precision)}): acerca el zoom y vuelve a marcar sus extremos, o elige una más larga.`;
     case 'desviacion':
-      return `Desviación ${pct(a.valor)}: la calibración no cuadra con la comprobación.`;
+      return `La cota da ${textoEscala(a.nCota)} y la comprobación ${textoEscala(a.nComp)}: difieren un ${pct(a.valor)} y, con la precisión de los clics, se admite ±${pct(a.tolerancia)}. Revisa la cifra o los extremos de una de las dos.`;
     case 'plausibilidad':
       return a.clase === 'fuera'
         ? `${textoEscala(a.n)} no parece la escala de un plano: ¿la cota está en metros?`
