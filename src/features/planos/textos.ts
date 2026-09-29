@@ -45,6 +45,13 @@ export function textoRevisionAdjunta(revision: string, viejo: Pick<PlanoMeta, 'n
   return `${revision} adjunta: calibra sus páginas para medir. «${nombreConRevision(viejo)}» conserva sus líneas.`;
 }
 
+/** [A1] Por qué se descartó un borrador guardado (§5.8). */
+export const TEXTO_DESCARTE_BORRADOR = {
+  obra: 'cambiaste de obra',
+  plano: 'se quitó su plano',
+  escala: 'cambió la escala de su página',
+} as const;
+
 /** [A1] El aviso de «Usar este PDF para este plano» (§9.3). */
 export function textoReenlazado(lineas: number, calibradas: number): string {
   const l = lineas ? `: ${lineas} ${lineas === 1 ? 'línea conserva' : 'líneas conservan'} sus números` : '';

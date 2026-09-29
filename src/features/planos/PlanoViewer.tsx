@@ -9,6 +9,13 @@
    Enter, Retroceso, Espacio y Ctrl/⌘+Z; nombrando, las teclas de edición del
    comentario son nativas (solo se corta su propagación) y consume Enter y Esc.
    Los atajos de una tecla (§6) nunca actúan con el foco en un campo de texto.
+   [A1] Las flechas encienden el cursor de teclado (§5.10): Intro pone un punto
+   donde está y Mayús+Intro cierra la forma; mover el ratón lo apaga.
+
+   [A1] Borradores (§5.8): una forma a medio medir que cambia de partida (sin
+   encajar), de página, de plano, de ocupante o a pantalla estrecha se guarda
+   en `planoUiStore` y se ofrece al volver ([Seguir] [Descartar], o «Borrador
+   para …» [Volver] [Descartar]). Uno a la vez: empezar otra forma lo descarta.
    =========================================================================== */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '../../components';
@@ -16,7 +23,17 @@ import { medFormaDe, medFormaDef } from '../../core/medForma';
 import { lineParcial } from '../../core/medicion';
 import { resumenCantidad } from '../../core/medPaste';
 import { fmtNum } from '../../core/money';
-import { REPOSO, cicloReducer, type Armada, type EfectoCiclo, type EstadoCiclo, type EventoCiclo } from '../../core/planoCiclo';
+import {
+  REPOSO,
+  aMedio,
+  cicloReducer,
+  type Armada,
+  type Contexto,
+  type EfectoCiclo,
+  type EstadoCiclo,
+  type EventoCiclo,
+  type FormaEnCurso,
+} from '../../core/planoCiclo';
 import { escalaDe, etiquetaDe, origenLegible } from '../../core/planoDatos';
 import {
   areaLazo,
@@ -29,6 +46,7 @@ import {
   redondearPunto,
 } from '../../core/planoGeom';
 import {
+  NOMBRE_HERRAMIENTA,
   ROTULO_FACTOR,
   celdaDe,
   lineasConEscala,
@@ -47,7 +65,7 @@ import { nextCalRev, nextFormaId } from '../../store/base';
 import { deleteLines, locatePartida } from '../../store/medLineOps';
 import { useMedUiStore } from '../../store/medUiStore';
 import { textoResultado } from '../../store/motivos';
-import { usePlanoUiStore } from '../../store/planoUiStore';
+import { usePlanoUiStore, type Borrador } from '../../store/planoUiStore';
 import { getDomainRevision, undo } from '../../store/temporal';
 import { adjuntarPlano, adjuntarRevision, usarPdfParaPlano } from './adjuntar';
 import { CalibrarPasos, CampoMetros } from './CalibrarPasos';
@@ -57,10 +75,11 @@ import { DialogoCopiarEscala, PopoverAjuste } from './EscalaCajetin';
 import { revisionMasNueva } from '../../core/planoRevision';
 import { comentarioPropuesto, desviacionCajetin, escalaCalibrada, escalaDeclarada, etiquetaPropuesta } from '../../core/planoTexto';
 import { BotonAyuda } from './BotonAyuda';
-import { textoEscala, textoReenlazado, textoRevisionAdjunta } from './textos';
-import { cajaDe, formasDeLineas, otrasPaginas, paginasAPrecargar, type FormaCapa } from './capa';
+import { TEXTO_DESCARTE_BORRADOR, textoEscala, textoReenlazado, textoRevisionAdjunta } from './textos';
+import { cajaDe, formaEn, formasDeLineas, otrasPaginas, paginasAPrecargar, type FormaCapa } from './capa';
 import {
   HERRAMIENTAS_MEDIR,
+  encajaHerramienta,
   leerFactor,
   leerFija,
   motivoVisor,
@@ -96,6 +115,26 @@ const TEXTO_SOLO_LECTURA = {
   'mas-nueva': 'Esta obra se guardó con una versión más nueva de Concreta: aquí solo se puede ver.',
 } as const;
 
+/** Flechas del cursor de teclado (§5.10): px de pantalla por pulsación. */
+const FLECHAS: Record<string, [number, number]> = {
+  ArrowLeft: [-1, 0],
+  ArrowRight: [1, 0],
+  ArrowUp: [0, -1],
+  ArrowDown: [0, 1],
+};
+/** Motivos que se resuelven en la franja a media forma (§5.8): las fijas que
+ *  pide la partida nueva o la pregunta de Superficie directa. */
+const PIDE_EN_FRANJA = new Set(['falta-dimension', 'kgm-sin-resolver', 'superficie-en-sup']);
+
+/** El aviso único de encima del lienzo (§5.2). */
+type Aviso = {
+  texto: string;
+  tono: 'info' | 'warn' | 'error';
+  acciones?: { texto: string; run: () => void }[];
+  /** Lleva «?» a la ayuda (§7.2). */
+  ayuda?: boolean;
+};
+
 const m = (v: number) => `${fmtNum(v)} m`;
 const m2 = (v: number) => `${fmtNum(v)} m²`;
 
@@ -115,6 +154,15 @@ function lecturaEnVivo(h: Herramienta, puntos: Punto[], cursor: Punto | null, e:
   }
   if (pts.length < 3) return `${m(longitudPolilinea(pts) * k)} · ${esc}`;
   return `${m2(areaLazo(pts) * k * k)} · perímetro ${m(perimetroCerrado(pts) * k)} · ${esc}`;
+}
+
+/** Pistas de la franja mientras se dibuja (§5.2), con ratón o [A1] con el cursor de teclado. */
+function pistasDibujando(h: Herramienta, teclado: boolean): string {
+  if (teclado)
+    return `Flechas mueven el cursor (Mayús ×10) · Intro pone un punto · Mayús+Intro ${h === 'recuento' ? 'termina' : 'cierra'} · Esc cancela`;
+  return h === 'recuento'
+    ? 'Clic en cada elemento · Enter termina · Retroceso quita punto · Esc cancela'
+    : 'Enter cierra · Retroceso quita punto · Esc cancela · Mayús fuerza 0/45/90°';
 }
 
 export function PlanoViewer({
@@ -263,6 +311,17 @@ export function PlanoViewer({
   const comentarioSugeridoRef = useRef(false);
   const formaIdRef = useRef<string>('');
   const atRef = useRef<string>('');
+  /** [A1] Dónde empezó la forma en curso: lo que guarda su borrador (§5.8). */
+  const origenForma = useRef<{ docToken: string; partidaId: string | null; pagina: number; calRev: string | null } | null>(
+    null,
+  );
+  /** [A1] Cursor de teclado (§5.10), en coordenadas de página; `null` = apagado. */
+  const [cursorTec, setCursorTec] = useState<Punto | null>(null);
+  const cursorTecRef = useRef<Punto | null>(null);
+  const ponerCursorTec = (p: Punto | null) => {
+    cursorTecRef.current = p;
+    setCursorTec(p);
+  };
 
   const prefijo = prefijoComentario(plano, pagina);
 
@@ -451,6 +510,15 @@ export function PlanoViewer({
 
   // Los efectos se leen con los cierres de ESTE render.
   efectosRef.current = (efs, nuevo, antes) => {
+    // [A1] Una forma que empieza (o se retoma): se anota dónde, para su
+    // borrador. Si había otro guardado, se descarta con aviso (uno a la vez).
+    if (aMedio(nuevo) && !aMedio(antes)) {
+      origenForma.current = { docToken: useObraStore.getState().docToken, partidaId, pagina, calRev: escala?.rev ?? null };
+      if (usePlanoUiStore.getState().borrador) {
+        usePlanoUiStore.getState().quitarBorrador();
+        avisar('Borrador descartado: empezaste otra forma.', 'info');
+      }
+    }
     for (const ef of efs) {
       switch (ef.tipo) {
         case 'seleccionar':
@@ -510,6 +578,9 @@ export function PlanoViewer({
         case 'descartada':
           avisar(`Forma descartada: ${TEXTO_DESCARTE[ef.que] ?? 'cambió el contexto'}.`, 'info');
           break;
+        case 'borrador':
+          guardarBorrador(ef.forma, ef.que === 'partida' ? 'partida' : 'vista');
+          break;
         case 'restaurar':
           break;
         case 'calibrada':
@@ -535,8 +606,65 @@ export function PlanoViewer({
       );
   }
 
-  /* ---- cambios de contexto bajo una forma a medio dibujar (§5.3) --------------- */
+  /* ---- cambios de contexto bajo una forma a medio dibujar (§5.3, [A1] §5.8) ---- */
+  const docToken = useObraStore((s) => s.docToken);
+  const borrador = usePlanoUiStore((s) => s.borrador);
+  /** ¿El borrador es de esta página y sigue valiendo (misma obra y escala)? */
+  const esDeAqui = (b: Borrador) =>
+    b.planoId === plano.id && b.pagina === pagina && b.docToken === docToken && b.calRev === (escala?.rev ?? null);
+  const puedeSeguir = !soloLectura && !estrecha;
+
+  /** Guarda la forma en curso como borrador de donde empezó. */
+  function guardarBorrador(forma: FormaEnCurso, espera: Borrador['espera']): void {
+    const o = origenForma.current;
+    if (!o?.partidaId) return;
+    const ui = usePlanoUiStore.getState();
+    ui.guardarBorrador({ ...o, partidaId: o.partidaId, planoId: plano.id, restar: ui.restar, forma, espera });
+  }
+
+  /** La forma pasa a la partida abierta: dilo, con lo que le falte. */
+  function avisarPaso(h: Herramienta): void {
+    if (!partida) return;
+    const mo = motivos[h];
+    avisar(`La forma pasa a ${partida.pos} ${partida.title}.${mo && PIDE_EN_FRANJA.has(mo.motivo) ? ` ${textoMotivoVisor(mo)}` : ''}`, 'info');
+  }
+
+  /** [Seguir]: retoma el borrador en la partida abierta. */
+  function seguirBorrador(b: Borrador): void {
+    const ui = usePlanoUiStore.getState();
+    ui.quitarBorrador();
+    ui.setRestar(b.restar);
+    if (b.forma.fase === 'nombrando') {
+      formaIdRef.current = nextFormaId();
+      atRef.current = new Date().toISOString();
+      comentarioSugeridoRef.current = false;
+    }
+    dispatch({ tipo: 'seguir', forma: b.forma });
+    if (b.partidaId !== partidaId) avisarPaso(b.forma.armada);
+    raizRef.current?.focus();
+  }
+
   const previo = useRef({ partidaId, pagina, planoId: plano.id, rev: escala?.rev ?? null });
+  const alCambiar = useRef<(que: Contexto) => void>(() => undefined);
+  alCambiar.current = (que) => {
+    const e = estadoRef.current;
+    if (que === 'pagina') ponerCursorTec(null); // sus coordenadas eran de la otra página
+    if (que === 'partida' && aMedio(e)) {
+      // Si su herramienta encaja en la partida nueva, la forma pasa a ella; si
+      // no, queda como borrador de la suya.
+      const encaja = !e.sustituye && encajaHerramienta(e.armada, partida, supDirecta);
+      if (encaja && origenForma.current) {
+        origenForma.current = { ...origenForma.current, partidaId };
+        avisarPaso(e.armada);
+      }
+      dispatch({ tipo: 'contexto', que, encaja });
+      return;
+    }
+    dispatch({ tipo: 'contexto', que });
+    // De vuelta a la partida de un borrador en espera, en su página: se retoma solo.
+    const b = usePlanoUiStore.getState().borrador;
+    if (que === 'partida' && b?.espera === 'partida' && b.partidaId === partidaId && esDeAqui(b) && puedeSeguir) seguirBorrador(b);
+  };
   useEffect(() => {
     const p = previo.current;
     const que =
@@ -550,8 +678,32 @@ export function PlanoViewer({
               ? 'escala'
               : null;
     previo.current = { partidaId, pagina, planoId: plano.id, rev: escala?.rev ?? null };
-    if (que) dispatch({ tipo: 'contexto', que });
-  }, [partidaId, pagina, plano.id, escala?.rev, dispatch]);
+    if (que) alCambiar.current(que);
+  }, [partidaId, pagina, plano.id, escala?.rev]);
+
+  // [A1] La ventana pasa a estrecha (< 1024 px, donde no se mide): la forma
+  // queda como borrador y se ofrece al volver a ensanchar.
+  useEffect(() => {
+    if (estrecha && aMedio(estadoRef.current)) dispatch({ tipo: 'contexto', que: 'vista' });
+  }, [estrecha, dispatch]);
+
+  // [A1] Al desmontar (otro plano, cerrar el visor, Deshacer que quita el
+  // plano) la forma en curso queda como borrador; si cambió la obra, se
+  // descarta con aviso.
+  useEffect(() => {
+    const planoId = plano.id;
+    return () => {
+      const e = estadoRef.current;
+      const o = origenForma.current;
+      if (!aMedio(e) || !o?.partidaId) return;
+      if (useObraStore.getState().docToken !== o.docToken) {
+        useToastStore.getState().show(`Forma descartada: ${TEXTO_DESCARTE_BORRADOR.obra}.`);
+        return;
+      }
+      const ui = usePlanoUiStore.getState();
+      ui.guardarBorrador({ ...o, partidaId: o.partidaId, planoId, restar: ui.restar, forma: e, espera: 'vista' });
+    };
+  }, [plano.id]);
 
   // Etiqueta al calibrar: la actual o, si no hay, la propuesta desde el texto (A1).
   useEffect(() => {
@@ -619,6 +771,13 @@ export function PlanoViewer({
     atenderMotivo(mo);
   }
 
+  /** Superficie en una partida L×A (§3.2): Superficie directa o Rectángulo. */
+  function elegirSupDirecta(v: boolean): void {
+    if (!partidaId) return;
+    usePlanoUiStore.getState().setSupDirecta(partidaId, v);
+    if (!v) dispatch({ tipo: 'herramienta', armada: 'rectangulo' });
+  }
+
   function empezarCalibrar(): void {
     if (motivoCalibrar) {
       avisar(motivoCalibrar);
@@ -669,6 +828,21 @@ export function PlanoViewer({
       return;
     }
     const ocupado = fase === 'dibujando' || fase === 'calibrando';
+    // [A1] Cursor de teclado (§5.10): las flechas lo encienden y lo mueven;
+    // con él, Intro pone un punto donde está y Mayús+Intro cierra la forma.
+    const flecha = FLECHAS[e.key];
+    if (flecha && !mod && !e.altKey) {
+      consumir();
+      moverCursorTec(flecha, e.shiftKey ? 10 : 1);
+      return;
+    }
+    if (e.key === 'Enter' && cursorTecRef.current && fase !== 'nombrando') {
+      consumir();
+      if (!e.shiftKey) clicTeclado(cursorTecRef.current);
+      else if (fase === 'dibujando') dispatch({ tipo: 'enter' });
+      else if (fase === 'calibrando') confirmarCalibracion();
+      return;
+    }
     if (e.key === 'Escape') {
       consumir();
       dispatch({ tipo: 'esc' });
@@ -724,6 +898,36 @@ export function PlanoViewer({
       consumir();
       fn();
     }
+  }
+
+  /** [A1] Enciende o mueve el cursor de teclado `k` px de pantalla. */
+  function moverCursorTec([dx, dy]: [number, number], k: number): void {
+    const api = lienzoApi.current;
+    if (!api) return;
+    const c = cursorTecRef.current;
+    if (!c) decir('Cursor de teclado: las flechas lo mueven, Intro pone un punto y Mayús+Intro cierra la forma.');
+    ponerCursorTec(api.moverCursor(c ?? inicioCursorTec(api), dx * k, dy * k));
+  }
+
+  /** Dónde se enciende: en el último punto de la forma o de la cota, donde
+   *  estaba el ratón o en el centro de la vista. */
+  function inicioCursorTec(api: LienzoApi): Punto {
+    const e = estadoRef.current;
+    if (aMedio(e)) return e.puntos[e.puntos.length - 1]!;
+    if (e.fase === 'calibrando') {
+      const t = e[e.paso];
+      const ultimo = t.b ?? t.a;
+      if (ultimo) return ultimo;
+    }
+    return cursor ?? api.centro();
+  }
+
+  /** Intro con el cursor de teclado: un clic donde está (con Mano, sobre la
+   *  forma que haya debajo). */
+  function clicTeclado(p: Punto): void {
+    const px = lienzoApi.current?.escala() ?? 1;
+    const mano = !(armadaMide || estadoRef.current.fase === 'calibrando');
+    dispatch({ tipo: 'clic', p, px, detalle: 1, forma: mano ? (formaEn(formas, p, px)?.lineId ?? null) : null, motivo: motivoArmada });
   }
 
   function intentarCrear(componiendo: boolean): void {
@@ -834,23 +1038,46 @@ export function PlanoViewer({
         }
       : null;
 
+  /** [A1] El aviso de un borrador de esta página (§5.8): [Seguir] si su
+   *  herramienta sirve en la partida abierta; si no, «Borrador para …» [Volver]. */
+  function avisoBorrador(b: Borrador): Aviso {
+    const f = b.forma;
+    const n = f.puntos.length;
+    const que = `${NOMBRE_HERRAMIENTA[f.armada]} · ${n} ${n === 1 ? 'punto' : 'puntos'}`;
+    const descartar = { texto: 'Descartar', run: () => usePlanoUiStore.getState().quitarBorrador() };
+    const pasa = b.partidaId === partidaId || (!f.sustituye && encajaHerramienta(f.armada, partida, supDirecta));
+    if (pasa || !puedeSeguir)
+      return {
+        texto: `Tienes una forma a medio medir en esta página (${que}).`,
+        tono: 'info',
+        acciones: puedeSeguir ? [{ texto: 'Seguir', run: () => seguirBorrador(b) }, descartar] : [descartar],
+      };
+    const suya = locatePartida(b.partidaId);
+    if (!suya) return { texto: `Tienes una forma a medio medir para una partida que ya no está (${que}).`, tono: 'info', acciones: [descartar] };
+    const volver = () => useObraStore.getState().revealPartida(suya.partida.id, suya.chapterId, suya.partida.sub ?? null);
+    return {
+      texto: `Borrador para ${suya.partida.pos} ${suya.partida.title} (${que}).`,
+      tono: 'info',
+      acciones: [{ texto: 'Volver', run: volver }, descartar],
+    };
+  }
+
   /* ---- aviso único (§5.2): el más prioritario ------------------------------------------ */
   const ilegibles = useObraStore((s) => s._ilegible?.length ?? 0);
   const planosObra = useObraStore((s) => s.planos);
   const masNueva = revisionMasNueva(planosObra, plano.id);
-  let aviso: {
-    texto: string;
-    tono: 'info' | 'warn' | 'error';
-    accion?: { texto: string; run: () => void };
-    ayuda?: boolean;
-  } | null = mensaje ? { texto: mensaje.texto, tono: mensaje.tono, ayuda: mensaje.ayuda } : null;
+  let aviso: Aviso | null = mensaje ? { texto: mensaje.texto, tono: mensaje.tono, ayuda: mensaje.ayuda } : null;
+  // [A1] El borrador de esta página va el primero: es trabajo del usuario a
+  // medio hacer y el aviso es su única salida (§5.8).
+  const borradorAqui = borrador && (estado.fase === 'reposo' || estado.fase === 'creada') && esDeAqui(borrador) ? borrador : null;
+  if (!aviso && borradorAqui) aviso = avisoBorrador(borradorAqui);
   // [A1] Revisión más nueva: sale también con el PDF no disponible (el cuerpo
   // explica eso) porque abrir la nueva es la salida más corta.
   if (!aviso && masNueva)
     aviso = {
       texto: `Hay una revisión más nueva: ${masNueva.revision ?? masNueva.nombre}.`,
       tono: 'info',
-      accion: { texto: 'Abrir', run: () => usePlanoUiStore.getState().abrirPlano(masNueva.id, Math.min(pagina, masNueva.paginas)) },
+      acciones: [{ texto: 'Abrir', run: () => usePlanoUiStore.getState().abrirPlano(masNueva.id, Math.min(pagina, masNueva.paginas)) }],
     };
   if (!aviso && docE.estado === 'no-disponible') aviso = null; // lo explica el cuerpo
   if (
@@ -866,19 +1093,19 @@ export function PlanoViewer({
       texto: 'La calibración no cuadra con la escala del plano: ¿el PDF está a otro tamaño?',
       tono: 'warn',
       ayuda: true,
-      accion: motivoCalibrar ? undefined : { texto: 'Rehacer cota', run: empezarCalibrar },
+      acciones: motivoCalibrar ? undefined : [{ texto: 'Rehacer cota', run: empezarCalibrar }],
     };
   if (!aviso && docE.estado === 'listo' && !escala && estado.fase !== 'calibrando')
     aviso = {
       texto: 'Calibra esta página para medir longitudes y superficies. Recuento funciona sin escala.',
       tono: 'info',
-      accion: motivoCalibrar ? undefined : { texto: 'Calibrar', run: empezarCalibrar },
+      acciones: motivoCalibrar ? undefined : [{ texto: 'Calibrar', run: empezarCalibrar }],
     };
   if (!aviso && docE.estado === 'listo' && escala && !escala.comprobacion && estado.fase !== 'calibrando')
     aviso = {
       texto: 'Comprueba la escala de esta página con otra cota antes de medir.',
       tono: 'warn',
-      accion: motivoCalibrar ? undefined : { texto: 'Comprobar', run: comprobarEscala },
+      acciones: motivoCalibrar ? undefined : [{ texto: 'Comprobar', run: comprobarEscala }],
     };
   if (!aviso && ilegibles > 0)
     aviso = { texto: `${ilegibles} datos de planos no se pueden leer; las líneas conservan sus números.`, tono: 'warn' };
@@ -908,11 +1135,11 @@ export function PlanoViewer({
             <Icon name={aviso.tono === 'info' ? 'crosshair' : 'alert'} size={14} />
             <span className={styles.avisoTexto}>{aviso.texto}</span>
             {aviso.ayuda && <BotonAyuda />}
-            {aviso.accion && (
-              <button type="button" className={styles.btn} onClick={aviso.accion.run}>
-                {aviso.accion.texto}
+            {aviso.acciones?.map((a) => (
+              <button key={a.texto} type="button" className={styles.btn} onClick={a.run}>
+                {a.texto}
               </button>
-            )}
+            ))}
           </>
         )}
       </div>
@@ -979,7 +1206,11 @@ export function PlanoViewer({
             onDobleClic={() => dispatch({ tipo: 'dobleClic' })}
             onMoverVertice={(i, p) => dispatch({ tipo: 'moverVertice', i, p })}
             onMoverCota={(cual, p) => dispatch({ tipo: 'moverPunto', cual, p })}
-            onCursor={(p) => setCursor(p)}
+            onCursor={(p) => {
+              setCursor(p);
+              if (p && cursorTecRef.current) ponerCursorTec(null); // mover el ratón lo apaga
+            }}
+            cursorTeclado={cursorTec}
             onPintado={(est, causa) => setPintado({ estado: est, causa })}
             precargar={precarga}
           />
@@ -1052,14 +1283,20 @@ export function PlanoViewer({
               onCancelar={() => dispatch({ tipo: 'esc' })}
             />
           ) : estado.fase === 'dibujando' ? (
-            <div className={styles.lectura}>
-              <span className="mono">{lecturaEnVivo(estado.armada, estado.puntos, cursor, escala)}</span>
-              <span className={styles.pistas}>
-                {pista ??
-                  (estado.armada === 'recuento'
-                    ? 'Clic en cada elemento · Enter termina · Retroceso quita punto · Esc cancela'
-                    : 'Enter cierra · Retroceso quita punto · Esc cancela · Mayús fuerza 0/45/90°')}
-              </span>
+            <div className={styles.aMedio}>
+              <div className={styles.lectura}>
+                <span className="mono">{lecturaEnVivo(estado.armada, estado.puntos, cursorTec ?? cursor, escala)}</span>
+                <span className={styles.pistas}>{pista ?? pistasDibujando(estado.armada, !!cursorTec)}</span>
+              </div>
+              {partida && motivoArmada && PIDE_EN_FRANJA.has(motivoArmada.motivo) && (
+                <PideEnFranja
+                  armada={estado.armada}
+                  partida={partida}
+                  motivo={motivoArmada}
+                  supDirecta={supDirecta}
+                  onSupDirecta={elegirSupDirecta}
+                />
+              )}
             </div>
           ) : estado.fase === 'nombrando' ? (
             <Nombrando
@@ -1075,6 +1312,17 @@ export function PlanoViewer({
                 dispatch({ tipo: 'esc' });
                 raizRef.current?.focus();
               }}
+              pide={
+                partida && preparada && !preparada.ok && PIDE_EN_FRANJA.has((preparada as MotivoMedida).motivo) ? (
+                  <PideEnFranja
+                    armada={estado.armada}
+                    partida={partida}
+                    motivo={preparada as MotivoMedida}
+                    supDirecta={supDirecta}
+                    onSupDirecta={elegirSupDirecta}
+                  />
+                ) : null
+              }
             />
           ) : estado.fase === 'creada' ? (
             <Creada lineId={estado.lineId} partida={partida} onAnadir={soloLectura || estrecha ? undefined : () => setAnadir(estado.lineId)} />
@@ -1085,11 +1333,7 @@ export function PlanoViewer({
               partida={partida}
               motivo={motivoArmada}
               supDirecta={supDirecta}
-              onSupDirecta={(v) => {
-                if (!partidaId) return;
-                usePlanoUiStore.getState().setSupDirecta(partidaId, v);
-                if (!v) dispatch({ tipo: 'herramienta', armada: 'rectangulo' });
-              }}
+              onSupDirecta={elegirSupDirecta}
             />
           )}
         </div>
@@ -1177,28 +1421,68 @@ function Reposo({
   supDirecta: boolean | null;
   onSupDirecta: (v: boolean) => void;
 }) {
-  const fijas = usePlanoUiStore((s) => (partida ? s.fijas[partida.id] : undefined));
-  const factor = usePlanoUiStore((s) => (partida ? s.factor[partida.id] : undefined));
   if (estrecha)
     return <p className={styles.franjaTexto}>Aquí solo se ve el plano: para medir, usa una pantalla más ancha.</p>;
   if (!partida) return <p className={styles.franjaTexto}>Abre una partida para medir: elígela en «Midiendo en».</p>;
   if (armada === 'mano')
     return <p className={styles.franjaTexto}>Mano: arrastra para moverte, clic en una forma para verla. Elige una herramienta para medir.</p>;
-  if (motivo?.motivo === 'superficie-en-sup' && supDirecta === null)
-    return (
-      <div className={styles.pregunta}>
-        <span>Esta partida se mide por Longitud × Anchura.</span>
-        <button type="button" className={`${styles.btn} ${styles.btnPrimario}`} onClick={() => onSupDirecta(true)}>
-          Medir esta partida por Superficie directa
-        </button>
-        <button type="button" className={styles.btn} onClick={() => onSupDirecta(false)}>
-          Usar Rectángulo
-        </button>
-      </div>
-    );
+  if (motivo?.motivo === 'superficie-en-sup' && supDirecta === null) return <PreguntaSupDirecta onSupDirecta={onSupDirecta} />;
+  return <CamposFijas armada={armada} partida={partida} supDirecta={supDirecta} motivo={motivo} />;
+}
+
+/** [A1] A media forma, lo que pide la partida a la que pasó (§5.8): sus
+ *  dimensiones fijas o la pregunta de Superficie directa. */
+function PideEnFranja({
+  armada,
+  partida,
+  motivo,
+  supDirecta,
+  onSupDirecta,
+}: {
+  armada: Herramienta;
+  partida: Partida;
+  motivo: MotivoVisor;
+  supDirecta: boolean | null;
+  onSupDirecta: (v: boolean) => void;
+}) {
+  if (motivo.motivo === 'superficie-en-sup') return <PreguntaSupDirecta onSupDirecta={onSupDirecta} />;
+  return <CamposFijas armada={armada} partida={partida} supDirecta={supDirecta} motivo={null} aMedio />;
+}
+
+function PreguntaSupDirecta({ onSupDirecta }: { onSupDirecta: (v: boolean) => void }) {
+  return (
+    <div className={styles.pregunta}>
+      <span>Esta partida se mide por Longitud × Anchura.</span>
+      <button type="button" className={`${styles.btn} ${styles.btnPrimario}`} onClick={() => onSupDirecta(true)}>
+        Medir esta partida por Superficie directa
+      </button>
+      <button type="button" className={styles.btn} onClick={() => onSupDirecta(false)}>
+        Usar Rectángulo
+      </button>
+    </div>
+  );
+}
+
+/** Dimensiones fijas de una herramienta en una partida (§3.3). `aMedio` ([A1]
+ *  §5.8): solo los campos, sin textos, para la franja de una forma en curso. */
+function CamposFijas({
+  armada,
+  partida,
+  supDirecta,
+  motivo,
+  aMedio = false,
+}: {
+  armada: Herramienta;
+  partida: Partida;
+  supDirecta: boolean | null;
+  motivo: MotivoVisor | null;
+  aMedio?: boolean;
+}) {
+  const fijas = usePlanoUiStore((s) => s.fijas[partida.id]);
+  const factor = usePlanoUiStore((s) => s.factor[partida.id]);
   const forma = medFormaDe(partida);
   const celda = celdaDe(armada, TABLA_SUP(forma, armada, supDirecta));
-  if (celda.encaja !== true) return motivo ? <p className={styles.franjaTexto}>{textoMotivoVisor(motivo)}</p> : null;
+  if (celda.encaja !== true) return motivo && !aMedio ? <p className={styles.franjaTexto}>{textoMotivoVisor(motivo)}</p> : null;
   const formaFinal = TABLA_SUP(forma, armada, supDirecta);
   const campos: { slot: MedDim | 'factor'; rotulo: string; obligatoria: boolean }[] = [
     ...celda.fijas.map((s) => ({
@@ -1209,7 +1493,7 @@ function Reposo({
     ...(celda.factor ? [{ slot: 'factor' as const, rotulo: ROTULO_FACTOR, obligatoria: true }] : []),
   ];
   if (!campos.length)
-    return (
+    return aMedio ? null : (
       <p className={styles.franjaTexto}>
         {motivo ? textoMotivoVisor(motivo) : `Clic en el plano para empezar a medir por ${medFormaDef(formaFinal).nombre.toLowerCase()}.`}
       </p>
@@ -1239,7 +1523,7 @@ function Reposo({
           </label>
         );
       })}
-      {motivo && motivo.motivo !== 'falta-dimension' && <span className={styles.pistas}>{textoMotivoVisor(motivo)}</span>}
+      {!aMedio && motivo && motivo.motivo !== 'falta-dimension' && <span className={styles.pistas}>{textoMotivoVisor(motivo)}</span>}
     </div>
   );
 }
@@ -1260,6 +1544,7 @@ function Nombrando({
   onTexto,
   onCrear,
   onCancelar,
+  pide,
 }: {
   prefijo: string;
   texto: string;
@@ -1271,6 +1556,8 @@ function Nombrando({
   onTexto: (t: string) => void;
   onCrear: () => void;
   onCancelar: () => void;
+  /** [A1] Lo que pide la partida (sus fijas), si le falta algo (§5.8). */
+  pide?: React.ReactNode;
 }) {
   const seleccionarAlEntrar = useRef(seleccionar);
   useEffect(() => {
@@ -1308,6 +1595,7 @@ function Nombrando({
         onChange={(e) => onTexto(e.target.value)}
       />
       <span className={styles.previa}>{previa}</span>
+      {pide}
       <button type="button" className={styles.btn} onClick={onCancelar}>
         Descartar
       </button>

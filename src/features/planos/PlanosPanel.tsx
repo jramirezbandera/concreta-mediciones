@@ -21,7 +21,7 @@ import { textoResultado } from '../../store/motivos';
 import { usePlanoUiStore } from '../../store/planoUiStore';
 import { TEXTO_FASE, adjuntarPlano, adjuntarRevision, type FaseAdjuntar, type ResultadoAdjuntar } from './adjuntar';
 import { DialogoLiberar } from './LiberarEspacio';
-import { textoEscala, textoRevisionAdjunta } from './textos';
+import { TEXTO_DESCARTE_BORRADOR, textoEscala, textoRevisionAdjunta } from './textos';
 import { PlanoViewer } from './PlanoViewer';
 import styles from './Planos.module.css';
 
@@ -98,9 +98,11 @@ export function PlanosPanel({
   const planos = useMemo(() => planosRaw.filter((p): p is PlanoMeta => planoLegible(p) && !p.quitado), [planosRaw]);
   const plano = planos.find((p) => p.id === planoId) ?? null;
 
-  // Tras Deshacer (o al cambiar de obra) el plano que se ve sigue existiendo.
+  // Tras Deshacer (o al cambiar de obra) el plano que se ve sigue existiendo y
+  // el borrador sigue valiendo; si no, se descarta con aviso (§5.8).
   useEffect(() => {
-    usePlanoUiStore.getState().reconciliar(planosRaw, docToken);
+    const descarte = usePlanoUiStore.getState().reconciliar(planosRaw, docToken);
+    if (descarte) useToastStore.getState().show(`Forma descartada: ${TEXTO_DESCARTE_BORRADOR[descarte]}.`);
   }, [planosRaw, docToken]);
 
   const [menu, setMenu] = useState<'plano' | 'pagina' | 'mas' | null>(null);

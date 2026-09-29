@@ -1256,6 +1256,23 @@ Cada cambio posterior: fecha, qué cambia y por qué.
   - **`meta.nombre`** (nuevo, solo en el almacén): el nombre del fichero con el que llegó el PDF, para listarlo. Sin él, el del plano de la obra en pantalla, o «PDF sin nombre».
   - **Interfaz:** botón «Liberar espacio» junto al espacio usado en la lista de planos; el diálogo lista los PDF sin uso (marcados), aparte «Liberar ya «X» (N MB): Deshacer ya no recuperará la capa de N líneas» (sin marcar) y cuántos de las últimas 24 h no se ofrecen. El aviso de cuota llena al adjuntar lo menciona.
   - Tests: `persist/liberar.test.ts` (otra obra guardada, memoria sin guardar, otra pestaña, sobre huérfano dañado, obra ilegible → detenida sin marcar, «Liberar ya», marca cambiada entre listar y borrar, adjuntar en B y liberar en A con el candado), `registry.test.ts` (`huellas`/`huellasDe`, meta sin ellas o de otro guardado lee el sobre, en crudo), `planos.test.ts`, `adjuntar.test.ts` (espera al candado) y `LiberarEspacio.test.tsx`.
+- **2026-09-29 (A1) · Borradores y cursor de teclado** (§5.3, §5.8, §5.10, §6). Hecho como dicen §5.8 y §5.10, con estas precisiones:
+  - **Ciclo:** un `contexto` de partida, página, plano, ocupante o `vista` (nuevo: la ventana pasa a estrecha) a medio dibujar devuelve el efecto `borrador` con la forma, en vez de `descartada`; `seguir` la retoma desde reposo o creada (nunca pisa otra forma ni una calibración). Un cambio de escala o de herramienta (también Calibrar y Comprobar a medio dibujo) la sigue descartando con aviso: los pide el usuario dentro del visor, y la escala cambia la geometría.
+  - **Qué es «encaja»** (`encajaHerramienta`): la celda de §3.1 para la forma de medir de la partida nueva no es «no encaja», y en Superficie sobre L×A no se eligió «Usar Rectángulo». Las fijas que falten no cuentan: la forma pasa y la franja las pide en DIBUJANDO y en NOMBRANDO (también la pregunta de Superficie directa), con el aviso «La forma pasa a 1.2 Solado… Indica la Altura…». Un «Volver a medir» nunca pasa: la línea que sustituye es de su partida.
+  - **Un borrador a la vez,** en `planoUiStore.borrador`: su obra, plano, página, partida, `rev` de la calibración, Restar y la forma (DIBUJANDO, o NOMBRANDO con su comentario). Empezar otra forma lo descarta con aviso («Borrador descartado: empezaste otra forma»). Al retomar una forma sin nombrar se renuevan `formaId` y `at` (nunca se creó).
+  - **Dónde se ofrece:** en el aviso único de su página, el primero tras los mensajes pasajeros:
+    - si su herramienta sirve en la partida abierta: «Tienes una forma a medio medir en esta página (Longitud · 3 puntos).» [Seguir] [Descartar];
+    - si no: «Borrador para 1.1 Tabique… (Longitud · 3 puntos).» [Volver] [Descartar]. [Volver] abre su partida, y volver a ella por cualquier camino, en su página, la retoma sola;
+    - en pantalla estrecha o en solo lectura, solo [Descartar].
+  - **«Al redimensionar»:** `LateralAside` no desmonta el visor al cambiar de tamaño ni de split a overlay, así que solo cuenta pasar a estrecha (< 1024 px, donde no se mide). Desmontar el visor (otro plano, cerrarlo, otro ocupante) guarda la forma igual.
+  - **Descartes con aviso:** `reconciliar` devuelve por qué descartó el borrador (`obra`; `plano` quitado o sin su página; `escala` de su página distinta, al recalibrar o al deshacer un cambio de escala) y el panel lo dice en un aviso («Forma descartada: cambió la escala de su página»). Al desmontar con la obra ya cambiada, la forma en curso se descarta con el mismo aviso.
+  - **Cursor de teclado:**
+    - se enciende con la primera flecha, que ya lo mueve, en el último punto de la forma o de la cota, donde estaba el ratón o en el centro de la vista;
+    - se mueve en píxeles de pantalla (respeta la rotación de la página) y, si se sale de la vista, la vista se desplaza;
+    - Intro es un clic donde está (con Mano, selecciona la forma de debajo); Mayús+Intro cierra la forma y, al calibrar, confirma;
+    - las guías, la lupa, el tramo en curso y la lectura en vivo lo siguen, y un anillo lo marca;
+    - se apaga al mover el ratón sobre el lienzo y al cambiar de página; fuera de los campos de texto, el visor consume las flechas.
+  - Tests: `core/planoCiclo.test.ts` (las rutas de `contexto` y `seguir`), `store/planoUiStore.test.ts` (los tres descartes de `reconciliar`) y `features/planos/Borradores.test.tsx` (partida que encaja con la Altura pedida; que no encaja, con [Volver] y por otro camino; página y plano; cerrar el visor; ventana estrecha; NOMBRANDO con su comentario; descartes: [Descartar], otra forma, obra, recalibrar y deshacer una escala; cursor de teclado con flechas, Intro, Mayús+Intro, Mano y ratón).
 
 ## Historial
 

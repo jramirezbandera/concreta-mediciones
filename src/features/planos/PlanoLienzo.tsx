@@ -10,7 +10,9 @@
      = desplazar, Ctrl + rueda = zoom al cursor (listener nativo, no pasivo),
      arrastrar con Mano, con el botón central o con Espacio = desplazar.
    · Capa SVG: formas de la partida abierta, dibujo en curso, cota de
-     calibración, guías del cursor en cruz y lupa ×4.
+     calibración, guías del cursor en cruz y lupa ×4. [A1] Con el cursor de
+     teclado encendido (§5.10), las guías, la lupa y el tramo en curso lo
+     siguen a él, y la vista se desplaza para que no se salga.
    Lo que es un clic sobre la página lo decide el ciclo (`core/planoCiclo`):
    aquí solo se traduce a coordenadas de página y se entrega.
    =========================================================================== */
@@ -39,7 +41,15 @@ export interface LienzoApi {
   escala(): number;
   /** [Reintentar] tras «No se pudo pintar esta página». */
   reintentar(): void;
+  /** [A1] El centro de la vista, en coordenadas de página. */
+  centro(): Punto;
+  /** [A1] `p` movido `dx`, `dy` px de pantalla; si se sale de la vista, la
+   *  vista se desplaza para que siga dentro. */
+  moverCursor(p: Punto, dx: number, dy: number): Punto;
 }
+
+/** Margen que el cursor de teclado deja hasta el borde de la vista. */
+const MARGEN_CURSOR = 24;
 
 export interface DibujoCapa {
   herramienta: Herramienta;
@@ -91,6 +101,7 @@ export function PlanoLienzo({
   onCursor,
   onPintado,
   precargar = [],
+  cursorTeclado = null,
 }: {
   apiRef: Ref<LienzoApi>;
   doc: DocPdf;
@@ -115,6 +126,8 @@ export function PlanoLienzo({
   onPintado: (estado: 'pintando' | 'listo' | 'error', causa?: string) => void;
   /** Páginas que precargar en reposo tras pintar esta, por orden. */
   precargar?: number[];
+  /** [A1] Cursor de teclado, en coordenadas de página; `null` = apagado. */
+  cursorTeclado?: Punto | null;
 }) {
   const cajaRef = useRef<HTMLDivElement>(null);
   const baseRef = useRef<HTMLCanvasElement>(null);
@@ -208,6 +221,26 @@ export function PlanoLienzo({
       },
       escala: () => (vistaRef.current ?? ajustada()).s,
       reintentar: () => setIntento((x) => x + 1),
+      centro() {
+        const cur = vistaRef.current ?? ajustada();
+        return lienzoAPagina([tam[0] / 2 - cur.tx, tam[1] / 2 - cur.ty], { caja: info.vista, rotacion: info.rotacion, pxPorUnidad: cur.s });
+      },
+      moverCursor(p, dx, dy) {
+        const cur = vistaRef.current ?? ajustada();
+        const vpc = { caja: info.vista, rotacion: info.rotacion, pxPorUnidad: cur.s };
+        const [x, y] = paginaALienzo(p, vpc);
+        const nuevo = lienzoAPagina([x + dx, y + dy], vpc);
+        const sx = x + dx + cur.tx;
+        const sy = y + dy + cur.ty;
+        const fuera = (v: number, max: number) =>
+          v < MARGEN_CURSOR ? MARGEN_CURSOR - v : v > max - MARGEN_CURSOR ? max - MARGEN_CURSOR - v : 0;
+        const [ox, oy] = [fuera(sx, tam[0]), fuera(sy, tam[1])];
+        if (ox || oy) {
+          movidoPorUsuario.current = true;
+          setVista({ s: cur.s, tx: cur.tx + ox, ty: cur.ty + oy });
+        }
+        return nuevo;
+      },
     }),
     [ajustada, info, tam, zoomEn],
   );
@@ -416,20 +449,23 @@ export function PlanoLienzo({
   }
 
   /* ---- lupa ×4 (esquina opuesta al cursor) -------------------------------------- */
-  const lupaVisible = modo === 'medir' && hover !== null;
-  const lupaIzquierda = hover ? hover[0] > tam[0] / 2 : false;
-  const lupaArriba = hover ? hover[1] > tam[1] / 2 : false;
+  // El puntero: el cursor de teclado si está encendido [A1]; si no, el ratón.
+  const puntero: [number, number] | null = cursorTeclado ? aPantalla(cursorTeclado) : hover;
+  const [px0, py0] = puntero ?? [NaN, NaN];
+  const lupaVisible = modo === 'medir' && puntero !== null;
+  const lupaIzquierda = puntero ? puntero[0] > tam[0] / 2 : false;
+  const lupaArriba = puntero ? puntero[1] > tam[1] / 2 : false;
   useEffect(() => {
     const lupa = lupaRef.current;
     const base = baseRef.current;
-    if (!lupaVisible || !lupa || !base || !hover || base.width === 0) return;
+    if (!lupaVisible || !lupa || !base || Number.isNaN(px0) || base.width === 0) return;
     const ctx = lupa.getContext?.('2d');
     if (!ctx) return;
     const L = 120;
     const ladoPantalla = L / 4;
     const k = base.width / (W * v.s); // px de lienzo base por px de pantalla
-    const sx = (hover[0] - v.tx - ladoPantalla / 2) * k;
-    const sy = (hover[1] - v.ty - ladoPantalla / 2) * k;
+    const sx = (px0 - v.tx - ladoPantalla / 2) * k;
+    const sy = (py0 - v.ty - ladoPantalla / 2) * k;
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, L, L);
     ctx.imageSmoothingEnabled = false;
@@ -442,7 +478,7 @@ export function PlanoLienzo({
     ctx.moveTo(0, L / 2);
     ctx.lineTo(L, L / 2);
     ctx.stroke();
-  }, [lupaVisible, hover, v.s, v.tx, v.ty, W]);
+  }, [lupaVisible, px0, py0, v.s, v.tx, v.ty, W]);
 
   /* ---- capa SVG ------------------------------------------------------------------ */
   const ruta = (pts: Punto[], cerrada: boolean) =>
@@ -550,7 +586,7 @@ export function PlanoLienzo({
             {dibujo.herramienta !== 'recuento' && (
               <path
                 d={ruta(
-                  !dibujo.cerrada && hover && modo === 'medir' ? [...dibujo.puntos, aPagina(hover[0], hover[1])] : dibujo.puntos,
+                  !dibujo.cerrada && puntero && modo === 'medir' ? [...dibujo.puntos, aPagina(puntero[0], puntero[1])] : dibujo.puntos,
                   dibujo.cerrada && dibujo.herramienta !== 'longitud',
                 )}
               />
@@ -561,12 +597,13 @@ export function PlanoLienzo({
             })}
           </g>
         )}
-        {modo === 'medir' && hover && (
+        {modo === 'medir' && puntero && (
           <g className={styles.guias}>
-            <line x1={0} y1={hover[1]} x2={tam[0]} y2={hover[1]} />
-            <line x1={hover[0]} y1={0} x2={hover[0]} y2={tam[1]} />
+            <line x1={0} y1={puntero[1]} x2={tam[0]} y2={puntero[1]} />
+            <line x1={puntero[0]} y1={0} x2={puntero[0]} y2={tam[1]} />
           </g>
         )}
+        {cursorTeclado && puntero && <circle cx={puntero[0]} cy={puntero[1]} r={7} className={styles.cursorTeclado} data-cursor-teclado="" />}
       </svg>
       {anclas.map((a) => {
         const [x, y] = aPantalla(a.p);

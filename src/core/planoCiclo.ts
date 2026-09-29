@@ -14,9 +14,12 @@
        └────────────── Esc ────────────────────────┘
      reposo ──Calibrar──► calibrando.cota ──► calibrando.comprobacion ──► reposo
 
-   La herramienta armada se mantiene tras crear una línea. Un cambio de
-   partida, página, plano, ocupante, escala o herramienta a medio dibujo
-   descarta la forma con aviso (en A0 no hay borradores).
+   La herramienta armada se mantiene tras crear una línea. [A1] Borradores
+   (§5.8): un cambio de partida, página, plano, ocupante o a pantalla estrecha
+   a medio dibujo NO descarta la forma: la devuelve como efecto `borrador` y
+   el visor la guarda; `seguir` la retoma. Si la herramienta encaja en la
+   partida nueva (lo decide el visor), la forma sigue en ella. Un cambio de
+   escala o de herramienta la descarta con aviso.
    =========================================================================== */
 import { parseEsNumber } from './money';
 /** Un motivo por el que no se puede medir (el de `planoMedida` o uno del visor:
@@ -44,8 +47,9 @@ import { TOPES } from './planoDatos';
 import type { Herramienta, Punto } from './types';
 
 export type Armada = 'mano' | Herramienta;
-/** Qué cambió bajo una forma a medio dibujar. */
-export type Contexto = 'partida' | 'pagina' | 'plano' | 'ocupante' | 'escala' | 'herramienta';
+/** Qué cambió bajo una forma a medio dibujar. `vista`: la ventana pasó a
+ *  estrecha (< 1024 px), donde no se mide. */
+export type Contexto = 'partida' | 'pagina' | 'plano' | 'ocupante' | 'vista' | 'escala' | 'herramienta';
 
 /** Una cota (o la comprobación): dos puntos y la distancia real tecleada. */
 export interface TramoCota {
@@ -82,6 +86,9 @@ export type EstadoCiclo =
       soloComprobar?: { mPorUnidad: number };
     };
 
+/** Una forma a medio dibujar o sin nombrar: lo que guarda un borrador. */
+export type FormaEnCurso = Extract<EstadoCiclo, { fase: 'dibujando' | 'nombrando' }>;
+
 export type EventoCiclo =
   /** `px`: píxeles de pantalla por unidad de página. `motivo`: por qué la
    *  herramienta armada no puede medir aquí (null = habilitada). `forma`: la
@@ -96,7 +103,10 @@ export type EventoCiclo =
   | { tipo: 'esc' }
   | { tipo: 'supr' }
   | { tipo: 'herramienta'; armada: Armada }
-  | { tipo: 'contexto'; que: Contexto }
+  /** `encaja` (solo `partida`): la herramienta de la forma encaja en la nueva. */
+  | { tipo: 'contexto'; que: Contexto; encaja?: boolean }
+  /** [A1] Retomar un borrador (§5.8). */
+  | { tipo: 'seguir'; forma: FormaEnCurso }
   | { tipo: 'texto'; texto: string }
   | { tipo: 'creada'; lineId: string }
   | { tipo: 'stale' }
@@ -141,6 +151,8 @@ export type EfectoCiclo =
   /** Esc en reposo: salir de pantalla completa o, si no, cerrar el visor. */
   | { tipo: 'escReposo' }
   | { tipo: 'descartada'; que: Contexto }
+  /** [A1] La forma sale del ciclo sin perderse: el visor la guarda (§5.8). */
+  | { tipo: 'borrador'; que: Contexto; forma: FormaEnCurso }
   /** «Volver a medir» que no llegó a sustituir: la forma vieja vuelve a verse. */
   | { tipo: 'restaurar'; lineId: string }
   | { tipo: 'calibrada'; datos: Calibrada }
@@ -168,8 +180,10 @@ function salir(e: { sustituye: string | null; armada: Armada }, extra: EfectoCic
   return { estado: reposo(e.armada), efectos };
 }
 
-const aMedio = (e: EstadoCiclo): e is Extract<EstadoCiclo, { fase: 'dibujando' | 'nombrando' }> =>
-  e.fase === 'dibujando' || e.fase === 'nombrando';
+export const aMedio = (e: EstadoCiclo): e is FormaEnCurso => e.fase === 'dibujando' || e.fase === 'nombrando';
+
+/** Cambios que guardan la forma como borrador en vez de descartarla (§5.8). */
+const GUARDAN: ReadonlySet<Contexto> = new Set(['partida', 'pagina', 'plano', 'ocupante', 'vista']);
 
 /** Empieza una forma con un clic (reposo o creada con una herramienta de medir). */
 function empezar(armada: Herramienta, p: Punto, sustituye: string | null = null): Paso {
@@ -336,13 +350,21 @@ export function cicloReducer(e: EstadoCiclo, ev: EventoCiclo): Paso {
     return quieto(reposo(ev.armada));
   }
   if (ev.tipo === 'contexto') {
-    if (aMedio(e)) return salir(e, [{ tipo: 'descartada', que: ev.que }]);
+    if (aMedio(e)) {
+      if (ev.que === 'partida' && ev.encaja) return quieto(e); // pasa a la partida nueva
+      if (GUARDAN.has(ev.que)) return { estado: reposo(e.armada), efectos: [{ tipo: 'borrador', que: ev.que, forma: e }] };
+      return salir(e, [{ tipo: 'descartada', que: ev.que }]);
+    }
     if (e.fase === 'reposo' && e.sustituye) return salir(e);
     if (e.fase === 'calibrando' && (ev.que === 'pagina' || ev.que === 'plano' || ev.que === 'ocupante'))
       return quieto(reposo(e.armada));
     if (e.fase === 'creada') return quieto(reposo(e.armada));
     if (e.fase === 'reposo' && e.seleccion) return { estado: { ...e, seleccion: null }, efectos: [{ tipo: 'seleccionar', forma: null }] };
     return quieto(e);
+  }
+  if (ev.tipo === 'seguir') {
+    // Solo desde reposo o creada: nunca pisa otra forma ni una calibración.
+    return quieto(e.fase === 'reposo' || e.fase === 'creada' ? ev.forma : e);
   }
   if (ev.tipo === 'volverAMedir') {
     const previo = aMedio(e) || (e.fase === 'reposo' && e.sustituye) ? salir(e as { sustituye: string | null; armada: Armada }).efectos : [];

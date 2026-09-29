@@ -182,19 +182,43 @@ describe('dibujando', () => {
 });
 
 describe('cambios bajo una forma a medio dibujar', () => {
-  it.each(['partida', 'pagina', 'plano', 'ocupante', 'escala'] as const)(
-    'cambio de %s → reposo y aviso «Forma descartada»',
+  const aMedio: EstadoCiclo[] = [
+    dibujando('longitud', [[0, 0]]),
+    { fase: 'nombrando', armada: 'longitud', puntos: [[0, 0], [9, 0]], sustituye: null, texto: 'x' } as EstadoCiclo,
+  ];
+
+  it.each(['partida', 'pagina', 'plano', 'ocupante', 'vista'] as const)(
+    '[A1] cambio de %s → reposo y la forma sale como borrador (§5.8)',
     (que) => {
-      for (const e of [
-        dibujando('longitud', [[0, 0]]),
-        { fase: 'nombrando', armada: 'longitud', puntos: [[0, 0], [9, 0]], sustituye: null, texto: 'x' } as EstadoCiclo,
-      ]) {
+      for (const e of aMedio) {
         const r = correr(e, { tipo: 'contexto', que });
         expect(r.estado).toEqual(reposo('longitud'));
-        expect(r.efectos).toEqual([{ tipo: 'descartada', que }]);
+        expect(r.efectos).toEqual([{ tipo: 'borrador', que, forma: e }]);
       }
     },
   );
+
+  it('[A1] cambio de partida en la que la herramienta encaja → la forma sigue, sin efectos', () => {
+    for (const e of aMedio) expect(correr(e, { tipo: 'contexto', que: 'partida', encaja: true })).toEqual({ estado: e, efectos: [] });
+  });
+
+  it('cambio de escala → reposo y aviso «Forma descartada»', () => {
+    for (const e of aMedio) {
+      const r = correr(e, { tipo: 'contexto', que: 'escala' });
+      expect(r.estado).toEqual(reposo('longitud'));
+      expect(r.efectos).toEqual([{ tipo: 'descartada', que: 'escala' }]);
+    }
+  });
+
+  it('[A1] seguir retoma el borrador desde reposo o creada; nunca pisa otra forma ni una calibración', () => {
+    const [forma] = aMedio as [Extract<EstadoCiclo, { fase: 'dibujando' }>];
+    expect(correr(reposo('recuento'), { tipo: 'seguir', forma }).estado).toEqual(forma);
+    expect(correr({ fase: 'creada', armada: 'longitud', lineId: 'l-1' }, { tipo: 'seguir', forma }).estado).toEqual(forma);
+    const otra = dibujando('superficie', [[5, 5]]);
+    expect(correr(otra, { tipo: 'seguir', forma }).estado).toEqual(otra);
+    const cal = correr(REPOSO, { tipo: 'calibrar' }).estado;
+    expect(correr(cal, { tipo: 'seguir', forma }).estado).toEqual(cal);
+  });
 
   it('cambio de herramienta: reposo con la nueva armada; si se dibujaba, como un cambio de partida', () => {
     expect(correr(dibujando('longitud', [[0, 0]]), { tipo: 'herramienta', armada: 'recuento' })).toEqual({

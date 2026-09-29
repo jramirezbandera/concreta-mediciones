@@ -5,9 +5,10 @@
    pantalla estrecha o página aún sin pintar.
    =========================================================================== */
 import { leerCelda } from '../../core/expresion';
+import { medFormaDe } from '../../core/medForma';
 import { parseEsNumber, toDecimalComma } from '../../core/money';
 import type { Armada } from '../../core/planoCiclo';
-import { motivoHerramienta, type MotivoMedida, type ValorFijo } from '../../core/planoMedida';
+import { TABLA_MEDIDA, motivoHerramienta, type MotivoMedida, type ValorFijo } from '../../core/planoMedida';
 import type { Escala, Herramienta, MedDim, Partida } from '../../core/types';
 import { textoMotivoMedida } from '../../store/motivos';
 
@@ -88,4 +89,17 @@ export function motivoVisor(h: Herramienta, c: ContextoVisor): MotivoVisor | nul
   if (m) return m;
   if (!c.pintada) return { motivo: 'pintando' };
   return null;
+}
+
+/** [A1] ¿Puede una forma de `h` a medio medir pasar a esta partida (§5.8)?
+ *  Solo mira su forma de medir: las fijas que falten se piden después. */
+export function encajaHerramienta(
+  h: Herramienta,
+  p: Pick<Partida, 'medForma' | 'ud' | 'med'> | null,
+  supDirecta: boolean | null,
+): boolean {
+  if (!p) return false;
+  const c = TABLA_MEDIDA[h][medFormaDe(p)];
+  if (c.encaja === false) return false;
+  return !(c.encaja === 'pasa-a-area' && p.med.length > 0 && supDirecta === false);
 }

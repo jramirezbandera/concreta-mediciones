@@ -403,6 +403,14 @@
   stroke: color-mix(in srgb, var(--capa-accent) 55%, transparent);
   stroke-width: 1;
 }
+/* [A1] Cursor de teclado (§5.10): un anillo con halo, legible sobre blanco y negro. */
+.cursorTeclado {
+  fill: none;
+  stroke: var(--capa-accent);
+  stroke-width: 2;
+  paint-order: stroke;
+  filter: drop-shadow(0 0 1px #fff);
+}
 .ancla {
   position: absolute;
   transform: translate(-50%, calc(-100% - 10px));
@@ -722,6 +730,14 @@
 }
 .fijaFalta input {
   border-color: var(--state-warn);
+}
+/* [A1] Una forma en curso con lo que pide la partida a la que pasó (§5.8). */
+.aMedio {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8) var(--sp-16);
+  width: 100%;
 }
 .lectura {
   display: flex;

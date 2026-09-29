@@ -9,11 +9,14 @@
    · Lo que el marcador de origen necesita sin cargar el visor: si los bytes de
      cada huella están en este navegador, y las peticiones «Ver en plano» y
      «Volver a medir».
+   · [A1] El borrador (§5.8): una forma a medio medir que sobrevivió a un
+     cambio de partida, página, plano u ocupante. Uno a la vez.
    Se vacía al cambiar de obra (`docToken`) y se reconcilia con `planos` tras
-   Deshacer (`reconciliar`).
+   Deshacer (`reconciliar`), que dice si descartó el borrador y por qué.
    =========================================================================== */
 import { create } from 'zustand';
-import { planoLegible } from '../core/planoDatos';
+import type { FormaEnCurso } from '../core/planoCiclo';
+import { escalaDe, planoLegible } from '../core/planoDatos';
 import type { MedDim, PlanoMeta } from '../core/types';
 
 export interface Destacar {
@@ -23,6 +26,27 @@ export interface Destacar {
   lineId: string;
   nonce: number;
 }
+
+/** [A1] Una forma a medio medir guardada (§5.8), ligada a su obra, plano,
+ *  página, partida y a la revisión de la calibración de su página. */
+export interface Borrador {
+  docToken: string;
+  planoId: string;
+  pagina: number;
+  /** La partida para la que se dibujaba («Borrador para …», [Volver]). */
+  partidaId: string;
+  /** `rev` de la escala de la página al empezarla (`null`: sin calibrar, Recuento). */
+  calRev: string | null;
+  restar: boolean;
+  forma: FormaEnCurso;
+  /** `partida`: la herramienta no encaja en la partida abierta; vuelve sola al
+   *  volver a su partida. `vista`: cambió la página, el plano, el ocupante o
+   *  el ancho; al volver se ofrece [Seguir]. */
+  espera: 'partida' | 'vista';
+}
+
+/** Por qué `reconciliar` descartó el borrador. */
+export type DescarteBorrador = 'obra' | 'plano' | 'escala';
 
 export interface PlanoUiState {
   /** Obra a la que pertenece este estado. */
@@ -53,6 +77,7 @@ export interface PlanoUiState {
   /** [A1] Algo que pide la cabecera (chip de escala, menú ⋯) y abre el visor,
    *  que es quien conoce el PDF (su `userUnit`, las páginas iguales). */
   pedido: { que: 'ajuste' | 'copiarEscala'; nonce: number } | null;
+  borrador: Borrador | null;
 
   abrirPlano: (planoId: string | null, pagina?: number) => void;
   setPagina: (pagina: number) => void;
@@ -70,8 +95,11 @@ export interface PlanoUiState {
   limpiarRemedir: () => void;
   pedirAlVisor: (que: 'ajuste' | 'copiarEscala') => void;
   limpiarPedido: () => void;
-  /** Tras Deshacer o cambiar de obra: el plano que se ve sigue existiendo. */
-  reconciliar: (planos: readonly unknown[], docToken: string) => void;
+  guardarBorrador: (b: Borrador) => void;
+  quitarBorrador: () => void;
+  /** Tras Deshacer o cambiar de obra: el plano que se ve sigue existiendo y el
+   *  borrador sigue valiendo (misma obra, su plano y la misma escala). */
+  reconciliar: (planos: readonly unknown[], docToken: string) => DescarteBorrador | null;
   reset: () => void;
 }
 
@@ -91,7 +119,17 @@ const INICIAL = {
   destacar: null,
   remedir: null,
   pedido: null,
+  borrador: null,
 } satisfies Partial<PlanoUiState>;
+
+/** ¿Sigue valiendo el borrador? Si no, por qué. */
+export function descarteDe(b: Borrador, planos: readonly unknown[], docToken: string): DescarteBorrador | null {
+  if (b.docToken !== docToken) return 'obra';
+  const p = planos.find((x): x is PlanoMeta => planoLegible(x) && x.id === b.planoId);
+  if (!p || p.quitado || b.pagina > p.paginas) return 'plano';
+  if ((escalaDe(p, b.pagina)?.rev ?? null) !== b.calRev) return 'escala';
+  return null;
+}
 
 let nonce = 0;
 
@@ -120,18 +158,23 @@ export const usePlanoUiStore = create<PlanoUiState>((set, get) => ({
   limpiarRemedir: () => set({ remedir: null }),
   pedirAlVisor: (que) => set({ pedido: { que, nonce: ++nonce } }),
   limpiarPedido: () => set({ pedido: null }),
+  guardarBorrador: (borrador) => set({ borrador }),
+  quitarBorrador: () => set({ borrador: null }),
   reconciliar: (planos, docToken) => {
     const s = get();
     if (s.docToken === null) set({ docToken }); // la primera vez solo se adopta
     else if (s.docToken !== docToken) {
       // Otra obra: nada del visor anterior vale (salvo el ancho y la disponibilidad).
       set({ ...INICIAL, ancho: s.ancho, disponibles: s.disponibles, docToken });
-      return;
+      return s.borrador ? 'obra' : null;
     }
-    if (!s.planoId) return;
+    const descarte = s.borrador ? descarteDe(s.borrador, planos, docToken) : null;
+    if (descarte) set({ borrador: null });
+    if (!s.planoId) return descarte;
     const p = planos.find((x): x is PlanoMeta => planoLegible(x) && x.id === s.planoId);
     if (!p || p.quitado) set({ planoId: null, pagina: 1 });
     else if (s.pagina > p.paginas) set({ pagina: 1 });
+    return descarte;
   },
   reset: () => set({ ...INICIAL }),
 }));
