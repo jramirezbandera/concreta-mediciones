@@ -1566,20 +1566,28 @@
 .pCard.selected {
   box-shadow: inset 3px 0 0 var(--accent), var(--shadow-panel);
 }
+/* Rejilla: [chevron] [contenido] [⋮]. Título y cálculo cuelgan de la columna
+   del contenido, así todo arranca en el mismo borde y se lee como un bloque. */
 .pCardHead {
   cursor: pointer;
-  padding: var(--sp-12) 13px 13px;
-}
-.pCardTop {
-  display: flex;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  column-gap: var(--sp-8);
   align-items: center;
-  gap: 9px;
+  padding: var(--sp-8) var(--sp-8) var(--sp-10) var(--sp-12);
+}
+.pCardChev {
+  grid-column: 1;
+}
+.pCardMenu {
+  grid-column: 3;
+  flex-shrink: 0;
 }
 .pCardId {
+  grid-column: 2;
   min-width: 0;
-  flex: 1;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--sp-8);
 }
 .pCardPos {
@@ -1594,62 +1602,68 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.pCardTitleRow {
+  grid-column: 2 / 4;
+  min-width: 0;
+  margin-top: var(--sp-2);
+  padding-right: var(--sp-4);
+}
+/* Línea de cálculo: «cantidad ud × precio € ······ importe». La guía de puntos
+   ata el importe a sus factores aunque la tarjeta sea ancha (visor partido). */
+.pCardCalc {
+  grid-column: 2 / 4;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  min-width: 0;
+  margin-top: var(--sp-6);
+  padding-right: var(--sp-4);
+  font-size: var(--fs-table);
+  color: var(--text-primary);
+}
+/* Envoltorio de EditableNum (ancho 100 %): sin ancho mínimo el input de edición
+   se quedaría en nada dentro de una línea que se ajusta al contenido. */
+.pCalcNum {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  flex-shrink: 0;
+}
+.pCalcNum:has(input) {
+  min-width: 84px;
+}
+/* La cantidad arranca en el mismo borde que el título (el relleno de 6px del
+   número editable la desplazaba). */
+.pCalcNum:first-child {
+  margin-left: calc(-1 * var(--sp-6));
+}
+/* Cantidad calculada (con medición): mismo relleno que EditableNum para que la
+   cifra no salte de sitio al cambiar entre calculada y a mano. */
+.pCalcFixed {
+  padding: 3px var(--sp-6);
+  font-weight: 500;
+}
+.pCalcUd {
+  flex-shrink: 0;
+  margin-left: -4px;
+}
+.pCalcOp {
+  flex-shrink: 0;
+  color: var(--text-disabled);
+}
+.pCalcLeader {
+  flex: 1;
+  min-width: var(--sp-12);
+  align-self: flex-end;
+  margin: 0 var(--sp-4) 6px;
+  border-bottom: 1px dotted var(--border-main);
+}
 .pCardImporte {
+  flex-shrink: 0;
   font-size: var(--fs-title);
   font-weight: 600;
   color: var(--text-primary);
-  flex-shrink: 0;
-}
-.pCardTitleRow {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--sp-8);
-  margin-top: 9px;
-  padding-left: var(--sp-24);
-}
-.pCardStats {
-  display: flex;
-  align-items: stretch;
-  margin-top: 11px;
-  margin-left: var(--sp-24);
-  border: 1px solid var(--border-sub);
-  border-radius: 8px;
-  background: var(--bg-primary);
-  overflow: hidden;
-}
-.pStat {
-  flex: 1;
-  min-width: 0;
-  padding: 7px var(--sp-10);
-  border-right: 1px solid var(--border-sub);
-}
-.pStat.last {
-  border-right: 0;
-}
-/* Celdas numéricas (Cantidad, Precio) a la derecha, etiqueta incluida, como las
-   columnas de la tabla: la cantidad calculada salía a la izquierda y la editable
-   (EditableNum) a la derecha, y la cifra cambiaba de lado según hubiera medición. */
-.pStat:not(:first-child) {
-  text-align: right;
-}
-.pStatLabel {
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  color: var(--text-secondary);
-  margin-bottom: var(--sp-2);
-}
-.pStatVal {
-  font-size: var(--fs-table);
-  font-weight: 500;
-  color: var(--text-primary);
-}
-/* El punto de «precio a mano» pegado a la cifra, no suelto en el borde de la
-   caja (el valor va alineado a la derecha dentro del stat). */
-.pStat.last .pStatVal {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 4px;
 }
 
 /* ---- medición en tarjetas ---- */

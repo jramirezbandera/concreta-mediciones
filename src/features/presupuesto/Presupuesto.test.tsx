@@ -152,7 +152,8 @@ describe('PresupuestoView (F2.1 lectura + F2.2 detalle)', () => {
     render(<PresupuestoView compact={true} />);
     expect(screen.queryByText('Nº · Código')).toBeNull(); // sin cabecera de tabla
     expect(screen.getByText('E02EM030')).toBeInTheDocument(); // la partida sigue ahí
-    expect(screen.getAllByText('Cantidad').length).toBeGreaterThan(0); // tarjetas con stats
+    // tarjetas con su línea de cálculo (cantidad ud × precio € ···· importe)
+    expect(screen.getAllByRole('button', { name: 'Precio unitario' }).length).toBeGreaterThan(0);
   });
 
   it('escritorio mantiene la tabla (cabecera de columnas presente)', () => {

@@ -48,38 +48,41 @@ export const PartidaCard = memo(function PartidaCard({
       className={`${styles.pCard} ${open ? `${styles.open} ${styles.selected}` : ''} ${justRevealed ? styles.justRevealed : ''}`}
       aria-selected={open}
     >
+      {/* Tres líneas que se leen de arriba abajo como la fila de la tabla:
+          identificación → título → cálculo. El importe cierra la línea de su
+          propio cálculo (cantidad × precio ···· importe) en vez de flotar
+          arriba lejos de sus factores; sin caja ni etiquetas en mayúsculas. */}
       <div className={styles.pCardHead} onClick={() => togglePartida(p.id)}>
-        <div className={styles.pCardTop}>
-          {/* Botón real (no solo el clic en la tarjeta): foco de teclado, estado
-              para lectores de pantalla y 44px de área táctil. Igual que CertCard. */}
-          <button
-            type="button"
-            className={`tap-target ${styles.chevBtn}`}
-            aria-expanded={open}
-            aria-label={`${open ? 'Contraer' : 'Desplegar'} partida ${p.pos}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              togglePartida(p.id);
-            }}
-          >
-            <Icon
-              name={open ? 'chevronDown' : 'chevron'}
-              size={15}
-              className={`${styles.chevIcon} ${open ? styles.open : ''}`}
-            />
-          </button>
-          <div className={styles.pCardId}>
-            <span className={`mono ${styles.pCardPos}`}>{p.pos}</span>
-            <span className={`mono ${styles.pCardCode}`}>{p.code}</span>
-          </div>
-          <span className={`mono ${styles.pCardImporte}`}>{fmtNum(toEur(importe))}</span>
-          <span onClick={stop} style={{ flexShrink: 0 }}>
-            <PartidaMenu p={p} chapterId={chapterId} canUp={canUp} canDown={canDown} />
-          </span>
+        {/* Botón real (no solo el clic en la tarjeta): foco de teclado, estado
+            para lectores de pantalla y 44px de área táctil. Igual que CertCard. */}
+        <button
+          type="button"
+          className={`tap-target ${styles.chevBtn} ${styles.pCardChev}`}
+          aria-expanded={open}
+          aria-label={`${open ? 'Contraer' : 'Desplegar'} partida ${p.pos}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            togglePartida(p.id);
+          }}
+        >
+          <Icon
+            name={open ? 'chevronDown' : 'chevron'}
+            size={15}
+            className={`${styles.chevIcon} ${open ? styles.open : ''}`}
+          />
+        </button>
+        <div className={styles.pCardId}>
+          <span className={`mono ${styles.pCardPos}`}>{p.pos}</span>
+          <span className={`mono ${styles.pCardCode}`}>{p.code}</span>
+          {p.mainType && <Badge type={p.mainType} />}
+          {p.contradictorio && <ContraChip />}
+          {p.ciPct != null && p.ciPct > 0 && <CiChip pct={p.ciPct} small />}
         </div>
+        <span className={styles.pCardMenu} onClick={stop}>
+          <PartidaMenu p={p} chapterId={chapterId} canUp={canUp} canDown={canDown} />
+        </span>
 
         <div className={styles.pCardTitleRow} onClick={stop}>
-          {p.mainType && <Badge type={p.mainType} />}
           <EditableText
             value={p.title}
             ariaLabel="Título de la partida"
@@ -87,50 +90,54 @@ export const PartidaCard = memo(function PartidaCard({
             className={styles.title}
             onCommit={(v) => editPartidaField(chapterId, p.id, 'title', v)}
           />
-          {p.contradictorio && <ContraChip />}
-          {p.ciPct != null && p.ciPct > 0 && <CiChip pct={p.ciPct} small />}
         </div>
 
-        <div className={styles.pCardStats}>
-          <div className={styles.pStat} onClick={stop}>
-            <div className={`caps ${styles.pStatLabel}`}>Ud.</div>
-            <div className={`mono ${styles.pStatVal}`}>
-              <UdSelect
-                value={p.ud}
-                ariaLabel="Unidad de medida de la partida"
-                onCommit={(v) => editPartidaField(chapterId, p.id, 'ud', v)}
-              />
-            </div>
-          </div>
-          <div className={styles.pStat} onClick={sinMedicion ? stop : undefined}>
-            <div className={`caps ${styles.pStatLabel}`}>Cantidad</div>
-            <div className={`mono ${styles.pStatVal}`}>
-              {sinMedicion ? (
-                <EditableNum
-                  value={cantidad}
-                  dec={2}
-                  ariaLabel="Cantidad de la partida (sin medición)"
-                  onCommit={(v) => setCantidad(chapterId, p.id, v)}
-                />
-              ) : (
-                fmtNum(cantidad)
-              )}
-            </div>
-          </div>
-          <div className={`${styles.pStat} ${styles.last}`} onClick={stop} title={precio.title}>
-            <div className={`caps ${styles.pStatLabel}`}>Precio €</div>
-            <div className={`mono ${styles.pStatVal}`}>
-              {precio.dot && <span className={styles.overrideDotCard} aria-hidden="true" />}
+        <div className={`mono ${styles.pCardCalc}`}>
+          <span
+            className={styles.pCalcNum}
+            onClick={sinMedicion ? stop : undefined}
+            title={sinMedicion ? 'Cantidad (sin medición: se escribe a mano)' : 'Cantidad medida'}
+          >
+            {sinMedicion ? (
               <EditableNum
-                value={p.precio}
+                value={cantidad}
                 dec={2}
-                accent={precio.accent}
-                ariaLabel="Precio unitario"
-                onCommit={(v) => setPrecio(chapterId, p.id, v)}
+                ariaLabel="Cantidad de la partida (sin medición)"
+                onCommit={(v) => setCantidad(chapterId, p.id, v)}
               />
-              <span className={styles.srOnly}>{precio.sr}</span>
-            </div>
-          </div>
+            ) : (
+              <span className={styles.pCalcFixed}>{fmtNum(cantidad)}</span>
+            )}
+          </span>
+          <span onClick={stop} className={styles.pCalcUd}>
+            <UdSelect
+              value={p.ud}
+              ariaLabel="Unidad de medida de la partida"
+              onCommit={(v) => editPartidaField(chapterId, p.id, 'ud', v)}
+            />
+          </span>
+          <span className={styles.pCalcOp} aria-hidden="true">
+            ×
+          </span>
+          <span className={styles.pCalcNum} onClick={stop} title={precio.title}>
+            {precio.dot && <span className={styles.overrideDotCard} aria-hidden="true" />}
+            <EditableNum
+              value={p.precio}
+              dec={2}
+              accent={precio.accent}
+              ariaLabel="Precio unitario"
+              onCommit={(v) => setPrecio(chapterId, p.id, v)}
+            />
+            <span className={styles.srOnly}>{precio.sr}</span>
+          </span>
+          <span className={styles.pCalcOp} aria-hidden="true">
+            €
+          </span>
+          <span className={styles.pCalcLeader} aria-hidden="true" />
+          <span className={styles.pCardImporte} title="Importe">
+            <span className={styles.srOnly}>Importe </span>
+            {fmtNum(toEur(importe))}
+          </span>
         </div>
       </div>
 
