@@ -21,6 +21,7 @@ import { DESVIACION_MAX } from '../../core/planoGeom';
 import { TOPES, escalaDe, escalaLegible, origenLegible, paginaValida, planoLegible } from '../../core/planoDatos';
 import { lineaRetocada, lineasConEscala, valoresDesdeOrigen, type NewPlanoLine } from '../../core/planoMedida';
 import { planRecalculo, recalcularLinea } from '../../core/planoRecalculo';
+import { siguienteRevision } from '../../core/planoRevision';
 import { escalaConAjuste } from '../../core/planoTexto';
 import type { Comprobacion, Escala, MedDim, MedForma, MedLine, Partida, PlanoMeta } from '../../core/types';
 import { nextCalRev, nextMedLineId } from '../base';
@@ -93,6 +94,8 @@ type PlanosSlice = Pick<
   | 'copyPlanoPageScale'
   | 'acceptLineValues'
   | 'unlinkLineOrigen'
+  | 'attachPlanoRevision'
+  | 'relinkPlano'
 >;
 
 const stale = (cambio: NonNullable<MedResult['detalle']>['cambio'], extra: Partial<NonNullable<MedResult['detalle']>> = {}): MedResult => ({
@@ -199,17 +202,70 @@ export const createPlanosSlice: ObraSlice<PlanosSlice> = (set, get) => ({
     return { ids: [planoId] };
   },
 
-  renamePlano: ({ planoId, nombre, expect }) => {
+  renamePlano: ({ planoId, nombre, revision, expect }) => {
     const s0 = get();
     if (expect.docToken !== s0.docToken) return stale('obra');
     const p0 = planoDe(s0, planoId);
     if (!p0) return { ids: [], reason: 'no-plano' };
     const n = nombre.trim();
-    if (!n || n === p0.nombre) return { ids: [], reason: 'noop' };
+    const r = revision === undefined ? (p0.revision ?? '') : revision.trim().slice(0, 24);
+    if (!n || (n === p0.nombre && r === (p0.revision ?? ''))) return { ids: [], reason: 'noop' };
     structural(() =>
       set((s) => {
         const p = planoDe(s, planoId);
-        if (p) p.nombre = n;
+        if (!p) return;
+        p.nombre = n;
+        if (r) p.revision = r;
+        else delete p.revision;
+      }),
+    );
+    return { ids: [planoId] };
+  },
+
+  attachPlanoRevision: ({ meta, sustituye, expect }) => {
+    const s0 = get();
+    if (expect.docToken !== s0.docToken) return stale('obra');
+    const viejo = planoDe(s0, sustituye);
+    if (!viejo || viejo.quitado) return { ids: [], reason: 'no-plano' };
+    if (!planoLegible(meta) || meta.paginas > TOPES.paginasPorPlano) return { ids: [], reason: 'noop' };
+    if (s0.planos.filter((p) => planoLegible(p) && !p.quitado).length >= TOPES.planos) return { ids: [], reason: 'noop' };
+    const nuevo = JSON.parse(JSON.stringify(meta)) as PlanoMeta;
+    nuevo.sustituye = sustituye;
+    nuevo.revision = meta.revision?.trim() || siguienteRevision(viejo.revision);
+    nuevo.escalas = {}; // otro PDF: se calibra de nuevo
+    // Las etiquetas de página («PB») pasan a las páginas que existen en la revisión.
+    const etiquetas = Object.entries(viejo.etiquetas ?? {}).filter(([k]) => paginaValida(k, nuevo.paginas));
+    if (!nuevo.etiquetas && etiquetas.length) nuevo.etiquetas = Object.fromEntries(etiquetas);
+    structural(() =>
+      set((s) => {
+        s.planos.push(nuevo);
+      }),
+    );
+    return { ids: [nuevo.id] };
+  },
+
+  relinkPlano: ({ planoId, huella, tamano, archivo, paginas, expect }) => {
+    const s0 = get();
+    if (expect.docToken !== s0.docToken) return stale('obra');
+    const p0 = planoDe(s0, planoId);
+    if (!p0 || p0.quitado) return { ids: [], reason: 'no-plano' };
+    if (p0.huella !== expect.huella) return stale('plano');
+    if (!huella || huella === p0.huella || paginas !== p0.paginas || !(tamano > 0)) return { ids: [], reason: 'noop' };
+    structural(() =>
+      set((s) => {
+        const p = planoDe(s, planoId);
+        if (!p) return;
+        // Las líneas conservan su `origen.huella`: manda en «Ver en plano».
+        p.huellasAnteriores = [...(p.huellasAnteriores ?? []).filter((h) => h !== huella && h !== p.huella), p.huella];
+        p.huella = huella;
+        p.tamano = tamano;
+        p.archivo = archivo;
+        // Misma escala y misma `rev` (las líneas siguen al día), pero «sin
+        // comprobar»: cada página pide una cota nueva (`setPlanoPageCheck`).
+        for (const k of Object.keys(p.escalas)) {
+          const e = p.escalas[Number(k)];
+          if (escalaLegible(e)) delete e.comprobacion;
+        }
       }),
     );
     return { ids: [planoId] };

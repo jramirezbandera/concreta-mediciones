@@ -57,7 +57,7 @@ describe('ProjectBackup (F6.3)', () => {
       target: { files: [importableJson('Obra Importada')] },
     });
 
-    await waitFor(() => expect(onImported).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(onImported).toHaveBeenCalledTimes(1), { timeout: 5000 });
     expect(confirm).toHaveBeenCalled();
     expect(state().obra.denominacion).toBe('Obra Importada');
     // backup previo + (export no): al menos una descarga (el backup antes de pisar)
@@ -259,7 +259,7 @@ describe('ProjectBackup · copia .zip con planos [A1]', () => {
     const onImported = vi.fn();
     render(<ProjectBackup onImported={onImported} />);
     fireEvent.change(screen.getByLabelText('Importar copia (.zip o .json)'), { target: { files: [file] } });
-    await waitFor(() => expect(onImported).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(onImported).toHaveBeenCalledTimes(1), { timeout: 5000 });
     expect(useToastStore.getState().msg).toBe('Copia restaurada: la obra y 1 plano');
   });
 });

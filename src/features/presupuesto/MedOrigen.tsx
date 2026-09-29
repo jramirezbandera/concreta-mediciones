@@ -48,7 +48,13 @@ export function MedOrigen({ line, numero, chip = false }: { line: MedLine; numer
   const o = line.origen;
   const legible = origenLegible(o);
   const plano = legible ? planos.find((p): p is PlanoMeta => planoLegible(p) && p.id === o.planoId) : undefined;
-  const disponible = useDisponible(legible ? o.huella : null);
+  // [A1] Tras «Usar este PDF para este plano», la línea conserva la huella con
+  // la que se midió: se ve con esos bytes si están y, si no, con los del plano.
+  const otraVersion = legible && !!plano && plano.huella !== o.huella;
+  const dispOrigen = useDisponible(legible ? o.huella : null);
+  const dispPlano = useDisponible(otraVersion ? plano.huella : null);
+  const planoDisponible = otraVersion ? dispPlano : dispOrigen;
+  const disponible = otraVersion && (dispOrigen || dispPlano) ? true : otraVersion ? (dispOrigen === false && dispPlano === false ? false : undefined) : dispOrigen;
 
   useEffect(() => {
     if (!abierto) return;
@@ -123,6 +129,7 @@ export function MedOrigen({ line, numero, chip = false }: { line: MedLine; numer
                 {o.herramienta === 'recuento' ? 'Recuento' : `1:${fmtNum(o.n, o.n % 1 ? 1 : 0)}${o.escalaAjustada ? ' ajustada' : ''}`} ·{' '}
                 {NOMBRE_HERRAMIENTA[o.herramienta]} · {new Date(o.at).toLocaleDateString('es-ES')}
               </div>
+              {otraVersion && <p className={styles.origenPopTexto}>Medida sobre otra versión del PDF de este plano.</p>}
               {retocada && !aceptada && <p className={styles.origenPopAviso}>Retocada a mano: alguna casilla no es la que dio el plano.</p>}
               {aceptada && (
                 <p className={styles.origenPopTexto}>
@@ -154,7 +161,7 @@ export function MedOrigen({ line, numero, chip = false }: { line: MedLine; numer
                   <button
                     type="button"
                     className={styles.origenPopBtn}
-                    disabled={!plano || quitado || disponible === false || (o.herramienta !== 'recuento' && !escalaDe(plano, o.pagina))}
+                    disabled={!plano || quitado || planoDisponible === false || (o.herramienta !== 'recuento' && !escalaDe(plano, o.pagina))}
                     onClick={() => {
                       setAbierto(false);
                       volverAMedir(line as MedLine & { origen: OrigenPlano });

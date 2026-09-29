@@ -53,6 +53,26 @@ describe('marcador de origen', () => {
     expect(m).toHaveTextContent('✎');
   });
 
+  it('[A1] medida con el PDF anterior del plano: se ve con el actual y lo dice', async () => {
+    const vieja = A0.planos[0]!.huella;
+    st().relinkPlano({
+      planoId: 'pl-p1',
+      huella: 'f'.repeat(64),
+      tamano: 10,
+      archivo: 'nuevo.pdf',
+      paginas: 1,
+      expect: { docToken: st().docToken, huella: vieja },
+    });
+    await __resetPlanosForTests(); // el PDF anterior ya no está…
+    registrarBytesEnMemoria('f'.repeat(64), new ArrayBuffer(8)); // …el actual, sí
+    usePlanoUiStore.getState().reset();
+    panel('p-solado');
+    await waitFor(() => expect(usePlanoUiStore.getState().disponibles).toEqual({ [vieja]: false, ['f'.repeat(64)]: true }));
+    fireEvent.click(screen.getByRole('button', { name: /^Línea 1: medida en el plano/ })); // no «no disponible»
+    expect(screen.getByText('Medida sobre otra versión del PDF de este plano.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ver en plano' })).toBeEnabled();
+  });
+
   it('[A1] retocada: «Aceptar valores actuales» y «Desvincular del plano»', async () => {
     useObraStore.setState((s) => {
       s.partidas.c01!.find((p) => p.id === 'p-solado')!.med[0]!.largo = 21;

@@ -194,6 +194,10 @@ depende de que la Etapa A supere su puerta cronometrada.
   (enchufes, luminarias) buscando sus copias en el PDF vectorial.
 - **Probar con un plano de ejemplo (P3).** En el estado vacío del visor, para el
   usuario final. El sandbox «Planos (ejemplo)» ya cubre al desarrollador.
+- **Ver una línea sobre el PDF con el que se midió (P3).** Tras «Usar este PDF para este
+  plano», las líneas antiguas conservan su `origen.huella`; «Ver en plano» abre el PDF
+  actual del plano y avisa. Si el PDF anterior estuviera en el navegador, abrirlo en un
+  modo de solo ver otra versión (A1 no lo hace: tras un reenlace casi nunca está).
 - **Borrado automático de PDF sin referencia entre pestañas (P3).** En la Etapa A se
   marcan y se borran a mano con «Liberar espacio». Hacerlo solo exige un protocolo
   entre pestañas: publicación de bytes, referencias sin guardar y las dos pilas del
@@ -213,4 +217,4 @@ estos ya están calculados:
 
 ---
 
-_Backlog: 1 TODO (mutaciones en pestaña readonly) + 5 aplazados del plan de líneas de medición + mejoras de producto (recordatorio de copia, guardar en carpeta, obra en el móvil, medir sobre planos con 7 aplazados, documentos). El pase de diseño móvil y la navegación de teclado en certificaciones están hechos._
+_Backlog: 1 TODO (mutaciones en pestaña readonly) + 5 aplazados del plan de líneas de medición + mejoras de producto (recordatorio de copia, guardar en carpeta, obra en el móvil, medir sobre planos con 8 aplazados, documentos). El pase de diseño móvil y la navegación de teclado en certificaciones están hechos._

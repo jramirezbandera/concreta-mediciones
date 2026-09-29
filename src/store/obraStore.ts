@@ -600,7 +600,22 @@ export interface ObraState extends ObraData {
   attachPlano: (a: { meta: PlanoMeta; expect: ExpectDoc; nuevo?: boolean }) => MedResult;
   /** Pone `quitado`: sale de las listas; sus líneas conservan números y `origen`. */
   removePlano: (a: { planoId: string; expect: ExpectDoc }) => MedResult;
-  renamePlano: (a: { planoId: string; nombre: string; expect: ExpectDoc }) => MedResult;
+  /** Nombre y, [A1] si se pasa, la revisión («Rev. B»; vacía la quita). */
+  renamePlano: (a: { planoId: string; nombre: string; revision?: string; expect: ExpectDoc }) => MedResult;
+  /** [A1] «Adjuntar revisión»: plano NUEVO con `sustituye` y `revision` (la
+   *  siguiente si no viene); el anterior no se toca (§9.3). Tras guardar los bytes. */
+  attachPlanoRevision: (a: { meta: PlanoMeta; sustituye: string; expect: ExpectDoc }) => MedResult;
+  /** [A1] «Usar este PDF para este plano»: huella nueva (la anterior a
+   *  `huellasAnteriores`), mismas escalas y líneas; cada página calibrada pierde
+   *  su comprobación y pide otra (§9.3). Tras guardar los bytes. */
+  relinkPlano: (a: {
+    planoId: string;
+    huella: string;
+    tamano: number;
+    archivo: string;
+    paginas: number;
+    expect: ExpectDoc & { huella: string };
+  }) => MedResult;
   /** Rótulo corto de una página («P1»); vacío lo quita. */
   setPlanoPageLabel: (a: { planoId: string; pagina: number; etiqueta: string; expect: ExpectDoc }) => MedResult;
   /** Calibración nueva de una página. `has-lines` si ya tiene líneas medidas con escala. */

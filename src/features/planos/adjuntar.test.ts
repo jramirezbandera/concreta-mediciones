@@ -4,12 +4,12 @@ import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { planoLegible } from '../../core/planoDatos';
 import { sha256Hex } from '../../core/sha256';
-import type { PlanoMeta } from '../../core/types';
+import type { Escala, PlanoMeta } from '../../core/types';
 import { __resetPlanosForTests, leerBytes, tienePlano } from '../../persist/planos';
 import { blankObraData, useObraStore } from '../../store';
 import { usePlanoUiStore } from '../../store/planoUiStore';
 import { pdfMinimo } from '../../test/pdfMinimo';
-import { MB, adjuntarPlano, nombreDeArchivo, type FaseAdjuntar } from './adjuntar';
+import { MB, adjuntarPlano, adjuntarRevision, nombreDeArchivo, usarPdfParaPlano, type FaseAdjuntar } from './adjuntar';
 import { __setMotorPdfForTests } from './motor';
 import { crearAdapterFake } from './pdfAdapter.fake';
 import { ErrorPdf, type PdfAdapter } from './pdfTipos';
@@ -18,6 +18,9 @@ const st = () => useObraStore.getState();
 const planos = () => st().planos.filter((p): p is PlanoMeta => planoLegible(p));
 const pdf = (n = 1) => pdfMinimo(Array.from({ length: n }, () => ({ mediaBox: [0, 0, 842, 595] as [number, number, number, number] })));
 const archivo = (bytes: Uint8Array, nombre = 'Planta primera.pdf') => new File([bytes], nombre, { type: 'application/pdf' });
+/** Una página como `pdf(1)` pero con otros bytes (otra huella). */
+const conTexto = (texto: string, mediaBox: [number, number, number, number] = [0, 0, 842, 595]) =>
+  pdfMinimo([{ mediaBox, textos: [{ x: 50, y: 50, tamano: 10, texto }] }]);
 
 beforeEach(async () => {
   await __resetPlanosForTests();
@@ -77,10 +80,13 @@ describe('adjuntar un plano', () => {
     expect(await tienePlano(planos()[0]!.huella)).toBe(true);
   });
 
-  it('reenlazar un plano concreto con otro PDF: «no idéntico» (A0 solo explica y cancela)', async () => {
+  it('reenlazar un plano concreto con otro PDF: «no idéntico», y [A1] si encaja en sus páginas', async () => {
     await adjuntarPlano(archivo(pdf(1)));
     const r = await adjuntarPlano(archivo(pdf(2), 'otro.pdf'), { destino: planos()[0]!.id });
-    expect(r).toEqual({ kind: 'no-identico' });
+    expect(r).toEqual({ kind: 'no-identico', encaja: false });
+    expect(planos()).toHaveLength(1); // nada publicado
+    const igual = await adjuntarPlano(archivo(conTexto('otra exportación'), 'otro.pdf'), { destino: planos()[0]!.id });
+    expect(igual).toEqual({ kind: 'no-identico', encaja: true });
   });
 
   it('errores con su texto: vacío, contraseña, dañado y > 500 MB; > 50 MB avisa y deja seguir', async () => {
@@ -127,5 +133,61 @@ describe('adjuntar un plano', () => {
   it('nombre del plano: el del fichero sin «.pdf»', () => {
     expect(nombreDeArchivo('Planta primera.PDF')).toBe('Planta primera');
     expect(nombreDeArchivo('.pdf')).toBe('Plano');
+  });
+});
+
+describe('[A1] revisión de un plano y «Usar este PDF para este plano» (§9.3)', () => {
+  it('adjuntar revisión: plano NUEVO con `sustituye` y la revisión siguiente; el viejo no cambia', async () => {
+    await adjuntarPlano(archivo(pdf(1)));
+    const viejo = structuredClone(planos()[0]!);
+    const fases: FaseAdjuntar[] = [];
+    const r = await adjuntarRevision(archivo(conTexto('rev b'), 'planta-revB.pdf'), { sustituye: viejo.id, onFase: (f) => fases.push(f) });
+    expect(r).toMatchObject({ kind: 'ok', revision: 'Rev. B' });
+    expect(fases).toEqual(['leyendo', 'huella', 'abriendo', 'guardando']);
+    const nuevo = planos()[1]!;
+    expect(nuevo).toMatchObject({ nombre: 'Planta primera', archivo: 'planta-revB.pdf', sustituye: viejo.id, revision: 'Rev. B', escalas: {} });
+    expect(planos()[0]).toEqual(viejo);
+    expect(await tienePlano(nuevo.huella)).toBe(true);
+    expect(usePlanoUiStore.getState().planoId).toBe(nuevo.id);
+  });
+
+  it('el mismo PDF no es una revisión', async () => {
+    await adjuntarPlano(archivo(pdf(1)));
+    const r = await adjuntarRevision(archivo(pdf(1)), { sustituye: planos()[0]!.id });
+    expect(r).toEqual({ kind: 'error', texto: 'Es el mismo PDF que «Planta primera»: una revisión es otro PDF.' });
+    expect(planos()).toHaveLength(1);
+  });
+
+  it('usar otro PDF para el plano: misma escala sin comprobación, la huella anterior al historial', async () => {
+    await adjuntarPlano(archivo(pdf(1)));
+    const p0 = planos()[0]!;
+    const escala = {
+      rev: 'cal-1',
+      mPorUnidad: 0.0176,
+      n: 50,
+      ref: { a: [100, 100], b: [400, 100], metros: 5.28 },
+      comprobacion: { fuente: 'cota', a: [100, 100], b: [100, 300], metros: 3.52, medidos: 3.52, desviacion: 0 },
+      at: 'x',
+    } as unknown as Escala;
+    st().setPlanoPageScale({ planoId: p0.id, pagina: 1, escala, expect: { docToken: st().docToken } });
+    const r = await usarPdfParaPlano(archivo(conTexto('reexportado'), 'reexportado.pdf'), { planoId: p0.id });
+    expect(r).toEqual({ kind: 'ok', planoId: p0.id, lineas: 0, calibradas: 1 });
+    const p = planos()[0]!;
+    expect(p).toMatchObject({ huellasAnteriores: [p0.huella], archivo: 'reexportado.pdf' });
+    expect(p.huella).not.toBe(p0.huella);
+    expect(p.escalas[1]).toMatchObject({ rev: 'cal-1', mPorUnidad: 0.0176 });
+    expect(p.escalas[1]!.comprobacion).toBeUndefined();
+    expect(await tienePlano(p.huella)).toBe(true);
+  });
+
+  it('un PDF donde no cabe lo guardado no se usa (otras páginas o más pequeñas)', async () => {
+    await adjuntarPlano(archivo(pdf(1)));
+    const p0 = planos()[0]!;
+    const escala = { rev: 'c', mPorUnidad: 0.01, n: 50, ref: { a: [700, 500], b: [800, 500], metros: 1 }, at: 'x' } as unknown as Escala;
+    st().setPlanoPageScale({ planoId: p0.id, pagina: 1, escala, expect: { docToken: st().docToken } });
+    expect(await usarPdfParaPlano(archivo(pdf(2), 'dos.pdf'), { planoId: p0.id })).toEqual({ kind: 'no-encaja' });
+    const pequeno = conTexto('A4', [0, 0, 595, 421]);
+    expect(await usarPdfParaPlano(archivo(pequeno, 'a4.pdf'), { planoId: p0.id })).toEqual({ kind: 'no-encaja' });
+    expect(planos()[0]!.huella).toBe(p0.huella);
   });
 });

@@ -164,6 +164,72 @@ describe('cada acción es UN paso de Deshacer y `stale` no toca nada', () => {
   });
 });
 
+describe('[A1] revisiones y «Usar este PDF para este plano» (§9.3)', () => {
+  const lineasDe = (planoId: string) =>
+    Object.values(st().partidas)
+      .flat()
+      .flatMap((p) => p.med)
+      .filter((l) => (l.origen as OrigenPlano | undefined)?.planoId === planoId);
+
+  it('adjuntar una revisión conserva el plano viejo, sus escalas y sus líneas; UN paso', () => {
+    const viejo = structuredClone(plano());
+    const lineas = structuredClone(lineasDe(viejo.id));
+    st().setPlanoPageLabel({ planoId: viejo.id, pagina: 1, etiqueta: 'P1', expect: doc() });
+    __resetHistoryForTests();
+    initHistory(useObraStore);
+    const meta: PlanoMeta = { ...viejo, id: 'pl-rev', huella: 'h-rev', escalas: {}, etiquetas: undefined };
+    expect(st().attachPlanoRevision({ meta, sustituye: viejo.id, expect: { docToken: 'otra' } })).toMatchObject({ reason: 'stale' });
+    expect(st().attachPlanoRevision({ meta, sustituye: 'no-existe', expect: doc() })).toMatchObject({ reason: 'no-plano' });
+    expect(st().attachPlanoRevision({ meta, sustituye: viejo.id, expect: doc() })).toEqual({ ids: ['pl-rev'] });
+    const nueva = st().planos.find((p) => (p as PlanoMeta).id === 'pl-rev') as PlanoMeta;
+    expect(nueva).toMatchObject({ sustituye: viejo.id, revision: 'Rev. B', escalas: {}, etiquetas: { 1: 'P1' } });
+    expect(plano()).toMatchObject({ id: viejo.id, huella: viejo.huella, escalas: viejo.escalas });
+    expect(plano().revision).toBeUndefined();
+    expect(lineasDe(viejo.id)).toEqual(lineas);
+    expect(__historyState().past).toBe(1);
+    undo();
+    expect(st().planos).toHaveLength(1);
+  });
+
+  it('la revisión que se pide manda; si no, la siguiente de la anterior', () => {
+    st().renamePlano({ planoId: plano().id, nombre: plano().nombre, revision: 'Rev. C', expect: doc() });
+    const base = { ...structuredClone(plano()), escalas: {} };
+    st().attachPlanoRevision({ meta: { ...base, id: 'r1', huella: 'h1', revision: undefined }, sustituye: plano().id, expect: doc() });
+    st().attachPlanoRevision({ meta: { ...base, id: 'r2', huella: 'h2', revision: ' Rev. 7 ' }, sustituye: 'r1', expect: doc() });
+    expect(st().planos.map((p) => (p as PlanoMeta).revision)).toEqual(['Rev. C', 'Rev. D', 'Rev. 7']);
+  });
+
+  it('renombrar puede cambiar o quitar la revisión', () => {
+    expect(st().renamePlano({ planoId: plano().id, nombre: plano().nombre, revision: '  Rev. A ', expect: doc() })).toEqual({ ids: [plano().id] });
+    expect(plano().revision).toBe('Rev. A');
+    expect(st().renamePlano({ planoId: plano().id, nombre: plano().nombre, revision: 'Rev. A', expect: doc() })).toMatchObject({ reason: 'noop' });
+    st().renamePlano({ planoId: plano().id, nombre: plano().nombre, revision: '', expect: doc() });
+    expect(plano()).not.toHaveProperty('revision');
+  });
+
+  it('reenlazar: huella nueva, la anterior al historial, mismas escalas y `rev`, sin comprobación; las líneas no cambian', () => {
+    const viejo = structuredClone(plano());
+    const lineas = structuredClone(lineasDe(viejo.id));
+    const expect1 = { ...doc(), huella: viejo.huella };
+    const args = { planoId: viejo.id, huella: 'h-nueva', tamano: 1234, archivo: 'nuevo.pdf', paginas: viejo.paginas };
+    expect(st().relinkPlano({ ...args, expect: { ...expect1, huella: 'otra' } })).toMatchObject({ reason: 'stale', detalle: { cambio: 'plano' } });
+    expect(st().relinkPlano({ ...args, paginas: viejo.paginas + 1, expect: expect1 })).toMatchObject({ reason: 'noop' });
+    expect(st().relinkPlano({ ...args, huella: viejo.huella, expect: expect1 })).toMatchObject({ reason: 'noop' });
+    expect(st().relinkPlano({ ...args, expect: expect1 })).toEqual({ ids: [viejo.id] });
+    expect(plano()).toMatchObject({ huella: 'h-nueva', tamano: 1234, archivo: 'nuevo.pdf', huellasAnteriores: [viejo.huella] });
+    const e = escalaDe(plano(), 1)!;
+    expect(e.rev).toBe(escalaDe(viejo, 1)!.rev);
+    expect(e.mPorUnidad).toBe(escalaDe(viejo, 1)!.mPorUnidad);
+    expect(e.comprobacion).toBeUndefined();
+    expect(lineasDe(viejo.id)).toEqual(lineas); // su `origen.huella` sigue siendo la vieja
+    // medir exige ahora la comprobación de la página
+    expect(() => medir5m('p-tabique')).toThrow(/sin-comprobar/);
+    // volver al PDF anterior lo saca del historial (sin duplicados)
+    st().relinkPlano({ ...args, huella: viejo.huella, expect: { ...doc(), huella: 'h-nueva' } });
+    expect(plano()).toMatchObject({ huella: viejo.huella, huellasAnteriores: ['h-nueva'] });
+  });
+});
+
 describe('escala', () => {
   const escalaNueva = (): Escala => ({ ...structuredClone(escalaDe(plano(), 1)!), rev: 'cal-2', n: 100, mPorUnidad: 0.0352777 });
 

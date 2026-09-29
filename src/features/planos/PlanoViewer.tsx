@@ -49,14 +49,15 @@ import { useMedUiStore } from '../../store/medUiStore';
 import { textoResultado } from '../../store/motivos';
 import { usePlanoUiStore } from '../../store/planoUiStore';
 import { getDomainRevision, undo } from '../../store/temporal';
-import { adjuntarPlano } from './adjuntar';
+import { adjuntarPlano, adjuntarRevision, usarPdfParaPlano } from './adjuntar';
 import { CalibrarPasos, CampoMetros } from './CalibrarPasos';
 import { AnadirTambien } from './AnadirTambien';
 import { DialogoRecalcular } from './DialogoRecalcular';
 import { DialogoCopiarEscala, PopoverAjuste } from './EscalaCajetin';
+import { revisionMasNueva } from '../../core/planoRevision';
 import { comentarioPropuesto, desviacionCajetin, escalaCalibrada, escalaDeclarada, etiquetaPropuesta } from '../../core/planoTexto';
 import { BotonAyuda } from './BotonAyuda';
-import { textoEscala } from './textos';
+import { textoEscala, textoReenlazado, textoRevisionAdjunta } from './textos';
 import { cajaDe, formasDeLineas, otrasPaginas, paginasAPrecargar, type FormaCapa } from './capa';
 import {
   HERRAMIENTAS_MEDIR,
@@ -575,9 +576,11 @@ export function PlanoViewer({
     if (!origenLegible(o)) return;
     lienzoApi.current?.encuadrar(cajaDe(o.puntos));
     setDestacada(destacar.lineId);
+    // [A1] Medida con el PDF anterior del plano («Usar este PDF para este plano»).
+    if (o.huella !== plano.huella) avisar('Esta línea se midió sobre otra versión del PDF.', 'info');
     const t = setTimeout(() => setDestacada(null), 1500);
     return () => clearTimeout(t);
-  }, [destacar, plano.id, pagina, pintado.estado, partida]);
+  }, [destacar, plano.id, plano.huella, pagina, pintado.estado, partida, avisar]);
 
   useEffect(() => {
     if (!remedir || !partida) return;
@@ -833,12 +836,22 @@ export function PlanoViewer({
 
   /* ---- aviso único (§5.2): el más prioritario ------------------------------------------ */
   const ilegibles = useObraStore((s) => s._ilegible?.length ?? 0);
+  const planosObra = useObraStore((s) => s.planos);
+  const masNueva = revisionMasNueva(planosObra, plano.id);
   let aviso: {
     texto: string;
     tono: 'info' | 'warn' | 'error';
     accion?: { texto: string; run: () => void };
     ayuda?: boolean;
   } | null = mensaje ? { texto: mensaje.texto, tono: mensaje.tono, ayuda: mensaje.ayuda } : null;
+  // [A1] Revisión más nueva: sale también con el PDF no disponible (el cuerpo
+  // explica eso) porque abrir la nueva es la salida más corta.
+  if (!aviso && masNueva)
+    aviso = {
+      texto: `Hay una revisión más nueva: ${masNueva.revision ?? masNueva.nombre}.`,
+      tono: 'info',
+      accion: { texto: 'Abrir', run: () => usePlanoUiStore.getState().abrirPlano(masNueva.id, Math.min(pagina, masNueva.paginas)) },
+    };
   if (!aviso && docE.estado === 'no-disponible') aviso = null; // lo explica el cuerpo
   if (
     !aviso &&
@@ -943,7 +956,7 @@ export function PlanoViewer({
             </button>
           </div>
         )}
-        {docE.estado === 'no-disponible' && <NoDisponible plano={plano} />}
+        {docE.estado === 'no-disponible' && <NoDisponible plano={plano} soloLectura={!!soloLectura} />}
         {doc && info && (
           <PlanoLienzo
             apiRef={lienzoApi}
@@ -1390,37 +1403,94 @@ function PopoverForma({
   );
 }
 
-/** Plano no disponible: sus bytes no están en este navegador (§7.2). */
-function NoDisponible({ plano }: { plano: PlanoMeta }) {
+/** Plano no disponible: sus bytes no están en este navegador (§7.2). [A1] Si
+ *  el PDF que se adjunta no es el original, ofrece «Usar este PDF para este
+ *  plano» (si encaja en sus páginas) o «Adjuntar como revisión nueva» (§9.3). */
+function NoDisponible({ plano, soloLectura }: { plano: PlanoMeta; soloLectura: boolean }) {
   const ref = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [otro, setOtro] = useState<{ file: File; encaja: boolean } | null>(null);
+  const toast = (texto: string) => useToastStore.getState().show(texto);
+  const empezar = () => {
+    setBusy(true);
+    setError(null);
+  };
+  async function elegido(f: File) {
+    empezar();
+    setOtro(null);
+    const r = await adjuntarPlano(f, { destino: plano.id });
+    setBusy(false);
+    if (r.kind === 'no-identico') setOtro({ file: f, encaja: r.encaja });
+    else if (r.kind === 'error') setError(r.texto);
+    else if (r.kind === 'reenlazado') toast(`Plano reenlazado: ${plano.nombre}`);
+  }
+  async function usarEste(f: File) {
+    empezar();
+    const r = await usarPdfParaPlano(f, { planoId: plano.id });
+    setBusy(false);
+    setOtro(null);
+    if (r.kind === 'ok') toast(textoReenlazado(r.lineas, r.calibradas));
+    else if (r.kind === 'no-encaja') setError('Este PDF no tiene las mismas páginas: adjúntalo como revisión nueva.');
+    else if (r.kind === 'error') setError(r.texto);
+  }
+  async function comoRevision(f: File) {
+    empezar();
+    const r = await adjuntarRevision(f, { sustituye: plano.id });
+    setBusy(false);
+    setOtro(null);
+    if (r.kind === 'ok') toast(textoRevisionAdjunta(r.revision, plano));
+    else if (r.kind === 'error') setError(r.texto);
+  }
   return (
     <div className={styles.estadoLienzo}>
       <p>
         No está el PDF de «{plano.archivo}» ({fmtNum(plano.tamano / 1048576, 1)} MB) en este navegador. Vuelve a
         adjuntarlo: las líneas y la escala se recuperan solas.
       </p>
-      <button type="button" className={`${styles.btn} ${styles.btnPrimario}`} disabled={busy} onClick={() => ref.current?.click()}>
-        Adjuntar PDF
-      </button>
+      {otro ? (
+        <div className={styles.otroPdf} role="alert">
+          <p>
+            Este PDF no es idéntico al original.{' '}
+            {otro.encaja
+              ? 'Tiene sus mismas páginas: puedes usarlo para este plano (conserva escalas y líneas; cada página calibrada pide comprobar su escala) o adjuntarlo como revisión nueva.'
+              : 'No tiene sus mismas páginas: solo puede entrar como revisión nueva, y las líneas siguen en este plano.'}{' '}
+            <BotonAyuda />
+          </p>
+          <div className={styles.popoverAcciones}>
+            {otro.encaja && (
+              <button type="button" className={`${styles.btn} ${styles.btnPrimario}`} disabled={busy} onClick={() => void usarEste(otro.file)}>
+                Usar este PDF para este plano
+              </button>
+            )}
+            <button type="button" className={styles.btn} disabled={busy} onClick={() => void comoRevision(otro.file)}>
+              Adjuntar como revisión nueva
+            </button>
+            <button type="button" className={styles.btn} disabled={busy} onClick={() => setOtro(null)}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          className={`${styles.btn} ${styles.btnPrimario}`}
+          disabled={busy || soloLectura}
+          onClick={() => ref.current?.click()}
+        >
+          Adjuntar PDF
+        </button>
+      )}
       <input
         ref={ref}
         type="file"
         accept="application/pdf,.pdf"
         hidden
         aria-label="Adjuntar el PDF de este plano"
-        onChange={async (e) => {
+        onChange={(e) => {
           const f = e.target.files?.[0];
           e.target.value = '';
-          if (!f) return;
-          setBusy(true);
-          setError(null);
-          const r = await adjuntarPlano(f, { destino: plano.id });
-          setBusy(false);
-          if (r.kind === 'no-identico') setError('Este PDF no es idéntico al original: adjúntalo desde el menú como plano nuevo.');
-          else if (r.kind === 'error') setError(r.texto);
-          else if (r.kind === 'reenlazado') useToastStore.getState().show(`Plano reenlazado: ${plano.nombre}`);
+          if (f) void elegido(f);
         }}
       />
       {error && (

@@ -511,6 +511,72 @@ describe('estados del visor', () => {
     expect(screen.getByRole('button', { name: 'Adjuntar PDF' })).toBeInTheDocument();
   });
 
+  it('[A1] PDF no disponible + otro PDF con sus páginas: «Usar este PDF para este plano»', async () => {
+    await montar();
+    const antes = structuredClone(st().planos[0] as PlanoMeta);
+    await __resetPlanosForTests();
+    act(() => usePlanoUiStore.getState().abrirPlano(null));
+    act(() => usePlanoUiStore.getState().abrirPlano(EJEMPLO.planoId, 1));
+    await screen.findByText(/No está el PDF de «planta-baja-ejemplo\.pdf»/);
+    const otro = new File([pdfMinimo([{ mediaBox: A3, textos: [{ x: 60, y: 60, tamano: 10, texto: 'Otra exportación' }] }])], 'reexportado.pdf', {
+      type: 'application/pdf',
+    });
+    fireEvent.change(screen.getByLabelText('Adjuntar el PDF de este plano'), { target: { files: [otro] } });
+    expect(await screen.findByText(/Este PDF no es idéntico al original\. Tiene sus mismas páginas/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Usar este PDF para este plano' }));
+    await waitFor(() => expect((st().planos[0] as PlanoMeta).huellasAnteriores).toEqual([antes.huella]));
+    const p = st().planos[0] as PlanoMeta;
+    expect(p).toMatchObject({ archivo: 'reexportado.pdf', escalas: { 1: { rev: escalaDe(antes, 1)!.rev } } });
+    expect(escalaDe(p, 1)!.comprobacion).toBeUndefined();
+    expect(useToastStore.getState().msg).toMatch(/^Plano reenlazado(: .*)?\. Comprueba la escala de su página calibrada con otra cota antes de medir\.$/);
+    expect(await screen.findByText(/sin comprobar/)).toBeInTheDocument(); // el chip de escala
+    expect(await screen.findByText('Comprueba la escala de esta página con otra cota antes de medir.')).toBeInTheDocument();
+  });
+
+  it('[A1] otro PDF con otras páginas: solo como revisión nueva; la vieja avisa de la revisión más nueva', async () => {
+    await montar();
+    await __resetPlanosForTests();
+    act(() => usePlanoUiStore.getState().abrirPlano(null));
+    act(() => usePlanoUiStore.getState().abrirPlano(EJEMPLO.planoId, 1));
+    await screen.findByText(/No está el PDF/);
+    const dos = new File([pdfMinimo([{ mediaBox: A3 }, { mediaBox: A3 }])], 'rev-b.pdf', { type: 'application/pdf' });
+    fireEvent.change(screen.getByLabelText('Adjuntar el PDF de este plano'), { target: { files: [dos] } });
+    expect(await screen.findByText(/No tiene sus mismas páginas: solo puede entrar como revisión nueva/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Usar este PDF para este plano' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Adjuntar como revisión nueva' }));
+    await waitFor(() => expect(st().planos).toHaveLength(2));
+    const nueva = st().planos[1] as PlanoMeta;
+    expect(nueva).toMatchObject({ sustituye: EJEMPLO.planoId, revision: 'Rev. B', paginas: 2 });
+    expect(usePlanoUiStore.getState().planoId).toBe(nueva.id);
+    expect(useToastStore.getState().msg).toBe('Rev. B adjunta: calibra sus páginas para medir. «Planta baja (ejemplo)» conserva sus líneas.');
+    // la vieja: aviso con [Abrir]
+    act(() => usePlanoUiStore.getState().abrirPlano(EJEMPLO.planoId, 1));
+    expect(await screen.findByText('Hay una revisión más nueva: Rev. B.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir' }));
+    expect(usePlanoUiStore.getState().planoId).toBe(nueva.id);
+    expect(await screen.findByRole('button', { name: /Planta baja \(ejemplo\) · Rev\. B/ })).toBeInTheDocument();
+  });
+
+  it('[A1] menú ⋯ «Adjuntar revisión…»: plano nuevo con la revisión siguiente; el viejo, sus escalas y líneas, intactos', async () => {
+    const { lienzo, visor } = await montar();
+    herramienta('Longitud');
+    clic(lienzo, EJEMPLO.tabiqueDe);
+    clic(lienzo, EJEMPLO.tabiqueA);
+    tecla(visor, 'Enter');
+    tecla(screen.getByRole('textbox', { name: 'Comentario de la línea' }), 'Enter');
+    await screen.findByText(/Línea 1 ·/);
+    const viejo = structuredClone(st().planos[0] as PlanoMeta);
+    fireEvent.click(screen.getByRole('button', { name: 'Más acciones de planos' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /Adjuntar revisión/ }));
+    const revB = new File([pdfMinimo([{ mediaBox: A3, textos: [{ x: 60, y: 60, tamano: 10, texto: 'Rev B' }] }])], 'rev-b.pdf', { type: 'application/pdf' });
+    fireEvent.change(screen.getByLabelText('Adjuntar revisión PDF'), { target: { files: [revB] } });
+    await waitFor(() => expect(st().planos).toHaveLength(2));
+    expect(st().planos[0]).toEqual(viejo);
+    expect((P(EJEMPLO.tabique).med[0]!.origen as OrigenPlano).planoId).toBe(EJEMPLO.planoId);
+    expect(st().planos[1]).toMatchObject({ sustituye: EJEMPLO.planoId, revision: 'Rev. B', escalas: {} });
+    expect(await screen.findByText('Calibra esta página para medir longitudes y superficies. Recuento funciona sin escala.')).toBeInTheDocument();
+  });
+
   it('quitar un plano pide confirmación con su número de líneas', async () => {
     const { lienzo, visor } = await montar();
     herramienta('Longitud');

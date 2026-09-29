@@ -1147,3 +1147,19 @@ button.chip {
   background: var(--bg-primary);
   color: var(--text-primary);
 }
+
+/* [A1] Al reenlazar con un PDF distinto: qué hacer con él (§9.3). */
+.otroPdf {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-10);
+  max-width: 520px;
+  padding: var(--sp-12);
+  border: 1px solid var(--state-warn);
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+.otroPdf .popoverAcciones {
+  justify-content: center;
+}

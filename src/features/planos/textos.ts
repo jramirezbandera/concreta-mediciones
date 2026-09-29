@@ -1,6 +1,8 @@
 /* Textos del visor de planos que comparten varios componentes (§7.2). */
 import { fmtNum } from '../../core/money';
 import type { AvisoCalibrar } from '../../core/planoCiclo';
+import { nombreConRevision } from '../../core/planoRevision';
+import type { PlanoMeta } from '../../core/types';
 
 /** «1:5 000 000», «1:63,5». */
 export function textoEscala(n: number): string {
@@ -36,4 +38,18 @@ export function abrirAyudaPlanos(): void {
 export function esFalloDeChunk(e: unknown): boolean {
   const msg = `${(e as Error)?.name ?? ''} ${(e as Error)?.message ?? e}`;
   return /dynamically imported module|Importing a module script failed|ChunkLoadError|Loading chunk|module script/i.test(msg);
+}
+
+/** [A1] El aviso de una revisión recién adjunta (§9.3). */
+export function textoRevisionAdjunta(revision: string, viejo: Pick<PlanoMeta, 'nombre' | 'revision'>): string {
+  return `${revision} adjunta: calibra sus páginas para medir. «${nombreConRevision(viejo)}» conserva sus líneas.`;
+}
+
+/** [A1] El aviso de «Usar este PDF para este plano» (§9.3). */
+export function textoReenlazado(lineas: number, calibradas: number): string {
+  const l = lineas ? `: ${lineas} ${lineas === 1 ? 'línea conserva' : 'líneas conservan'} sus números` : '';
+  const c = calibradas
+    ? ` Comprueba ${calibradas === 1 ? 'la escala de su página calibrada' : `la escala de sus ${calibradas} páginas calibradas`} con otra cota antes de medir.`
+    : '';
+  return `Plano reenlazado${l}.${c}`;
 }

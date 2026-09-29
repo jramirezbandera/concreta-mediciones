@@ -11,6 +11,7 @@ import { fmtNum } from '../../core/money';
 import { escalaDe, etiquetaDe, origenLegible, planoLegible } from '../../core/planoDatos';
 import { DESVIACION_MAX } from '../../core/planoGeom';
 import { lineasConOtraEscala } from '../../core/planoRecalculo';
+import { nombreConRevision, revisionMasNueva } from '../../core/planoRevision';
 import { desviacionCajetin } from '../../core/planoTexto';
 import type { PlanoMeta } from '../../core/types';
 import { useSessionStore } from '../../persist';
@@ -18,8 +19,8 @@ import { espacioNavegador } from '../../persist/planos';
 import { useObraStore, useToastStore } from '../../store';
 import { textoResultado } from '../../store/motivos';
 import { usePlanoUiStore } from '../../store/planoUiStore';
-import { TEXTO_FASE, adjuntarPlano, type FaseAdjuntar, type ResultadoAdjuntar } from './adjuntar';
-import { textoEscala } from './textos';
+import { TEXTO_FASE, adjuntarPlano, adjuntarRevision, type FaseAdjuntar, type ResultadoAdjuntar } from './adjuntar';
+import { textoEscala, textoRevisionAdjunta } from './textos';
 import { PlanoViewer } from './PlanoViewer';
 import styles from './Planos.module.css';
 
@@ -138,7 +139,7 @@ export function PlanosPanel({
             onClick={() => setMenu(menu === 'plano' ? null : 'plano')}
           >
             <Icon name="plano" size={15} />
-            <span className={styles.cabNombre}>{plano ? plano.nombre : 'Planos'}</span>
+            <span className={styles.cabNombre}>{plano ? nombreConRevision(plano) : 'Planos'}</span>
             <Icon name="chevronDown" size={13} />
           </button>
           {menu === 'plano' && (
@@ -154,8 +155,11 @@ export function PlanosPanel({
                     setMenu(null);
                   }}
                 >
-                  {p.nombre}
-                  <span className={styles.menuMeta}>{total(medidas.get(p.id))} medidas</span>
+                  {nombreConRevision(p)}
+                  <span className={styles.menuMeta}>
+                    {revisionMasNueva(planosRaw, p.id) ? 'sustituida · ' : ''}
+                    {total(medidas.get(p.id))} medidas
+                  </span>
                 </button>
               ))}
               <button
@@ -251,6 +255,15 @@ export function PlanosPanel({
               </button>
               {plano && (
                 <>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className={styles.menuItem}
+                    disabled={readonly || estrecha}
+                    onClick={() => (setMenu(null), adjuntar.elegirRevision())}
+                  >
+                    <Icon name="layers" size={14} /> Adjuntar revisión…
+                  </button>
                   <button type="button" role="menuitem" className={styles.menuItem} disabled={readonly} onClick={() => (setMenu(null), setDialogo('renombrar'))}>
                     <Icon name="pencil" size={14} /> Renombrar
                   </button>
@@ -313,6 +326,18 @@ export function PlanosPanel({
           if (f) void adjuntar.adjuntar(f);
         }}
       />
+      <input
+        ref={adjuntar.revisionRef}
+        type="file"
+        accept="application/pdf,.pdf"
+        hidden
+        aria-label="Adjuntar revisión PDF"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          e.target.value = '';
+          if (f && plano) void adjuntar.revision(f, plano);
+        }}
+      />
 
       {plano && dialogo === 'renombrar' && <DialogoRenombrar plano={plano} onClose={() => setDialogo(null)} />}
       {plano && dialogo === 'etiquetas' && <DialogoEtiquetas plano={plano} onClose={() => setDialogo(null)} />}
@@ -327,6 +352,7 @@ export function PlanosPanel({
 
 function useAdjuntar() {
   const inputRef = useRef<HTMLInputElement>(null);
+  const revisionRef = useRef<HTMLInputElement>(null);
   const [fase, setFase] = useState<FaseAdjuntar | null>(null);
   const [resultado, setResultado] = useState<{ r: ResultadoAdjuntar; file: File } | null>(null);
   async function adjuntar(file: File, nuevo = false) {
@@ -339,11 +365,24 @@ function useAdjuntar() {
     } else if (r.kind === 'reenlazado') useToastStore.getState().show('Plano reenlazado: sus líneas se ven otra vez');
     else if (r.kind !== 'cancelado') setResultado({ r, file });
   }
+  /** [A1] «Adjuntar revisión»: plano nuevo que sustituye al abierto. */
+  async function revision(file: File, viejo: PlanoMeta) {
+    setResultado(null);
+    const r = await adjuntarRevision(file, { sustituye: viejo.id, onFase: setFase });
+    setFase(null);
+    if (r.kind === 'ok') {
+      useToastStore.getState().show(textoRevisionAdjunta(r.revision, viejo));
+      if (r.aviso) setResultado({ r: { kind: 'error', texto: r.aviso }, file });
+    } else if (r.kind === 'error') setResultado({ r, file });
+  }
   return {
     inputRef,
+    revisionRef,
     fase,
     resultado: resultado?.r ?? null,
     elegir: () => inputRef.current?.click(),
+    elegirRevision: () => revisionRef.current?.click(),
+    revision,
     soltar: (f: File) => void adjuntar(f),
     adjuntar: (f: File) => adjuntar(f),
     otraVez: () => resultado && void adjuntar(resultado.file, true),
@@ -393,6 +432,7 @@ function PlanosLista({
   readonly: boolean;
 }) {
   const disponibles = usePlanoUiStore((s) => s.disponibles);
+  const planosTodos = useObraStore((s) => s.planos);
   const ilegibles = useObraStore((s) => s._ilegible?.length ?? 0);
   const partidas = useObraStore((s) => s.partidas);
   const [espacio, setEspacio] = useState<{ usado: number; cuota: number } | null>(null);
@@ -439,6 +479,7 @@ function PlanosLista({
         const noDisp = disponibles[p.huella] === false;
         const calibradas = Object.keys(p.escalas).filter((k) => escalaDe(p, Number(k))).length;
         const otraEscala = lineasConOtraEscala(partidas, p);
+        const nueva = revisionMasNueva(planosTodos, p.id);
         return (
           <button
             key={p.id}
@@ -448,11 +489,12 @@ function PlanosLista({
           >
             <Icon name="plano" size={18} />
             <span className={styles.fichaTexto}>
-              <span className={styles.fichaNombre}>{p.nombre}</span>
+              <span className={styles.fichaNombre}>{nombreConRevision(p)}</span>
               <span className={styles.fichaMeta}>
                 {p.paginas} {p.paginas === 1 ? 'página' : 'páginas'} · {calibradas ? `${calibradas} calibrada${calibradas === 1 ? '' : 's'}` : 'sin calibrar'} ·{' '}
                 {total(med)} medidas · {mb(p.tamano)}
                 {noDisp && ' · no disponible en este navegador'}
+                {nueva && ` · sustituida por ${nueva.revision ?? nueva.nombre}`}
               </span>
               {otraEscala > 0 && (
                 <span className={`${styles.fichaPaginas} ${styles.recalculoAviso}`}>
@@ -488,8 +530,9 @@ const doc = () => ({ docToken: useObraStore.getState().docToken });
 
 function DialogoRenombrar({ plano, onClose }: { plano: PlanoMeta; onClose: () => void }) {
   const [nombre, setNombre] = useState(plano.nombre);
+  const [revision, setRevision] = useState(plano.revision ?? '');
   const guardar = () => {
-    useObraStore.getState().renamePlano({ planoId: plano.id, nombre, expect: doc() });
+    useObraStore.getState().renamePlano({ planoId: plano.id, nombre, revision, expect: doc() });
     onClose();
   };
   return (
@@ -513,6 +556,16 @@ function DialogoRenombrar({ plano, onClose }: { plano: PlanoMeta; onClose: () =>
       <label className={styles.campoDialogo}>
         Nombre
         <input value={nombre} onChange={(e) => setNombre(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && guardar()} />
+      </label>
+      <label className={styles.campoDialogo}>
+        Revisión (opcional)
+        <input
+          value={revision}
+          maxLength={24}
+          placeholder="Rev. A"
+          onChange={(e) => setRevision(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && guardar()}
+        />
       </label>
       <p className={styles.franjaTexto}>Fichero original: {plano.archivo}</p>
     </Modal>
