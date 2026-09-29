@@ -565,6 +565,10 @@
   background: var(--bg-surface);
   overflow: hidden;
 }
+/* El aviso «Ver en plano» de la última línea no se corta en el borde. */
+.medWrap:has(.origenPop) {
+  overflow: visible;
+}
 .medTable {
   width: 100%;
   border-collapse: collapse;
@@ -1556,7 +1560,8 @@
 }
 /* Con el menú ⋮ abierto la tarjeta deja de recortar: el popover (absoluto) se
    cortaba en el borde inferior y «Copiar partida», «Borrar»… quedaban fuera. */
-.pCard:has(.menuPop) {
+.pCard:has(.menuPop),
+.pCard:has(.origenPop) {
   overflow: visible;
 }
 .pCard.open {
@@ -1681,6 +1686,10 @@
   border-radius: 9px 9px 0 0;
   background: var(--bg-surface);
   overflow: clip;
+}
+/* El aviso «Ver en plano» de una línea no se recorta en el borde de la caja. */
+.medCardList:has(.origenPop) {
+  overflow: visible;
 }
 .medListHead {
   padding: var(--sp-6) var(--sp-10) var(--sp-6) calc(var(--sp-10) + var(--med-indent));
@@ -1940,6 +1949,14 @@
   font-size: var(--fs-table);
   color: var(--text-primary);
   text-align: left;
+}
+/* En la lista compacta la etiqueta va a la derecha (junto al parcial y la ×):
+   abierto hacia la derecha se salía de la tarjeta y quedaba recortado. Se abre
+   hacia la izquierda y nunca más ancho que la pantalla. */
+.medCard .origenPop {
+  left: auto;
+  right: 0;
+  width: min(280px, calc(100vw - 48px));
 }
 .origenPopTit {
   display: flex;
