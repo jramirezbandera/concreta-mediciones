@@ -16,6 +16,7 @@ import {
   saveActiveObra,
   setActiveId,
   setUltimaCopia,
+  huellasDeObraGuardada,
 } from './registry';
 
 const data = (name: string): ObraData => ({
@@ -152,11 +153,11 @@ describe('registry · meta FUSIONADA (Etapa 0)', () => {
   it('el autosave conserva kind, ultimaCopia y campos que no conoce', async () => {
     const id = await createObra(data('Ref'), 'reference');
     await setUltimaCopia(id, '2026-09-01T10:00:00.000Z');
-    // Un campo de una versión futura en la meta del índice (p. ej. `huellas`).
+    // Un campo de una versión futura en la meta del índice.
     const idx0 = await loadIndex();
     await set(INDEX_KEY, {
       ...idx0,
-      obras: idx0.obras.map((m) => (m.id === id ? { ...m, huellas: ['h1'] } : m)),
+      obras: idx0.obras.map((m) => (m.id === id ? { ...m, futuro: ['h1'] } : m)),
     });
     await saveActiveObra(id, data('Ref renombrada'));
     const meta = (await loadIndex()).obras.find((m) => m.id === id)!;
@@ -164,7 +165,7 @@ describe('registry · meta FUSIONADA (Etapa 0)', () => {
       name: 'Ref renombrada',
       kind: 'reference',
       ultimaCopia: '2026-09-01T10:00:00.000Z',
-      huellas: ['h1'],
+      futuro: ['h1'],
     });
   });
 
@@ -196,5 +197,54 @@ describe('registry · meta FUSIONADA (Etapa 0)', () => {
     expect(await saveActiveObra(id, data('Pisaría'))).toEqual({ kind: 'version-conflict' });
     expect(await loadIndex()).toEqual(before);
     expect(await get(obraKey(id))).toEqual(futuro);
+  });
+});
+
+describe('[A1] registry · huellas de PDF en la meta (§1.6)', () => {
+  const H = 'a'.repeat(64);
+  const conPlano = (name: string): ObraData => ({
+    ...data(name),
+    planos: [{ id: 'pl1', tipo: 'pdf', nombre: 'P', archivo: 'p.pdf', tamano: 1, huella: H, paginas: 1, escalas: {} }],
+  });
+
+  it('crear y guardar escriben `huellas` y `huellasDe` (el `savedAt` de la meta)', async () => {
+    const id = await createObra(conPlano('A'));
+    let m = (await loadIndex()).obras[0]!;
+    expect(m).toMatchObject({ huellas: [H], huellasDe: m.savedAt });
+    await saveActiveObra(id, data('A sin planos'));
+    m = (await loadIndex()).obras[0]!;
+    expect(m).toMatchObject({ huellas: [], huellasDe: m.savedAt });
+    expect(await huellasDeObraGuardada(m)).toEqual([]);
+  });
+
+  it('una meta sin `huellas`, o de otro guardado, hace leer el sobre (nunca vale `[]`)', async () => {
+    const id = await createObra(conPlano('A'));
+    const m = (await loadIndex()).obras[0]!;
+    const { huellas: _h, huellasDe: _d, ...sin } = m;
+    void _h;
+    void _d;
+    expect(await huellasDeObraGuardada(sin)).toEqual([H]);
+    // Una versión que no conoce `huellas` guardó después: renovó `savedAt`.
+    expect(await huellasDeObraGuardada({ ...m, huellas: [], savedAt: '2099-01-01T00:00:00.000Z' })).toEqual([H]);
+    // la del índice, cuando es de esta misma meta (no lee el sobre)
+    await set(obraKey(id), 'sobre roto');
+    expect(await huellasDeObraGuardada(m)).toEqual([H]);
+  });
+
+  it('un sobre dañado o de una versión más nueva se lee en crudo; sin sobre, ninguna', async () => {
+    const id = await createObra(conPlano('A'));
+    const m = { ...(await loadIndex()).obras[0]!, huellas: undefined };
+    await set(obraKey(id), { savedAt: 'x', data: { planos: [{ huella: H }] } }); // sin forma de obra
+    expect(await huellasDeObraGuardada(m)).toEqual([H]);
+    await set(obraKey(id), { schemaVersion: SCHEMA_VERSION + 3, savedAt: 'x', appVersion: '9', data: { otra: { h: H } } });
+    expect(await huellasDeObraGuardada(m)).toEqual([H]);
+    await clear();
+    expect(await huellasDeObraGuardada(m)).toEqual([]);
+  });
+
+  it('`reconcile` registra un sobre huérfano con sus huellas', async () => {
+    await saveObra(obraKey('huerfana'), conPlano('Huérfana'));
+    const m = (await reconcile()).obras.find((x) => x.id === 'huerfana')!;
+    expect(m).toMatchObject({ huellas: [H], huellasDe: m.savedAt });
   });
 });

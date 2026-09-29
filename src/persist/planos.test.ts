@@ -2,6 +2,8 @@ import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   __resetPlanosForTests,
+  borrarSinReferencia,
+  sincronizarMarcas,
   espacioNavegador,
   esCuotaLlena,
   guardarPlano,
@@ -80,5 +82,29 @@ describe('almacén de planos (concreta-planos)', () => {
     expect(await espacioNavegador()).toBeNull();
     vi.stubGlobal('navigator', {});
     expect(await espacioNavegador()).toBeNull();
+  });
+});
+
+describe('[A1] marcas de «sin referencia» y borrado (§9.4)', () => {
+  it('marcar y desmarcar solo toca `meta`; borrar exige la marca que se vio', async () => {
+    await guardarPlano('h1', bytes(10, 1), 'application/pdf', 'uno.pdf');
+    await guardarPlano('h2', bytes(10, 2), 'application/pdf');
+    const metas = await sincronizarMarcas(new Set(['h1']), '2026-09-29T10:00:00.000Z');
+    expect(metas.get('h1')).not.toHaveProperty('sinReferenciaDesde');
+    expect(metas.get('h1')).toMatchObject({ nombre: 'uno.pdf' });
+    expect(metas.get('h2')).toMatchObject({ sinReferenciaDesde: '2026-09-29T10:00:00.000Z' });
+    // una segunda pasada no cambia una marca ya puesta; volver a usarlo la quita
+    await sincronizarMarcas(new Set(), '2026-09-30T10:00:00.000Z');
+    expect((await leerMetaPlano('h2'))!.sinReferenciaDesde).toBe('2026-09-29T10:00:00.000Z');
+    await sincronizarMarcas(new Set(['h1', 'h2']), 'x');
+    expect(await leerMetaPlano('h2')).not.toHaveProperty('sinReferenciaDesde');
+    expect(new Uint8Array((await leerBytes('h2'))!)[0]).toBe(2);
+
+    await sincronizarMarcas(new Set(), '2026-10-01T00:00:00.000Z');
+    expect(await borrarSinReferencia('h2', 'otra marca')).toBe(false);
+    expect(await tienePlano('h2')).toBe(true);
+    expect(await borrarSinReferencia('h2', '2026-10-01T00:00:00.000Z')).toBe(true);
+    expect(await tienePlano('h2')).toBe(false);
+    expect(await leerMetaPlano('h2')).toBeUndefined();
   });
 });

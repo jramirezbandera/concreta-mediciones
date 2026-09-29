@@ -24,6 +24,7 @@
    =========================================================================== */
 import { del, get, set } from 'idb-keyval';
 import { rawUuid } from '../core/id';
+import { huellasEnCrudo, huellasEnUso } from '../core/planoDatos';
 import { SCHEMA_VERSION, fromSerializable, type ObraData } from '../store';
 import {
   OBRA_KEY,
@@ -72,6 +73,13 @@ export interface ObraMeta {
    *  `metaOf` sella el del índice DESPUÉS de guardar el sobre) y cuándo. El
    *  aviso de cambios antiguos compara el del índice; la limpieza, los dos. */
   migracionV5?: MigracionV5;
+  /** [A1] Huellas de PDF que usa la obra (`huellasEnUso`), para «Liberar
+   *  espacio» sin leer su sobre (§1.6, §9.4). */
+  huellas?: string[];
+  /** [A1] El `savedAt` de ESTA meta cuando se calcularon `huellas`: si otro
+   *  guardado (una versión que no las conoce) renueva `savedAt` sin ellas, ya no
+   *  coinciden y valen «desconocido» (se lee el sobre), nunca `[]`. */
+  huellasDe?: string;
 }
 
 export interface MigracionV5 {
@@ -277,6 +285,9 @@ export function reconcile(): Promise<ObraIndex> {
           name: nameOf(res.envelope.data),
           savedAt: res.envelope.savedAt,
           schemaVersion: res.envelope.schemaVersion,
+          // [A1] en crudo: el sobre aún no está migrado (siempre de más)
+          huellas: huellasEnCrudo(res.envelope.data),
+          huellasDe: res.envelope.savedAt,
         });
       }
       // huérfano corrupto: fuera del índice (no listable), pero el blob se conserva
@@ -445,14 +456,36 @@ export async function deleteObra(id: string): Promise<ObraIndex> {
  *  sin re-leer el índice. `kind` ausente = obra de trabajo (compat). Con `prev`
  *  FUSIONA: conserva sus campos y solo renueva los que salen del blob. */
 export function metaOf(id: string, data: ObraData, kind?: ObraKind, prev?: ObraMeta): ObraMeta {
+  const savedAt = new Date().toISOString();
   return {
     ...prev,
     id,
     name: nameOf(data),
-    savedAt: new Date().toISOString(),
+    savedAt,
     schemaVersion: data.schemaVersion,
     ...(kind ? { kind } : {}),
+    huellas: huellasEnUso(data),
+    huellasDe: savedAt,
   };
+}
+
+/**
+ * [A1] Las huellas de PDF que usa una obra guardada (§1.6, §9.4). Del índice si
+ * `huellas` es de esta misma meta (`huellasDe === savedAt`); si no, del sobre,
+ * y en crudo si no se puede leer como obra (dañada, más nueva: siempre de más).
+ * `null` si ni así se puede leer: la limpieza se detiene.
+ */
+export async function huellasDeObraGuardada(meta: ObraMeta): Promise<string[] | null> {
+  if (Array.isArray(meta.huellas) && meta.huellasDe === meta.savedAt && meta.huellas.every((h) => typeof h === 'string'))
+    return meta.huellas;
+  try {
+    const res = await loadObraData(meta.id);
+    if (res.kind === 'ok') return huellasEnUso(res.data);
+    if (res.kind === 'vacia') return [];
+    return huellasEnCrudo(res.raw);
+  } catch {
+    return null;
+  }
 }
 
 /* ---- la copia v5 de una obra migrada ---------------------------------------- */

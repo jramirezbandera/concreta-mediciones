@@ -15,7 +15,7 @@
      restaurarlo (`sync.restaurarZipSobreActiva`).
    =========================================================================== */
 import { fmtNum } from '../core/money';
-import { excedeTopes, huellasParaCopia, planoLegible } from '../core/planoDatos';
+import { excedeTopes, huellasEnUso, planoLegible } from '../core/planoDatos';
 import type { PlanoMeta } from '../core/types';
 import { fromSerializable, toSerializable, useObraStore, type ObraData } from '../store';
 import { APP_VERSION, isObraData, newerVersionOf } from './persist';
@@ -197,7 +197,7 @@ export async function planCopiaZip(data: ObraData, topes: TopesZip = TOPES_ZIP):
   const vivos = planosVivos(data);
   const huellas: PlanCopiaZip['huellas'] = [];
   const hay = new Set<string>();
-  for (const h of huellasParaCopia(data)) {
+  for (const h of huellasEnUso(data)) {
     if (!(await tienePlano(h).catch(() => false))) continue;
     const meta = await leerMetaPlano(h).catch(() => undefined);
     hay.add(h);

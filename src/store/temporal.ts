@@ -245,6 +245,39 @@ export function pauseHistory<T>(fn: () => T): T {
   return r;
 }
 
+/**
+ * [A1] Las huellas de PDF que usan los estados de las dos pilas (§9.4): lo que
+ * Deshacer o Rehacer pueden volver a traer (un plano quitado cuya alta está en
+ * `past`). La consulta mínima que «Liberar espacio» necesita: no expone los
+ * snapshots. Cada objeto compartido entre snapshots se recorre una sola vez.
+ */
+export function huellasDelHistorial(): Set<string> {
+  const out = new Set<string>();
+  const planosVistos = new Set<unknown>();
+  const partidasVistas = new Set<unknown>();
+  for (const snap of [...past, ...future]) {
+    // Todas las de cada estado: aquí sobra de más (el plano vivo de ese
+    // estado y cualquier línea medida), nunca de menos.
+    if (!planosVistos.has(snap.planos)) {
+      planosVistos.add(snap.planos);
+      for (const p of snap.planos as unknown[]) {
+        const h = (p as { huella?: unknown } | null)?.huella;
+        if (typeof h === 'string' && !(p as { quitado?: unknown }).quitado) out.add(h);
+      }
+    }
+    for (const lista of Object.values(snap.partidas))
+      for (const partida of lista) {
+        if (partidasVistas.has(partida)) continue;
+        partidasVistas.add(partida);
+        for (const l of partida.med) {
+          const h = (l.origen as { huella?: unknown } | undefined)?.huella;
+          if (typeof h === 'string') out.add(h);
+        }
+      }
+  }
+  return out;
+}
+
 /* ---- helpers de test ------------------------------------------------------- */
 export function __resetHistoryForTests(): void {
   unsub?.();

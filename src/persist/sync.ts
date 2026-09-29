@@ -20,7 +20,7 @@
    =========================================================================== */
 import { shallow } from 'zustand/shallow';
 import type { ImportedObra } from '../core/bc3import';
-import { huellasParaCopia, planoLegible } from '../core/planoDatos';
+import { huellasEnUso, planoLegible } from '../core/planoDatos';
 import {
   SCHEMA_VERSION,
   blankObraData,
@@ -34,8 +34,9 @@ import { usePlanoUiStore } from '../store/planoUiStore';
 import { DOMAIN_KEYS } from '../store/schema';
 import { __resetHistoryForTests } from '../store/temporal';
 import { calcularHuella } from './huella';
+import { escucharPreguntasDeHuellas } from './liberar';
 import { OBRA_KEY, OBRA_KEY_PREFIX, clearObra, flush, loadObraEnvelope, obraKey } from './persist';
-import { esCuotaLlena, restaurarPlano, retirarRestaurado, tienePlano } from './planos';
+import { CANDADO_PLANOS, esCuotaLlena, restaurarPlano, retirarRestaurado, tienePlano } from './planos';
 import {
   abrirCambiosAntiguos as registryAbrirCambiosAntiguos,
   createObra,
@@ -56,7 +57,7 @@ import {
 } from './registry';
 import { usePersistStore } from './persistStore';
 import { useSessionStore, type ReadonlyMotivo } from './sessionStore';
-import { claimObra, releaseActiveLock } from './tabLock';
+import { claimObra, conCandado, releaseActiveLock } from './tabLock';
 import { construirCopiaZip, descargarBlob, exportObraJson, planCopiaZip, type CopiaZip } from './transfer';
 
 /** T1.3a: debounce más largo (la edición llega en ráfagas; no hace falta guardar a
@@ -350,6 +351,8 @@ function limpiarEnReposo(): void {
 
 /** Migra/reconcilia el registro y carga la obra activa. Llamar antes de render. */
 export async function hydrate(): Promise<void> {
+  // [A1] «Liberar espacio» en otra pestaña pregunta qué PDF usa esta (§9.4).
+  escucharPreguntasDeHuellas();
   try {
     await migrateLegacy(); // one-shot, idempotente
     const idx = await reconcile();
@@ -748,7 +751,8 @@ export function restaurarZipSobreActiva(
   copia: CopiaZip,
   onProgreso?: (hechos: number, total: number) => void,
 ): Promise<RestaurarResult> {
-  return serializeOp(() => restaurarZipImpl(copia, onProgreso));
+  // Bajo el candado compartido de los PDF hasta que la obra está en disco (§9.4).
+  return serializeOp(() => conCandado(CANDADO_PLANOS, 'shared', () => restaurarZipImpl(copia, onProgreso)));
 }
 async function restaurarZipImpl(
   copia: CopiaZip,
@@ -776,14 +780,16 @@ async function restaurarZipImpl(
     }
     if ((await calcularHuella(bytes)) !== h) return (await yaEsta(h)) ? 'ok' : 'huella';
     try {
-      if ((await restaurarPlano(h, bytes, 'application/pdf', token)).nuevo) nuevos.push({ huella: h, tamano: bytes.byteLength });
+      const nombre = copia.data.planos.find((p) => planoLegible(p) && p.huella === h) as { archivo?: string } | undefined;
+      if ((await restaurarPlano(h, bytes, 'application/pdf', token, nombre?.archivo)).nuevo)
+        nuevos.push({ huella: h, tamano: bytes.byteLength });
       return 'ok';
     } catch (e) {
       if (esCuotaLlena(e)) sinCuota = true;
       return (await yaEsta(h)) ? 'ok' : esCuotaLlena(e) ? 'cuota' : 'error';
     }
   };
-  const huellas = huellasParaCopia(copia.data);
+  const huellas = huellasEnUso(copia.data);
   for (const [i, h] of huellas.entries()) {
     onProgreso?.(i, huellas.length);
     estado.set(h, await uno(h));

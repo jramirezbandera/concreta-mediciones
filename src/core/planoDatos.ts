@@ -240,18 +240,45 @@ export function excedeTopes(d: { planos: unknown; partidas: PartidasMap }): keyo
 }
 
 /**
- * [A1] Las huellas cuyos PDF necesita una copia completa de la obra (§9.2): la
- * de cada plano que no está quitado y la de cada línea medida sobre él (una
- * línea medida con un PDF anterior conserva su `origen.huella`, que manda en
- * «Ver en plano»). Primero las de los planos, en su orden.
+ * [A1] Las huellas que usa una obra: las que lleva su copia completa (§9.2) y
+ * las que cuentan como referencia en «Liberar espacio» (§9.4). La de cada plano
+ * que no está quitado y la de cada línea medida sobre él (una línea medida con
+ * un PDF anterior conserva su `origen.huella`, que manda en «Ver en plano»).
+ * Un plano quitado no cuenta, ni sus líneas. Lo apartado como ilegible
+ * (`_ilegible`) cuenta entero, por si acaso (`huellasEnCrudo`). Primero las de
+ * los planos, en su orden.
  */
-export function huellasParaCopia(d: { planos: unknown; partidas: PartidasMap }): string[] {
+export function huellasEnUso(d: { planos: unknown; partidas: PartidasMap; _ilegible?: unknown }): string[] {
   const vivos = (Array.isArray(d.planos) ? d.planos : []).filter((p): p is PlanoMeta => planoLegible(p) && !p.quitado);
   const ids = new Set(vivos.map((p) => p.id));
   const out = new Set(vivos.map((p) => p.huella));
   for (const { line } of lineasDe(d.partidas)) {
     const o = line.origen;
     if (origenLegible(o) && ids.has(o.planoId)) out.add(o.huella);
+  }
+  if (d._ilegible !== undefined) for (const h of huellasEnCrudo(d._ilegible)) out.add(h);
+  return [...out];
+}
+
+const RE_HUELLA = /^[0-9a-f]{64}$/;
+
+/**
+ * [A1] Toda cadena con forma de huella (sha256 en hexadecimal) dentro de `x`, a
+ * cualquier profundidad: las referencias de una obra que no se puede leer como
+ * obra (dañada, de una versión más nueva). Siempre de más, nunca de menos.
+ */
+export function huellasEnCrudo(x: unknown): string[] {
+  const out = new Set<string>();
+  const vistos = new Set<object>();
+  const pila: unknown[] = [x];
+  while (pila.length) {
+    const v = pila.pop();
+    if (typeof v === 'string') {
+      if (RE_HUELLA.test(v)) out.add(v);
+    } else if (v && typeof v === 'object' && !vistos.has(v)) {
+      vistos.add(v);
+      for (const k of Object.keys(v)) pila.push((v as Record<string, unknown>)[k]);
+    }
   }
   return [...out];
 }

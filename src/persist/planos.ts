@@ -3,7 +3,7 @@
    Base de IndexedDB PROPIA, `concreta-planos` (versión 1), con dos almacenes y
    la huella (sha256) como clave:
 
-     meta  ─ { tamano, tipo, tocadoEn, sinReferenciaDesde? [A1], restauracion? [A1] }
+     meta  ─ { tamano, tipo, tocadoEn, sinReferenciaDesde? [A1], restauracion? [A1], nombre? [A1] }
      bytes ─ ArrayBuffer, escrito UNA sola vez
 
    idb-keyval no sirve aquí: su `update` reescribe el valor entero y solo admite
@@ -19,9 +19,17 @@
    de ESA restauración; si la obra no llega a guardarse, se retiran solo los
    que siguen siendo suyos. Adjuntar o restaurar la misma huella después la
    ADOPTA (quita el token) y ya no se retira.
+
+   [A1] «Liberar espacio» (§9.4): `sincronizarMarcas` pone o quita la marca
+   `sinReferenciaDesde` (solo `meta`, nunca los bytes) y `borrarSinReferencia`
+   borra un PDF solo si su marca sigue siendo la que se vio al listarlo. Nada
+   se borra solo.
    =========================================================================== */
 
 const DB = 'concreta-planos';
+/** [A1] Web Lock de los PDF (§9.4): adjuntar, reenlazar y restaurar lo toman
+ *  compartido hasta que su guardado aterriza; «Liberar espacio», exclusivo. */
+export const CANDADO_PLANOS = 'concreta.planos';
 const VERSION = 1;
 const META = 'meta';
 const BYTES = 'bytes';
@@ -35,6 +43,8 @@ export interface PlanoAlmacenMeta {
   sinReferenciaDesde?: string;
   /** [A1] token de la restauración que lo escribió. */
   restauracion?: string;
+  /** [A1] nombre del fichero con el que llegó (para «Liberar espacio»). */
+  nombre?: string;
 }
 
 let dbPromise: Promise<IDBDatabase> | null = null;
@@ -96,8 +106,8 @@ export function esCuotaLlena(e: unknown): boolean {
  * restauración: la huella queda adoptada). Idempotente por huella: reintentar
  * no duplica nada ni reescribe los bytes.
  */
-export async function guardarPlano(huella: string, bytes: ArrayBuffer, tipo: string): Promise<void> {
-  await escribir(huella, bytes, tipo, null);
+export async function guardarPlano(huella: string, bytes: ArrayBuffer, tipo: string, nombre?: string): Promise<void> {
+  await escribir(huella, bytes, tipo, null, nombre);
 }
 
 /**
@@ -110,12 +120,19 @@ export async function restaurarPlano(
   bytes: ArrayBuffer,
   tipo: string,
   token: string,
+  nombre?: string,
 ): Promise<{ nuevo: boolean }> {
-  return { nuevo: await escribir(huella, bytes, tipo, token) };
+  return { nuevo: await escribir(huella, bytes, tipo, token, nombre) };
 }
 
 /** Escribe (si faltan) y sella `meta`. Devuelve si los bytes eran nuevos. */
-async function escribir(huella: string, bytes: ArrayBuffer, tipo: string, token: string | null): Promise<boolean> {
+async function escribir(
+  huella: string,
+  bytes: ArrayBuffer,
+  tipo: string,
+  token: string | null,
+  nombre?: string,
+): Promise<boolean> {
   const db = await abrir();
   const tx = db.transaction([META, BYTES], 'readwrite');
   const hecho = fin(tx);
@@ -150,6 +167,7 @@ async function escribir(huella: string, bytes: ArrayBuffer, tipo: string, token:
       delete meta.sinReferenciaDesde;
       delete meta.restauracion;
       if (nuevo && token) meta.restauracion = token;
+      if (nombre) meta.nombre = nombre;
       intentar(() => sMeta.put(meta, huella));
     };
   };
@@ -180,6 +198,58 @@ export async function retirarRestaurado(huella: string, token: string): Promise<
   };
   await hecho;
   return retirado;
+}
+
+/**
+ * [A1] Pone la marca de «sin referencia» a los PDF que no están en `enUso` y
+ * se la quita a los que sí (§9.4). UNA transacción sobre `meta`: los bytes no
+ * se reescriben. Devuelve la `meta` de cada PDF del almacén tras marcar.
+ */
+export async function sincronizarMarcas(enUso: ReadonlySet<string>, ahora: string): Promise<Map<string, PlanoAlmacenMeta>> {
+  const db = await abrir();
+  const tx = db.transaction(META, 'readwrite');
+  const hecho = fin(tx);
+  const out = new Map<string, PlanoAlmacenMeta>();
+  const cursor = tx.objectStore(META).openCursor();
+  cursor.onsuccess = () => {
+    const c = cursor.result;
+    if (!c) return;
+    const huella = String(c.key);
+    const m = { ...(c.value as PlanoAlmacenMeta) };
+    if (enUso.has(huella) && m.sinReferenciaDesde !== undefined) {
+      delete m.sinReferenciaDesde;
+      c.update(m);
+    } else if (!enUso.has(huella) && m.sinReferenciaDesde === undefined) {
+      m.sinReferenciaDesde = ahora;
+      c.update(m);
+    }
+    out.set(huella, m);
+    c.continue();
+  };
+  await hecho;
+  return out;
+}
+
+/**
+ * [A1] Borra un PDF (bytes y `meta`) SOLO si su marca sigue siendo `marca`, la
+ * que se vio al listarlo: adjuntarlo, reenlazarlo o restaurarlo entretanto
+ * quita la marca y lo salva. UNA transacción que relee `meta`.
+ */
+export async function borrarSinReferencia(huella: string, marca: string): Promise<boolean> {
+  const db = await abrir();
+  const tx = db.transaction([META, BYTES], 'readwrite');
+  const hecho = fin(tx);
+  let borrado = false;
+  const m = tx.objectStore(META).get(huella);
+  m.onsuccess = () => {
+    if ((m.result as PlanoAlmacenMeta | undefined)?.sinReferenciaDesde !== marca) return;
+    tx.objectStore(META).delete(huella);
+    tx.objectStore(BYTES).delete(huella);
+    borrado = true;
+  };
+  await hecho;
+  if (borrado) enMemoria.delete(huella);
+  return borrado;
 }
 
 /** Planos que viven solo en memoria (el ejemplo del sandbox): nunca se escriben

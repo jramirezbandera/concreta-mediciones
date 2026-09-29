@@ -24,7 +24,15 @@ import { escalaDe, origenLegible, planoLegible } from '../../core/planoDatos';
 import { encajaEnPaginas, nombreConRevision, paginasConGeometria } from '../../core/planoRevision';
 import type { PlanoMeta } from '../../core/types';
 import { calcularHuella } from '../../persist/huella';
-import { esCuotaLlena, espacioNavegador, guardarPlano, tienePlano } from '../../persist/planos';
+import {
+  CANDADO_PLANOS,
+  esCuotaLlena,
+  espacioNavegador,
+  guardarPlano,
+  tienePlano,
+} from '../../persist/planos';
+import { flushPending } from '../../persist/sync';
+import { conCandado } from '../../persist/tabLock';
 import { TOPES_ZIP } from '../../persist/transfer';
 import { useObraStore } from '../../store';
 import { nextPlanoId } from '../../store/base';
@@ -97,7 +105,8 @@ function leerArchivo(file: Blob): Promise<ArrayBuffer> {
   });
 }
 
-const planosVivos = () => useObraStore.getState().planos.filter((p): p is PlanoMeta => planoLegible(p));
+const planosVivos = () =>
+  useObraStore.getState().planos.filter((p): p is PlanoMeta => planoLegible(p));
 
 /* ---- piezas comunes ------------------------------------------------------------- */
 
@@ -115,15 +124,23 @@ function tamanoNoValido(file: File, nombre: string): Fallo | null {
 /** [A1] Un solo contrato con la copia .zip (§9.2): si con este PDF los planos
  *  pasan de sus topes, se avisa ya. Si no, el aviso de un PDF grande. */
 function avisoTamano(file: File, nombre: string): string | undefined {
-  const enObra = new Map(planosVivos().filter((p) => !p.quitado).map((p) => [p.huella, p.tamano]));
+  const enObra = new Map(
+    planosVivos()
+      .filter((p) => !p.quitado)
+      .map((p) => [p.huella, p.tamano]),
+  );
   const conEste = [...enObra.values()].reduce((s, n) => s + n, 0) + file.size;
   if (conEste > TOPES_ZIP.total)
     return `Con «${nombre}», los planos de la obra pasan de 2 GB: la copia completa (.zip) no cabrá y tendrás que guardar los PDF por separado.`;
-  if (file.size > AVISO_BYTES) return `«${nombre}» pesa ${mb(file.size)}: la copia de la obra será grande.`;
+  if (file.size > AVISO_BYTES)
+    return `«${nombre}» pesa ${mb(file.size)}: la copia de la obra será grande.`;
   return undefined;
 }
 
-async function leerYHuella(file: File, onFase: Fase): Promise<{ bytes: ArrayBuffer; huella: string } | Fallo> {
+async function leerYHuella(
+  file: File,
+  onFase: Fase,
+): Promise<{ bytes: ArrayBuffer; huella: string } | Fallo> {
   onFase?.('leyendo');
   let bytes: ArrayBuffer;
   try {
@@ -151,20 +168,31 @@ async function abrirPdf<T>(
     doc = await motorPdf().abrir(bytes.slice(0), { signal: new AbortController().signal });
   } catch (e) {
     const tipo = e instanceof ErrorPdf ? e.tipo : 'danado';
-    if (tipo === 'contrasena') return { kind: 'error', texto: 'Este PDF tiene contraseña: quítala y vuelve a adjuntarlo.' };
+    if (tipo === 'contrasena')
+      return { kind: 'error', texto: 'Este PDF tiene contraseña: quítala y vuelve a adjuntarlo.' };
     if (tipo === 'vacio') return { kind: 'error', texto: 'El archivo está vacío.' };
     if (tipo === 'worker')
-      return { kind: 'error', texto: `No se pudo abrir «${nombre}»: ${(e as ErrorPdf).causa ?? 'el motor de PDF no responde'}.` };
+      return {
+        kind: 'error',
+        texto: `No se pudo abrir «${nombre}»: ${(e as ErrorPdf).causa ?? 'el motor de PDF no responde'}.`,
+      };
     return {
       kind: 'error',
       texto: `No se pudo leer «${nombre}» (dañado o no es un PDF). Ábrelo en otro visor y vuelve a guardarlo.`,
     };
   }
   try {
-    if (doc.paginas > MAX_PAGINAS) return { kind: 'error', texto: `«${nombre}» tiene ${doc.paginas} páginas: el máximo es 2 000.` };
+    if (doc.paginas > MAX_PAGINAS)
+      return {
+        kind: 'error',
+        texto: `«${nombre}» tiene ${doc.paginas} páginas: el máximo es 2 000.`,
+      };
     return { paginas: doc.paginas, valor: await usar(doc) };
   } catch {
-    return { kind: 'error', texto: `No se pudo leer «${nombre}» (dañado o no es un PDF). Ábrelo en otro visor y vuelve a guardarlo.` };
+    return {
+      kind: 'error',
+      texto: `No se pudo leer «${nombre}» (dañado o no es un PDF). Ábrelo en otro visor y vuelve a guardarlo.`,
+    };
   } finally {
     doc.cerrar();
   }
@@ -179,14 +207,22 @@ async function encajaEn(doc: DocPdf, plano: PlanoMeta): Promise<boolean> {
   return encajaEnPaginas(plano, partidas, doc.paginas, cajas);
 }
 
-async function guardarBytes(huella: string, bytes: ArrayBuffer, onFase: Fase): Promise<Fallo | null> {
+async function guardarBytes(
+  huella: string,
+  bytes: ArrayBuffer,
+  nombre: string,
+  onFase: Fase,
+): Promise<Fallo | null> {
   onFase?.('guardando');
   try {
-    await guardarPlano(huella, bytes, 'application/pdf');
+    await guardarPlano(huella, bytes, 'application/pdf', nombre);
   } catch (e) {
     if (esCuotaLlena(e)) {
       const esp = await espacioNavegador();
-      return { kind: 'error', texto: `No queda espacio en el navegador${esp ? ` (usados ${gb(esp.usado)})` : ''}. Quita planos que no uses.` };
+      return {
+        kind: 'error',
+        texto: `No queda espacio en el navegador${esp ? ` (usados ${gb(esp.usado)})` : ''}. Quita planos que no uses o usa «Liberar espacio» en la lista de planos.`,
+      };
     }
     return { kind: 'error', texto: 'No se pudo guardar el PDF en este navegador.' };
   }
@@ -195,6 +231,17 @@ async function guardarBytes(huella: string, bytes: ArrayBuffer, onFase: Fase): P
 }
 
 const esFallo = (x: object): x is Fallo => 'kind' in x && x.kind === 'error';
+
+/** [A1] Guardar los bytes y publicar el metadato bajo el candado compartido de
+ *  los PDF, hasta que la obra está en disco: «Liberar espacio» (exclusivo)
+ *  espera y no puede borrar un PDF recién adjuntado aún sin guardar (§9.4). */
+function bajoCandado<T>(fn: () => Promise<T>): Promise<T> {
+  return conCandado(CANDADO_PLANOS, 'shared', async () => {
+    const r = await fn();
+    await flushPending().catch(() => false);
+    return r;
+  });
+}
 
 /* ---- adjuntar ------------------------------------------------------------------- */
 
@@ -228,40 +275,46 @@ export async function adjuntarPlano(
       return esFallo(a) ? a : { kind: 'no-identico', encaja: a.valor };
     }
   }
-  const mismo = opts.destino ? vivos.find((p) => p.id === opts.destino) : vivos.find((p) => !p.quitado && p.huella === huella);
+  const mismo = opts.destino
+    ? vivos.find((p) => p.id === opts.destino)
+    : vivos.find((p) => !p.quitado && p.huella === huella);
   if (mismo && !opts.nuevo) {
     const disponible = await tienePlano(huella).catch(() => false);
-    if (disponible && !opts.destino) return { kind: 'duplicado', planoId: mismo.id, nombre: mismo.nombre };
+    if (disponible && !opts.destino)
+      return { kind: 'duplicado', planoId: mismo.id, nombre: mismo.nombre };
   }
 
   const abierto = await abrirPdf(bytes, nombre, opts.onFase, async () => undefined);
   if (esFallo(abierto)) return abierto;
-  const guardado = await guardarBytes(huella, bytes, opts.onFase);
-  if (guardado) return guardado;
+  return bajoCandado(async (): Promise<ResultadoAdjuntar> => {
+    const guardado = await guardarBytes(huella, bytes, nombre, opts.onFase);
+    if (guardado) return guardado;
 
-  // Los bytes ya están: si la obra cambió, no se publica nada (se quedan guardados).
-  const obra = useObraStore.getState();
-  if (obra.docToken !== docToken) return { kind: 'cancelado' };
-  const ui = usePlanoUiStore.getState();
-  if (mismo && !opts.nuevo) {
-    ui.abrirPlano(mismo.id, 1);
-    return { kind: 'reenlazado', planoId: mismo.id };
-  }
-  const meta: PlanoMeta = {
-    id: nextPlanoId(),
-    tipo: 'pdf',
-    nombre: nombreDeArchivo(nombre),
-    archivo: nombre,
-    tamano: bytes.byteLength,
-    huella,
-    paginas: abierto.paginas,
-    escalas: {},
-  };
-  const res = obra.attachPlano({ meta, expect: { docToken }, nuevo: opts.nuevo });
-  const planoId = res.ids[0];
-  if (!planoId) return { kind: 'error', texto: 'No se pudo añadir el plano a la obra (máximo 200 planos).' };
-  ui.abrirPlano(planoId, 1);
-  return { kind: 'ok', planoId, revivido: planoId !== meta.id, ...(aviso ? { aviso } : {}) };
+    // Los bytes ya están: si la obra cambió, no se publica nada (se quedan guardados).
+    const obra = useObraStore.getState();
+    if (obra.docToken !== docToken) return { kind: 'cancelado' };
+    const ui = usePlanoUiStore.getState();
+    if (mismo && !opts.nuevo) {
+      ui.abrirPlano(mismo.id, 1);
+      return { kind: 'reenlazado', planoId: mismo.id };
+    }
+    const meta: PlanoMeta = {
+      id: nextPlanoId(),
+      tipo: 'pdf',
+      nombre: nombreDeArchivo(nombre),
+      archivo: nombre,
+      tamano: bytes.byteLength,
+      huella,
+      paginas: abierto.paginas,
+      escalas: {},
+    };
+    const res = obra.attachPlano({ meta, expect: { docToken }, nuevo: opts.nuevo });
+    const planoId = res.ids[0];
+    if (!planoId)
+      return { kind: 'error', texto: 'No se pudo añadir el plano a la obra (máximo 200 planos).' };
+    ui.abrirPlano(planoId, 1);
+    return { kind: 'ok', planoId, revivido: planoId !== meta.id, ...(aviso ? { aviso } : {}) };
+  });
 }
 
 /**
@@ -284,31 +337,45 @@ export async function adjuntarRevision(
   const leido = await leerYHuella(file, opts.onFase);
   if (esFallo(leido)) return leido;
   if (leido.huella === viejo.huella)
-    return { kind: 'error', texto: `Es el mismo PDF que «${nombreConRevision(viejo)}»: una revisión es otro PDF.` };
+    return {
+      kind: 'error',
+      texto: `Es el mismo PDF que «${nombreConRevision(viejo)}»: una revisión es otro PDF.`,
+    };
   const abierto = await abrirPdf(leido.bytes, nombre, opts.onFase, async () => undefined);
   if (esFallo(abierto)) return abierto;
-  const guardado = await guardarBytes(leido.huella, leido.bytes, opts.onFase);
-  if (guardado) return guardado;
+  return bajoCandado(async (): Promise<ResultadoRevision> => {
+    const guardado = await guardarBytes(leido.huella, leido.bytes, nombre, opts.onFase);
+    if (guardado) return guardado;
 
-  const obra = useObraStore.getState();
-  if (obra.docToken !== docToken) return { kind: 'cancelado' };
-  const meta: PlanoMeta = {
-    id: nextPlanoId(),
-    tipo: 'pdf',
-    nombre: viejo.nombre,
-    archivo: nombre,
-    tamano: leido.bytes.byteLength,
-    huella: leido.huella,
-    paginas: abierto.paginas,
-    escalas: {},
-  };
-  const res = obra.attachPlanoRevision({ meta, sustituye: viejo.id, expect: { docToken } });
-  const planoId = res.ids[0];
-  if (!planoId) return { kind: 'error', texto: res.reason === 'noop' ? 'No se pudo añadir la revisión (máximo 200 planos).' : textoResultado(res) };
-  const nuevo = useObraStore.getState().planos.find((p): p is PlanoMeta => planoLegible(p) && p.id === planoId)!;
-  const ui = usePlanoUiStore.getState();
-  ui.abrirPlano(planoId, Math.min(ui.planoId === viejo.id ? ui.pagina : 1, abierto.paginas));
-  return { kind: 'ok', planoId, revision: nuevo.revision ?? '', ...(aviso ? { aviso } : {}) };
+    const obra = useObraStore.getState();
+    if (obra.docToken !== docToken) return { kind: 'cancelado' };
+    const meta: PlanoMeta = {
+      id: nextPlanoId(),
+      tipo: 'pdf',
+      nombre: viejo.nombre,
+      archivo: nombre,
+      tamano: leido.bytes.byteLength,
+      huella: leido.huella,
+      paginas: abierto.paginas,
+      escalas: {},
+    };
+    const res = obra.attachPlanoRevision({ meta, sustituye: viejo.id, expect: { docToken } });
+    const planoId = res.ids[0];
+    if (!planoId)
+      return {
+        kind: 'error',
+        texto:
+          res.reason === 'noop'
+            ? 'No se pudo añadir la revisión (máximo 200 planos).'
+            : textoResultado(res),
+      };
+    const nuevo = useObraStore
+      .getState()
+      .planos.find((p): p is PlanoMeta => planoLegible(p) && p.id === planoId)!;
+    const ui = usePlanoUiStore.getState();
+    ui.abrirPlano(planoId, Math.min(ui.planoId === viejo.id ? ui.pagina : 1, abierto.paginas));
+    return { kind: 'ok', planoId, revision: nuevo.revision ?? '', ...(aviso ? { aviso } : {}) };
+  });
 }
 
 /**
@@ -332,25 +399,29 @@ export async function usarPdfParaPlano(
   const abierto = await abrirPdf(leido.bytes, nombre, opts.onFase, (doc) => encajaEn(doc, plano));
   if (esFallo(abierto)) return abierto;
   if (leido.huella !== plano.huella && !abierto.valor) return { kind: 'no-encaja' };
-  const guardado = await guardarBytes(leido.huella, leido.bytes, opts.onFase);
-  if (guardado) return guardado;
+  return bajoCandado(async (): Promise<ResultadoReenlace> => {
+    const guardado = await guardarBytes(leido.huella, leido.bytes, nombre, opts.onFase);
+    if (guardado) return guardado;
 
-  const obra = useObraStore.getState();
-  if (obra.docToken !== docToken) return { kind: 'cancelado' };
-  if (leido.huella !== plano.huella) {
-    const res = obra.relinkPlano({
-      planoId: plano.id,
-      huella: leido.huella,
-      tamano: leido.bytes.byteLength,
-      archivo: nombre,
-      paginas: abierto.paginas,
-      expect: { docToken, huella: plano.huella },
-    });
-    if (!res.ids.length) return { kind: 'error', texto: textoResultado(res) };
-  }
-  let lineas = 0;
-  for (const ps of Object.values(useObraStore.getState().partidas))
-    for (const p of ps) for (const l of p.med) if (origenLegible(l.origen) && l.origen.planoId === plano.id) lineas++;
-  const calibradas = Object.keys(plano.escalas).filter((k) => escalaDe(plano, Number(k))).length;
-  return { kind: 'ok', planoId: plano.id, lineas, calibradas };
+    const obra = useObraStore.getState();
+    if (obra.docToken !== docToken) return { kind: 'cancelado' };
+    if (leido.huella !== plano.huella) {
+      const res = obra.relinkPlano({
+        planoId: plano.id,
+        huella: leido.huella,
+        tamano: leido.bytes.byteLength,
+        archivo: nombre,
+        paginas: abierto.paginas,
+        expect: { docToken, huella: plano.huella },
+      });
+      if (!res.ids.length) return { kind: 'error', texto: textoResultado(res) };
+    }
+    let lineas = 0;
+    for (const ps of Object.values(useObraStore.getState().partidas))
+      for (const p of ps)
+        for (const l of p.med)
+          if (origenLegible(l.origen) && l.origen.planoId === plano.id) lineas++;
+    const calibradas = Object.keys(plano.escalas).filter((k) => escalaDe(plano, Number(k))).length;
+    return { kind: 'ok', planoId: plano.id, lineas, calibradas };
+  });
 }

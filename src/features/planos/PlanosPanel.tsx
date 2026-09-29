@@ -20,6 +20,7 @@ import { useObraStore, useToastStore } from '../../store';
 import { textoResultado } from '../../store/motivos';
 import { usePlanoUiStore } from '../../store/planoUiStore';
 import { TEXTO_FASE, adjuntarPlano, adjuntarRevision, type FaseAdjuntar, type ResultadoAdjuntar } from './adjuntar';
+import { DialogoLiberar } from './LiberarEspacio';
 import { textoEscala, textoRevisionAdjunta } from './textos';
 import { PlanoViewer } from './PlanoViewer';
 import styles from './Planos.module.css';
@@ -437,9 +438,12 @@ function PlanosLista({
   const partidas = useObraStore((s) => s.partidas);
   const [espacio, setEspacio] = useState<{ usado: number; cuota: number } | null>(null);
   const [encima, setEncima] = useState(false);
+  const [liberar, setLiberar] = useState(false);
+  /** Sube al liberar: el espacio usado se vuelve a medir. */
+  const [medir, setMedir] = useState(0);
   useEffect(() => {
     void espacioNavegador().then(setEspacio);
-  }, [planos.length]);
+  }, [planos.length, medir]);
 
   const zona = (
     <div
@@ -515,10 +519,23 @@ function PlanosLista({
         );
       })}
       {zona}
-      {espacio && (
-        <p className={styles.espacio}>
-          Espacio del navegador: usados {mb(espacio.usado)} de {mb(espacio.cuota)}.
-        </p>
+      <div className={styles.espacioFila}>
+        {espacio && (
+          <p className={styles.espacio}>
+            Espacio del navegador: usados {mb(espacio.usado)} de {mb(espacio.cuota)}.
+          </p>
+        )}
+        <button type="button" className={styles.btn} onClick={() => setLiberar(true)}>
+          <Icon name="trash" size={14} /> Liberar espacio
+        </button>
+      </div>
+      {liberar && (
+        <DialogoLiberar
+          onCerrar={(liberado) => {
+            setLiberar(false);
+            if (liberado) setMedir((n) => n + 1);
+          }}
+        />
       )}
     </div>
   );

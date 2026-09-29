@@ -5,7 +5,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { planoLegible } from '../../core/planoDatos';
 import { sha256Hex } from '../../core/sha256';
 import type { Escala, PlanoMeta } from '../../core/types';
-import { __resetPlanosForTests, leerBytes, tienePlano } from '../../persist/planos';
+import { CANDADO_PLANOS, __resetPlanosForTests, leerBytes, tienePlano } from '../../persist/planos';
+import { __setLockManagerForTests, conCandado } from '../../persist/tabLock';
+import { FakeLockManager } from '../../test/fakeLocks';
 import { blankObraData, useObraStore } from '../../store';
 import { usePlanoUiStore } from '../../store/planoUiStore';
 import { pdfMinimo } from '../../test/pdfMinimo';
@@ -189,5 +191,22 @@ describe('[A1] revisión de un plano y «Usar este PDF para este plano» (§9.3)
     const pequeno = conTexto('A4', [0, 0, 595, 421]);
     expect(await usarPdfParaPlano(archivo(pequeno, 'a4.pdf'), { planoId: p0.id })).toEqual({ kind: 'no-encaja' });
     expect(planos()[0]!.huella).toBe(p0.huella);
+  });
+});
+
+describe('[A1] candado de los PDF (§9.4)', () => {
+  afterEach(() => __setLockManagerForTests(null));
+
+  it('con «Liberar espacio» en marcha (exclusivo), adjuntar espera para guardar y publicar', async () => {
+    __setLockManagerForTests(new FakeLockManager());
+    let soltar!: () => void;
+    const liberando = conCandado(CANDADO_PLANOS, 'exclusive', () => new Promise<void>((r) => (soltar = r)));
+    const r = adjuntarPlano(archivo(pdf(1)));
+    await new Promise((res) => setTimeout(res, 30));
+    expect(planos()).toHaveLength(0); // ni bytes ni metadato mientras tanto
+    soltar();
+    await liberando;
+    expect(await r).toMatchObject({ kind: 'ok' });
+    expect(planos()).toHaveLength(1);
   });
 });

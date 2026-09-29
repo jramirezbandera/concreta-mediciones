@@ -76,6 +76,14 @@ export {
 } from './durability';
 export { PersistUI } from './PersistUI';
 export {
+  buscarPdfSinUso,
+  liberarPdf,
+  type Busqueda,
+  type Liberacion,
+  type PdfSinUso,
+  type PdfDelHistorial,
+} from './liberar';
+export {
   buildExportText,
   exportObraJson,
   parseObraJson,

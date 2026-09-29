@@ -55,6 +55,21 @@ export function __setLockManagerForTests(m: LockManagerLike | null): void {
   lockMgr = m;
 }
 
+/**
+ * [A1] Ejecuta `fn` con el Web Lock `nombre`, compartido o exclusivo (los PDF
+ * de los planos, §9.4: adjuntar y restaurar en compartido, «Liberar espacio»
+ * en exclusivo). Sin Web Locks, sin candado.
+ */
+export async function conCandado<T>(nombre: string, modo: 'shared' | 'exclusive', fn: () => Promise<T>): Promise<T> {
+  const mgr = lockMgr;
+  if (!mgr) return fn();
+  let out: { v: T } | null = null;
+  await mgr.request(nombre, { mode: modo }, async () => {
+    out = { v: await fn() };
+  });
+  return (out as { v: T } | null)!.v;
+}
+
 /** ¿Está disponible la Web Locks API en este entorno? */
 export function lockSupported(): boolean {
   return lockMgr !== null;
