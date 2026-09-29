@@ -119,7 +119,7 @@ export function CalibrarPasos({
       {a && (
         <div className={styles.avisoCalibrar} role="alert">
           <span>{textoAvisoCalibrar(a)}</span>
-          <BotonAyuda />
+          <BotonAyuda seccion="planos-calibrar" />
           {a.tipo === 'desviacion' && (
             <>
               <button type="button" className={styles.btn} onClick={onRehacerCota}>

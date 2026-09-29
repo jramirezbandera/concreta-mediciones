@@ -24,8 +24,8 @@ import { PlanosPanel } from './PlanosPanel';
 const st = () => useObraStore.getState();
 const P = (id: string) => Object.values(st().partidas).flat().find((p) => p.id === id)!;
 const A3_Y1 = 841.89;
-const EN_ESTA_PAGINA = 'Tienes una forma a medio medir en esta página (Longitud · 2 puntos).';
-const PARA_TABIQUE = 'Borrador para 1.1 Tabique de ladrillo hueco doble (Longitud · 2 puntos).';
+const EN_ESTA_PAGINA = 'Forma a medio medir: Longitud, 2 puntos.';
+const PARA_TABIQUE = 'Borrador para 1.1 Tabique de ladrillo hueco doble: Longitud, 2 puntos.';
 
 function Harness({ estrecha = false }: { estrecha?: boolean }) {
   useAppHotkeys({ onHelp: () => undefined });
@@ -177,6 +177,8 @@ describe('[A1] borradores: al cambiar de contexto la forma no se pierde', () => 
     expect(terminar(2)).toBeNull();
     expect(screen.getByText(EN_ESTA_PAGINA)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Seguir' })).toBeNull(); // estrecha: no se mide
+    // el borrador se ve atenuado en el lienzo: es lo que ofrece el aviso
+    expect(document.querySelector('[data-borrador]')).not.toBeNull();
     rerender(<Harness />);
     fireEvent.click(screen.getByRole('button', { name: 'Seguir' }));
     expect(terminar(2)).toBeInTheDocument();

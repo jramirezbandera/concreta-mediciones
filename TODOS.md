@@ -68,6 +68,16 @@ la tarjeta Resumen al pie), porque ahí viven el coeficiente K y «Ajusta».
 
 Informe completo: `~/.gstack/projects/jramirezbandera-concreta-mediciones/designs/design-audit-20260924/`.
 
+## Contraste de textos que aún van en `--text-disabled` (P3)
+
+- **Qué:** en tema claro, `#94a3b8` sobre blanco da 2,6:1 (AA pide 4,5:1). Lo usan
+  textos que se leen: «Mediciones» junto a la marca, «Medir por», «Cantidad total» y
+  su unidad, el texto de «Sin líneas de medición…» y «Ayuda» de la barra de estado.
+- **Por qué:** el pase móvil sacó `--text-disabled` del texto legible, pero estos se
+  quedaron. Lo encontró el detector de diseño en el `/design-review` del visor de
+  planos (2026-09-29), fuera de su alcance.
+- **Cómo:** pasarlos a `--text-secondary` salvo lo que de verdad esté deshabilitado.
+
 ---
 
 ## Aplazados del plan «reordenar, copiar y duplicar líneas de medición» (autoplan 2026-09-24)
@@ -173,11 +183,14 @@ Todo vive en IndexedDB del navegador; la única red era acordarse de exportar el
   (qué columnas). Plan revisado con `/autoplan` (2026-09-25):
   `docs/plan-medir-planos-pdf.md`. Los PDF van en un almacén de IndexedDB aparte,
   por huella; la obra solo guarda sus metadatos (esquema v6).
+- **Estado (2026-09-29):** Etapa A hecha (A0 y A1) y encendida por defecto en
+  producción (`?planos=0` la apaga). La Etapa B la decide el usuario tras usar la A en
+  obra.
 
 #### Aplazados del plan «Medir sobre planos PDF» (autoplan 2026-09-25)
 
-Son lo que las revisiones CEO, diseño, DX e ingeniería dejaron fuera a propósito. Todo
-depende de que la Etapa A supere su puerta cronometrada.
+Son lo que las revisiones CEO, diseño, DX e ingeniería dejaron fuera a propósito. La
+puerta cronometrada se anuló (2026-09-27): entran si el uso en obra lo pide.
 
 - **Exportar el plano marcado para la DF (P2).** Las páginas con las formas medidas,
   numeradas como sus líneas, en PDF para adjuntar a la medición. Es otra superficie de

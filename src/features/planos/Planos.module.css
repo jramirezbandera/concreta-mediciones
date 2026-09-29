@@ -83,6 +83,23 @@
   height: 30px;
   flex-shrink: 0;
 }
+/* En pantallas táctiles, 44 px de área sin agrandar el botón (como `.tap-target`). */
+@media (pointer: coarse) {
+  .cabIcono,
+  .tool {
+    position: relative;
+  }
+  .cabIcono::before,
+  .tool::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%);
+  }
+}
 .fase {
   font-size: var(--fs-caption);
   color: var(--text-secondary);
@@ -290,7 +307,8 @@
 .pagina {
   position: absolute;
   background: #fff;
-  box-shadow: var(--shadow-panel);
+  /* El filo de la hoja: en claro, blanco sobre casi blanco no se distinguía. */
+  box-shadow: 0 0 0 1px var(--border-main), var(--shadow-panel);
   image-rendering: auto;
   pointer-events: none;
 }
@@ -383,6 +401,17 @@
 }
 .dibujoCruce path {
   stroke: var(--capa-peligro);
+}
+/* Una Longitud es una línea abierta: sin relleno. */
+.dibujoAbierto path {
+  fill: none;
+}
+/* [A1] El borrador de la página (§5.8): atenuado y discontinuo, sin guías. */
+.dibujoBorrador {
+  opacity: 0.55;
+}
+.dibujoBorrador path {
+  stroke-dasharray: 6 4;
 }
 .cota path,
 .comprobacion path,
@@ -757,6 +786,12 @@
   width: 100%;
   flex-wrap: wrap;
 }
+/* [Descartar] [Crear línea] van juntos, a la derecha: si no caben, bajan los dos. */
+.nombrandoAcciones {
+  display: flex;
+  gap: var(--sp-8);
+  margin-left: auto;
+}
 .prefijo {
   padding: var(--sp-2) var(--sp-8);
   border-radius: 5px;
@@ -816,7 +851,8 @@
   display: flex;
   gap: var(--sp-6);
   font-size: var(--fs-caption);
-  color: var(--text-disabled);
+  /* Los pasos que vienen son información, no controles apagados: contraste AA. */
+  color: var(--text-secondary);
 }
 .pasoOn {
   color: var(--accent);

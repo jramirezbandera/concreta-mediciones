@@ -1,9 +1,9 @@
 /* ===========================================================================
    features/planos/flag — interruptor en tiempo de ejecución del visor de planos
-   (§5.9). Hasta superar la puerta cronometrada:
-     · `?planos=1` lo enciende y `?planos=0` lo apaga (y se recuerda en
+   (§5.9). Terminada la Etapa A1, encendido por defecto también en producción:
+     · `?planos=0` lo apaga y `?planos=1` lo vuelve a encender (y se recuerda en
        `localStorage['concreta.planos']`);
-     · sin nada, encendido en desarrollo y apagado en producción.
+     · sin nada, encendido.
    El lector y el escritor v6 NO van detrás del interruptor: solo la interfaz
    (botón «Planos», visor y marcador de origen en las líneas).
    =========================================================================== */
@@ -26,7 +26,7 @@ function leer(): boolean {
   } catch {
     // sin location o sin localStorage
   }
-  return import.meta.env.DEV;
+  return true;
 }
 
 let activo = leer();

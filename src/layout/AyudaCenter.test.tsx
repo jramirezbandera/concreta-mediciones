@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useObraStore } from '../store';
 import { AyudaCenter } from './AyudaCenter';
@@ -41,6 +41,21 @@ describe('AyudaCenter', () => {
     render(<AyudaCenter open onClose={noop} onNavigate={noop} initialTab="inicio" />);
     // El número del paso 1 se sustituye por un check (no hay "1" como número de paso).
     expect(screen.queryByText('Crea o importa una obra')).toBeInTheDocument();
+  });
+
+  it('[A1] el «?» de un mensaje del visor abre «Medir sobre planos» en su sección, con el foco', async () => {
+    render(<AyudaCenter open onClose={noop} onNavigate={noop} initialTab="funcionalidades" ancla="planos-calibrar" />);
+    const sec = screen.getByRole('region', { name: 'Calibrar y comprobar' });
+    await waitFor(() => expect(sec).toHaveFocus());
+    expect(screen.getByRole('region', { name: 'Qué herramienta para cada partida' })).toBeInTheDocument();
+  });
+
+  it('[A1] el paso «Mide sobre los planos» abre el visor', () => {
+    const onAbrirPlanos = vi.fn();
+    render(<AyudaCenter open onClose={noop} onNavigate={noop} onAbrirPlanos={onAbrirPlanos} initialTab="inicio" />);
+    expect(screen.getByText('Mide sobre los planos')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir Planos' }));
+    expect(onAbrirPlanos).toHaveBeenCalled();
   });
 
   it('en compacto apila las secciones (atajos visibles sin pestañas)', () => {

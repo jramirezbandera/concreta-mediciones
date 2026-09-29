@@ -93,6 +93,12 @@ describe('medir desde el visor', () => {
     herramienta('Longitud');
     expect((await screen.findAllByText('Esta partida se mide por Unidades: usa Recuento.')).length).toBeGreaterThan(0);
     expect(screen.getByRole('radio', { name: 'Recuento' })).toHaveAttribute('aria-checked', 'true');
+    // [A1] su «?» lleva a la sección de la ayuda que lo explica
+    const pedida = vi.fn();
+    window.addEventListener('concreta:ayuda', pedida);
+    fireEvent.click(screen.getByRole('button', { name: 'Ayuda: Qué herramienta para cada partida' }));
+    window.removeEventListener('concreta:ayuda', pedida);
+    expect((pedida.mock.calls[0]![0] as CustomEvent).detail).toEqual({ tab: 'funcionalidades', ancla: 'planos-herramientas' });
     clic(lienzo, [300, 300]);
     clic(lienzo, [400, 300]);
     expect(P(EJEMPLO.tabique).med).toHaveLength(0);

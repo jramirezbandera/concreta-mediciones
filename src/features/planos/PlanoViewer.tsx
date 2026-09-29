@@ -74,6 +74,7 @@ import { DialogoRecalcular } from './DialogoRecalcular';
 import { DialogoCopiarEscala, PopoverAjuste } from './EscalaCajetin';
 import { revisionMasNueva } from '../../core/planoRevision';
 import { comentarioPropuesto, desviacionCajetin, escalaCalibrada, escalaDeclarada, etiquetaPropuesta } from '../../core/planoTexto';
+import type { AnclaAyuda } from '../../layout/ayudaContent';
 import { BotonAyuda } from './BotonAyuda';
 import { TEXTO_DESCARTE_BORRADOR, textoEscala, textoReenlazado, textoRevisionAdjunta } from './textos';
 import { cajaDe, formaEn, formasDeLineas, otrasPaginas, paginasAPrecargar, type FormaCapa } from './capa';
@@ -131,8 +132,8 @@ type Aviso = {
   texto: string;
   tono: 'info' | 'warn' | 'error';
   acciones?: { texto: string; run: () => void }[];
-  /** Lleva «?» a la ayuda (§7.2). */
-  ayuda?: boolean;
+  /** Lleva «?» a esta sección de la ayuda (§7.2). */
+  ayuda?: AnclaAyuda;
 };
 
 const m = (v: number) => `${fmtNum(v)} m`;
@@ -263,14 +264,14 @@ export function PlanoViewer({
     texto: string;
     tono: 'info' | 'warn' | 'error';
     n: number;
-    /** Lleva «?» a la ayuda (calibración y «no encaja», §7.2). */
-    ayuda?: boolean;
+    /** Lleva «?» a esta sección de la ayuda (calibración y «no encaja», §7.2). */
+    ayuda?: AnclaAyuda;
   } | null>(null);
   const [pista, setPista] = useState<string | null>(null);
   const [anuncio, setAnuncio] = useState({ texto: '', n: 0 });
   const decir = useCallback((texto: string) => setAnuncio((a) => ({ texto, n: a.n + 1 })), []);
   const avisar = useCallback(
-    (texto: string, tono: 'info' | 'warn' | 'error' = 'warn', ayuda = false) => {
+    (texto: string, tono: 'info' | 'warn' | 'error' = 'warn', ayuda?: AnclaAyuda) => {
       setMensaje((x) => ({ texto, tono, n: (x?.n ?? 0) + 1, ayuda }));
       decir(texto);
     },
@@ -595,7 +596,15 @@ export function PlanoViewer({
 
   /** Qué hace el visor con un motivo: decirlo y, si lo hay, su arreglo (§7.2). */
   function atenderMotivo(mo: MotivoVisor | MotivoMedida): void {
-    avisar(textoMotivoVisor(mo), 'warn', mo.motivo === 'no-encaja' || mo.motivo === 'sin-calibrar' || mo.motivo === 'sin-comprobar');
+    avisar(
+      textoMotivoVisor(mo),
+      'warn',
+      mo.motivo === 'no-encaja'
+        ? 'planos-herramientas'
+        : mo.motivo === 'sin-calibrar' || mo.motivo === 'sin-comprobar'
+          ? 'planos-calibrar'
+          : undefined,
+    );
     if (mo.motivo === 'no-encaja') dispatch({ tipo: 'herramienta', armada: mo.usa });
     else if (mo.motivo === 'sin-partida') setSelectorAbierto(true);
     else if (mo.motivo === 'falta-dimension' || mo.motivo === 'kgm-sin-resolver')
@@ -1043,20 +1052,20 @@ export function PlanoViewer({
   function avisoBorrador(b: Borrador): Aviso {
     const f = b.forma;
     const n = f.puntos.length;
-    const que = `${NOMBRE_HERRAMIENTA[f.armada]} · ${n} ${n === 1 ? 'punto' : 'puntos'}`;
+    const que = `${NOMBRE_HERRAMIENTA[f.armada]}, ${n} ${n === 1 ? 'punto' : 'puntos'}`;
     const descartar = { texto: 'Descartar', run: () => usePlanoUiStore.getState().quitarBorrador() };
     const pasa = b.partidaId === partidaId || (!f.sustituye && encajaHerramienta(f.armada, partida, supDirecta));
     if (pasa || !puedeSeguir)
       return {
-        texto: `Tienes una forma a medio medir en esta página (${que}).`,
+        texto: `Forma a medio medir: ${que}.`,
         tono: 'info',
         acciones: puedeSeguir ? [{ texto: 'Seguir', run: () => seguirBorrador(b) }, descartar] : [descartar],
       };
     const suya = locatePartida(b.partidaId);
-    if (!suya) return { texto: `Tienes una forma a medio medir para una partida que ya no está (${que}).`, tono: 'info', acciones: [descartar] };
+    if (!suya) return { texto: `Forma a medio medir para una partida que ya no está: ${que}.`, tono: 'info', acciones: [descartar] };
     const volver = () => useObraStore.getState().revealPartida(suya.partida.id, suya.chapterId, suya.partida.sub ?? null);
     return {
-      texto: `Borrador para ${suya.partida.pos} ${suya.partida.title} (${que}).`,
+      texto: `Borrador para ${suya.partida.pos} ${suya.partida.title}: ${que}.`,
       tono: 'info',
       acciones: [{ texto: 'Volver', run: volver }, descartar],
     };
@@ -1092,7 +1101,7 @@ export function PlanoViewer({
     aviso = {
       texto: 'La calibración no cuadra con la escala del plano: ¿el PDF está a otro tamaño?',
       tono: 'warn',
-      ayuda: true,
+      ayuda: 'planos-calibrar',
       acciones: motivoCalibrar ? undefined : [{ texto: 'Rehacer cota', run: empezarCalibrar }],
     };
   if (!aviso && docE.estado === 'listo' && !escala && estado.fase !== 'calibrando')
@@ -1134,7 +1143,7 @@ export function PlanoViewer({
           <>
             <Icon name={aviso.tono === 'info' ? 'crosshair' : 'alert'} size={14} />
             <span className={styles.avisoTexto}>{aviso.texto}</span>
-            {aviso.ayuda && <BotonAyuda />}
+            {aviso.ayuda && <BotonAyuda seccion={aviso.ayuda} />}
             {aviso.acciones?.map((a) => (
               <button key={a.texto} type="button" className={styles.btn} onClick={a.run}>
                 {a.texto}
@@ -1211,6 +1220,11 @@ export function PlanoViewer({
               if (p && cursorTecRef.current) ponerCursorTec(null); // mover el ratón lo apaga
             }}
             cursorTeclado={cursorTec}
+            borrador={
+              borradorAqui
+                ? { herramienta: borradorAqui.forma.armada, puntos: borradorAqui.forma.puntos, cerrada: borradorAqui.forma.fase === 'nombrando' }
+                : null
+            }
             onPintado={(est, causa) => setPintado({ estado: est, causa })}
             precargar={precarga}
           />
@@ -1398,9 +1412,12 @@ export function PlanoViewer({
 
 function TotalPartida({ p, coefK }: { p: Partida; coefK: number }) {
   const r = resumenCantidad(p, coefK);
+  const n = p.med.length;
+  // Una partida vacía no tiene «cantidad fija»: aún no tiene nada.
+  const que = r.fija ? (n === 0 && r.cantidad === 0 ? 'sin líneas' : 'cantidad fija') : `${n} ${n === 1 ? 'línea' : 'líneas'}`;
   return (
     <span className={`mono ${styles.total}`}>
-      {r.fija ? 'cantidad fija' : `${p.med.length} ${p.med.length === 1 ? 'línea' : 'líneas'}`} · {fmtNum(r.cantidad)} {p.ud}
+      {que} · {fmtNum(r.cantidad)} {p.ud}
     </span>
   );
 }
@@ -1596,12 +1613,14 @@ function Nombrando({
       />
       <span className={styles.previa}>{previa}</span>
       {pide}
-      <button type="button" className={styles.btn} onClick={onCancelar}>
-        Descartar
-      </button>
-      <button type="button" className={`${styles.btn} ${styles.btnPrimario}`} onClick={onCrear}>
-        Crear línea
-      </button>
+      <div className={styles.nombrandoAcciones}>
+        <button type="button" className={styles.btn} onClick={onCancelar}>
+          Descartar
+        </button>
+        <button type="button" className={`${styles.btn} ${styles.btnPrimario}`} onClick={onCrear}>
+          Crear línea
+        </button>
+      </div>
     </div>
   );
 }
@@ -1743,7 +1762,7 @@ function NoDisponible({ plano, soloLectura }: { plano: PlanoMeta; soloLectura: b
             {otro.encaja
               ? 'Tiene sus mismas páginas: puedes usarlo para este plano (conserva escalas y líneas; cada página calibrada pide comprobar su escala) o adjuntarlo como revisión nueva.'
               : 'No tiene sus mismas páginas: solo puede entrar como revisión nueva, y las líneas siguen en este plano.'}{' '}
-            <BotonAyuda />
+            <BotonAyuda seccion="planos-revisiones" />
           </p>
           <div className={styles.popoverAcciones}>
             {otro.encaja && (
@@ -1783,7 +1802,7 @@ function NoDisponible({ plano, soloLectura }: { plano: PlanoMeta; soloLectura: b
       />
       {error && (
         <p className={styles.errorTexto} role="alert">
-          {error} <BotonAyuda />
+          {error} <BotonAyuda seccion="planos-revisiones" />
         </p>
       )}
     </div>

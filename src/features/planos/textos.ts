@@ -3,6 +3,7 @@ import { fmtNum } from '../../core/money';
 import type { AvisoCalibrar } from '../../core/planoCiclo';
 import { nombreConRevision } from '../../core/planoRevision';
 import type { PlanoMeta } from '../../core/types';
+import type { AnclaAyuda } from '../../layout/ayudaContent';
 
 /** «1:5 000 000», «1:63,5». */
 export function textoEscala(n: number): string {
@@ -29,9 +30,9 @@ export function textoAvisoCalibrar(a: AvisoCalibrar): string {
 }
 
 /** «?» de los mensajes de calibración, «no encaja» y «PDF no idéntico» (§7.2):
- *  abre el Centro de Ayuda en sus funcionalidades («Medir sobre planos»). */
-export function abrirAyudaPlanos(): void {
-  window.dispatchEvent(new CustomEvent('concreta:ayuda', { detail: 'funcionalidades' }));
+ *  abre el Centro de Ayuda en «Medir sobre planos», en la sección `ancla`. */
+export function abrirAyudaPlanos(ancla: AnclaAyuda): void {
+  window.dispatchEvent(new CustomEvent('concreta:ayuda', { detail: { tab: 'funcionalidades', ancla } }));
 }
 
 /** ¿Es el fallo de cargar un chunk (versión nueva publicada, red caída)? */

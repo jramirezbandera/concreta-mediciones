@@ -102,6 +102,7 @@ export function PlanoLienzo({
   onPintado,
   precargar = [],
   cursorTeclado = null,
+  borrador = null,
 }: {
   apiRef: Ref<LienzoApi>;
   doc: DocPdf;
@@ -128,6 +129,8 @@ export function PlanoLienzo({
   precargar?: number[];
   /** [A1] Cursor de teclado, en coordenadas de página; `null` = apagado. */
   cursorTeclado?: Punto | null;
+  /** [A1] El borrador de esta página (§5.8), atenuado: lo que ofrece el aviso. */
+  borrador?: Omit<DibujoCapa, 'cruce' | 'resta'> | null;
 }) {
   const cajaRef = useRef<HTMLDivElement>(null);
   const baseRef = useRef<HTMLCanvasElement>(null);
@@ -452,7 +455,9 @@ export function PlanoLienzo({
   // El puntero: el cursor de teclado si está encendido [A1]; si no, el ratón.
   const puntero: [number, number] | null = cursorTeclado ? aPantalla(cursorTeclado) : hover;
   const [px0, py0] = puntero ?? [NaN, NaN];
-  const lupaVisible = modo === 'medir' && puntero !== null;
+  // Con la forma cerrada (NOMBRANDO) un clic no pone puntos: ni guías ni lupa.
+  const apuntando = modo === 'medir' && puntero !== null && !dibujo?.cerrada;
+  const lupaVisible = apuntando;
   const lupaIzquierda = puntero ? puntero[0] > tam[0] / 2 : false;
   const lupaArriba = puntero ? puntero[1] > tam[1] / 2 : false;
   useEffect(() => {
@@ -581,8 +586,21 @@ export function PlanoLienzo({
         {formas.map(pintarForma)}
         {calibrar && cotaCapa(calibrar.cota, styles.cota)}
         {calibrar && calibrar.paso === 'comprobacion' && cotaCapa(calibrar.comprobacion, styles.comprobacion)}
+        {borrador && borrador.puntos.length > 0 && (
+          <g className={`${styles.dibujo} ${styles.dibujoBorrador} ${borrador.herramienta === 'longitud' ? styles.dibujoAbierto : ''}`} data-borrador="">
+            {borrador.herramienta !== 'recuento' && (
+              <path d={ruta(borrador.puntos, borrador.cerrada && borrador.herramienta !== 'longitud')} />
+            )}
+            {borrador.puntos.map((p, i) => {
+              const [x, y] = aPantalla(p);
+              return <rect key={i} x={x - 3} y={y - 3} width={6} height={6} />;
+            })}
+          </g>
+        )}
         {dibujo && dibujo.puntos.length > 0 && (
-          <g className={`${styles.dibujo} ${dibujo.cruce ? styles.dibujoCruce : ''}`}>
+          <g
+            className={`${styles.dibujo} ${dibujo.cruce ? styles.dibujoCruce : ''} ${dibujo.herramienta === 'longitud' ? styles.dibujoAbierto : ''}`}
+          >
             {dibujo.herramienta !== 'recuento' && (
               <path
                 d={ruta(
@@ -597,7 +615,7 @@ export function PlanoLienzo({
             })}
           </g>
         )}
-        {modo === 'medir' && puntero && (
+        {apuntando && puntero && (
           <g className={styles.guias}>
             <line x1={0} y1={puntero[1]} x2={tam[0]} y2={puntero[1]} />
             <line x1={puntero[0]} y1={0} x2={puntero[0]} y2={tam[1]} />

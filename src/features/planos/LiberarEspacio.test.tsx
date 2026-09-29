@@ -55,6 +55,9 @@ describe('Liberar espacio', () => {
     render(<PlanosPanel estrecha={false} onCerrar={() => undefined} />);
     fireEvent.click(screen.getByRole('button', { name: /Liberar espacio/ }));
     expect(await screen.findByText('Ningún PDF sin usar: no hay nada que liberar.')).toBeInTheDocument();
-    expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Liberar' })).toBeDisabled();
+    // sin nada que liberar, solo se cierra
+    const d = screen.getByRole('dialog');
+    expect(within(d).queryByRole('button', { name: /Liberar/ })).toBeNull();
+    expect(within(d).getByText('Cerrar', { selector: 'button' })).toBeInTheDocument(); // el del pie, además de la ✕
   });
 });

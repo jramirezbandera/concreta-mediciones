@@ -45,6 +45,7 @@ function useMedidas(): Map<string, Map<number, number>> {
 
 const total = (m: Map<number, number> | undefined) => [...(m?.values() ?? [])].reduce((a, b) => a + b, 0);
 const mb = (bytes: number) => `${fmtNum(bytes / 1048576, 1)} MB`;
+const medidasTexto = (n: number) => `${n} ${n === 1 ? 'medida' : 'medidas'}`;
 
 /** Chip de escala (§5.2): «Sin calibrar» o «1:50 · ±0,3 %». */
 function ChipEscala({ plano, pagina }: { plano: PlanoMeta; pagina: number }) {
@@ -161,7 +162,7 @@ export function PlanosPanel({
                   {nombreConRevision(p)}
                   <span className={styles.menuMeta}>
                     {revisionMasNueva(planosRaw, p.id) ? 'sustituida · ' : ''}
-                    {total(medidas.get(p.id))} medidas
+                    {medidasTexto(total(medidas.get(p.id)))}
                   </span>
                 </button>
               ))}
@@ -498,7 +499,7 @@ function PlanosLista({
               <span className={styles.fichaNombre}>{nombreConRevision(p)}</span>
               <span className={styles.fichaMeta}>
                 {p.paginas} {p.paginas === 1 ? 'página' : 'páginas'} · {calibradas ? `${calibradas} calibrada${calibradas === 1 ? '' : 's'}` : 'sin calibrar'} ·{' '}
-                {total(med)} medidas · {mb(p.tamano)}
+                {medidasTexto(total(med))} · {mb(p.tamano)}
                 {noDisp && ' · no disponible en este navegador'}
                 {nueva && ` · sustituida por ${nueva.revision ?? nueva.nombre}`}
               </span>

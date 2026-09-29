@@ -20,6 +20,11 @@ Funciona **100 % en el navegador**: sin servidor ni cuenta. La obra se guarda en
   unidad, rendimiento y precio; numeración automática estilo Arquimedes/CYPE.
 - **Mediciones detalladas** — líneas con comentario, unidades, dimensiones (largo ×
   ancho × alto) y fórmulas; el total se propaga al presupuesto.
+- **Medir sobre planos PDF** — adjunta el PDF del proyecto, calibra cada página con
+  una cota (y compruébala con otra) y mide longitudes, superficies, rectángulos y
+  recuentos con clics: cada medida entra como línea de la partida abierta, con su
+  comentario («P1 · Salón») y de dónde sale, y se vuelve a ella desde la línea. Los PDF
+  se guardan en el navegador aparte de la obra; la copia `.zip` los lleva con ella.
 - **Justificación de precios** — descomposición de partidas (mano de obra, materiales,
   maquinaria) con edición *copy-on-write* sobre el banco de precios.
 - **Coeficiente K** — escala global de precios unitarios para cuadrar el PEM a una
@@ -34,7 +39,7 @@ Funciona **100 % en el navegador**: sin servidor ni cuenta. La obra se guarda en
   Presto, CYPE/Arquimedes y similares; exportación de listados a **PDF**, **Excel
   (.xlsx)** y **Word (.docx)**.
 - **Multi-obra y copia de seguridad** — cambio entre obras y backup/restauración del
-  proyecto completo.
+  proyecto completo (`.json`, o `.zip` con los planos).
 - **UI adaptable** — escritorio y móvil, tema claro/oscuro, atajos de teclado y centro
   de ayuda integrado.
 
@@ -42,7 +47,9 @@ Funciona **100 % en el navegador**: sin servidor ni cuenta. La obra se guarda en
 
 Vite 7 · React 19 · TypeScript · Zustand · Immer · CSS Modules · IndexedDB
 (`idb-keyval`) · Vitest. Exportación con `write-excel-file` (XLSX) y `docx` (DOCX); el
-intercambio FIEBDC-3 usa un parser forkado en `src/vendor/bc3` y un writer propio.
+intercambio FIEBDC-3 usa un parser forkado en `src/vendor/bc3` y un writer propio. Los
+planos se pintan con `pdfjs-dist` (se carga solo al abrir el visor) y la copia `.zip`
+comprime con `fflate`.
 
 ## Estructura
 
@@ -52,7 +59,7 @@ src/
   store/        Estado de la obra (Zustand + Immer) y selectores
   persist/      Persistencia en IndexedDB, hidratación y transferencia
   features/     presupuesto · certificaciones · resumen · referencia ·
-                importar · exportar · obra · print
+                importar · exportar · obra · planos · print
   layout/       TopBar, sidebar, drawer, barras de estado
   components/   Primitivas de UI
   hooks/        Hooks compartidos (atajos, breakpoints, tema…)
@@ -72,11 +79,14 @@ npm run dev      # servidor de desarrollo (Vite)
 npm run build    # typecheck (tsc -b) + build de producción
 npm run preview  # servir el build localmente
 npm test         # tests (Vitest)
+npm run test:node  # tests en Node: pdf.js real y formato de la copia .zip
 npm run lint     # ESLint
 npm run format   # Prettier
 ```
 
-La galería de primitivas de UI está en `/#sandbox`.
+La galería de primitivas de UI está en `/#sandbox`; su botón «Abrir el ejemplo de
+planos» carga un plano A3 a 1:50 ya calibrado, con dos partidas, para probar el visor
+sin tocar tus obras (`?planos=0` apaga el visor).
 
 > Nota: muy de vez en cuando el **primer** `npm test` en frío falla entero con un
 > error espurio de Vitest («"vitest" is imported inside "globalSetup"»). Es un

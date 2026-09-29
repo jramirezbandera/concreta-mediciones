@@ -7,10 +7,20 @@
   display: inline-flex;
   gap: var(--sp-2);
   padding: 3px;
-  margin-bottom: 14px;
   border-radius: 9px;
   background: var(--bg-elevated);
   border: 1px solid var(--border-main);
+}
+/* Las pestañas, fijas arriba al bajar (el «?» del visor salta a una sección):
+   siempre se ve en qué pestaña estás. La banda ocupa el relleno superior del
+   cuerpo del modal y tapa lo que pasa por debajo. */
+.segBar {
+  position: sticky;
+  top: -18px; /* el relleno superior del cuerpo del modal: pegada al borde */
+  z-index: 1;
+  margin-top: -18px;
+  padding: 18px 0 14px;
+  background: var(--bg-surface);
 }
 .segBtn {
   border: 0;
@@ -145,6 +155,39 @@
   line-height: 1.5;
   color: var(--text-secondary);
   margin-top: var(--sp-2);
+}
+
+/* ---------- medir sobre planos, paso a paso ----------------------------------- */
+.planos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-12);
+  margin-top: var(--sp-16);
+}
+.planosSec {
+  padding: var(--sp-10) var(--sp-12);
+  border-radius: 10px;
+  border: 1px solid var(--border-main);
+  background: var(--bg-elevated);
+  scroll-margin-top: 76px; /* por debajo de las pestañas fijas */
+}
+.planosSec:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--ring-accent);
+}
+.planosSec h3 {
+  margin: 0;
+}
+.planosPuntos {
+  margin: var(--sp-6) 0 0;
+  padding-left: var(--sp-16);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  font-size: var(--fs-table);
+  line-height: 1.5;
+  color: var(--text-secondary);
 }
 
 /* ---------- atajos -------------------------------------------------------- */

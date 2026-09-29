@@ -1,11 +1,16 @@
 import { Fragment, useEffect, useState } from 'react';
 import { Icon, Modal } from '../components';
+import { origenLegible } from '../core/planoDatos';
+import type { Partida } from '../core/types';
+import { planosActivos } from '../features/planos/flag';
 import { isTouchOnly } from '../hooks/touchOnly';
 import { selectCounts, useObraStore } from '../store';
 import {
+  AYUDA_PLANOS,
   FEATURES,
   STEPS,
   shortcutGroups,
+  type AnclaAyuda,
   type GoView,
   type HelpTab,
   type OnboardingStep,
@@ -21,9 +26,14 @@ const TABS: { k: HelpTab; label: string }[] = [
   { k: 'atajos', label: 'Atajos' },
 ];
 
+/** ¿Alguna línea medida sobre un plano? */
+const hayLineaDePlano = (partidas: Record<string, Partida[]>) =>
+  Object.values(partidas).some((ps) => ps.some((p) => p.med.some((l) => origenLegible(l.origen))));
+
 /** Estado real de la obra → qué pasos del onboarding están hechos. */
 function useStepProgress(): Record<NonNullable<OnboardingStep['done']>, boolean> {
   const counts = useObraStore(selectCounts);
+  const plano = useObraStore((s) => hayLineaDePlano(s.partidas));
   const chapters = useObraStore((s) => s.chapters);
   const coefK = useObraStore((s) => s.rates.coefK);
   const certs = useObraStore((s) => s.certs);
@@ -31,13 +41,20 @@ function useStepProgress(): Record<NonNullable<OnboardingStep['done']>, boolean>
     obra: chapters.length > 0,
     partidas: counts.partidas > 0,
     medicion: counts.lineas > 0,
+    plano,
     coefK: coefK !== 1,
     cert: certs.some((c) => Object.keys(c.data ?? {}).length > 0),
   };
 }
 
 /* ---------- secciones ----------------------------------------------------- */
-function Inicio({ onGo }: { onGo: (v: GoView) => void }) {
+function Inicio({
+  onGo,
+  onAbrirPlanos,
+}: {
+  onGo: (v: GoView) => void;
+  onAbrirPlanos?: () => void;
+}) {
   const done = useStepProgress();
   return (
     <div className={styles.section}>
@@ -62,6 +79,11 @@ function Inicio({ onGo }: { onGo: (v: GoView) => void }) {
                   {s.goLabel}
                 </button>
               )}
+              {s.abre === 'planos' && s.goLabel && onAbrirPlanos && (
+                <button type="button" className={styles.stepGo} onClick={onAbrirPlanos}>
+                  {s.goLabel}
+                </button>
+              )}
             </li>
           );
         })}
@@ -72,17 +94,48 @@ function Inicio({ onGo }: { onGo: (v: GoView) => void }) {
 
 function Funcionalidades() {
   return (
-    <div className={`${styles.section} ${styles.featGrid}`}>
-      {FEATURES.map((f) => (
-        <div key={f.title} className={styles.feat}>
-          <span className={styles.featIcon}>
-            <Icon name={f.icon} size={16} />
-          </span>
-          <div>
-            <div className={styles.featTitle}>{f.title}</div>
-            <div className={styles.featDesc}>{f.desc}</div>
+    <>
+      <div className={`${styles.section} ${styles.featGrid}`}>
+        {FEATURES.map((f) => (
+          <div key={f.title} className={styles.feat}>
+            <span className={styles.featIcon}>
+              <Icon name={f.icon} size={16} />
+            </span>
+            <div>
+              <div className={styles.featTitle}>{f.title}</div>
+              <div className={styles.featDesc}>{f.desc}</div>
+            </div>
           </div>
-        </div>
+        ))}
+      </div>
+      {planosActivos() && <AyudaPlanos />}
+    </>
+  );
+}
+
+/** «Medir sobre planos», paso a paso: una sección por ancla, a la que lleva el
+ *  «?» de cada mensaje del visor. */
+function AyudaPlanos() {
+  return (
+    <div className={`${styles.section} ${styles.planos}`}>
+      <div className={`sec-head ${styles.groupTitle}`}>Medir sobre planos, paso a paso</div>
+      {AYUDA_PLANOS.map((sec) => (
+        <section
+          key={sec.id}
+          id={`ayuda-${sec.id}`}
+          tabIndex={-1}
+          className={styles.planosSec}
+          aria-labelledby={`ayuda-${sec.id}-t`}
+        >
+          <h3 id={`ayuda-${sec.id}-t`} className={styles.featTitle}>
+            {sec.titulo}
+          </h3>
+          <ul className={styles.planosPuntos}>
+            {sec.puntos.map((t) => (
+              <li key={t}>{t}</li>
+            ))}
+          </ul>
+        </section>
       ))}
     </div>
   );
@@ -112,8 +165,11 @@ function Atajos() {
   );
 }
 
-const PANELS: Record<HelpTab, (p: { onGo: (v: GoView) => void }) => React.ReactNode> = {
-  inicio: ({ onGo }) => <Inicio onGo={onGo} />,
+const PANELS: Record<
+  HelpTab,
+  (p: { onGo: (v: GoView) => void; onAbrirPlanos?: () => void }) => React.ReactNode
+> = {
+  inicio: ({ onGo, onAbrirPlanos }) => <Inicio onGo={onGo} onAbrirPlanos={onAbrirPlanos} />,
   funcionalidades: () => <Funcionalidades />,
   atajos: () => <Atajos />,
 };
@@ -124,18 +180,25 @@ const PANELS: Record<HelpTab, (p: { onGo: (v: GoView) => void }) => React.ReactN
  * por pestañas (segmented); en compacto (bottom-sheet) apila las 3 secciones
  * (las pestañas con scroll horizontal son poco descubribles en móvil).
  * `initialTab` lo fija quien abre: el botón → 'inicio'; la tecla `?` → 'atajos'.
+ * `ancla`: el «?» de un mensaje del visor de planos abre en Funcionalidades y
+ * lleva a su sección (la enfoca, para que el lector de pantalla empiece ahí).
  */
 export function AyudaCenter({
   open,
   onClose,
   initialTab = 'inicio',
+  ancla,
   onNavigate,
+  onAbrirPlanos,
   compact = false,
 }: {
   open: boolean;
   onClose: () => void;
   initialTab?: HelpTab;
+  ancla?: AnclaAyuda;
   onNavigate: (v: GoView) => void;
+  /** «Abrir Planos» del paso de primeros pasos. */
+  onAbrirPlanos?: () => void;
   compact?: boolean;
 }) {
   const [tab, setTab] = useState<HelpTab>(initialTab);
@@ -143,6 +206,16 @@ export function AyudaCenter({
   useEffect(() => {
     if (open) setTab(initialTab);
   }, [open, initialTab]);
+  // El «?» de un mensaje del visor: su sección, a la vista y con el foco.
+  useEffect(() => {
+    if (!open || !ancla) return;
+    const r = requestAnimationFrame(() => {
+      const el = document.getElementById(`ayuda-${ancla}`);
+      el?.scrollIntoView?.({ block: 'start' });
+      el?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(r);
+  }, [open, ancla, tab]);
 
   const onGo = (v: GoView) => onNavigate(v);
 
@@ -155,27 +228,29 @@ export function AyudaCenter({
           {TABS.filter((t) => t.k !== 'atajos' || !isTouchOnly()).map((t) => (
             <Fragment key={t.k}>
               <div className={`sec-head ${styles.stackHead}`}>{t.label}</div>
-              {PANELS[t.k]({ onGo })}
+              {PANELS[t.k]({ onGo, onAbrirPlanos })}
             </Fragment>
           ))}
         </div>
       ) : (
         <>
-          <div className={styles.seg} role="tablist">
-            {TABS.map((t) => (
-              <button
-                key={t.k}
-                type="button"
-                role="tab"
-                aria-selected={tab === t.k}
-                className={`tcol ${styles.segBtn} ${tab === t.k ? styles.on : ''}`}
-                onClick={() => setTab(t.k)}
-              >
-                {t.label}
-              </button>
-            ))}
+          <div className={styles.segBar}>
+            <div className={styles.seg} role="tablist">
+              {TABS.map((t) => (
+                <button
+                  key={t.k}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === t.k}
+                  className={`tcol ${styles.segBtn} ${tab === t.k ? styles.on : ''}`}
+                  onClick={() => setTab(t.k)}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
           </div>
-          {PANELS[tab]({ onGo })}
+          {PANELS[tab]({ onGo, onAbrirPlanos })}
         </>
       )}
     </Modal>

@@ -22,7 +22,7 @@ import { useClipboardHotkeys } from './hooks/usePartidaClipboard';
 import { useMedClipboard } from './hooks/useMedClipboard';
 import { useTheme } from './hooks/useTheme';
 import { AyudaCenter } from './layout/AyudaCenter';
-import type { HelpTab } from './layout/ayudaContent';
+import type { AnclaAyuda, HelpTab } from './layout/ayudaContent';
 import { BottomTabBar, Drawer, MobileSummaryBar, ObraSwitcher, Sidebar, StatusBar, TopBar, type View } from './layout';
 import { ROOMY_W } from './layout/TopBar';
 import { selectCounts, selectPec, selectPem, selectTotalConIva, useObraStore, useToastStore } from './store';
@@ -114,15 +114,25 @@ export default function App() {
   useClipboardHotkeys(); // Ctrl/Cmd+C copiar partida · Ctrl/Cmd+V pegar (T8)
   useMedClipboard(); // líneas de medición: Ctrl/Cmd+C/V/D y Esc (cede a partidas fuera de contexto)
   // Centro de Ayuda: `null` = cerrado; el botón abre en 'inicio', la tecla `?` en 'atajos'.
-  const [helpTab, setHelpTab] = useState<HelpTab | null>(null);
-  const openHelp = useCallback((tab: HelpTab = 'inicio') => setHelpTab(tab), []);
+  const [helpTab, setHelpTabState] = useState<HelpTab | null>(null);
+  /** Sección de la ayuda a la que lleva el «?» de un mensaje del visor de planos. */
+  const [helpAncla, setHelpAncla] = useState<AnclaAyuda | undefined>(undefined);
+  const setHelpTab = useCallback((tab: HelpTab | null, ancla?: AnclaAyuda) => {
+    setHelpTabState(tab);
+    setHelpAncla(ancla);
+  }, []);
+  const openHelp = useCallback((tab: HelpTab = 'inicio') => setHelpTab(tab), [setHelpTab]);
   useAppHotkeys({ onHelp: () => setHelpTab('atajos') }); // Ctrl/Cmd+K · Supr · Esc · ?
-  // «?» de los mensajes del visor de planos: abre la ayuda en su pestaña.
+  // «?» de los mensajes del visor de planos: abre la ayuda en su pestaña y sección.
   useEffect(() => {
-    const onAyuda = (e: Event) => setHelpTab((e as CustomEvent<HelpTab | undefined>).detail ?? 'inicio');
+    const onAyuda = (e: Event) => {
+      const d = (e as CustomEvent<HelpTab | { tab: HelpTab; ancla?: AnclaAyuda } | undefined>).detail;
+      if (typeof d === 'object') setHelpTab(d.tab, d.ancla);
+      else setHelpTab(d ?? 'inicio');
+    };
     window.addEventListener('concreta:ayuda', onAyuda);
     return () => window.removeEventListener('concreta:ayuda', onAyuda);
-  }, []);
+  }, [setHelpTab]);
 
   // La vista activa vive en el store (única fuente; el sandbox sigue local).
   const view = useObraStore((s) => s.view);
@@ -498,11 +508,21 @@ export default function App() {
       <AyudaCenter
         open={helpTab !== null}
         initialTab={helpTab ?? 'inicio'}
+        ancla={helpAncla}
         onClose={() => setHelpTab(null)}
         onNavigate={(v) => {
           changeView(v);
           setHelpTab(null);
         }}
+        onAbrirPlanos={
+          planosOn
+            ? () => {
+                changeView('presupuesto'); // se mide sobre la partida abierta del presupuesto
+                setPlanosOpen(true);
+                setHelpTab(null);
+              }
+            : undefined
+        }
         compact={bp.isMobile}
       />
 

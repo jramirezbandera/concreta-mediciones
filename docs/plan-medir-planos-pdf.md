@@ -783,7 +783,7 @@ Reductor puro `(estado, evento) → { estado, efectos }`: el visor solo lo conec
 - **Interruptor en tiempo de ejecución:**
   - hasta superar la puerta, el visor se enciende con `?planos=1` o `localStorage['concreta.planos'] = '1'` (`?planos=0` lo apaga);
   - en producción va apagado por defecto y en desarrollo encendido;
-  - tras la puerta [A1], encendido por defecto;
+  - tras la puerta [A1], encendido por defecto (hecho al cerrar A1, 2026-09-29: la puerta se anuló);
   - el lector y el escritor v6 NO van detrás del interruptor.
 - **Frontera de errores local:** envuelve el chunk de Planos dentro de `LateralAside`. El presupuesto nunca se queda en blanco.
   - Si falla la carga del chunk: «Hay una versión nueva de Concreta: recarga la página» con [Recargar] (`reloadToLatest`).
@@ -1261,8 +1261,9 @@ Cada cambio posterior: fecha, qué cambia y por qué.
   - **Qué es «encaja»** (`encajaHerramienta`): la celda de §3.1 para la forma de medir de la partida nueva no es «no encaja», y en Superficie sobre L×A no se eligió «Usar Rectángulo». Las fijas que falten no cuentan: la forma pasa y la franja las pide en DIBUJANDO y en NOMBRANDO (también la pregunta de Superficie directa), con el aviso «La forma pasa a 1.2 Solado… Indica la Altura…». Un «Volver a medir» nunca pasa: la línea que sustituye es de su partida.
   - **Un borrador a la vez,** en `planoUiStore.borrador`: su obra, plano, página, partida, `rev` de la calibración, Restar y la forma (DIBUJANDO, o NOMBRANDO con su comentario). Empezar otra forma lo descarta con aviso («Borrador descartado: empezaste otra forma»). Al retomar una forma sin nombrar se renuevan `formaId` y `at` (nunca se creó).
   - **Dónde se ofrece:** en el aviso único de su página, el primero tras los mensajes pasajeros:
-    - si su herramienta sirve en la partida abierta: «Tienes una forma a medio medir en esta página (Longitud · 3 puntos).» [Seguir] [Descartar];
-    - si no: «Borrador para 1.1 Tabique… (Longitud · 3 puntos).» [Volver] [Descartar]. [Volver] abre su partida, y volver a ella por cualquier camino, en su página, la retoma sola;
+    - si su herramienta sirve en la partida abierta: «Forma a medio medir: Longitud, 3 puntos.» [Seguir] [Descartar];
+    - si no: «Borrador para 1.1 Tabique…: Longitud, 3 puntos.» [Volver] [Descartar]. [Volver] abre su partida, y volver a ella por cualquier camino, en su página, la retoma sola;
+    - la forma guardada se pinta atenuada y discontinua en el lienzo de su página, para que el aviso hable de algo que se ve;
     - en pantalla estrecha o en solo lectura, solo [Descartar].
   - **«Al redimensionar»:** `LateralAside` no desmonta el visor al cambiar de tamaño ni de split a overlay, así que solo cuenta pasar a estrecha (< 1024 px, donde no se mide). Desmontar el visor (otro plano, cerrarlo, otro ocupante) guarda la forma igual.
   - **Descartes con aviso:** `reconciliar` devuelve por qué descartó el borrador (`obra`; `plano` quitado o sin su página; `escala` de su página distinta, al recalibrar o al deshacer un cambio de escala) y el panel lo dice en un aviso («Forma descartada: cambió la escala de su página»). Al desmontar con la obra ya cambiada, la forma en curso se descarta con el mismo aviso.
@@ -1273,6 +1274,22 @@ Cada cambio posterior: fecha, qué cambia y por qué.
     - las guías, la lupa, el tramo en curso y la lectura en vivo lo siguen, y un anillo lo marca;
     - se apaga al mover el ratón sobre el lienzo y al cambiar de página; fuera de los campos de texto, el visor consume las flechas.
   - Tests: `core/planoCiclo.test.ts` (las rutas de `contexto` y `seguir`), `store/planoUiStore.test.ts` (los tres descartes de `reconciliar`) y `features/planos/Borradores.test.tsx` (partida que encaja con la Altura pedida; que no encaja, con [Volver] y por otro camino; página y plano; cerrar el visor; ventana estrecha; NOMBRANDO con su comentario; descartes: [Descartar], otra forma, obra, recalibrar y deshacer una escala; cursor de teclado con flechas, Intro, Mayús+Intro, Mano y ratón).
+- **2026-09-29 (A1) · Ayuda, README, `/design-review` e interruptor encendido** (§5.9, §10). Cierra la Etapa A1:
+  - **Ayuda por secciones:** «Medir sobre planos» queda como resumen en Funcionalidades y, debajo, «Medir sobre planos, paso a paso» con siete secciones con ancla (`AYUDA_PLANOS`): qué herramienta para cada partida, medir (clic… Enter, Enter; Restar, «Añadir también a…», borradores, cursor de teclado), calibrar y comprobar, una escala por página, líneas retocadas, revisiones y otro PDF, y copia .zip frente a .json. Cada «?» lleva a la suya (`BotonAyuda seccion`): «no encaja» a herramientas; sin calibrar, sin comprobar y los avisos de calibrar a calibrar; «PDF no idéntico» a revisiones. La sección recibe el foco y las pestañas del Centro de Ayuda quedan fijas arriba.
+  - **Primeros pasos:** «Mide sobre los planos», tras «Mide cada partida», hecho con la primera línea medida sobre un plano, con [Abrir Planos] (va al presupuesto y abre el visor).
+  - **Interruptor:** encendido por defecto también en producción; `?planos=0` lo apaga y se recuerda (`?planos=1` lo vuelve a encender). Sustituye «en producción va apagado por defecto» de §5.9.
+  - **README:** la característica, `features/planos`, pdf.js y fflate en el stack, `npm run test:node` y el ejemplo del sandbox. TODOS.md: la Etapa A, hecha; la puerta, anulada.
+  - **`/design-review`** (1366, 1024 y 390 px, claro y oscuro). Arreglado:
+    - el borrador de la página se pinta atenuado y discontinuo en el lienzo (el aviso hablaba de una forma que no se veía) y su aviso se acorta a una línea («Forma a medio medir: Longitud, 3 puntos.»);
+    - en NOMBRANDO, [Descartar] [Crear línea] van juntos a la derecha, y no salen las guías ni la lupa (un clic ahí no pone puntos);
+    - una Longitud a medio dibujar ya no se rellena;
+    - la hoja lleva filo (`--border-main`): en claro, blanco sobre casi blanco no se distinguía;
+    - la franja de una partida vacía dice «sin líneas», no «cantidad fija»; «1 medida» en singular en la lista y el menú de planos;
+    - «Liberar espacio» sin nada que liberar solo ofrece [Cerrar];
+    - los pasos que vienen al calibrar pasan a `--text-secondary` (2,6:1 → 7,6:1 en claro);
+    - 44 px de área táctil en la barra de herramientas y la cabecera del visor con puntero grueso (sin agrandar los botones);
+    - «1 %» con espacio duro en la ayuda.
+  - Queda fuera (TODOS.md): textos del presupuesto y de las barras que aún van en `--text-disabled`.
 
 ## Historial
 

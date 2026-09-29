@@ -38,6 +38,8 @@ export function DialogoLiberar({ onCerrar }: { onCerrar: (liberado: boolean) => 
   }, []);
 
   const ok = busqueda?.kind === 'ok' ? busqueda : null;
+  /** Buscado y sin nada que ofrecer (o detenido): solo se cierra. */
+  const nada = busqueda !== null && (!ok || (!ok.libres.length && !ok.historial.length));
   const elegidos = ok
     ? [...ok.libres, ...ok.historial.map((p) => ({ ...p, delHistorial: true }))].filter((p) => marcados.has(p.huella))
     : [];
@@ -81,19 +83,25 @@ export function DialogoLiberar({ onCerrar }: { onCerrar: (liberado: boolean) => 
       icon="trash"
       initialFocus={cancelar}
       footer={
-        <>
+        nada ? (
           <button ref={cancelar} type="button" className={styles.btn} onClick={() => onCerrar(false)}>
-            Cancelar
+            Cerrar
           </button>
-          <button
-            type="button"
-            className={`${styles.btn} ${styles.btnPeligro}`}
-            disabled={!elegidos.length || busy}
-            onClick={() => void liberar()}
-          >
-            {elegidos.length ? `Liberar ${tam(total)}` : 'Liberar'}
-          </button>
-        </>
+        ) : (
+          <>
+            <button ref={cancelar} type="button" className={styles.btn} onClick={() => onCerrar(false)}>
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className={`${styles.btn} ${styles.btnPeligro}`}
+              disabled={!elegidos.length || busy}
+              onClick={() => void liberar()}
+            >
+              {elegidos.length ? `Liberar ${tam(total)}` : 'Liberar'}
+            </button>
+          </>
+        )
       }
     >
       <div className={styles.recalculo}>
