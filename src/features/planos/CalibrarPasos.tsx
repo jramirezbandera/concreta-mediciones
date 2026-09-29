@@ -67,6 +67,9 @@ export function CalibrarPasos({
   onCancelar,
   declarada = null,
   userUnit = 1,
+  escalaPlano,
+  onEscalaPlano,
+  papel = null,
 }: {
   estado: Calibrando;
   /** Píxeles de pantalla por unidad de página (precisión de la cota). */
@@ -78,9 +81,14 @@ export function CalibrarPasos({
   onRehacerComprobacion: () => void;
   onEsCorrecta: () => void;
   onCancelar: () => void;
-  /** [A1] La N de «1:N» del cajetín, si la página declara una. */
+  /** La N de «1:N» del plano: la tecleada o la del cajetín (A1). */
   declarada?: number | null;
   userUnit?: number;
+  /** Texto del campo «Escala del plano». */
+  escalaPlano: string;
+  onEscalaPlano: (t: string) => void;
+  /** Tamaño de la página: «A3 · 420 × 297 mm». */
+  papel?: string | null;
 }) {
   const t = estado[estado.paso];
   // [A1] Con escala en el cajetín, la cota se compara en vivo con ella.
@@ -102,7 +110,9 @@ export function CalibrarPasos({
       </div>
       <p className={styles.franjaTexto}>
         {estado.paso === 'cota'
-          ? 'Marca los dos extremos de una cota conocida y escribe su distancia real: cuanto más larga y más zoom, más precisa (arrastra un punto para afinarlo).'
+          ? declarada
+            ? `Marca una cota conocida y escribe su distancia real para confirmar la escala ${textoEscala(declarada)}: si cuadra, queda calibrada.`
+            : 'Marca los dos extremos de una cota conocida y escribe su distancia real: cuanto más larga y más zoom, más precisa (arrastra un punto para afinarlo). Si sabes la escala del plano, escríbela abajo: basta una cota.'
           : estado.soloComprobar
             ? 'Esta escala no está comprobada: marca otra cota conocida, mejor a más de 45° de la de calibrar, y escribe su distancia real.'
             : 'Comprueba con otra cota, mejor a más de 45° de la primera; si la página no tiene otra, repite la misma en otra zona.'}
@@ -124,6 +134,11 @@ export function CalibrarPasos({
         <div className={styles.avisoCalibrar} role="alert">
           <span>{textoAvisoCalibrar(a)}</span>
           <BotonAyuda seccion="planos-calibrar" />
+          {a.tipo === 'no-cuadra-plano' && (
+            <button type="button" className={styles.btn} onClick={onRehacerCota}>
+              Rehacer cota
+            </button>
+          )}
           {a.tipo === 'desviacion' && (
             <>
               <button type="button" className={styles.btn} onClick={onRehacerCota}>
@@ -147,6 +162,24 @@ export function CalibrarPasos({
         </div>
       )}
       <div className={styles.calibrarPie}>
+        {estado.paso === 'cota' && (
+          <label className={styles.etiquetaCampo}>
+            Escala del plano:
+            <span className={styles.escalaCampo}>
+              <span className="mono">1:</span>
+              <input
+                className="mono"
+                inputMode="decimal"
+                value={escalaPlano}
+                maxLength={8}
+                placeholder="100"
+                aria-label="Escala del plano"
+                onChange={(e) => onEscalaPlano(e.target.value)}
+              />
+            </span>
+            {papel && <span className="mono">{papel}</span>}
+          </label>
+        )}
         <label className={styles.etiquetaCampo}>
           Esta página es:
           <input

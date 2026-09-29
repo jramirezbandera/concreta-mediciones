@@ -136,6 +136,7 @@ export const AYUDA_PLANOS: SeccionAyuda[] = [
       'Cada página se calibra con una cota conocida: clic en sus dos extremos y su distancia real en metros. Cuanto más larga en pantalla, más precisa: acerca el zoom si hace falta.',
       'Después, otra cota para comprobar, mejor a más de 45° de la primera. Se admite la imprecisión de los clics (±1 % con cotas largas, más con cortas); si no cuadran, el aviso dice qué escala da cada una: una cifra mal tecleada, un clic desviado o el PDF impreso a otro tamaño.',
       'Si cuadran, la escala sale de las dos y, si una escala habitual (1:50, 1:100…) cae dentro de su precisión, se ajusta a ella exacta.',
+      'Si sabes la escala del plano, escríbela en «Escala del plano: 1:[100]» (se rellena sola si el texto del plano la trae). El tamaño del papel sale del PDF (p. ej. «A3 · 420 × 297 mm»), así que basta una cota de control: si cuadra, la página queda a esa escala exacta; si no, el PDF está a otro tamaño (un A1 exportado a A3…) y se pide la comprobación.',
       'Si el texto del plano trae su escala («E 1:50») y la cota cuadra con ella, esa es la comprobación y la escala se ajusta a la exacta («1:50 ajustada»). Si no cuadra, el visor lo avisa.',
       'Una escala «sin comprobar» (copiada con «Usar esta calibración en otras páginas» o tras usar otro PDF) no mide hasta comprobarla con otra cota. Recuento funciona sin escala.',
     ],

@@ -486,6 +486,10 @@ describe('[A1] cajetín al calibrar (T9)', () => {
     expect(c.datos.n).toBeCloseTo(47, 0);
   });
 
+  it('una cota que no cuadra con la escala del plano lo avisa al pasar a la comprobación', () => {
+    expect(cota('4,7', 50).estado).toMatchObject({ paso: 'comprobacion', aviso: { tipo: 'no-cuadra-plano', nCota: 47, declarada: 50 } });
+  });
+
   it('sin cajetín, lo de siempre: a la comprobación', () => {
     expect(cota('5', null).estado).toMatchObject({ paso: 'comprobacion' });
   });

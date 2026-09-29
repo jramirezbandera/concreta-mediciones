@@ -13,7 +13,7 @@
    · un valor con `expr` es exactamente `evalEsExpr(expr)` de esos operandos;
    · el área de un polígono es `round2` del lazo.
    =========================================================================== */
-import { round2 } from './money';
+import { parseEsNumber, round2 } from './money';
 import type { Punto } from './types';
 
 /** Caja en coordenadas de página: x0, y0, x1, y1. */
@@ -356,6 +356,35 @@ export function escalaParaAjustar(n: number, precision: number, declarada: numbe
   for (const h of ESCALAS_HABITUALES)
     if (cerca(h) && (mejor === null || Math.abs(n - h) / h < Math.abs(n - mejor) / mejor)) mejor = h;
   return mejor;
+}
+
+/** La N de una escala tecleada: «100», «1:100», «1/100», «1:62,5». null si no
+ *  es una escala de plano (fuera de 1:1–1:5000). */
+export function leerEscalaTecleada(t: string): number | null {
+  const m = /^\s*(?:1\s*[:/]\s*)?([\d.,]+)\s*$/.exec(t);
+  const n = m ? parseEsNumber(m[1]!) : null;
+  return n !== null && Number.isFinite(n) && n >= 1 && n <= 5000 ? n : null;
+}
+
+/** Tamaño físico de la página en mm (1 unidad = `userUnit`/72 pulgadas). */
+export function tamanoPaginaMm(vista: Caja, userUnit = 1): { ancho: number; alto: number } {
+  const k = (userUnit * 25.4) / 72;
+  return { ancho: Math.abs(vista[2] - vista[0]) * k, alto: Math.abs(vista[3] - vista[1]) * k };
+}
+
+const FORMATOS_ISO: readonly [string, number, number][] = [
+  ['A0', 841, 1189],
+  ['A1', 594, 841],
+  ['A2', 420, 594],
+  ['A3', 297, 420],
+  ['A4', 210, 297],
+];
+
+/** «A3» si la página es un formato ISO 216 (cualquier orientación, ±2 %); null si no. */
+export function formatoPapel(anchoMm: number, altoMm: number): string | null {
+  const [c, l] = anchoMm < altoMm ? [anchoMm, altoMm] : [altoMm, anchoMm];
+  const f = FORMATOS_ISO.find(([, fc, fl]) => Math.abs(c - fc) / fc <= 0.02 && Math.abs(l - fl) / fl <= 0.02);
+  return f ? f[0] : null;
 }
 
 /** Metros por unidad de página EXACTOS de «1:N» (1 unidad = `userUnit`/72 pulgadas). */

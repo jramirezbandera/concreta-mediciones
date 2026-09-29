@@ -22,6 +22,8 @@ export function textoAvisoCalibrar(a: AvisoCalibrar): string {
       return `${a.cual === 'cota' ? 'La cota es demasiado corta' : 'La comprobación es demasiado corta'} a este zoom (precisión ±${pct(a.precision)}): acerca el zoom y vuelve a marcar sus extremos, o elige una más larga.`;
     case 'desviacion':
       return `La cota da ${textoEscala(a.nCota)} y la comprobación ${textoEscala(a.nComp)}: difieren un ${pct(a.valor)} y, con la precisión de los clics, se admite ±${pct(a.tolerancia)}. Revisa la cifra o los extremos de una de las dos.`;
+    case 'no-cuadra-plano':
+      return `La cota da ${textoEscala(a.nCota)} y la escala del plano es ${textoEscala(a.declarada)}: ¿el PDF está a otro tamaño (p. ej. un A1 exportado a A3)? Comprueba la escala con otra cota o rehaz la cota y corrige la escala.`;
     case 'plausibilidad':
       return a.clase === 'fuera'
         ? `${textoEscala(a.n)} no parece la escala de un plano: ¿la cota está en metros?`

@@ -260,12 +260,27 @@ describe('calibrar desde la interfaz', () => {
     expect(screen.getByRole('button', { name: /1:50 ajustada/ })).toBeInTheDocument();
   });
 
+  it('«Escala del plano» tecleada: sale del cajetín, se puede cambiar y con ella basta una cota', async () => {
+    const { plano2 } = await calibrarOtraPagina();
+    const campo = screen.getByRole('textbox', { name: 'Escala del plano' });
+    expect(campo).toHaveValue('50');
+    expect(campo.closest('label')).toHaveTextContent('A3 · 420 × 297 mm');
+    // La cota de 10 m del dibujo, dicha de 20 m, con la escala tecleada 1:100: cuadran.
+    fireEvent.change(campo, { target: { value: '1:100' } });
+    const metros = screen.getByRole('textbox', { name: 'Distancia real en metros' });
+    fireEvent.change(metros, { target: { value: '20' } });
+    tecla(metros, 'Enter');
+    expect(screen.queryByText('2 Comprobación')).toBeNull();
+    expect(escalaDe(plano2(), 1)).toMatchObject({ n: 100, ajustada: true, escalaDeclarada: 100, comprobacion: { fuente: 'cajetin' } });
+  });
+
   it('una cota que no cuadra con el cajetín pide la comprobación; se guarda con la escala declarada y avisa', async () => {
     const { l2, plano2 } = await calibrarOtraPagina();
     const metros = screen.getByRole('textbox', { name: 'Distancia real en metros' });
     fireEvent.change(metros, { target: { value: '10,5' } }); // 1:52,5 frente a «E 1:50»
     tecla(metros, 'Enter');
     expect(screen.getByText('2 Comprobación')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent(/La cota da 1:52,5 y la escala del plano es 1:50: ¿el PDF está a otro tamaño/);
     clic(l2, [1000, 100]);
     clic(l2, [1000, 100 + 6 * m]);
     const metros2 = screen.getByRole('textbox', { name: 'Distancia real en metros' });

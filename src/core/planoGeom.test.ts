@@ -19,6 +19,9 @@ import {
   perimetroCerrado,
   plausibilidad,
   escalaParaAjustar,
+  formatoPapel,
+  leerEscalaTecleada,
+  tamanoPaginaMm,
   precisionTramo,
   toleranciaComprobacion,
   rectanguloTresClics,
@@ -265,6 +268,28 @@ describe('calibración', () => {
     expect(toleranciaComprobacion(0.002, 0.003)).toBe(0.01);
     expect(toleranciaComprobacion(0.01, 0.015)).toBeCloseTo(0.025, 12);
     expect(toleranciaComprobacion(0.03, 0.03)).toBe(0.05);
+  });
+
+  it('escala tecleada: «100», «1:100», «1/100», «1:62,5»; fuera de 1:1–1:5000, null', () => {
+    expect(leerEscalaTecleada('100')).toBe(100);
+    expect(leerEscalaTecleada(' 1:100 ')).toBe(100);
+    expect(leerEscalaTecleada('1/50')).toBe(50);
+    expect(leerEscalaTecleada('1:62,5')).toBe(62.5);
+    expect(leerEscalaTecleada('')).toBeNull();
+    expect(leerEscalaTecleada('0')).toBeNull();
+    expect(leerEscalaTecleada('10000')).toBeNull();
+    expect(leerEscalaTecleada('E 1:50')).toBeNull();
+  });
+
+  it('tamaño de la página en mm y su formato ISO', () => {
+    const a3 = tamanoPaginaMm([0, 0, 1190.55, 841.89]);
+    expect(a3.ancho).toBeCloseTo(420, 0);
+    expect(a3.alto).toBeCloseTo(297, 0);
+    expect(formatoPapel(a3.ancho, a3.alto)).toBe('A3');
+    expect(formatoPapel(297, 420)).toBe('A3');
+    expect(formatoPapel(594, 841)).toBe('A1');
+    expect(formatoPapel(216, 279)).toBeNull(); // carta
+    expect(tamanoPaginaMm([0, 0, 595.28, 841.89], 2).ancho).toBeCloseTo(420, 0); // userUnit 2
   });
 
   it('escala para ajustar: la habitual (o la declarada) dentro de la precisión', () => {

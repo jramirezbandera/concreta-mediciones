@@ -402,6 +402,7 @@ Los demás, por herramienta, en el fixture (`l-salon`, `l-hueco`, `l-dorm1`, `l-
      - si la página no tiene una segunda cota, se puede repetir la misma en otra zona;
      - sin comprobación no se mide.
   3. **Etiqueta:** «Esta página es: [P1]». En A0 se teclea; [A1] propuesta desde el texto.
+  - **Escala del plano** [Rev. 2026-09-30]: en el paso 1, «Escala del plano: 1:[100]» junto al tamaño del papel que da el PDF («A3 · 420 × 297 mm»; 1 unidad = `userUnit`/72″). Se rellena con la del cajetín (o la que ya tenía la página) y se puede teclear: muchos planos traen el cajetín dibujado, sin texto. Con ella, la cota es de control: si cuadra dentro de su precisión, la escala queda exacta a la tecleada (`ajustada`, `escalaDeclarada`, comprobación `fuente: 'cajetin'`) sin segunda cota. Si no cuadra: «La cota da 1:98,5 y la escala del plano es 1:50: ¿el PDF está a otro tamaño (p. ej. un A1 exportado a A3)?…» y se pide la comprobación. Nunca se calibra solo con la escala: un PDF exportado a otro papel mediría mal sin aviso.
   - **Ayudas de precisión**, también al colocar vértices:
     - cursor en cruz con guías a todo el ancho;
     - lupa ×4, un recuadro de 120 px en la esquina opuesta al cursor;
@@ -4062,6 +4063,7 @@ Nuevas:
 | 115 | Gate | D6 = A: plan aprobado tal cual | User decision | — | Respuesta del usuario en la aprobación final, tras la segunda pasada de ingeniería | B, C/D/E |
 | 116 | Gate | Elecciones de criterio 1-12 con su opción recomendada (T9 cajetín como comprobación; T10 reenlazar con historial de huellas; T11 certificación con signo antes de Restar, tarea E12) | User decision | — | Aprobadas con D6 = A | Las alternativas descritas en la aprobación final |
 | 117 | Uso real | Precisión por extremo al zoom con que se marcó; cota útil hasta ±5 %; tolerancia de la comprobación = suma de precisiones (1-5 %); escala de las dos cotas ajustada a la habitual que cae dentro de su precisión | User feedback | P1 | 2026-09-29: con cotas de 0,6 m cada intento pedía más zoom y luego «no cuadra»; el 1 % fijo no lo cumplen dos cotas cortas bien marcadas | Mantener 300 px y 1 % fijos |
+| 118 | Uso real | «Escala del plano» tecleable en el paso 1 con el tamaño del papel a la vista; con ella basta una cota de control | User decision | P1 | 2026-09-30: los cajetines dibujados sin texto no se leen y no había forma de decir «A3 a 1:100»; el usuario eligió una cota de control frente a calibrar solo con la escala | Sin cotas; sin cotas marcada «sin comprobar» |
 
 ### Aprobación (2026-09-25)
 

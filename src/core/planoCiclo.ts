@@ -76,7 +76,9 @@ export type AvisoCalibrar =
   | { tipo: 'corta'; cual: 'cota' | 'comprobacion'; precision: number }
   /** `nCota`/`nComp`: la «1:N» que da cada una; `tolerancia`: lo admitido. */
   | { tipo: 'desviacion'; valor: number; tolerancia: number; nCota: number; nComp: number }
-  | { tipo: 'plausibilidad'; n: number; clase: 'fuera' | 'rara' };
+  | { tipo: 'plausibilidad'; n: number; clase: 'fuera' | 'rara' }
+  /** La cota no cuadra con la escala del plano (cajetín o tecleada): se pide la comprobación. */
+  | { tipo: 'no-cuadra-plano'; nCota: number; declarada: number };
 
 export type EstadoCiclo =
   /** `sustituye`: «Volver a medir» armado; el primer clic empieza la forma nueva. */
@@ -131,7 +133,8 @@ export type EventoCiclo =
   | { tipo: 'moverPunto'; cual: 'a' | 'b'; p: Punto; px?: number }
   /** Arrastrar un vértice antes de confirmar la forma (DIBUJANDO). */
   | { tipo: 'moverVertice'; i: number; p: Punto }
-  /** `cajetin`: la N de «1:N» si el texto de la página declara UNA escala (A1). */
+  /** `cajetin`: la N de «1:N» del plano: la que declara el texto de la página
+   *  (A1) o la que teclea el usuario. Con ella basta una cota. */
   | { tipo: 'confirmar'; px: number; userUnit: number; cajetin?: number | null }
   | { tipo: 'rehacerCota' }
   | { tipo: 'rehacerComprobacion' }
@@ -274,30 +277,31 @@ function confirmarCalibracion(
     if (metros === null) return conAviso({ tipo: 'metros' });
     const prec = precisionDe(cota, px)!;
     if (!(prec <= DESVIACION_TOPE)) return conAviso({ tipo: 'corta', cual: 'cota', precision: prec });
-    // [A1] T9: si el cajetín declara UNA escala y la cota cuadra con ella
-    // dentro de su precisión, el cajetín hace de comprobación y la escala se
-    // ajusta a la exacta (se quita el error del clic). Si no cuadra, la cota
-    // manda y se pide la comprobación de siempre.
+    // [A1] T9: si el plano tiene escala (la del cajetín o la tecleada) y la
+    // cota cuadra con ella dentro de su precisión, la cota hace de control y
+    // la escala se ajusta a la exacta (se quita el error del clic). Si no
+    // cuadra (un A1 exportado a A3…), la cota manda y se pide la comprobación.
     if (cajetin && cajetin > 0 && !e.soloComprobar) {
       const nCal = escalaN(mPorUnidadDeCota(cota.a, cota.b, metros), userUnit);
       const desv = Math.abs(nCal - cajetin) / cajetin;
-      if (desv <= toleranciaComprobacion(prec, 0))
-        return {
-          estado: reposo(e.armada),
-          efectos: [
-            {
-              tipo: 'calibrada',
-              datos: {
-                mPorUnidad: mPorUnidadDeEscala(cajetin, userUnit),
-                n: cajetin,
-                ref: { a: cota.a, b: cota.b, metros },
-                comprobacion: { fuente: 'cajetin', escalaDeclarada: cajetin, desviacion: redondear6(desv) },
-                escalaDeclarada: cajetin,
-                ajustada: true,
-              },
+      if (!(desv <= toleranciaComprobacion(prec, 0)))
+        return quieto({ ...e, paso: 'comprobacion', aviso: { tipo: 'no-cuadra-plano', nCota: nCal, declarada: cajetin } });
+      return {
+        estado: reposo(e.armada),
+        efectos: [
+          {
+            tipo: 'calibrada',
+            datos: {
+              mPorUnidad: mPorUnidadDeEscala(cajetin, userUnit),
+              n: cajetin,
+              ref: { a: cota.a, b: cota.b, metros },
+              comprobacion: { fuente: 'cajetin', escalaDeclarada: cajetin, desviacion: redondear6(desv) },
+              escalaDeclarada: cajetin,
+              ajustada: true,
             },
-          ],
-        };
+          },
+        ],
+      };
     }
     return quieto({ ...e, paso: 'comprobacion', aviso: null });
   }

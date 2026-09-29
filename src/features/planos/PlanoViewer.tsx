@@ -37,13 +37,17 @@ import {
 import { escalaDe, etiquetaDe, origenLegible } from '../../core/planoDatos';
 import {
   areaLazo,
+  cifra,
   dist,
   DESVIACION_MAX,
   escalaN,
+  formatoPapel,
+  leerEscalaTecleada,
   longitudPolilinea,
   perimetroCerrado,
   rectanguloTresClics,
   redondearPunto,
+  tamanoPaginaMm,
 } from '../../core/planoGeom';
 import {
   NOMBRE_HERRAMIENTA,
@@ -303,6 +307,8 @@ export function PlanoViewer({
   const [selectorAbierto, setSelectorAbierto] = useState(false);
   const [destacada, setDestacada] = useState<string | null>(null);
   const [etiqueta, setEtiqueta] = useState('');
+  /** «Escala del plano» al calibrar: con ella basta una cota de control. */
+  const [escalaTexto, setEscalaTexto] = useState('');
   /** Calibración nueva de una página con líneas, pendiente de la pregunta de recalcular. */
   const [recalculo, setRecalculo] = useState<{ escala: Escala; etiqueta: string; detalle: string; verbo: string } | null>(null);
   const [ajusteAbierto, setAjusteAbierto] = useState(false);
@@ -721,6 +727,20 @@ export function PlanoViewer({
     if (estado.fase === 'calibrando') setEtiqueta((t) => t || etiquetaDe(plano, pagina) || etiquetaSugerida || '');
     else setEtiqueta('');
   }, [estado.fase, plano, pagina, etiquetaSugerida]);
+  // Escala del plano al calibrar: la que ya tenía la página o la del cajetín.
+  const escalaPrevia = escala?.escalaDeclarada ?? declarada;
+  useEffect(() => {
+    if (estado.fase === 'calibrando') setEscalaTexto((t) => t || (escalaPrevia ? cifra(escalaPrevia) : ''));
+    else setEscalaTexto('');
+  }, [estado.fase, escalaPrevia]);
+  const escalaPlano = leerEscalaTecleada(escalaTexto);
+  const papel = useMemo(() => {
+    if (!info) return null;
+    const t = tamanoPaginaMm(info.vista, info.userUnit);
+    const [an, al] = info.rotacion === 90 || info.rotacion === 270 ? [t.alto, t.ancho] : [t.ancho, t.alto];
+    const f = formatoPapel(an, al);
+    return `${f ? `${f} · ` : ''}${Math.round(an)} × ${Math.round(al)} mm`;
+  }, [info]);
 
   /* ---- peticiones de la cabecera: chip de escala y menú ⋯ (A1) ---------------------- */
   const pedido = usePlanoUiStore((s) => s.pedido);
@@ -958,7 +978,7 @@ export function PlanoViewer({
   }
 
   function confirmarCalibracion(): void {
-    dispatch({ tipo: 'confirmar', px: lienzoApi.current?.escala() ?? 1, userUnit: info?.userUnit ?? 1, cajetin: declarada });
+    dispatch({ tipo: 'confirmar', px: lienzoApi.current?.escala() ?? 1, userUnit: info?.userUnit ?? 1, cajetin: escalaPlano });
   }
 
   /** Otras partidas con líneas de la misma forma (`formaId`), para el popover. */
@@ -1298,9 +1318,12 @@ export function PlanoViewer({
               onRehacerCota={() => dispatch({ tipo: 'rehacerCota' })}
               onRehacerComprobacion={() => dispatch({ tipo: 'rehacerComprobacion' })}
               onEsCorrecta={() =>
-                dispatch({ tipo: 'esCorrecta', px: lienzoApi.current?.escala() ?? 1, userUnit: info?.userUnit ?? 1, cajetin: declarada })
+                dispatch({ tipo: 'esCorrecta', px: lienzoApi.current?.escala() ?? 1, userUnit: info?.userUnit ?? 1, cajetin: escalaPlano })
               }
-              declarada={declarada}
+              declarada={escalaPlano}
+              escalaPlano={escalaTexto}
+              onEscalaPlano={setEscalaTexto}
+              papel={papel}
               userUnit={info?.userUnit ?? 1}
               onCancelar={() => dispatch({ tipo: 'esc' })}
             />

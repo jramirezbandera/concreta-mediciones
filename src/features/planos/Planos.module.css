@@ -876,6 +876,7 @@
 }
 .calibrarPie {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--sp-8);
 }
@@ -1223,4 +1224,14 @@ button.chip {
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-8);
+}
+/* «Escala del plano: 1:[100]» al calibrar. */
+.escalaCampo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--text-primary);
+}
+.escalaCampo input {
+  width: 64px;
 }
