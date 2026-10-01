@@ -15,6 +15,8 @@ import type { AiImageAttachment, ChatTurn } from './types';
 export const MAX_HISTORY_TURNS = 12; // ventana deslizante por defecto (6 pares)
 export const MAX_REQUEST_IMAGES = 6; // total por petición; se podan del turno MÁS ANTIGUO
 export const IMAGE_OMITTED_MARKER = '[imagen adjunta omitida por longitud de la conversación]';
+export const REPORT_MARKER =
+  '[RESULTADO REAL de las operaciones de tu respuesta anterior; ✗ = NO se aplicó, la obra no cambió]';
 export const IMAGES_CARRIED_MARKER =
   '[las primeras imágenes de este mensaje proceden de mensajes anteriores de la conversación, re-adjuntadas para que sigan visibles]';
 
@@ -23,7 +25,8 @@ export const IMAGES_CARRIED_MARKER =
  * pura y testeable sin importar la UI.
  */
 export interface ChatItemLike {
-  kind: 'user' | 'assistant' | 'error';
+  kind: 'user' | 'assistant' | 'error' | 'report';
+  /** user: lo que escribió · report: el informe de ejecución ya en texto plano. */
   text?: string;
   images?: AiImageAttachment[];
   reply?: string;
@@ -36,6 +39,10 @@ export interface ChatItemLike {
  * - Ítems `kind:'error'` se EXCLUYEN (no rompen la alternancia).
  * - user → { role:'user', text, images } · assistant → { role:'assistant',
  *   text: rawEnvelope }.
+ * - Ítems `kind:'report'` (lo que el executor HIZO de verdad con las ops) se
+ *   anteponen al SIGUIENTE turno user bajo REPORT_MARKER: sin ellos el modelo
+ *   solo ve su propio «He creado la partida» y no se entera de que la op se
+ *   descartó, así que repite el error y afirma haberlo hecho.
  * - Ventana de `maxTurns` podando SIEMPRE por pares desde el principio →
  *   alternancia estricta y primer turno user.
  * - Las imágenes de los turnos podados se re-adjuntan DELANTE del primer turno
@@ -47,12 +54,22 @@ export function buildChatTurns(
   items: ReadonlyArray<ChatItemLike>,
   maxTurns: number = MAX_HISTORY_TURNS,
 ): ChatTurn[] {
-  // 1) Excluir errores y mapear a turnos.
+  // 1) Excluir errores, mapear a turnos y plegar los informes en el user siguiente.
   const mapped: ChatTurn[] = [];
+  let reports: string[] = [];
   for (const item of items) {
     if (item.kind === 'error') continue;
+    if (item.kind === 'report') {
+      if (item.text) reports.push(item.text);
+      continue;
+    }
     if (item.kind === 'user') {
-      const turn: ChatTurn = { role: 'user', text: item.text ?? '' };
+      const text = item.text ?? '';
+      const turn: ChatTurn = {
+        role: 'user',
+        text: reports.length ? `${REPORT_MARKER}\n${reports.join('\n')}\n[FIN DEL RESULTADO]\n\n${text}` : text,
+      };
+      reports = [];
       if (item.images && item.images.length > 0) turn.images = [...item.images];
       mapped.push(turn);
     } else {

@@ -4,6 +4,7 @@ import {
   IMAGE_OMITTED_MARKER,
   IMAGES_CARRIED_MARKER,
   MAX_REQUEST_IMAGES,
+  REPORT_MARKER,
   type ChatItemLike,
 } from './chatHistory';
 import type { AiImageAttachment } from './types';
@@ -29,6 +30,22 @@ describe('buildChatTurns', () => {
     const turns = buildChatTurns([u('a'), { kind: 'error', text: 'fallo' }, u('b')]);
     expect(turns.map((t) => t.role)).toEqual(['user', 'user']);
     expect(turns.map((t) => t.text)).toEqual(['a', 'b']);
+  });
+
+  it('pliega los informes de ejecución en el SIGUIENTE turno user', () => {
+    const turns = buildChatTurns([
+      u('crea micros'),
+      a('{"reply":"He creado la partida","ops":[]}'),
+      { kind: 'report', text: '✗ Operación «crear_partida» no aplicada — falta el título de la partida' },
+      { kind: 'report', text: '✗ Descarté 1 propuesta(s) sin confirmar.' },
+      u('creala como 1.8'),
+    ]);
+    expect(turns.map((t) => t.role)).toEqual(['user', 'assistant', 'user']);
+    expect(turns[0]!.text).toBe('crea micros');
+    expect(turns[2]!.text).toBe(
+      `${REPORT_MARKER}\n✗ Operación «crear_partida» no aplicada — falta el título de la partida\n` +
+        '✗ Descarté 1 propuesta(s) sin confirmar.\n[FIN DEL RESULTADO]\n\ncreala como 1.8',
+    );
   });
 
   it('poda por pares: el primer turno restante sigue siendo user', () => {

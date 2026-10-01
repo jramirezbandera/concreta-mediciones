@@ -8,6 +8,8 @@ import { defineConfig } from 'vite';
  * NO es determinista y NO va en CI (gastaría cupo compartido y sería intermitente).
  */
 export default defineConfig({
+  // El store arrastra `appVersion`, que lee esta constante horneada por vite.config.ts.
+  define: { __APP_BUILD__: JSON.stringify('eval') },
   test: {
     globals: true,
     environment: 'jsdom',

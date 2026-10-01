@@ -37,7 +37,7 @@
   {
     "id": "certificar-100-capitulo",
     "prompt": "Certifica al 100% el capítulo 2",
-    "note": "gemini-3.1-flash-lite acierta el ambito pero OMITE ref de forma fiable (2 refuerzos del prompt no bastaron). Mitigado: certificar_100 es SIEMPRE tarjeta y la tarjeta NOMBRA el contenedor destino, asi que el usuario ve si aterriza mal; con vista 'toda la obra' el executor devuelve 'no encontrado', no certifica todo. Subir a gemini-3.1-flash lo arreglaria (una constante en models.ts).",
+    "note": "Antes flash-lite OMITIA ref aqui de forma fiable: con solo `op` en required trataba el resto de campos como opcionales. Arreglado al declarar todos los campos required (anulables) en schema.ts. Aun asi certificar_100 es SIEMPRE tarjeta y la tarjeta NOMBRA el contenedor destino.",
     "expect": { "op": "certificar_100", "ambito": "capitulo" }
   },
   {

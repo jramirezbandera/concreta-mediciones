@@ -140,6 +140,12 @@ function applyReport(apply: ApplyResult): Report {
   return { rows };
 }
 
+/** Informe en texto plano para devolvérselo al modelo (ver buildChatTurns). */
+const TONE_MARK: Record<Tone, string> = { ok: '✓', warn: '✗', danger: '✗' };
+function reportText(report: Report): string {
+  return report.rows.map((r) => `${TONE_MARK[r.tone]} ${r.text}${r.reason ? ` — ${r.reason}` : ''}`).join('\n');
+}
+
 /** Toast «Deshacer» cuando un lote mutó la obra (undo global lo revierte). */
 function offerUndo(appliedCount: number): void {
   if (appliedCount <= 0) return;
@@ -257,8 +263,11 @@ export function AsistenteChat() {
     const state = useObraStore.getState();
     const snapshot = buildObraSnapshot(state, selectTotalConIva(state));
     const system = buildChatSystem(snapshot);
-    // Los informes de ejecución no viajan como turnos (no son del hilo user/assistant).
-    const turns = buildChatTurns(turnItems.filter((it) => it.kind !== 'report'));
+    // Los informes de ejecución viajan como TEXTO plegado en el siguiente turno
+    // user: así el modelo sabe qué ops se aplicaron de verdad y cuáles no.
+    const turns = buildChatTurns(
+      turnItems.map((it) => (it.kind === 'report' ? { kind: 'report', text: reportText(it.report) } : it)),
+    );
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -412,16 +421,21 @@ export function AsistenteChat() {
       if ((!t && imgs.length === 0) || busy) return;
       pendingTextRef.current = t;
       pendingImagesRef.current = imgs;
-      setPending(null); // un turno nuevo descarta una propuesta sin confirmar
+      // Un turno nuevo descarta una propuesta sin confirmar; queda en el informe
+      // para que el modelo no la dé por aplicada.
+      const dropped: ChatItem[] = pending
+        ? [{ kind: 'report', report: { rows: [{ tone: 'warn', text: `Descarté ${pending.proposals.length} propuesta(s) sin confirmar.` }] } }]
+        : [];
+      setPending(null);
       const userItem: ChatItem =
         imgs.length > 0 ? { kind: 'user', text: t, images: imgs } : { kind: 'user', text: t };
-      const next: ChatItem[] = [...itemsRef.current, userItem];
+      const next: ChatItem[] = [...itemsRef.current, ...dropped, userItem];
       setItems(next);
       setDraft('');
       setImages([]);
       runRequest(next, t);
     },
-    [busy, images, runRequest],
+    [busy, images, pending, runRequest],
   );
 
   // Los handlers mutan el store (applyProposals): corren en el cuerpo del handler,
