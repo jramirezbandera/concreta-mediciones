@@ -18,7 +18,7 @@ export const AI_MODELS: Record<AiProviderId, string> = {
   // Gemini 3.1 Flash-Lite (modelo FIJADO, no alias). Elegido por su free tier
   // grande: el `-flash` normal daba ~20 peticiones/día por proyecto, inviable
   // para la clave compartida. Soporta structured output (`responseJsonSchema`) y
-  // razonamiento apagable (`thinkingBudget: 0`).
+  // razonamiento con presupuesto ajustable (`THINKING_BUDGET` en providers/gemini).
   // Fuentes: https://ai.google.dev/gemini-api/docs/models · .../rate-limits
   gemini: 'gemini-3.1-flash-lite',
 };

@@ -11,6 +11,9 @@
 import { AiError, aiErrorKindFromStatus, chatSystemText } from '../types';
 import type { ChatTurn, ProviderChatFn } from '../types';
 
+/** Tokens de razonamiento por turno (ver la llamada en `chatRaw`). */
+export const THINKING_BUDGET = 1024;
+
 /** Una `part` de contenido de Gemini: imagen embebida o texto. */
 type GeminiPart = { inlineData: { mimeType: string; data: string } } | { text: string };
 
@@ -81,7 +84,10 @@ export function toAiError(
   }
   return new AiError(
     'unknown',
-    scrub(`Error inesperado llamando a Gemini: ${err instanceof Error ? err.message : String(err)}`, apiKey),
+    scrub(
+      `Error inesperado llamando a Gemini: ${err instanceof Error ? err.message : String(err)}`,
+      apiKey,
+    ),
   );
 }
 
@@ -114,30 +120,79 @@ export const chatRaw: ProviderChatFn = async (req, apiKey, model) => {
   const ai = new GoogleGenAI({ apiKey });
 
   let text: string | undefined;
-  try {
-    const response = await ai.models.generateContent({
-      model,
-      contents: req.turns.map((turn) => ({
-        role: turn.role === 'assistant' ? 'model' : 'user',
-        parts: turnToParts(turn),
-      })),
-      config: {
-        // Caché de prompt: en Gemini es IMPLÍCITA y automática (cachea el prefijo
-        // común si supera el umbral). Lo único a respetar es no meter nada
-        // variable delante: por eso el system va estable-primero (ver ChatSystem).
-        systemInstruction: chatSystemText(req.system),
-        // Razonamiento APAGADO: en gemini-3.1-flash-lite `thinkingBudget: 0` lo
-        // desactiva por completo (esos tokens se facturarían como salida). Si se
-        // cambia de modelo, revalidar que acepta thinkingBudget:0.
-        thinkingConfig: { thinkingBudget: 0 },
-        responseMimeType: 'application/json',
-        responseJsonSchema: req.schema,
-        abortSignal: req.signal,
-      },
-    });
-    text = response.text;
-  } catch (err) {
-    throw toAiError(err, apiKey, req.signal, ApiError);
+  for (let attempt = 0; ; attempt++) {
+    try {
+      text = await generate(ai, req, model);
+      break;
+    } catch (err) {
+      const e = toAiError(err, apiKey, req.signal, ApiError);
+      const delay = RETRY_DELAYS_MS[attempt];
+      if (delay === undefined || !isTransient(err)) throw e;
+      await sleep(delay, req.signal).catch(() => {
+        throw new AiError('aborted', 'Petición a Gemini cancelada.');
+      });
+    }
   }
   return parseJsonText(text);
 };
+
+/** Esperas antes de cada reintento ante un fallo PASAJERO del servicio. */
+export const RETRY_DELAYS_MS = [1500, 4000];
+
+/**
+ * 5xx = Gemini saturado («high demand», 503) o caído un momento: se reintenta.
+ * El 429 (cupo) NO: reintentarlo solo gasta más cupo compartido. Por eso no se
+ * usa el `retryOptions` del SDK, que reintenta también los 429 y, al rendirse,
+ * pierde el status (el usuario dejaría de ver «límite alcanzado»).
+ */
+export function isTransient(err: unknown): boolean {
+  const status = numericStatus(err);
+  return status !== undefined && status >= 500;
+}
+
+/** Espera `ms` o rechaza en cuanto se cancele la petición. */
+function sleep(ms: number, signal: AbortSignal | undefined): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) return reject(new Error('aborted'));
+    const t = setTimeout(resolve, ms);
+    signal?.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(t);
+        reject(new Error('aborted'));
+      },
+      { once: true },
+    );
+  });
+}
+
+/** Una llamada a `generateContent` → texto crudo de la respuesta. */
+async function generate(
+  ai: InstanceType<(typeof import('@google/genai'))['GoogleGenAI']>,
+  req: Parameters<ProviderChatFn>[0],
+  model: string,
+): Promise<string | undefined> {
+  const response = await ai.models.generateContent({
+    model,
+    contents: req.turns.map((turn) => ({
+      role: turn.role === 'assistant' ? 'model' : 'user',
+      parts: turnToParts(turn),
+    })),
+    config: {
+      // Caché de prompt: en Gemini es IMPLÍCITA y automática (cachea el prefijo
+      // común si supera el umbral). Lo único a respetar es no meter nada
+      // variable delante: por eso el system va estable-primero (ver ChatSystem).
+      systemInstruction: chatSystemText(req.system),
+      // Razonamiento CORTO. Con 0 (apagado) fallaba la mitad de las mediciones
+      // derivadas: «micros según la 1.1» contaba encepados (38) en vez de
+      // micros (118). Medido en real (8 intentos): 0 → 4/8 · 512 → 7/8 ·
+      // 1024 → 7/8 (y su fallo es no emitir, nunca un número malo) · 2048 → 6/8.
+      // Gasta ~100-900 tokens de pensamiento por turno; la latencia apenas varía.
+      thinkingConfig: { thinkingBudget: THINKING_BUDGET },
+      responseMimeType: 'application/json',
+      responseJsonSchema: req.schema,
+      abortSignal: req.signal,
+    },
+  });
+  return response.text;
+}

@@ -52,6 +52,12 @@ const partidas = (): Record<string, Partida[]> => ({
   c1: [
     partida({ id: 'p1', pos: '1.1', code: 'ADE010', title: 'Excavación en zanjas', ud: 'm³', precio: 18.5, med: [line({ uds: 4, largo: 2, ancho: 1 })] }),
     partida({ id: 'p2', pos: '1.2', code: 'ADR010', title: 'Relleno y compactación', ud: 'm³', precio: 9.2, med: [line({ uds: 10 })] }),
+    // Medición de la que DERIVAR otra (caso de dogfood: contar los micros por encepado).
+    partida({ id: 'p3', pos: '1.3', code: 'CEM010', title: 'Encepado de grupo de micropilotes', ud: 'm³', precio: 279.45, med: [
+      line({ id: 'e2', comment: 'Encepado 2 micros', uds: 14, largo: 1.6, ancho: 0.8, alto: 0.8 }),
+      line({ id: 'e3', comment: 'Encepado 3 micros', uds: 18, largo: 1.8, ancho: 1.6, alto: 0.9 }),
+      line({ id: 'e6', comment: 'Encepado 6 micros', uds: 6, largo: 2.4, ancho: 2, alto: 1 }),
+    ] }),
   ],
   c2: [],
 });
@@ -86,6 +92,8 @@ interface Expect {
   /** Producto de las dimensiones de la 1ª línea (invariante robusto al reparto de
    *  slots: "5 por 4" puede ir a largo·ancho o uds·largo, pero el parcial es 20). */
   parcial?: number;
+  /** Suma de los parciales de TODAS las líneas inline (medición derivada). */
+  total?: number;
 }
 const approx = (a: unknown, b: number): boolean => typeof a === 'number' && Math.abs(a - b) < 0.01;
 /** Normaliza una unidad para comparar: el modelo escribe "m2"/"m²", "m3"/"m³"
@@ -122,6 +130,11 @@ function check(ops: Operation[], exp: Expect): { ok: boolean; msg: string } {
     if (!l) return fail('sin línea inline');
     const p = dimFactor(l.uds) * dimFactor(l.largo) * dimFactor(l.ancho) * dimFactor(l.alto);
     if (!approx(p, exp.parcial)) return fail(`parcial ${p} ≠ ${exp.parcial}`);
+  }
+  if (exp.total !== undefined) {
+    const ls = (op.lineas as Record<string, unknown>[] | undefined) ?? [];
+    const t = ls.reduce((sum, l) => sum + dimFactor(l.uds) * dimFactor(l.largo) * dimFactor(l.ancho) * dimFactor(l.alto), 0);
+    if (!approx(t, exp.total)) return fail(`total ${t} ≠ ${exp.total}`);
   }
   return { ok: true, msg: '' };
 }
