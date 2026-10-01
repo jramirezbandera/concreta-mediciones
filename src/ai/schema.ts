@@ -55,9 +55,12 @@ const OP_SCHEMA = closedObject({
     description: 'Título corto. OBLIGATORIO en crear_capitulo, crear_subcapitulo y crear_partida.',
   },
   ud: { type: ['string', 'null'], description: 'Unidad de medida, p.ej. "m³", "ud", "m²". OBLIGATORIA en crear_partida.' },
-  codigo: { type: ['string', 'null'] },
+  codigo: { type: ['string', 'null'], description: 'Solo si el usuario lo dicta; null = la app asigna uno.' },
   precio: { type: ['number', 'null'], description: 'Precio unitario en euros.' },
-  descripcion: { type: ['string', 'null'], description: 'Texto descriptivo largo (no sustituye al título).' },
+  descripcion: {
+    type: ['string', 'null'],
+    description: 'Texto descriptivo de la partida (no sustituye al título). En crear_partida, redáctalo si no lo dan.',
+  },
   // Medición inline.
   lineas: { type: ['array', 'null'], items: LINEA_SCHEMA },
   // Edición: campo + valor polimórfico (texto para editar_partida/editar_linea,

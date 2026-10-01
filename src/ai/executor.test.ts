@@ -57,6 +57,22 @@ describe('planTurn — resolución y clasificación', () => {
     expect(medTotal(p.med)).toBe(6); // 2·3, ancho/alto vacíos = 1
   });
 
+  it('crear_partida sin código → la app asigna el siguiente libre (P001, P002…); uno dictado se respeta', () => {
+    planTurn(
+      [
+        { op: 'crear_partida', capitulo: '1', titulo: 'A', ud: 'ud', descripcion: 'Redactada por la IA.' },
+        { op: 'crear_partida', capitulo: '1', titulo: 'B', ud: 'ud' },
+        { op: 'crear_partida', capitulo: '1', titulo: 'C', ud: 'ud', codigo: 'MIC01' },
+      ],
+      currentSeal(),
+    );
+    const byTitle = (t: string) => useObraStore.getState().partidas.c1!.find((x) => x.title === t)!;
+    expect(byTitle('A').code).toBe('P001');
+    expect(byTitle('A').desc).toBe('Redactada por la IA.');
+    expect(byTitle('B').code).toBe('P002');
+    expect(byTitle('C').code).toBe('MIC01');
+  });
+
   it('parcial: vacío=1 y un 0 explícito anula la línea', () => {
     planTurn([{ op: 'crear_partida', capitulo: '1', titulo: 'X', ud: 'm', lineas: [{ uds: 2, largo: 3 }, { uds: 5, largo: 0 }] }], currentSeal());
     const p = useObraStore.getState().partidas.c1!.find((x) => x.title === 'X')!;

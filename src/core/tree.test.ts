@@ -8,6 +8,7 @@ import {
   findNode,
   findPartidaById,
   flattenContainers,
+  nextPartidaCode,
   partidasByContainer,
   resolveContainerRef,
   resolvePartidaRef,
@@ -233,6 +234,15 @@ describe('resolución de referencias (F-A3)', () => {
   it('findPartidaById localiza la partida y su capítulo', () => {
     expect(findPartidaById(partidas, 'p3')).toEqual({ partida: partidas.c2![0], chapterId: 'c2' });
     expect(findPartidaById(partidas, 'nope')).toBeNull();
+  });
+
+  it('nextPartidaCode: mayor Pnnn + 1, ignorando los demás códigos', () => {
+    expect(nextPartidaCode(partidas)).toBe('P001'); // todas '——'
+    const conCodigos = {
+      c1: [{ ...P('a', undefined), code: 'P007' }, { ...P('b', undefined), code: 'CPM010' }],
+      c2: [{ ...P('c', undefined), code: 'P002' }, { ...P('d', undefined), code: 'P1A' }],
+    };
+    expect(nextPartidaCode(conCodigos)).toBe('P008');
   });
 
   it('resolvePartidaRef resuelve por pos y por id', () => {

@@ -58,7 +58,13 @@ usa van a null):
     · capitulo = código del capítulo/sub destino ("2", "2.1"); si lo OMITES, va al contenedor activo.
     · lineas = [{ comentario?, uds?, largo?, ancho?, alto? }] (medición inline).
     · titulo y ud SIEMPRE (sin ellos no se crea): titulo corto ("Micropilotes"),
-      no la descripción. codigo, precio y descripcion: null si el usuario no los da.
+      no la descripción.
+    · descripcion: si el usuario no la da, REDÁCTALA tú: 1-3 frases en el estilo
+      de una base de precios (qué comprende la unidad: suministro, ejecución,
+      medios). Sin cifras, marcas ni especificaciones que no consten (diámetros,
+      resistencias, espesores): si no las sabes, descríbelo en genérico.
+    · codigo: SOLO si el usuario lo dicta; si no, null (la app asigna uno libre).
+      precio: null si no lo da.
 - agregar_lineas: { op, ref, lineas }                ref = POSICIÓN de la partida ("1.2")
 - editar_partida: { op, ref, campo, valor }          campo ∈ titulo|ud|codigo|descripcion (valor = texto)
 - editar_linea:  { op, ref, indice, campo, valor }   indice: 1 = primera línea; campo ∈ comentario|uds|largo|ancho|alto

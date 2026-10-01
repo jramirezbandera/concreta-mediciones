@@ -110,6 +110,23 @@ export function findPartidaById(partidas: PartidasMap, id: string): PartidaHit |
 }
 
 /**
+ * Siguiente código libre `P001`, `P002`… de la obra (el mayor `Pnnn` + 1). Es el
+ * mismo esquema que el export BC3 genera para las partidas sin código, así que
+ * una partida creada por el asistente lleva un código propio, que no se hace
+ * pasar por uno de CYPE ni choca con los existentes.
+ */
+export function nextPartidaCode(partidas: PartidasMap): string {
+  let max = 0;
+  for (const chId in partidas) {
+    for (const p of partidas[chId] ?? []) {
+      const m = /^P(\d+)$/.exec(p.code.trim());
+      if (m) max = Math.max(max, Number(m[1]));
+    }
+  }
+  return `P${String(max + 1).padStart(3, '0')}`;
+}
+
+/**
  * Resuelve la referencia que el asistente da a una partida: primero por `pos`
  * (`"1.2.3"`, lo que el usuario dicta y ve), y si no, por `id` (identificador
  * estable). El `code` NO sirve como identificador: `addPartida` crea con

@@ -29,7 +29,7 @@
 import { estaCertToOrigen, prevDataOf } from '../core/certificacion';
 import { fmtEur, fmtNum, round2, toEur, type Cents } from '../core/money';
 import { lineParcial, partidaCantidad, partidaImporte } from '../core/medicion';
-import { findNode, findPartidaById, resolveContainerRef, resolvePartidaRef, subtreeIds } from '../core/tree';
+import { findNode, findPartidaById, nextPartidaCode, resolveContainerRef, resolvePartidaRef, subtreeIds } from '../core/tree';
 import type { MedLine, Partida, SubChapter } from '../core/types';
 import { getActiveObraId, useSessionStore } from '../persist';
 import { ALL, copyTargetOf, useObraStore, type NewMedLine, type ObraState } from '../store';
@@ -441,7 +441,8 @@ function applyCrearPartida(
     return null;
   }
   const store = useObraStore.getState();
-  if (op.codigo) store.editPartidaField(chId, id, 'code', op.codigo);
+  // Sin código dictado, uno propio libre (P001…): la IA no lo inventa (ver nextPartidaCode).
+  store.editPartidaField(chId, id, 'code', op.codigo ?? nextPartidaCode(store.partidas));
   store.editPartidaField(chId, id, 'title', op.titulo);
   store.editPartidaField(chId, id, 'ud', op.ud);
   if (op.descripcion) store.editPartidaField(chId, id, 'desc', op.descripcion);
