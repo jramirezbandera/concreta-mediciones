@@ -17,13 +17,11 @@
    =========================================================================== */
 import { medFormaDe } from '../../core/medForma';
 import { indiceInsercion, lineaParaDestino, lineasCertificadas } from '../../core/medPaste';
-import { DESVIACION_TOPE } from '../../core/planoGeom';
 import { TOPES, escalaDe, escalaLegible, origenLegible, paginaValida, planoLegible } from '../../core/planoDatos';
 import { lineaRetocada, lineasConEscala, valoresDesdeOrigen, type NewPlanoLine } from '../../core/planoMedida';
 import { planRecalculo, recalcularLinea } from '../../core/planoRecalculo';
 import { siguienteRevision } from '../../core/planoRevision';
-import { escalaConAjuste } from '../../core/planoTexto';
-import type { Comprobacion, Escala, MedDim, MedForma, MedLine, Partida, PlanoMeta } from '../../core/types';
+import type { Escala, MedDim, MedForma, MedLine, Partida, PlanoMeta } from '../../core/types';
 import { nextCalRev, nextMedLineId } from '../base';
 import type { MedResult, ObraSlice, ObraState } from '../obraStore';
 import { structural } from './estructuraSlice';
@@ -89,8 +87,6 @@ type PlanosSlice = Pick<
   | 'addPlanoLines'
   | 'remeasureLine'
   | 'rescalePlanoPage'
-  | 'setPlanoPageCheck'
-  | 'setPlanoScaleAdjusted'
   | 'copyPlanoPageScale'
   | 'acceptLineValues'
   | 'unlinkLineOrigen'
@@ -149,7 +145,6 @@ function comprobarMedida(s: ObraState, expect: ExpectMedida, lineas: readonly Ne
   if (conEscala) {
     if (!escala) return { ids: [], reason: 'sin-calibrar' };
     if (escala.rev !== expect.calRev) return stale('escala');
-    if (!escala.comprobacion) return { ids: [], reason: 'sin-comprobar' };
   }
   for (const l of lineas) {
     if (!origenLegible(l.origen) || l.origen.planoId !== plano.id || l.origen.pagina !== expect.pagina)
@@ -260,8 +255,8 @@ export const createPlanosSlice: ObraSlice<PlanosSlice> = (set, get) => ({
         p.huella = huella;
         p.tamano = tamano;
         p.archivo = archivo;
-        // Misma escala y misma `rev` (las líneas siguen al día), pero «sin
-        // comprobar»: cada página pide una cota nueva (`setPlanoPageCheck`).
+        // Misma escala y misma `rev` (las líneas siguen al día); la
+        // comprobación era del PDF anterior.
         for (const k of Object.keys(p.escalas)) {
           const e = p.escalas[Number(k)];
           if (escalaLegible(e)) delete e.comprobacion;
@@ -455,28 +450,6 @@ export const createPlanosSlice: ObraSlice<PlanosSlice> = (set, get) => ({
     return { ids: [lineId] };
   },
 
-  setPlanoScaleAdjusted: ({ planoId, pagina, ajustada, userUnit, expect }) => {
-    const s0 = get();
-    if (expect.docToken !== s0.docToken) return stale('obra');
-    const p0 = planoDe(s0, planoId);
-    if (!p0) return { ids: [], reason: 'no-plano' };
-    const e = escalaDe(p0, pagina);
-    if (!e) return { ids: [], reason: 'sin-calibrar' };
-    if (e.rev !== expect.calRev) return stale('escala');
-    if (!e.escalaDeclarada || !!e.ajustada === ajustada) return { ids: [], reason: 'noop' };
-    const n = lineasConEscala(s0.partidas, planoId, pagina);
-    if (n > 0) return { ids: [], reason: 'has-lines', detalle: { n } };
-    const nueva = escalaConAjuste(e, ajustada, userUnit, nextCalRev(), new Date().toISOString());
-    if (!nueva || !escalaLegible(nueva)) return { ids: [], reason: 'noop' };
-    structural(() =>
-      set((s) => {
-        const p = planoDe(s, planoId);
-        if (p) p.escalas[pagina] = nueva;
-      }),
-    );
-    return { ids: [planoId] };
-  },
-
   copyPlanoPageScale: ({ planoId, desde, paginas, expect }) => {
     const s0 = get();
     if (expect.docToken !== s0.docToken) return stale('obra');
@@ -494,7 +467,9 @@ export const createPlanosSlice: ObraSlice<PlanosSlice> = (set, get) => ({
       const c = JSON.parse(JSON.stringify(e)) as Escala;
       c.rev = nextCalRev();
       c.at = at;
-      delete c.comprobacion; // «sin comprobar»: cada página pide la suya
+      // La cota y la comprobación son de la página de origen: la copia lleva la escala.
+      delete c.ref;
+      delete c.comprobacion;
       return [n, c] as const;
     });
     structural(() =>
@@ -502,27 +477,6 @@ export const createPlanosSlice: ObraSlice<PlanosSlice> = (set, get) => ({
         const p = planoDe(s, planoId);
         if (!p) return;
         for (const [n, c] of copias) p.escalas[n] = c;
-      }),
-    );
-    return { ids: [planoId] };
-  },
-
-  setPlanoPageCheck: ({ planoId, pagina, comprobacion, expect }) => {
-    const s0 = get();
-    if (expect.docToken !== s0.docToken) return stale('obra');
-    const p0 = planoDe(s0, planoId);
-    if (!p0) return { ids: [], reason: 'no-plano' };
-    const e = escalaDe(p0, pagina);
-    if (!e) return { ids: [], reason: 'sin-calibrar' };
-    if (e.rev !== expect.calRev) return stale('escala');
-    if (e.comprobacion) return { ids: [], reason: 'noop' };
-    if (!(comprobacion.desviacion >= 0 && comprobacion.desviacion <= DESVIACION_TOPE)) return { ids: [], reason: 'noop' };
-    const copia = JSON.parse(JSON.stringify(comprobacion)) as Comprobacion;
-    structural(() =>
-      set((s) => {
-        const p = planoDe(s, planoId);
-        const esc = p?.escalas[pagina];
-        if (esc) esc.comprobacion = copia; // misma escala y misma `rev`
       }),
     );
     return { ids: [planoId] };

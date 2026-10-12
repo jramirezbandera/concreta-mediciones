@@ -35,8 +35,6 @@ export function textoResultado(r: Pick<MedResult, 'reason' | 'detalle'>, context
       return 'La línea ya no existe.';
     case 'sin-calibrar':
       return 'Calibra esta página para medir longitudes y superficies. Recuento funciona sin escala.';
-    case 'sin-comprobar':
-      return 'Comprueba la escala de esta página con otra cota antes de medir.';
     case 'has-lines':
       return `Esta página ya tiene ${plural(d.n ?? 0, 'línea medida', 'líneas medidas')}: al cambiar la escala se recalculan. Para medir un detalle a otra escala, adjunta el PDF otra vez.`;
     case 'certificada':
@@ -88,8 +86,6 @@ export function textoMotivoMedida(m: MotivoMedida): string {
   switch (m.motivo) {
     case 'sin-calibrar':
       return 'Calibra esta página para medir longitudes y superficies. Recuento funciona sin escala.';
-    case 'sin-comprobar':
-      return 'Comprueba la escala de esta página con otra cota antes de medir.';
     case 'no-encaja':
       return `Esta partida se mide por ${NOMBRE_FORMA_MIN[m.forma] ?? medFormaDef(m.forma).nombre}: usa ${NOMBRE_HERRAMIENTA[m.usa]}.`;
     case 'superficie-en-sup':

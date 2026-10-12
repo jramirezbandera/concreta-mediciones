@@ -134,34 +134,12 @@ export function desviacionCajetin(nCalibrada: number, nDeclarada: number): numbe
   return nDeclarada > 0 ? Math.abs(nCalibrada - nDeclarada) / nDeclarada : Infinity;
 }
 
-/** La escala calibrada de una `Escala` (la de su cota), con su «1:N». */
-export function escalaCalibrada(e: Pick<Escala, 'ref'>, userUnit = 1): { mPorUnidad: number; n: number } {
+/** La escala calibrada de una `Escala` (la de su cota), con su «1:N»; null
+ *  si se puso a la escala del plano sin cota. */
+export function escalaCalibrada(e: Pick<Escala, 'ref'>, userUnit = 1): { mPorUnidad: number; n: number } | null {
+  if (!e.ref) return null;
   const m = mPorUnidadDeCota(e.ref.a, e.ref.b, e.ref.metros);
   return { mPorUnidad: m, n: escalaN(m, userUnit) };
-}
-
-/**
- * La misma calibración ajustada a la escala del cajetín (`ajustada`) o con la
- * de su cota («Usar la calibrada»). `rev` nueva: cambia `mPorUnidad`, y las
- * líneas de la página pasan por el recálculo. null si no hay escala declarada.
- */
-export function escalaConAjuste(e: Escala, ajustada: boolean, userUnit: number, rev: string, at: string): Escala | null {
-  const declarada = e.escalaDeclarada;
-  if (!declarada || !(declarada > 0)) return null;
-  const cal = escalaCalibrada(e, userUnit);
-  const out: Escala = JSON.parse(JSON.stringify(e)) as Escala;
-  out.rev = rev;
-  out.at = at;
-  if (ajustada) {
-    out.mPorUnidad = mPorUnidadDeEscala(declarada, userUnit);
-    out.n = declarada;
-    out.ajustada = true;
-  } else {
-    out.mPorUnidad = cal.mPorUnidad;
-    out.n = cal.n;
-    delete out.ajustada;
-  }
-  return out;
 }
 
 /* ---- etiqueta propuesta ------------------------------------------------------ */

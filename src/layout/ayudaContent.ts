@@ -131,14 +131,14 @@ export const AYUDA_PLANOS: SeccionAyuda[] = [
   },
   {
     id: 'planos-calibrar',
-    titulo: 'Calibrar y comprobar',
+    titulo: 'Calibrar',
     puntos: [
-      'Cada página se calibra con una cota conocida: clic en sus dos extremos y su distancia real en metros. Cuanto más larga en pantalla, más precisa: acerca el zoom si hace falta.',
-      'Después, otra cota para comprobar, mejor a más de 45° de la primera. Se admite la imprecisión de los clics (±1 % con cotas largas, más con cortas); si no cuadran, el aviso dice qué escala da cada una: una cifra mal tecleada, un clic desviado o el PDF impreso a otro tamaño.',
-      'Si cuadran, la escala sale de las dos y, si una escala habitual (1:50, 1:100…) cae dentro de su precisión, se ajusta a ella exacta.',
-      'Si sabes la escala del plano, escríbela en «Escala del plano: 1:[100]» (se rellena sola si el texto del plano la trae). El tamaño del papel sale del PDF (p. ej. «A3 · 420 × 297 mm»), así que basta una cota de control: si cuadra, la página queda a esa escala exacta; si no, el PDF está a otro tamaño (un A1 exportado a A3…) y se pide la comprobación.',
-      'Si el texto del plano trae su escala («E 1:50») y la cota cuadra con ella, esa es la comprobación y la escala se ajusta a la exacta («1:50 ajustada»). Si no cuadra, el visor lo avisa.',
-      'Una escala «sin comprobar» (copiada con «Usar esta calibración en otras páginas» o tras usar otro PDF) no mide hasta comprobarla con otra cota. Recuento funciona sin escala.',
+      'Si sabes la escala del plano, escríbela en «Escala del plano: 1:[100]» (se rellena sola si el texto del plano la trae) y pulsa «Usar 1:100»: la página queda a esa escala sobre el papel del PDF (p. ej. «A3 · 420 × 297 mm»). No hace falta cota.',
+      'Si no la sabes, marca una cota conocida: clic en sus dos extremos y su distancia real en metros. Cuanto más larga en pantalla, más precisa: acerca el zoom si hace falta. Si una escala habitual (1:50, 1:100…) cae dentro de su precisión, se ajusta a ella exacta.',
+      'Con escala y cota, la cota la confirma: si cuadran, la página queda a la escala exacta («1:50 ajustada»). Si no cuadran, eliges con cuál seguir: la cota (el PDF se exportó a otro tamaño de papel, p. ej. un A1 a A3) o la escala del plano (la cota está mal marcada).',
+      'Si la página no tiene escala pero su texto la trae («E 1:50»), el aviso de arriba ofrece «Usar 1:50» sin pasar por calibrar.',
+      'Al calibrar una página, si hay otras sin escala del mismo tamaño, el aviso ofrece «Usar 1:50 en otras páginas…»: salen marcadas las que dicen la misma escala; las que no dicen ninguna, márcalas tú si van a la misma. También está en el menú ⋯.',
+      'Recuento funciona sin escala.',
     ],
   },
   {
@@ -163,7 +163,7 @@ export const AYUDA_PLANOS: SeccionAyuda[] = [
     titulo: 'Revisiones y otro PDF',
     puntos: [
       'Si llega una versión nueva del plano, «Adjuntar revisión…» (menú ⋯) la añade como plano nuevo («Rev. B»): la anterior conserva sus escalas y sus líneas y avisa de que hay una más nueva.',
-      'Al volver a adjuntar un PDF que no está y elegir otro fichero: si tiene las mismas páginas, puedes «Usar este PDF para este plano» (conserva escalas y líneas; cada página pide comprobar su escala con otra cota); si no, entra como revisión nueva.',
+      'Al volver a adjuntar un PDF que no está y elegir otro fichero: si tiene las mismas páginas, puedes «Usar este PDF para este plano» (conserva escalas y líneas); si no, entra como revisión nueva.',
     ],
   },
   {

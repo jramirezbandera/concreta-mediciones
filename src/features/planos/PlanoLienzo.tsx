@@ -114,7 +114,8 @@ export function PlanoLienzo({
   /** «Volver a medir»: la forma vieja se atenúa. */
   atenuada: string | null;
   dibujo: DibujoCapa | null;
-  calibrar: { paso: 'cota' | 'comprobacion'; cota: TramoCota; comprobacion: TramoCota } | null;
+  /** La cota al calibrar. */
+  calibrar: TramoCota | null;
   anclas?: Ancla[];
   modo: 'mano' | 'medir';
   espacio: boolean;
@@ -399,9 +400,8 @@ export function PlanoLienzo({
       if (e.button === 1) e.preventDefault();
       gesto.current = { tipo: 'desplazar', x: pos[0], y: pos[1], tx: v.tx, ty: v.ty, movido: false };
     } else if (e.button === 0 && calibrar) {
-      const t = calibrar[calibrar.paso];
-      if (cerca(pos, t.a)) gesto.current = { tipo: 'cota', cual: 'a', movido: false };
-      else if (cerca(pos, t.b)) gesto.current = { tipo: 'cota', cual: 'b', movido: false };
+      if (cerca(pos, calibrar.a)) gesto.current = { tipo: 'cota', cual: 'a', movido: false };
+      else if (cerca(pos, calibrar.b)) gesto.current = { tipo: 'cota', cual: 'b', movido: false };
     } else if (e.button === 0 && dibujo && !dibujo.cerrada) {
       const i = dibujo.puntos.findIndex((q) => cerca(pos, q));
       if (i >= 0) gesto.current = { tipo: 'vertice', i, movido: false };
@@ -584,8 +584,7 @@ export function PlanoLienzo({
           </pattern>
         </defs>
         {formas.map(pintarForma)}
-        {calibrar && cotaCapa(calibrar.cota, styles.cota)}
-        {calibrar && calibrar.paso === 'comprobacion' && cotaCapa(calibrar.comprobacion, styles.comprobacion)}
+        {calibrar && cotaCapa(calibrar, styles.cota)}
         {borrador && borrador.puntos.length > 0 && (
           <g className={`${styles.dibujo} ${styles.dibujoBorrador} ${borrador.herramienta === 'longitud' ? styles.dibujoAbierto : ''}`} data-borrador="">
             {borrador.herramienta !== 'recuento' && (

@@ -80,7 +80,7 @@ export function encajaEnPaginas(
   };
   for (const [k, e] of Object.entries(plano.escalas)) {
     if (!escalaLegible(e)) continue;
-    const pts: Punto[] = [e.ref.a, e.ref.b];
+    const pts: Punto[] = e.ref ? [e.ref.a, e.ref.b] : [];
     if (e.comprobacion?.fuente === 'cota') pts.push(e.comprobacion.a, e.comprobacion.b);
     if (!dentro(Number(k), pts)) return false;
   }

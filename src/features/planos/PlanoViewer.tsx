@@ -34,7 +34,7 @@ import {
   type EventoCiclo,
   type FormaEnCurso,
 } from '../../core/planoCiclo';
-import { escalaDe, etiquetaDe, origenLegible } from '../../core/planoDatos';
+import { escalaDe, etiquetaDe, origenLegible, planoLegible } from '../../core/planoDatos';
 import {
   areaLazo,
   cifra,
@@ -44,6 +44,7 @@ import {
   formatoPapel,
   leerEscalaTecleada,
   longitudPolilinea,
+  mPorUnidadDeEscala,
   perimetroCerrado,
   rectanguloTresClics,
   redondearPunto,
@@ -75,7 +76,8 @@ import { adjuntarPlano, adjuntarRevision, usarPdfParaPlano } from './adjuntar';
 import { CalibrarPasos, CampoMetros } from './CalibrarPasos';
 import { AnadirTambien } from './AnadirTambien';
 import { DialogoRecalcular } from './DialogoRecalcular';
-import { DialogoCopiarEscala, PopoverAjuste } from './EscalaCajetin';
+import { DialogoCopiarEscala } from './CopiarEscala';
+import { paginasDelMismoTamano } from './paginasIguales';
 import { revisionMasNueva } from '../../core/planoRevision';
 import { comentarioPropuesto, desviacionCajetin, escalaCalibrada, escalaDeclarada, etiquetaPropuesta } from '../../core/planoTexto';
 import type { AnclaAyuda } from '../../layout/ayudaContent';
@@ -311,10 +313,10 @@ export function PlanoViewer({
   const [escalaTexto, setEscalaTexto] = useState('');
   /** Calibración nueva de una página con líneas, pendiente de la pregunta de recalcular. */
   const [recalculo, setRecalculo] = useState<{ escala: Escala; etiqueta: string; detalle: string; verbo: string } | null>(null);
-  const [ajusteAbierto, setAjusteAbierto] = useState(false);
   /** «Añadir también a…» abierto para esta línea (A1). */
   const [anadir, setAnadir] = useState<string | null>(null);
-  const [copiarAbierto, setCopiarAbierto] = useState(false);
+  /** «Usar 1:50 en otras páginas»: la página desde la que se copia. */
+  const [copiarDesde, setCopiarDesde] = useState<number | null>(null);
   const comentarioSugeridoRef = useRef(false);
   const formaIdRef = useRef<string>('');
   const atRef = useRef<string>('');
@@ -444,28 +446,28 @@ export function PlanoViewer({
     raizRef.current?.focus();
   }
 
-  function guardarCalibracion(datos: Extract<EfectoCiclo, { tipo: 'calibrada' }>['datos']): void {
+  function guardarCalibracion(datos: Extract<EfectoCiclo, { tipo: 'calibrada' }>['datos'], et = etiqueta.trim()): void {
     if (!info) return;
     const store = useObraStore.getState();
     const r = redondearPunto;
-    const c = datos.comprobacion;
     const esc: Escala = {
       rev: nextCalRev(),
       mPorUnidad: datos.mPorUnidad,
       n: escalaN(datos.mPorUnidad, info.userUnit),
-      ref: { ...datos.ref, a: r(datos.ref.a), b: r(datos.ref.b) },
-      comprobacion: c.fuente === 'cota' ? { ...c, a: r(c.a), b: r(c.b) } : { ...c },
+      ...(datos.ref ? { ref: { ...datos.ref, a: r(datos.ref.a), b: r(datos.ref.b) } } : {}),
+      ...(datos.comprobacion ? { comprobacion: { ...datos.comprobacion } } : {}),
       ...(datos.escalaDeclarada ? { escalaDeclarada: datos.escalaDeclarada } : {}),
       ...(datos.ajustada ? { ajustada: true } : {}),
       at: new Date().toISOString(),
     };
-    const et = etiqueta.trim();
-    const detalle =
-      c.fuente === 'cajetin'
-        ? `ajustada al plano (la cota daba ${textoEscala(escalaCalibrada(esc, info.userUnit).n)})`
+    const nCota = escalaCalibrada(esc, info.userUnit)?.n;
+    const detalle = !datos.ref
+      ? `a la escala del plano${papel ? ` sobre ${papel}` : ''}`
+      : datos.comprobacion && nCota !== undefined
+        ? `la cota cuadra (daba ${textoEscala(nCota)})`
         : datos.nMedida !== undefined
-          ? `ajustada${datos.ajustada ? ' al plano' : ''} (las cotas daban ${textoEscala(datos.nMedida)})`
-          : `comprobada ${fmtNum(c.desviacion * 100, 1)} %`;
+          ? `ajustada (la cota daba ${textoEscala(datos.nMedida)})`
+          : 'con la cota';
     // Con líneas medidas, la pregunta «¿La escala anterior estaba mal?» (§2, §4.4).
     if (lineasConEscala(store.partidas, plano.id, pagina) > 0) {
       setRecalculo({ escala: esc, etiqueta: et, detalle, verbo: 'recalibrada' });
@@ -487,34 +489,42 @@ export function PlanoViewer({
     const texto = `${et || `Pág. ${pagina}`} ${verbo} ${textoEscala(esc.n)} · ${detalle}`;
     useToastStore.getState().show(texto);
     decir(texto);
+    ofrecerCopia(texto, esc.n);
   }
 
-  /** «Comprobar» una escala que no tiene comprobación (A1). */
-  function comprobarEscala(): void {
+  /** Si hay otras páginas sin escala del mismo tamaño, el aviso de la
+   *  calibración ofrece usarla también allí (§2). */
+  function ofrecerCopia(texto: string, n: number): void {
+    if (!doc || motivoCalibrar) return;
+    const desde = pagina;
+    const planoId = plano.id;
+    // Sigue en esa página y ningún otro aviso ha ocupado el hueco (el de la
+    // calibración pudo irse ya: un PDF largo tarda en recorrerse).
+    const vivo = () => {
+      const ui = usePlanoUiStore.getState();
+      const msg = useToastStore.getState().msg;
+      return ui.planoId === planoId && ui.pagina === desde && (msg === texto || msg === null);
+    };
+    void (async () => {
+      const p = useObraStore.getState().planos.find((x) => planoLegible(x) && x.id === planoId) as PlanoMeta | undefined;
+      if (!p) return;
+      const iguales = await paginasDelMismoTamano(doc, p, desde, vivo);
+      if (!iguales.length || !vivo()) return;
+      useToastStore.getState().show(texto, { label: `Usar ${textoEscala(n)} en otras páginas…`, run: () => setCopiarDesde(desde) });
+    })();
+  }
+
+  /** La página a la escala que dice su texto, sin pasar por calibrar (§2). */
+  function usarEscalaDelPlano(n: number): void {
+    if (!info) return;
     if (motivoCalibrar) {
       avisar(motivoCalibrar);
       return;
     }
-    if (!escala) return;
-    setEtiqueta(etiquetaDe(plano, pagina) ?? '');
-    dispatch({ tipo: 'comprobar', mPorUnidad: escala.mPorUnidad, ref: escala.ref });
-  }
-
-  function guardarComprobacion(c: Extract<EfectoCiclo, { tipo: 'comprobada' }>['comprobacion']): void {
-    if (!escala) return;
-    const store = useObraStore.getState();
-    const r = redondearPunto;
-    const res = store.setPlanoPageCheck({
-      planoId: plano.id,
-      pagina,
-      comprobacion: { ...c, a: r(c.a), b: r(c.b) },
-      expect: { docToken: store.docToken, calRev: escala.rev },
-    });
-    if (!res.ids.length) {
-      avisar(textoResultado(res), 'error');
-      return;
-    }
-    rematarCalibracion(escala, etiqueta.trim(), `${fmtNum(c.desviacion * 100, 1)} %`, 'comprobada');
+    guardarCalibracion(
+      { mPorUnidad: mPorUnidadDeEscala(n, info.userUnit), n, escalaDeclarada: n },
+      etiquetaDe(plano, pagina) || etiquetaSugerida || '',
+    );
   }
 
   // Los efectos se leen con los cierres de ESTE render.
@@ -595,9 +605,6 @@ export function PlanoViewer({
         case 'calibrada':
           guardarCalibracion(ef.datos);
           break;
-        case 'comprobada':
-          guardarComprobacion(ef.comprobacion);
-          break;
       }
     }
   };
@@ -609,7 +616,7 @@ export function PlanoViewer({
       'warn',
       mo.motivo === 'no-encaja'
         ? 'planos-herramientas'
-        : mo.motivo === 'sin-calibrar' || mo.motivo === 'sin-comprobar'
+        : mo.motivo === 'sin-calibrar'
           ? 'planos-calibrar'
           : undefined,
     );
@@ -747,9 +754,8 @@ export function PlanoViewer({
   useEffect(() => {
     if (!pedido) return;
     usePlanoUiStore.getState().limpiarPedido();
-    if (pedido.que === 'ajuste' && escala?.escalaDeclarada) setAjusteAbierto(true);
-    if (pedido.que === 'copiarEscala' && escala?.escalaDeclarada && doc) setCopiarAbierto(true);
-  }, [pedido, escala, doc]);
+    if (pedido.que === 'copiarEscala' && escala && doc) setCopiarDesde(pagina);
+  }, [pedido, escala, doc, pagina]);
 
   /* ---- «Ver en plano» y «Volver a medir» pedidos desde el presupuesto ---------- */
   useEffect(() => {
@@ -790,13 +796,9 @@ export function PlanoViewer({
       return;
     }
     if (mo.motivo === 'sin-calibrar') {
-      avisar(textoMotivoVisor(mo));
+      // Se calibra y, al terminar, queda armada la herramienta elegida.
+      if (!motivoCalibrar) dispatch({ tipo: 'herramienta', armada: h });
       empezarCalibrar();
-      return;
-    }
-    if (mo.motivo === 'sin-comprobar') {
-      avisar(textoMotivoVisor(mo));
-      comprobarEscala();
       return;
     }
     atenderMotivo(mo);
@@ -952,8 +954,7 @@ export function PlanoViewer({
     const e = estadoRef.current;
     if (aMedio(e)) return e.puntos[e.puntos.length - 1]!;
     if (e.fase === 'calibrando') {
-      const t = e[e.paso];
-      const ultimo = t.b ?? t.a;
+      const ultimo = e.cota.b ?? e.cota.a;
       if (ultimo) return ultimo;
     }
     return cursor ?? api.centro();
@@ -978,7 +979,12 @@ export function PlanoViewer({
   }
 
   function confirmarCalibracion(): void {
-    dispatch({ tipo: 'confirmar', px: lienzoApi.current?.escala() ?? 1, userUnit: info?.userUnit ?? 1, cajetin: escalaPlano });
+    dispatch({ tipo: 'confirmar', ...medidaCal() });
+  }
+
+  /** Lo que el ciclo necesita para cerrar la calibración: zoom, unidad y escala del plano. */
+  function medidaCal(): { px: number; userUnit: number; declarada: number | null } {
+    return { px: lienzoApi.current?.escala() ?? 1, userUnit: info?.userUnit ?? 1, declarada: escalaPlano };
   }
 
   /** Otras partidas con líneas de la misma forma (`formaId`), para el popover. */
@@ -1021,16 +1027,16 @@ export function PlanoViewer({
 
   const anclas: Ancla[] = [];
   if (estado.fase === 'calibrando') {
-    const t = estado[estado.paso];
+    const t = estado.cota;
     if (t.a && t.b)
       anclas.push({
-        key: `metros-${estado.paso}`,
+        key: 'metros-cota',
         p: [(t.a[0] + t.b[0]) / 2, (t.a[1] + t.b[1]) / 2],
         nodo: (
           <CampoMetros
             valor={t.metros}
             autoFocus
-            onCambio={(texto) => dispatch({ tipo: 'metros', cual: estado.paso, texto })}
+            onCambio={(texto) => dispatch({ tipo: 'metros', texto })}
             onConfirmar={confirmarCalibracion}
           />
         ),
@@ -1121,29 +1127,37 @@ export function PlanoViewer({
     !aviso &&
     docE.estado === 'listo' &&
     escala?.escalaDeclarada &&
+    escala.ref &&
     !escala.ajustada &&
     info &&
-    desviacionCajetin(escalaCalibrada(escala, info.userUnit).n, escala.escalaDeclarada) > DESVIACION_MAX &&
+    desviacionCajetin(escalaCalibrada(escala, info.userUnit)!.n, escala.escalaDeclarada) > DESVIACION_MAX &&
     estado.fase !== 'calibrando'
   )
     aviso = {
       texto: 'La calibración no cuadra con la escala del plano: ¿el PDF está a otro tamaño?',
       tono: 'warn',
       ayuda: 'planos-calibrar',
-      acciones: motivoCalibrar ? undefined : [{ texto: 'Rehacer cota', run: empezarCalibrar }],
-    };
-  if (!aviso && docE.estado === 'listo' && !escala && estado.fase !== 'calibrando')
-    aviso = {
-      texto: 'Calibra esta página para medir longitudes y superficies. Recuento funciona sin escala.',
-      tono: 'info',
       acciones: motivoCalibrar ? undefined : [{ texto: 'Calibrar', run: empezarCalibrar }],
     };
-  if (!aviso && docE.estado === 'listo' && escala && !escala.comprobacion && estado.fase !== 'calibrando')
-    aviso = {
-      texto: 'Comprueba la escala de esta página con otra cota antes de medir.',
-      tono: 'warn',
-      acciones: motivoCalibrar ? undefined : [{ texto: 'Comprobar', run: comprobarEscala }],
-    };
+  if (!aviso && docE.estado === 'listo' && !escala && estado.fase !== 'calibrando')
+    aviso =
+      declarada && info
+        ? {
+            // El texto de la página trae su escala: se usa con un clic (§2).
+            texto: `El plano dice ${textoEscala(declarada)}${papel ? ` (${papel})` : ''}: úsala para medir longitudes y superficies.`,
+            tono: 'info',
+            acciones: motivoCalibrar
+              ? undefined
+              : [
+                  { texto: `Usar ${textoEscala(declarada)}`, run: () => usarEscalaDelPlano(declarada) },
+                  { texto: 'Calibrar', run: empezarCalibrar },
+                ],
+          }
+        : {
+            texto: 'Calibra esta página para medir longitudes y superficies. Recuento funciona sin escala.',
+            tono: 'info',
+            acciones: motivoCalibrar ? undefined : [{ texto: 'Calibrar', run: empezarCalibrar }],
+          };
   if (!aviso && ilegibles > 0)
     aviso = { texto: `${ilegibles} datos de planos no se pueden leer; las líneas conservan sus números.`, tono: 'warn' };
 
@@ -1195,22 +1209,6 @@ export function PlanoViewer({
       />
 
       <div className={styles.lienzoWrap}>
-        {ajusteAbierto && escala?.escalaDeclarada && info && (
-          <PopoverAjuste
-            plano={plano}
-            pagina={pagina}
-            escala={escala}
-            userUnit={info.userUnit}
-            readonly={!!motivoCalibrar}
-            onCerrar={() => setAjusteAbierto(false)}
-            onRecalcular={(nueva, detalle) => setRecalculo({ escala: nueva, etiqueta: etiquetaDe(plano, pagina) ?? '', detalle, verbo: 'con escala' })}
-            onRehacerCota={empezarCalibrar}
-            onHecho={(texto) => {
-              useToastStore.getState().show(texto);
-              decir(texto);
-            }}
-          />
-        )}
         {docE.estado === 'cargando' && <div className={styles.estadoLienzo}>Abriendo el plano…</div>}
         {docE.estado === 'error' && (
           <div className={styles.estadoLienzo} role="alert">
@@ -1232,7 +1230,7 @@ export function PlanoViewer({
             destacada={destacada}
             atenuada={atenuada}
             dibujo={dibujo}
-            calibrar={estado.fase === 'calibrando' ? { paso: estado.paso, cota: estado.cota, comprobacion: estado.comprobacion } : null}
+            calibrar={estado.fase === 'calibrando' ? estado.cota : null}
             anclas={anclas}
             modo={armadaMide || estado.fase === 'calibrando' ? 'medir' : 'mano'}
             espacio={espacio}
@@ -1315,11 +1313,9 @@ export function PlanoViewer({
               etiqueta={etiqueta}
               onEtiqueta={setEtiqueta}
               onConfirmar={confirmarCalibracion}
-              onRehacerCota={() => dispatch({ tipo: 'rehacerCota' })}
-              onRehacerComprobacion={() => dispatch({ tipo: 'rehacerComprobacion' })}
-              onEsCorrecta={() =>
-                dispatch({ tipo: 'esCorrecta', px: lienzoApi.current?.escala() ?? 1, userUnit: info?.userUnit ?? 1, cajetin: escalaPlano })
-              }
+              onQuitarCota={() => dispatch({ tipo: 'rehacerCota' })}
+              onEsCorrecta={() => dispatch({ tipo: 'esCorrecta', ...medidaCal() })}
+              onUsar={(cual) => dispatch({ tipo: 'usar', cual, ...medidaCal() })}
               declarada={escalaPlano}
               escalaPlano={escalaTexto}
               onEscalaPlano={setEscalaTexto}
@@ -1424,13 +1420,13 @@ export function PlanoViewer({
           }}
         />
       )}
-      {copiarAbierto && doc && (
+      {copiarDesde !== null && doc && (
         <DialogoCopiarEscala
           doc={doc}
           plano={plano}
-          pagina={pagina}
+          pagina={copiarDesde}
           onCerrar={() => {
-            setCopiarAbierto(false);
+            setCopiarDesde(null);
             raizRef.current?.focus();
           }}
         />
@@ -1768,7 +1764,7 @@ function NoDisponible({ plano, soloLectura }: { plano: PlanoMeta; soloLectura: b
     const r = await usarPdfParaPlano(f, { planoId: plano.id });
     setBusy(false);
     setOtro(null);
-    if (r.kind === 'ok') toast(textoReenlazado(r.lineas, r.calibradas));
+    if (r.kind === 'ok') toast(textoReenlazado(r.lineas));
     else if (r.kind === 'no-encaja') setError('Este PDF no tiene las mismas páginas: adjúntalo como revisión nueva.');
     else if (r.kind === 'error') setError(r.texto);
   }
@@ -1791,7 +1787,7 @@ function NoDisponible({ plano, soloLectura }: { plano: PlanoMeta; soloLectura: b
           <p>
             Este PDF no es idéntico al original.{' '}
             {otro.encaja
-              ? 'Tiene sus mismas páginas: puedes usarlo para este plano (conserva escalas y líneas; cada página calibrada pide comprobar su escala) o adjuntarlo como revisión nueva.'
+              ? 'Tiene sus mismas páginas: puedes usarlo para este plano (conserva escalas y líneas) o adjuntarlo como revisión nueva.'
               : 'No tiene sus mismas páginas: solo puede entrar como revisión nueva, y las líneas siguen en este plano.'}{' '}
             <BotonAyuda seccion="planos-revisiones" />
           </p>

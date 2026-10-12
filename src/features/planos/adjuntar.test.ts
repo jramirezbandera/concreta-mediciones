@@ -173,7 +173,7 @@ describe('[A1] revisión de un plano y «Usar este PDF para este plano» (§9.3)
     } as unknown as Escala;
     st().setPlanoPageScale({ planoId: p0.id, pagina: 1, escala, expect: { docToken: st().docToken } });
     const r = await usarPdfParaPlano(archivo(conTexto('reexportado'), 'reexportado.pdf'), { planoId: p0.id });
-    expect(r).toEqual({ kind: 'ok', planoId: p0.id, lineas: 0, calibradas: 1 });
+    expect(r).toEqual({ kind: 'ok', planoId: p0.id, lineas: 0 });
     const p = planos()[0]!;
     expect(p).toMatchObject({ huellasAnteriores: [p0.huella], archivo: 'reexportado.pdf' });
     expect(p.huella).not.toBe(p0.huella);

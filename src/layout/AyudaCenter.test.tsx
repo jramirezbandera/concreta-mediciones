@@ -45,7 +45,7 @@ describe('AyudaCenter', () => {
 
   it('[A1] el «?» de un mensaje del visor abre «Medir sobre planos» en su sección, con el foco', async () => {
     render(<AyudaCenter open onClose={noop} onNavigate={noop} initialTab="funcionalidades" ancla="planos-calibrar" />);
-    const sec = screen.getByRole('region', { name: 'Calibrar y comprobar' });
+    const sec = screen.getByRole('region', { name: 'Calibrar' });
     await waitFor(() => expect(sec).toHaveFocus());
     expect(screen.getByRole('region', { name: 'Qué herramienta para cada partida' })).toBeInTheDocument();
   });

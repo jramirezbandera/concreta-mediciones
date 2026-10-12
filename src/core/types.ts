@@ -352,9 +352,10 @@ export interface Escala {
   mPorUnidad: number;
   /** N de «1:N», con 1 decimal. Solo para enseñar. */
   n: number;
-  /** La cota de calibración. */
-  ref: { a: Punto; b: Punto; metros: number };
-  /** En A0 siempre presente; en A1 puede faltar («sin comprobar»). */
+  /** La cota de calibración; falta si la página se puso a la escala del plano sin cota. */
+  ref?: { a: Punto; b: Punto; metros: number };
+  /** Una cota de control o la escala del plano con que cuadró la cota. Opcional:
+   *  no hace falta para medir. */
   comprobacion?: Comprobacion;
   /** [A1] la N de «1:N» leída del cajetín. */
   escalaDeclarada?: number;

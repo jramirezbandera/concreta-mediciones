@@ -66,7 +66,7 @@ export function escalaLegible(x: unknown): x is Escala {
   if (!isRecord(x)) return false;
   if (!texto(x.rev) || !finito(x.mPorUnidad) || !(x.mPorUnidad > 0) || !finito(x.n)) return false;
   const r = x.ref;
-  if (!isRecord(r) || !puntoLegible(r.a) || !puntoLegible(r.b) || !finito(r.metros) || !(r.metros > 0))
+  if (r !== undefined && (!isRecord(r) || !puntoLegible(r.a) || !puntoLegible(r.b) || !finito(r.metros) || !(r.metros > 0)))
     return false;
   if (x.comprobacion !== undefined) {
     const c = x.comprobacion;

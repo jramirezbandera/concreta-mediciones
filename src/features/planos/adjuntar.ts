@@ -20,7 +20,7 @@
    =========================================================================== */
 import { fmtNum } from '../../core/money';
 import type { Caja } from '../../core/planoGeom';
-import { escalaDe, origenLegible, planoLegible } from '../../core/planoDatos';
+import { origenLegible, planoLegible } from '../../core/planoDatos';
 import { encajaEnPaginas, nombreConRevision, paginasConGeometria } from '../../core/planoRevision';
 import type { PlanoMeta } from '../../core/types';
 import { calcularHuella } from '../../persist/huella';
@@ -78,8 +78,8 @@ export type ResultadoRevision =
 
 export type ResultadoReenlace =
   /** El plano usa ya el PDF nuevo; `lineas`: las suyas (conservan números);
-   *  `calibradas`: las páginas que ahora piden comprobar su escala. */
-  | { kind: 'ok'; planoId: string; lineas: number; calibradas: number }
+   */
+  | { kind: 'ok'; planoId: string; lineas: number }
   /** Otro número de páginas, o lo guardado no cabe en ellas. */
   | { kind: 'no-encaja' }
   | { kind: 'error'; texto: string }
@@ -421,7 +421,6 @@ export async function usarPdfParaPlano(
       for (const p of ps)
         for (const l of p.med)
           if (origenLegible(l.origen) && l.origen.planoId === plano.id) lineas++;
-    const calibradas = Object.keys(plano.escalas).filter((k) => escalaDe(plano, Number(k))).length;
-    return { kind: 'ok', planoId: plano.id, lineas, calibradas };
+    return { kind: 'ok', planoId: plano.id, lineas };
   });
 }

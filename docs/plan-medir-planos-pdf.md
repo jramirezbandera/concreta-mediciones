@@ -391,48 +391,38 @@ Los demás, por herramienta, en el fixture (`l-salon`, `l-hueco`, `l-dorm1`, `l-
   - un tramo que cruza la forma se pinta en `--state-danger`, el clic se rechaza y la pista lo explica («La forma se cruza: rehazla en orden»). Casos con test: colineal, vértice que toca y tramo de cierre;
   - se rechazan con su motivo la longitud 0, el polígono de menos de 3 vértices y el de área 0;
   - Mayús fuerza 0/45/90° en la orientación de la pantalla, también con `/Rotate 90` (test).
-- **Calibrar** (en el lienzo, sin modal: `CalibrarPasos.tsx` + `Lupa.tsx`):
-  1. **Cota conocida:**
-     - dos clics y la distancia real en un campo anclado al segmento, en metros;
-     - la precisión de la cota es ±1 px en cada extremo, al zoom con que se marcó ese extremo (acercar, marcar y alejar no la empeora): `(1/pxA + 1/pxB) / longitud`. La franja la enseña;
-     - peor que ±5 % (≈ 40 px en pantalla) no sirve: «La cota es demasiado corta a este zoom (precisión ±6,7 %): acerca el zoom y vuelve a marcar sus extremos, o elige una más larga». [Rev. 2026-09-29: antes, ≥ 300 px en pantalla; bloqueaba cotas cortas útiles.]
-  2. **Comprobación:**
-     - dos clics sobre otra cota y su valor;
-     - si se puede, a más de 45° de la primera. La franja lo sugiere y la lupa lo facilita;
-     - si la página no tiene una segunda cota, se puede repetir la misma en otra zona;
-     - sin comprobación no se mide.
-  3. **Etiqueta:** «Esta página es: [P1]». En A0 se teclea; [A1] propuesta desde el texto.
-  - **Escala del plano** [Rev. 2026-09-30]: en el paso 1, «Escala del plano: 1:[100]» junto al tamaño del papel que da el PDF («A3 · 420 × 297 mm»; 1 unidad = `userUnit`/72″). Se rellena con la del cajetín (o la que ya tenía la página) y se puede teclear: muchos planos traen el cajetín dibujado, sin texto. Con ella, la cota es de control: si cuadra dentro de su precisión, la escala queda exacta a la tecleada (`ajustada`, `escalaDeclarada`, comprobación `fuente: 'cajetin'`) sin segunda cota. Si no cuadra: «La cota da 1:98,5 y la escala del plano es 1:50: ¿el PDF está a otro tamaño (p. ej. un A1 exportado a A3)?…» y se pide la comprobación. Nunca se calibra solo con la escala: un PDF exportado a otro papel mediría mal sin aviso.
+- **Calibrar** (en el lienzo, sin modal: `CalibrarPasos.tsx` + `Lupa.tsx`), en UN paso [Rev. 2026-10-12]:
+  - **Escala del plano:** «Escala del plano: 1:[100]»; se rellena con la del cajetín o la que ya tenía la página, y se puede teclear (muchos planos traen el cajetín dibujado, sin texto). Con ella basta: [Usar 1:100] pone la página a esa escala sobre el papel que da el PDF («A3 · 420 × 297 mm»; 1 unidad = `userUnit`/72″), sin cota (`Escala` sin `ref`).
+  - **Cota (opcional con escala):** dos clics y la distancia real en un campo anclado al segmento, en metros. La franja dice en vivo qué da («La cota da 1:49,7 (±1,2 %) · cuadra con 1:50»).
+    - la precisión de la cota es ±1 px en cada extremo, al zoom con que se marcó ese extremo (acercar, marcar y alejar no la empeora): `(1/pxA + 1/pxB) / longitud`;
+    - peor que ±5 % (≈ 40 px en pantalla) no sirve: «La cota es demasiado corta a este zoom (precisión ±6,7 %): acerca el zoom y vuelve a marcar sus extremos, o elige una más larga». [Quitar cota] la borra.
+  - **Las dos:** si la cota cuadra con la escala dentro de su precisión, la página queda a la escala exacta (`ajustada`, `escalaDeclarada`, comprobación `fuente: 'cajetin'`). Si no: «La cota da 1:52,5 y el plano dice 1:50 (difieren un 5 %)…» y el usuario elige con [Usar 1:52,5 (la cota)] (un PDF exportado a otro papel) o [Usar 1:50 (el plano)] (la cota mal marcada). Elegida la cota, no se guarda `escalaDeclarada`: no se queda avisando.
+  - **Solo la cota:** da la escala y, si una habitual cae dentro de su precisión (mín. 0,5 %, máx. 3 %), se ajusta a ella exacta: «P1 calibrada 1:50 · ajustada (la cota daba 1:50,9)».
+  - **Etiqueta:** «Esta página es: [P1]», propuesta desde el texto.
+  - Ya no hay segunda cota de comprobación ni páginas «sin comprobar»: la comprobación es opcional y no bloquea medir. Antes (2026-09-26 a 2026-10-12) se exigía una segunda cota y «nunca se calibraba solo con la escala»; en la práctica, pedir dos cotas a un plano con escala era demasiado.
   - **Ayudas de precisión**, también al colocar vértices:
     - cursor en cruz con guías a todo el ancho;
     - lupa ×4, un recuadro de 120 px en la esquina opuesta al cursor;
     - los puntos se pueden arrastrar antes de confirmar.
-  - **Tolerancia de la comprobación:** la suma de las precisiones de las dos cotas, entre el 1 % y el 5 %. Dos cotas cortas bien marcadas no pueden cuadrar al 1 %; una cifra mal tecleada suele fallar por mucho más. Si cuadran, la escala sale de las dos (`Σ metros / Σ longitud`) y, si una escala habitual (o la del cajetín, que manda) cae dentro de su precisión (mín. 0,5 %, máx. 3 %), se ajusta a ella exacta: «P1 calibrada 1:50 · ajustada (las cotas daban 1:50,4)». [Rev. 2026-09-29]
-  - **Fuera de tolerancia:** «La cota da 1:50 y la comprobación 1:54,2: difieren un 8,3 % y, con la precisión de los clics, se admite ±5 %. Revisa la cifra o los extremos de una de las dos.» con [Rehacer cota] [Rehacer comprobación], sin empezar de cero. Rehacer la comprobación conserva la cota.
-  - **Plausibilidad:** pide confirmación antes de guardar, con [Sí, es correcta] [Rehacer cota]. Un «cm» tecleado como «m» pasa la segunda cota; esto lo caza.
+  - **Plausibilidad** (solo la cota): pide confirmación antes de guardar, con [Sí, es correcta] o [Quitar cota]. Un «cm» tecleado como «m» lo caza.
     - Fuera de 1:1–1:5000: «1:5 000 000 no parece la escala de un plano: ¿la cota está en metros?».
     - Dentro, pero a más de un 3 % de todas las habituales: «1:63,5 no es una escala habitual: ¿el PDF se imprimió ajustado a la página? Si la cota es correcta, sigue».
     - Las habituales son 1, 2, 5, 10, 15, 20, 25, 30, 40, 50, 75, 100, 125, 150, 200, 250, 300, 400, 500, 750, 1000, 1500, 2000, 2500 y 5000.
-  - **Resultado:** `setPlanoPageScale` con cota y comprobación. Guarda una `Escala` completa con `rev` nuevo; una calibración a medias no se guarda.
+  - **Resultado:** `setPlanoPageScale` con una `Escala` nueva (`rev` nuevo); una calibración a medias no se guarda.
 - **Una calibración activa por página.** «Líneas medidas» son aquí las que llevan escala: las de Recuento no cuentan, así que se puede contar antes de calibrar.
   - Cambiar la escala de una página SIN líneas medidas: `setPlanoPageScale`.
   - CON líneas en A0: `setPlanoPageScale` devuelve `has-lines` y la escala no cambia. Aviso: «Esta página ya tiene N líneas medidas con esta escala. Recalcularlas llega más adelante; para medir a otra escala, adjunta el PDF otra vez».
   - CON líneas en [A1]: pregunta «¿La escala anterior estaba mal?» con [Recalcular N líneas] y [Cancelar]. Cancelar es la opción por defecto: Enter cancela. Todo camino que cambia la escala de una página con líneas pasa por `rescalePlanoPage` (§4):
     - recalibrar;
-    - «Usar la calibrada»;
-    - «Usar esta calibración en otras páginas»;
-    - «Usar este PDF para este plano», solo si su comprobación nueva falla y hay que recalibrar (§9.3).
-  - Añadir una comprobación a una escala que no la tiene [A1] no cambia la escala ni su `rev`: `setPlanoPageCheck` (§4.1).
   - Los detalles a otra escala se miden adjuntando el mismo PDF otra vez, que queda como otro plano con los mismos bytes. La escala por zonas sigue en TODOS.
 - **Cajetín [A1]** (`core/planoTexto`), con textos contiguos unidos:
   - Lee «1:N», «E 1:N», «ESCALA 1:N», «1/N», «E 1/N» y «ESCALA 1/N». Descarta fechas y fracciones sueltas («1/2»).
-  - Solo si la página declara UNA escala:
-    - la franja compara («calibrada 1:49,7 · el plano dice 1:50»), teniendo en cuenta `userUnit`;
-    - a menos del 1 %, cuenta como comprobación (`fuente: 'cajetin'`, T9) y ajusta `mPorUnidad` a la exacta (`ajustada`), reversible con «Usar la calibrada (1:49,7)»;
-    - por encima, aviso en `--state-warn` sin bloquear, porque la cota manda: «La calibración no cuadra con la escala del plano: ¿el PDF está a otro tamaño?».
-    - Una comprobación por cota posterior se evalúa contra la escala ya ajustada.
-  - Dos escalas en el texto: ni comprobación ni ajuste.
-- **[A1] «Usar esta calibración en otras páginas»:** mismo tamaño de página y misma escala en el cajetín. Copia la escala (con `rev` nuevo por página) y cada página pide su comprobación (`setPlanoPageCheck`).
+  - Solo si la página declara UNA escala [Rev. 2026-10-12]:
+    - sin escala aún, el aviso lo dice y la usa con un clic: «El plano dice 1:50 (A3 · 420 × 297 mm): úsala para medir longitudes y superficies.» [Usar 1:50] [Calibrar];
+    - al calibrar, rellena «Escala del plano» (una cota la confirma o se elige con cuál seguir, como arriba);
+    - una calibración antigua que no cuadra con ella: aviso en `--state-warn` sin bloquear, «La calibración no cuadra con la escala del plano: ¿el PDF está a otro tamaño?» [Calibrar].
+  - Dos escalas en el texto: no se propone ninguna.
+- **[A1] «Usar 1:50 en otras páginas»** [Rev. 2026-10-12]: al terminar de calibrar, si hay otras páginas sin escala del mismo tamaño, rotación y `userUnit`, el aviso de la calibración lo ofrece (también en el menú ⋯, «Usar esta escala en otras páginas…»). El diálogo marca las que dicen la misma escala en su texto, deja sin marcar las que no dicen ninguna y no ofrece las que dicen otra. `copyPlanoPageScale` copia la escala con `rev` nuevo por página, sin la cota ni la comprobación (son de la página de origen).
 
 ### 3. De medida a línea (`core/planoMedida`)
 
@@ -530,11 +520,9 @@ La tabla va como DATOS (un objeto por celda) y el test la recorre entera.
 | `setPlanoPageScale({ planoId, pagina, escala, expect })` | A0 | calibración nueva; `has-lines` si la página tiene líneas medidas |
 | `addPlanoLines({ destinos: [{ chapterId, partidaId, lineas, medForma?, afterId? }], expect })` | A0 un destino · A1 varios | alta de las líneas y, si toca, del cambio de forma; todo o nada; un error por destino (partida, campo, motivo) |
 | `remeasureLine({ lineId, preparada, expect })` | A0 | «Volver a medir» |
-| `setPlanoScaleAdjusted({ planoId, pagina, ajustada, expect })` | A1 | ajuste al cajetín y «Usar la calibrada»; con líneas, por `rescalePlanoPage` |
 | `rescalePlanoPage({ planoId, pagina, escala, lineIds, expect })` | A1 | escala nueva + recálculo de las líneas indicadas, en varias partidas |
 | `attachPlanoRevision({ meta, sustituye, expect })` | A1 | plano nuevo con `sustituye` y `revision`; el anterior no se toca |
 | `relinkPlano({ planoId, huella, expect })` | A1 | «Usar este PDF para este plano» (§9.3) |
-| `setPlanoPageCheck({ planoId, pagina, comprobacion, expect })` | A1 | añade la comprobación a una escala que no la tiene, sin cambiar la escala ni su `rev` |
 | `acceptLineValues({ lineId, expect })` / `unlinkLineOrigen({ lineId, expect })` | A1 | «Aceptar valores actuales» / «Desvincular del plano» |
 | `moveShapeVertices({ lineId, puntos, alsoLineIds, expect })` | B | editar vértices, con «Aplicar también a N líneas» |
 
@@ -626,15 +614,13 @@ La tabla va como DATOS (un objeto por celda) y el test la recorre entera.
   - [A1] «Liberar espacio».
 - **Chip de escala:**
   - «Sin calibrar» (neutral);
-  - «1:50 · ±0,3 %» (accent);
-  - [A1] «1:50 ajustada» (accent);
-  - [A1] «sin comprobar» (`--state-warn`);
-  - [A1] «no cuadra con el cajetín» (`--state-warn`).
+  - «1:50» (accent). Solo informa: la escala se cambia calibrando [Rev. 2026-10-12: antes abría «Ajustar al plano / Usar la calibrada»];
+  - [A1] «1:50 · no cuadra con el plano» (`--state-warn`), una calibración antigua.
 - **Aviso único:** una banda de 32 px encima del lienzo con solo el más prioritario y su acción. Orden:
   1. plano no disponible;
   2. [A1] revisión más nueva;
   3. [A1] calibración que no cuadra con el cajetín;
-  4. página sin calibrar (o [A1] sin comprobar);
+  4. página sin calibrar;
   5. datos de planos ilegibles.
 - **Franja inferior:**
   - Fila 1, siempre: «Midiendo en: 2.6 EAV010 Acero en vigas · Peso ▾» y el total de la partida («12 líneas · 148,30 kg»).
@@ -654,8 +640,7 @@ Reductor puro `(estado, evento) → { estado, efectos }`: el visor solo lo conec
   - `dibujando`, con herramienta, puntos y, si es «Volver a medir», la línea que sustituye;
   - `nombrando`, con la medida preparada y el texto;
   - `creada`, con la línea creada;
-  - `calibrando.cota`;
-  - `calibrando.comprobacion`.
+  - `calibrando`, con la cota (opcional).
 - **La herramienta armada** se mantiene tras crear una línea, igual que las dimensiones fijas.
 
 | Estado | Evento | Condición | Pasa a | Efectos |
@@ -687,13 +672,15 @@ Reductor puro `(estado, evento) → { estado, efectos }`: el visor solo lo conec
 | creada | clic | herramienta habilitada | dibujando [p] | — |
 | creada | Esc | — | reposo | — |
 | cualquiera | cambio de herramienta | — | reposo (armada la nueva) | si se dibujaba: como «cambio de partida» |
-| reposo | Calibrar | — | calibrando.cota | — |
-| calibrando.cota | clic ×2, arrastrar, metros | precisión de la cota ≤ ±5 % | calibrando.comprobacion | — |
-| calibrando.cota | confirmar | precisión peor que ±5 % | calibrando.cota | «La cota es demasiado corta a este zoom…» |
-| calibrando.comprobacion | confirmar | desviación ≤ tolerancia y escala plausible | reposo | `setPlanoPageScale`; «P1 calibrada 1:50 · comprobada 0,3 %» o «· ajustada (las cotas daban 1:50,4)» |
-| calibrando.comprobacion | confirmar | desviación > tolerancia | calibrando.comprobacion | [Rehacer cota] [Rehacer comprobación] |
-| calibrando.comprobacion | confirmar | escala poco plausible | calibrando.comprobacion | pedir confirmación (§2) |
-| calibrando.* | Esc | — | reposo | cancelar; la página se queda como estaba |
+| reposo | Calibrar | — | calibrando | — |
+| calibrando | confirmar | escala del plano y sin cota | reposo | `setPlanoPageScale`; «P1 calibrada 1:50 · a la escala del plano sobre A3 · 420 × 297 mm» |
+| calibrando | confirmar | sin escala ni cota | calibrando | «Escribe la escala del plano o marca una cota conocida.» |
+| calibrando | confirmar | precisión de la cota peor que ±5 % | calibrando | «La cota es demasiado corta a este zoom…» |
+| calibrando | confirmar | cota y escala que cuadran | reposo | `setPlanoPageScale`; «· la cota cuadra (daba 1:49,8)» |
+| calibrando | confirmar | cota y escala que no cuadran | calibrando | [Usar 1:52,5 (la cota)] [Usar 1:50 (el plano)] |
+| calibrando | confirmar | solo cota, escala plausible | reposo | `setPlanoPageScale`; «· con la cota» o «· ajustada (la cota daba 1:50,9)» |
+| calibrando | confirmar | solo cota, escala poco plausible | calibrando | pedir confirmación (§2) |
+| calibrando | Esc | — | reposo | cancelar; la página se queda como estaba |
 
 - **Punto de inserción:**
   - se fija al entrar a medir: tras la línea con el foco o, si no hay, al final;
@@ -853,7 +840,7 @@ Solo con el foco dentro del visor. Van en `ayudaContent` y en los tooltips (no e
 | Adjuntar | fases «Leyendo… · Calculando huella… · Guardando…» | — | contraseña, dañado, no es PDF, vacío, > 500 MB, cuota llena (§7.2) | abre la pág. 1 con «Calibra esta página» | misma huella ya en la obra: «Ya está adjunto como Planta 1» [Abrirlo] [Adjuntar otra vez (para otra escala)] |
 | Lista de planos | «Cargando planos…» | zona de soltar con «Adjunta el PDF · Calibra con una cota · Mide» y [Adjuntar plano] | plano no disponible: «Vuelve a adjuntar el PDF» | lista con escala y número de medidas por página | [A1] «N líneas con otra escala»; datos ilegibles |
 | Página | página previa borrosa + «Pintando…»; medir deshabilitado hasta que la mostrada sea la activa | sin medidas de la partida aquí: «Tiene medidas en P2 y P3» | «No se pudo pintar esta página» [Reintentar] | página nítida con la capa | texto ilegible: sin propuesta ni cajetín, sin aviso |
-| Calibrar | — | — | «Desviación 2,8 %» [Rehacer cota] [Rehacer comprobación] | «P1 calibrada 1:50 · comprobada 0,3 %» | [A1] ajustada / no cuadra con el cajetín (warn) |
+| Calibrar | — | — | «La cota da 1:52,5 y el plano dice 1:50…» [Usar 1:52,5 (la cota)] [Usar 1:50 (el plano)] | «P1 calibrada 1:50 · la cota cuadra (daba 1:49,8)» | [A1] ajustada / no cuadra con el cajetín (warn) |
 | Medir | — | sin partida: selector abierto | no encaja → motivo + arreglo; cruce → tramo en danger | «✓ Línea 7 · 18,40 m²» + `aria-live` | falta una fija → campo en warn |
 | Ver en plano | abriendo el plano | — | plano no disponible o quitado → marcador atenuado + popover | encuadra y destaca 1,5 s | línea borrada → no hay marcador |
 | Reenlazar | — | — | huella distinta: A0 «Este PDF no es idéntico al original» [Cancelar]; [A1] [Usar este PDF para este plano] [Adjuntar como revisión nueva] [Cancelar] | «Plano reenlazado: 12 líneas» | — |
@@ -885,7 +872,7 @@ Cada uno con problema, causa y arreglo. Los de calibración, «no encaja» y «P
 | perfiles en conflicto | «El comentario dice HEB 200 y el kg/m fijo es IPE 300.» | [Usar HEB 200] [Usar IPE 300] |
 | cota corta (precisión peor que ±5 %) | «La cota es demasiado corta a este zoom (precisión ±6,7 %): acerca el zoom y vuelve a marcar sus extremos, o elige una más larga.» | — |
 | distancia no válida | «Escribe la distancia real en metros.» | — |
-| desviación fuera de tolerancia | «La cota da 1:50 y la comprobación 1:54,2: difieren un 8,3 % y, con la precisión de los clics, se admite ±5 %. Revisa la cifra o los extremos de una de las dos.» | [Rehacer cota] [Rehacer comprobación] |
+| cota y escala del plano que no cuadran | «La cota da 1:52,5 y el plano dice 1:50 (difieren un 5 %). Si el PDF se exportó a otro tamaño de papel, vale la cota; si la cota está mal marcada, vale el plano.» | [Usar 1:52,5 (la cota)] [Usar 1:50 (el plano)] |
 | escala poco plausible | «1:5 000 000 no parece la escala de un plano: ¿la cota está en metros?» | [Sí, es correcta] [Rehacer cota] |
 | página con líneas (`has-lines`, A0) | «Esta página ya tiene N líneas medidas con esta escala. Recalcularlas llega más adelante; para medir a otra escala, adjunta el PDF otra vez.» | — |
 | certificada (`certificada`) | «La línea 7 está certificada en C2: revísala a mano.» | guarda de certificadas |
@@ -902,7 +889,6 @@ Cada uno con problema, causa y arreglo. Los de calibración, «no encaja» y «P
 | [A1] PDF de la copia que no cuadra con su huella | no se rechaza la copia: ese PDF se descarta y su plano queda «no disponible», dicho en el resumen de la restauración («El PDF de Planta 2 no cuadra con su huella: vuelve a adjuntarlo») | — |
 | [A1] revisión más nueva | «Hay una revisión más nueva: Rev. B.» | [Abrir] |
 | [A1] cajetín que no cuadra | «La calibración no cuadra con la escala del plano: ¿el PDF está a otro tamaño?» (warn, no bloquea) | [Rehacer cota] |
-| [A1] sin comprobar | «Comprueba la escala de esta página con otra cota antes de medir.» | [Comprobar] |
 | cambios antiguos (migración a v6) | «Una versión antigua de Concreta guardó cambios en esta obra después de actualizarla.» | [Abrir esos cambios como obra aparte] [Ignorar] |
 | quitar plano | «Quitar "Planta primera": 23 líneas conservan sus números, pero dejan de verse en el plano.» | [Quitar] [Cancelar] |
 
@@ -1012,9 +998,9 @@ type Caja = [number, number, number, number]; // x0, y0, x1, y1 en coordenadas d
 - **Qué hace:**
   - `relinkPlano` pone la huella nueva y pasa la anterior a `huellasAnteriores`;
   - conserva escalas y líneas;
-  - quita la `comprobacion` de cada página calibrada, así cada una pide comprobar de nuevo antes de medir. La comprobación nueva se guarda con `setPlanoPageCheck`: la escala y su `rev` no cambian y las líneas siguen al día.
+  - quita la `comprobacion` de cada página calibrada (era del PDF anterior); se sigue midiendo con su escala.
 - **Las líneas antiguas:** conservan su `origen.huella`, que manda en «Ver en plano» y cuenta como referencia en «Liberar espacio».
-- **Si la comprobación nueva falla:** se recalibra, por `rescalePlanoPage`.
+- **Si la escala ya no vale:** se recalibra, por `rescalePlanoPage`.
 
 #### 9.4 «Liberar espacio» [A1]
 
@@ -1146,7 +1132,7 @@ Una sola lista, por fichero. Lo hecho en la Etapa 0 no se repite.
 - **`src/persist/transfer.node.test.ts`** [A1]: .zip con tamaños falsos, duplicados, nombres desconocidos y topes reales en los dos sentidos; exportar → borrar IDB → importar → capa y «Ver en plano»; restauración con cuota llena y con adopción concurrente.
 - **`src/features/planos/pdfAdapter.node.test.ts`** (A0): contrato real = doble; caja con origen ≠ 0, CropBox, las cuatro rotaciones y rotación con `UserUnit`; abrir A → B → llega A y se cierra; versión y ruta del worker.
 - **`src/features/planos/*.test.tsx`** (A0, con el doble):
-  - calibrar (arrastrar un punto recalcula; rehacer la comprobación conserva la cota);
+  - calibrar (con la escala del plano sola, con una cota, con las dos y elegir cuando no cuadran);
   - medir longitud → línea con `expr` y `origen`, Deshacer; herramienta que no encaja; Esc a medio dibujo no cierra la partida;
   - Esc en reposo cierra el visor y deja la partida abierta; Esc en CREADA no cierra la partida; en pantalla completa, Esc en reposo sale de ella; Ctrl+Z quita un vértice sin deshacer la última línea;
   - en el comentario, Retroceso y Ctrl+Z editan el texto y la C no arma Calibrar;
@@ -1292,6 +1278,15 @@ Cada cambio posterior: fecha, qué cambia y por qué.
     - 44 px de área táctil en la barra de herramientas y la cabecera del visor con puntero grueso (sin agrandar los botones);
     - «1 %» con espacio duro en la ayuda.
   - Queda fuera (TODOS.md): textos del presupuesto y de las barras que aún van en `--text-disabled`.
+- **2026-10-12 · Calibrar en un paso** (§2, §4.1, §5.2, §5.3, §7.2). Pedir dos cotas a un plano con escala era demasiado:
+  - con la escala del plano basta (sin cota, sobre el papel del PDF); una cota la confirma o, sin escala, la da;
+  - cota y escala que no cuadran: el usuario elige con cuál sigue, en vez de pedir una segunda cota;
+  - la comprobación es opcional: se quitan «sin comprobar», su aviso y su chip, el motivo `sin-comprobar`, `setPlanoPageCheck` y el evento `comprobar`. Copiar una escala o reenlazar el PDF ya no obliga a nada antes de medir;
+  - `Escala.ref` pasa a opcional (una página a la escala del plano no tiene cota); `escalaCalibrada` devuelve null sin cota.
+- **2026-10-12 · Menos pasos para medir** (§2, §4.1, §5.2):
+  - el chip de escala solo informa: se quitan su popover («Ajustar al plano / Usar la calibrada»), `setPlanoScaleAdjusted`, `escalaConAjuste` y el pedido `ajuste`. Esa decisión se toma al calibrar;
+  - al terminar de calibrar, el aviso ofrece «Usar 1:50 en otras páginas…» si hay páginas sin escala del mismo tamaño (`paginasDelMismoTamano`); el diálogo marca las que dicen la misma escala y ofrece, sin marcar, las que no dicen ninguna. La copia ya no lleva la cota de la página de origen;
+  - una página sin escala cuyo texto dice «E 1:50» ofrece [Usar 1:50] en el aviso, sin pasar por calibrar; elegir una herramienta de medir en una página sin escala abre la calibración y, al terminar, deja armada esa herramienta.
 
 ## Historial
 

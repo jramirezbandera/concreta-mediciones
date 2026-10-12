@@ -76,7 +76,7 @@ export interface PlanoUiState {
   remedir: { lineId: string; nonce: number } | null;
   /** [A1] Algo que pide la cabecera (chip de escala, menú ⋯) y abre el visor,
    *  que es quien conoce el PDF (su `userUnit`, las páginas iguales). */
-  pedido: { que: 'ajuste' | 'copiarEscala'; nonce: number } | null;
+  pedido: { que: 'copiarEscala'; nonce: number } | null;
   borrador: Borrador | null;
 
   abrirPlano: (planoId: string | null, pagina?: number) => void;
@@ -93,7 +93,7 @@ export interface PlanoUiState {
   pedirDestacar: (d: Omit<Destacar, 'nonce'>) => void;
   pedirRemedir: (lineId: string) => void;
   limpiarRemedir: () => void;
-  pedirAlVisor: (que: 'ajuste' | 'copiarEscala') => void;
+  pedirAlVisor: (que: 'copiarEscala') => void;
   limpiarPedido: () => void;
   guardarBorrador: (b: Borrador) => void;
   quitarBorrador: () => void;

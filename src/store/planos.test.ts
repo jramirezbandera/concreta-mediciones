@@ -222,8 +222,8 @@ describe('[A1] revisiones y «Usar este PDF para este plano» (§9.3)', () => {
     expect(e.mPorUnidad).toBe(escalaDe(viejo, 1)!.mPorUnidad);
     expect(e.comprobacion).toBeUndefined();
     expect(lineasDe(viejo.id)).toEqual(lineas); // su `origen.huella` sigue siendo la vieja
-    // medir exige ahora la comprobación de la página
-    expect(() => medir5m('p-tabique')).toThrow(/sin-comprobar/);
+    // sin comprobación se sigue midiendo
+    expect(() => medir5m('p-tabique')).not.toThrow();
     // volver al PDF anterior lo saca del historial (sin duplicados)
     st().relinkPlano({ ...args, huella: viejo.huella, expect: { ...doc(), huella: 'h-nueva' } });
     expect(plano()).toMatchObject({ huella: viejo.huella, huellasAnteriores: ['h-nueva'] });
@@ -330,47 +330,8 @@ describe('[A1] recalcular al cambiar la escala', () => {
   });
 });
 
-describe('[A1] cajetín: ajustar y copiar la calibración', () => {
-  /** La escala del fixture (1:50) como calibrada a 1:49,7 con «E 1:50» en el cajetín. */
-  const conCajetin = (ajustada: boolean) =>
-    useObraStore.setState((s) => {
-      const e = s.planos[0]!.escalas[1]!;
-      e.escalaDeclarada = 50;
-      e.ref = { a: [0, 0], b: [283.46 * (50 / 49.7), 0], metros: 5 }; // la cota da 1:49,7
-      if (ajustada) {
-        e.ajustada = true;
-        e.mPorUnidad = (50 * 0.0254) / 72;
-        e.n = 50;
-      }
-    });
-
-  it('setPlanoScaleAdjusted: con líneas, `has-lines`; sin líneas, la calibrada con `rev` nueva', () => {
-    conCajetin(true);
-    const rev = escalaDe(plano(), 1)!.rev;
-    const exp = { ...doc(), calRev: rev };
-    expect(st().setPlanoScaleAdjusted({ planoId: plano().id, pagina: 1, ajustada: false, userUnit: 1, expect: exp })).toMatchObject({
-      reason: 'has-lines',
-    });
-    useObraStore.setState((s) => {
-      for (const ps of Object.values(s.partidas)) for (const p of ps) p.med = [];
-    });
-    expect(st().setPlanoScaleAdjusted({ planoId: plano().id, pagina: 1, ajustada: true, userUnit: 1, expect: exp })).toMatchObject({
-      reason: 'noop',
-    });
-    expect(st().setPlanoScaleAdjusted({ planoId: plano().id, pagina: 1, ajustada: false, userUnit: 1, expect: exp })).toEqual({
-      ids: [plano().id],
-    });
-    const e = escalaDe(plano(), 1)!;
-    expect(e.rev).not.toBe(rev);
-    expect(e.ajustada).toBeUndefined();
-    expect(e.n).toBeCloseTo(49.7, 1);
-    expect(st().setPlanoScaleAdjusted({ planoId: plano().id, pagina: 1, ajustada: true, userUnit: 1, expect: { ...doc(), calRev: e.rev } })).toEqual({
-      ids: [plano().id],
-    });
-    expect(escalaDe(plano(), 1)).toMatchObject({ n: 50, ajustada: true });
-  });
-
-  it('copyPlanoPageScale: copia a otras páginas «sin comprobar», con `rev` nueva, en UN paso', () => {
+describe('[A1] copiar la calibración', () => {
+  it('copyPlanoPageScale: copia a otras páginas, con `rev` nueva, en UN paso', () => {
     useObraStore.setState((s) => {
       s.planos[0]!.paginas = 4;
     });
@@ -430,59 +391,24 @@ describe('[A1] aceptar valores y desvincular', () => {
   });
 });
 
-describe('[A1] sin comprobar', () => {
-  const sinComprobar = () =>
+describe('escala sin comprobación o sin cota', () => {
+  const aEscalaDelPlano = () =>
     useObraStore.setState((s) => {
-      delete s.planos[0]!.escalas[1]!.comprobacion;
+      const e = s.planos[0]!.escalas[1]!;
+      delete e.comprobacion;
+      delete e.ref;
+      e.escalaDeclarada = e.n;
     });
 
-  it('medir en una página sin comprobar: la herramienta sale con su motivo y el store la rechaza', () => {
-    sinComprobar();
+  it('se mide igual: la comprobación no es obligatoria y la cota tampoco', () => {
+    aEscalaDelPlano();
     const pl = plano();
-    const p = P('p-tabique');
-    expect(motivoHerramienta('longitud', { partida: p, escala: escalaDe(pl, 1), fijas: {} })).toEqual({ motivo: 'sin-comprobar' });
-    expect(motivoHerramienta('recuento', { partida: P('p-enchufes'), escala: escalaDe(pl, 1), fijas: {} })).toBeNull();
-    const r = prepararMedida({
-      herramienta: 'longitud',
-      puntos: [
-        [100, 100],
-        [383.46, 100],
-      ],
-      plano: pl,
-      pagina: 1,
-      escala: escalaDe(pl, 1),
-      partida: p,
-      fijas: {},
-      restar: false,
-      comentario: 'P1 · x',
-      formaId: 'f-x',
-      at: '2026-09-28T00:00:00.000Z',
-    });
-    expect(r).toMatchObject({ ok: false, motivo: 'sin-comprobar' });
+    expect(escalaDe(pl, 1)).not.toBeNull();
+    expect(motivoHerramienta('longitud', { partida: P('p-tabique'), escala: escalaDe(pl, 1), fijas: {} })).toBeNull();
+    expect(() => medir5m('p-tabique')).not.toThrow();
   });
 
-  it('setPlanoPageCheck añade la comprobación sin cambiar la escala ni su `rev`; las líneas siguen al día', () => {
-    sinComprobar();
-    const e0 = escalaDe(plano(), 1)!;
-    const comprobacion = { fuente: 'cota' as const, a: [0, 0] as [number, number], b: [0, 170.08] as [number, number], metros: 3, medidos: 3.0001, desviacion: 0.00003 };
-    const expectC = { ...doc(), calRev: e0.rev };
-    expect(st().setPlanoPageCheck({ planoId: plano().id, pagina: 1, comprobacion, expect: { ...expectC, calRev: 'otra' } })).toMatchObject({
-      reason: 'stale',
-    });
-    expect(st().setPlanoPageCheck({ planoId: plano().id, pagina: 1, comprobacion: { ...comprobacion, desviacion: 0.06 }, expect: expectC })).toMatchObject({
-      reason: 'noop',
-    });
-    expect(st().setPlanoPageCheck({ planoId: plano().id, pagina: 1, comprobacion, expect: expectC })).toEqual({ ids: [plano().id] });
-    const e1 = escalaDe(plano(), 1)!;
-    expect(e1).toMatchObject({ rev: e0.rev, mPorUnidad: e0.mPorUnidad, comprobacion: { metros: 3 } });
-    expect(lineasConOtraEscala(st().partidas, plano())).toBe(0);
-    expect(st().setPlanoPageCheck({ planoId: plano().id, pagina: 1, comprobacion, expect: expectC })).toMatchObject({ reason: 'noop' });
-    undo();
-    expect(escalaDe(plano(), 1)!.comprobacion).toBeUndefined();
-  });
-
-  it('textos: sin comprobar, líneas que cambiaron', () => {
-    expect(textoResultado({ reason: 'sin-comprobar' })).toBe('Comprueba la escala de esta página con otra cota antes de medir.');
+  it('textos: líneas que cambiaron', () => {
     expect(textoResultado({ reason: 'stale', detalle: { cambio: 'lineas' } })).toBe(
       'Las líneas de esta página cambiaron mientras confirmabas: revisa el recálculo.',
     );

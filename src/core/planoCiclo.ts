@@ -12,7 +12,8 @@
        │                                         creada ◄── (store: crear)
        │                                           │ clic: otra forma
        └────────────── Esc ────────────────────────┘
-     reposo ──Calibrar──► calibrando.cota ──► calibrando.comprobacion ──► reposo
+     reposo ──Calibrar──► calibrando ──► reposo
+                          (la escala del plano, una cota o las dos)
 
    La herramienta armada se mantiene tras crear una línea. [A1] Borradores
    (§5.8): un cambio de partida, página, plano, ocupante o a pantalla estrecha
@@ -28,11 +29,8 @@ export type MotivoCiclo = { motivo: string };
 import {
   DESVIACION_TOPE,
   ajustar45,
-  cifra,
   cruzaLaForma,
   demasiadoCerca,
-  desviacion,
-  dist,
   escalaN,
   escalaParaAjustar,
   formaInvalida,
@@ -53,7 +51,7 @@ export type Armada = 'mano' | Herramienta;
  *  estrecha (< 1024 px), donde no se mide. */
 export type Contexto = 'partida' | 'pagina' | 'plano' | 'ocupante' | 'vista' | 'escala' | 'herramienta';
 
-/** Una cota (o la comprobación): dos puntos y la distancia real tecleada.
+/** Una cota: dos puntos y la distancia real tecleada.
  *  `pxA`/`pxB`: píxeles de pantalla por unidad de página con que se marcó
  *  cada extremo (su precisión; sin ellos, el zoom de ahora). */
 export interface TramoCota {
@@ -69,16 +67,39 @@ export function precisionDe(t: TramoCota, pxAhora: number): number | null {
   return t.a && t.b ? precisionTramo(t.a, t.b, t.pxA ?? pxAhora, t.pxB ?? pxAhora) : null;
 }
 
+/** Lo que da una cota completa: su «1:N», su precisión y, con escala del
+ *  plano, si cuadra con ella dentro de esa precisión. null si está incompleta. */
+export interface LecturaCota {
+  n: number;
+  mPorUnidad: number;
+  metros: number;
+  precision: number;
+  /** null sin escala del plano. */
+  cuadra: boolean | null;
+  /** Diferencia (fracción) con la escala del plano. */
+  desviacion: number | null;
+}
+
+export function leerCota(t: TramoCota, px: number, userUnit: number, declarada: number | null): LecturaCota | null {
+  const metros = metrosDe(t);
+  if (!t.a || !t.b || metros === null) return null;
+  const precision = precisionDe(t, px)!;
+  const mPorUnidad = mPorUnidadDeCota(t.a, t.b, metros);
+  const n = escalaN(mPorUnidad, userUnit);
+  const desviacion = declarada && declarada > 0 ? Math.abs(n - declarada) / declarada : null;
+  const cuadra = desviacion === null ? null : desviacion <= toleranciaComprobacion(precision, 0);
+  return { n, mPorUnidad, metros, precision, cuadra, desviacion };
+}
+
 export type AvisoCalibrar =
+  /** Ni escala del plano ni cota. */
+  | { tipo: 'nada' }
   | { tipo: 'faltan-puntos' }
   | { tipo: 'metros' }
-  /** `cual`: la cota o la comprobación. */
-  | { tipo: 'corta'; cual: 'cota' | 'comprobacion'; precision: number }
-  /** `nCota`/`nComp`: la «1:N» que da cada una; `tolerancia`: lo admitido. */
-  | { tipo: 'desviacion'; valor: number; tolerancia: number; nCota: number; nComp: number }
+  | { tipo: 'corta'; precision: number }
   | { tipo: 'plausibilidad'; n: number; clase: 'fuera' | 'rara' }
-  /** La cota no cuadra con la escala del plano (cajetín o tecleada): se pide la comprobación. */
-  | { tipo: 'no-cuadra-plano'; nCota: number; declarada: number };
+  /** La cota no cuadra con la escala del plano: el usuario elige con cuál sigue. */
+  | { tipo: 'no-cuadra-plano'; nCota: number; declarada: number; valor: number };
 
 export type EstadoCiclo =
   /** `sustituye`: «Volver a medir» armado; el primer clic empieza la forma nueva. */
@@ -88,17 +109,13 @@ export type EstadoCiclo =
   | { fase: 'creada'; armada: Herramienta; lineId: string }
   | {
       fase: 'calibrando';
-      paso: 'cota' | 'comprobacion';
       /** Herramienta que vuelve a quedar armada al terminar. */
       armada: Armada;
+      /** Opcional si se sabe la escala del plano. */
       cota: TramoCota;
-      comprobacion: TramoCota;
       aviso: AvisoCalibrar | null;
       /** El usuario confirmó una escala poco plausible («Sí, es correcta»). */
       plausibleOk: boolean;
-      /** [A1] Solo añadir la comprobación a una escala «sin comprobar»: la
-       *  cota es la de la escala y se compara con su `mPorUnidad`. */
-      soloComprobar?: { mPorUnidad: number };
     };
 
 /** Una forma a medio dibujar o sin nombrar: lo que guarda un borrador. */
@@ -127,33 +144,32 @@ export type EventoCiclo =
   | { tipo: 'stale' }
   | { tipo: 'volverAMedir'; lineId: string; herramienta: Herramienta }
   | { tipo: 'calibrar' }
-  /** [A1] «Comprobar» una escala sin comprobación: empieza en el paso 2. */
-  | { tipo: 'comprobar'; mPorUnidad: number; ref: { a: Punto; b: Punto; metros: number } }
-  | { tipo: 'metros'; cual: 'cota' | 'comprobacion'; texto: string }
+  | { tipo: 'metros'; texto: string }
   | { tipo: 'moverPunto'; cual: 'a' | 'b'; p: Punto; px?: number }
   /** Arrastrar un vértice antes de confirmar la forma (DIBUJANDO). */
   | { tipo: 'moverVertice'; i: number; p: Punto }
-  /** `cajetin`: la N de «1:N» del plano: la que declara el texto de la página
-   *  (A1) o la que teclea el usuario. Con ella basta una cota. */
-  | { tipo: 'confirmar'; px: number; userUnit: number; cajetin?: number | null }
+  /** `declarada`: la N de «1:N» del plano (la del cajetín o la tecleada). Con
+   *  ella no hace falta cota; con las dos, la cota la confirma. */
+  | { tipo: 'confirmar'; px: number; userUnit: number; declarada?: number | null }
+  /** Quita la cota marcada (y su aviso). */
   | { tipo: 'rehacerCota' }
-  | { tipo: 'rehacerComprobacion' }
-  | { tipo: 'esCorrecta'; px: number; userUnit: number; cajetin?: number | null };
+  | { tipo: 'esCorrecta'; px: number; userUnit: number; declarada?: number | null }
+  /** La cota y la escala del plano no cuadran: seguir con una de las dos. */
+  | { tipo: 'usar'; cual: 'cota' | 'plano'; px: number; userUnit: number; declarada?: number | null };
 
-/** Lo que resulta de una calibración completa: el visor le pone `rev` y `at`. */
+/** Lo que resulta de una calibración: el visor le pone `rev` y `at`. */
 export interface Calibrada {
   mPorUnidad: number;
   n: number;
-  ref: { a: Punto; b: Punto; metros: number };
-  comprobacion:
-    | { fuente: 'cota'; a: Punto; b: Punto; metros: number; medidos: number; desviacion: number }
-    /** [A1] T9: el cajetín cuadra a menos del 1 % y hace de comprobación. */
-    | { fuente: 'cajetin'; escalaDeclarada: number; desviacion: number };
-  /** [A1] La N de «1:N» del cajetín, si la página declara una. */
+  /** Sin cota si se usó la escala del plano tal cual. */
+  ref?: { a: Punto; b: Punto; metros: number };
+  /** [A1] T9: la cota cuadra con la escala del plano y hace de comprobación. */
+  comprobacion?: { fuente: 'cajetin'; escalaDeclarada: number; desviacion: number };
+  /** La N de «1:N» del plano con que queda la página. */
   escalaDeclarada?: number;
-  /** [A1] `mPorUnidad` llevada a la declarada exacta (cuadraba dentro de la precisión). */
+  /** [A1] `mPorUnidad` llevada a la declarada exacta (la cota cuadraba dentro de su precisión). */
   ajustada?: boolean;
-  /** La «1:N» que daban las cotas cuando se ajustó a una escala exacta. */
+  /** La «1:N» que daba la cota cuando se ajustó a una escala habitual. */
   nMedida?: number;
 }
 
@@ -173,9 +189,7 @@ export type EfectoCiclo =
   | { tipo: 'borrador'; que: Contexto; forma: FormaEnCurso }
   /** «Volver a medir» que no llegó a sustituir: la forma vieja vuelve a verse. */
   | { tipo: 'restaurar'; lineId: string }
-  | { tipo: 'calibrada'; datos: Calibrada }
-  /** [A1] La comprobación de una escala que no la tenía (misma escala y `rev`). */
-  | { tipo: 'comprobada'; comprobacion: Extract<Calibrada['comprobacion'], { fuente: 'cota' }> };
+  | { tipo: 'calibrada'; datos: Calibrada };
 
 export interface Paso {
   estado: EstadoCiclo;
@@ -248,9 +262,11 @@ function metrosDe(t: TramoCota): number | null {
   return v !== null && Number.isFinite(v) && v > 0 ? v : null;
 }
 
-function clicCalibrando(e: Extract<EstadoCiclo, { fase: 'calibrando' }>, ev: Extract<EventoCiclo, { tipo: 'clic' }>): Paso {
+type Calibrando = Extract<EstadoCiclo, { fase: 'calibrando' }>;
+
+function clicCalibrando(e: Calibrando, ev: Extract<EventoCiclo, { tipo: 'clic' }>): Paso {
   if ((ev.detalle ?? 1) >= 2) return quieto(e);
-  const t = e[e.paso];
+  const t = e.cota;
   let nuevo: TramoCota;
   if (!t.a || t.b) nuevo = { metros: t.metros, a: ev.p, b: null, pxA: ev.px }; // primer clic (o empezar de nuevo)
   else {
@@ -258,124 +274,68 @@ function clicCalibrando(e: Extract<EstadoCiclo, { fase: 'calibrando' }>, ev: Ext
     if (demasiadoCerca(t.a, p, ev.px)) return quieto(e);
     nuevo = { ...t, b: p, pxB: ev.px };
   }
-  return quieto({ ...e, [e.paso]: nuevo, aviso: null } as typeof e);
+  return quieto({ ...e, cota: nuevo, aviso: null });
 }
 
-function confirmarCalibracion(
-  e: Extract<EstadoCiclo, { fase: 'calibrando' }>,
-  px: number,
-  userUnit: number,
-  cajetin: number | null = null,
-): Paso {
+const calibrada = (e: Calibrando, datos: Calibrada): Paso => ({
+  estado: reposo(e.armada),
+  efectos: [{ tipo: 'calibrada', datos }],
+});
+
+const redondear6 = (v: number) => Math.round(v * 1e6) / 1e6;
+
+/** La página a la escala del plano, sin cota: el tamaño del papel sale del PDF. */
+const aEscalaDelPlano = (e: Calibrando, declarada: number, userUnit: number): Paso =>
+  calibrada(e, { mPorUnidad: mPorUnidadDeEscala(declarada, userUnit), n: declarada, escalaDeclarada: declarada });
+
+/**
+ * Un solo paso (§2): con la escala del plano basta; con una cota, la cota da
+ * la escala (ajustada a la habitual que cae dentro de su precisión); con las
+ * dos, si cuadran queda la del plano exacta y, si no, el usuario elige.
+ */
+function confirmarCalibracion(e: Calibrando, px: number, userUnit: number, declarada: number | null = null): Paso {
   const conAviso = (aviso: AvisoCalibrar): Paso => quieto({ ...e, aviso });
   const cota = e.cota;
-  const declarada = cajetin && cajetin > 0 ? { escalaDeclarada: cajetin } : {};
-  const redondear6 = (v: number) => Math.round(v * 1e6) / 1e6;
-  if (e.paso === 'cota') {
-    if (!cota.a || !cota.b) return conAviso({ tipo: 'faltan-puntos' });
-    const metros = metrosDe(cota);
-    if (metros === null) return conAviso({ tipo: 'metros' });
-    const prec = precisionDe(cota, px)!;
-    if (!(prec <= DESVIACION_TOPE)) return conAviso({ tipo: 'corta', cual: 'cota', precision: prec });
-    // [A1] T9: si el plano tiene escala (la del cajetín o la tecleada) y la
-    // cota cuadra con ella dentro de su precisión, la cota hace de control y
-    // la escala se ajusta a la exacta (se quita el error del clic). Si no
-    // cuadra (un A1 exportado a A3…), la cota manda y se pide la comprobación.
-    if (cajetin && cajetin > 0 && !e.soloComprobar) {
-      const nCal = escalaN(mPorUnidadDeCota(cota.a, cota.b, metros), userUnit);
-      const desv = Math.abs(nCal - cajetin) / cajetin;
-      if (!(desv <= toleranciaComprobacion(prec, 0)))
-        return quieto({ ...e, paso: 'comprobacion', aviso: { tipo: 'no-cuadra-plano', nCota: nCal, declarada: cajetin } });
-      return {
-        estado: reposo(e.armada),
-        efectos: [
-          {
-            tipo: 'calibrada',
-            datos: {
-              mPorUnidad: mPorUnidadDeEscala(cajetin, userUnit),
-              n: cajetin,
-              ref: { a: cota.a, b: cota.b, metros },
-              comprobacion: { fuente: 'cajetin', escalaDeclarada: cajetin, desviacion: redondear6(desv) },
-              escalaDeclarada: cajetin,
-              ajustada: true,
-            },
-          },
-        ],
-      };
-    }
-    return quieto({ ...e, paso: 'comprobacion', aviso: null });
+  const dec = declarada && declarada > 0 ? declarada : null;
+  if (!cota.a && !cota.b) return dec ? aEscalaDelPlano(e, dec, userUnit) : conAviso({ tipo: 'nada' });
+  if (!cota.a || !cota.b) return conAviso({ tipo: 'faltan-puntos' });
+  const l = leerCota(cota, px, userUnit, dec);
+  if (!l) return conAviso({ tipo: 'metros' });
+  if (!(l.precision <= DESVIACION_TOPE)) return conAviso({ tipo: 'corta', precision: l.precision });
+  const ref = { a: cota.a, b: cota.b, metros: l.metros };
+  if (dec) {
+    // [A1] T9: la cota cuadra con la escala del plano dentro de su precisión:
+    // hace de comprobación y la escala queda la exacta (sin el error del clic).
+    if (!l.cuadra) return conAviso({ tipo: 'no-cuadra-plano', nCota: l.n, declarada: dec, valor: l.desviacion! });
+    return calibrada(e, {
+      mPorUnidad: mPorUnidadDeEscala(dec, userUnit),
+      n: dec,
+      ref,
+      comprobacion: { fuente: 'cajetin', escalaDeclarada: dec, desviacion: redondear6(l.desviacion!) },
+      escalaDeclarada: dec,
+      ajustada: true,
+    });
   }
-  const comp = e.comprobacion;
-  if (!comp.a || !comp.b) return conAviso({ tipo: 'faltan-puntos' });
-  const metrosComp = metrosDe(comp);
-  if (metrosComp === null) return conAviso({ tipo: 'metros' });
-  const precComp = precisionDe(comp, px)!;
-  if (!(precComp <= DESVIACION_TOPE)) return conAviso({ tipo: 'corta', cual: 'comprobacion', precision: precComp });
-  const dComp = dist(comp.a, comp.b);
-  const nComp = escalaN(metrosComp / dComp, userUnit);
-  if (e.soloComprobar) {
-    // La escala guardada es la referencia: solo cuenta la precisión de la comprobación.
-    const medidos = dComp * e.soloComprobar.mPorUnidad;
-    const desv = desviacion(medidos, metrosComp);
-    const tol = toleranciaComprobacion(0, precComp);
-    if (!(desv <= tol))
-      return conAviso({ tipo: 'desviacion', valor: desv, tolerancia: tol, nCota: escalaN(e.soloComprobar.mPorUnidad, userUnit), nComp });
-    return {
-      estado: reposo(e.armada),
-      efectos: [
-        {
-          tipo: 'comprobada',
-          comprobacion: { fuente: 'cota', a: comp.a, b: comp.b, metros: metrosComp, medidos: redondear6(medidos), desviacion: redondear6(desv) },
-        },
-      ],
-    };
-  }
-  const metrosCota = metrosDe(cota);
-  if (!cota.a || !cota.b || metrosCota === null) return quieto({ ...e, paso: 'cota', aviso: { tipo: 'faltan-puntos' } });
-  const precCota = precisionDe(cota, px)!;
-  const dCota = dist(cota.a, cota.b);
-  // La desviación admitida crece con la imprecisión de las dos cotas: dos
-  // cotas cortas bien marcadas no pueden cuadrar al 1 %.
-  const tol = toleranciaComprobacion(precCota, precComp);
-  const desvCruzada = desviacion(dComp * mPorUnidadDeCota(cota.a, cota.b, metrosCota), metrosComp);
-  if (!(desvCruzada <= tol))
-    return conAviso({ tipo: 'desviacion', valor: desvCruzada, tolerancia: tol, nCota: escalaN(metrosCota / dCota, userUnit), nComp });
-  // Cuadran: la escala sale de las dos a la vez (más precisa que cualquiera)
-  // y, si una escala habitual (o la del cajetín) cae dentro de su precisión,
-  // se ajusta a ella exacta.
-  const mMedida = (metrosCota + metrosComp) / (dCota + dComp);
-  const prec = Math.hypot(precCota * dCota, precComp * dComp) / (dCota + dComp);
-  const nMedida = escalaN(mMedida, userUnit);
-  const exacta = escalaParaAjustar(nMedida, prec, cajetin);
-  const m = exacta ? mPorUnidadDeEscala(exacta, userUnit) : mMedida;
-  const n = exacta ?? nMedida;
+  // Solo la cota: si una escala habitual cae dentro de su precisión, se ajusta a ella.
+  const exacta = escalaParaAjustar(l.n, l.precision);
+  const n = exacta ?? l.n;
   const clase = plausibilidad(n);
   if (clase !== 'ok' && !e.plausibleOk) return conAviso({ tipo: 'plausibilidad', n, clase });
-  const medidos = dComp * m;
-  return {
-    estado: reposo(e.armada),
-    efectos: [
-      {
-        tipo: 'calibrada',
-        datos: {
-          mPorUnidad: m,
-          n,
-          ref: { a: cota.a, b: cota.b, metros: metrosCota },
-          comprobacion: {
-            fuente: 'cota',
-            a: comp.a,
-            b: comp.b,
-            metros: metrosComp,
-            medidos: redondear6(medidos),
-            desviacion: redondear6(desviacion(medidos, metrosComp)),
-          },
-          ...declarada,
-          ...(exacta && exacta === cajetin ? { ajustada: true } : {}),
-          ...(exacta && exacta !== nMedida ? { nMedida } : {}),
-        },
-      },
-    ],
-  };
+  return calibrada(e, {
+    mPorUnidad: exacta ? mPorUnidadDeEscala(exacta, userUnit) : l.mPorUnidad,
+    n,
+    ref,
+    ...(exacta && exacta !== l.n ? { nMedida: l.n } : {}),
+  });
+}
+
+/** «Usar la cota» o «Usar la escala del plano» cuando no cuadran: lo decide el usuario. */
+function usar(e: Calibrando, cual: 'cota' | 'plano', px: number, userUnit: number, declarada: number | null): Paso {
+  const dec = declarada && declarada > 0 ? declarada : null;
+  if (cual === 'plano') return dec ? aEscalaDelPlano(e, dec, userUnit) : quieto(e);
+  const l = leerCota(e.cota, px, userUnit, null);
+  if (!l || !e.cota.a || !e.cota.b) return quieto(e);
+  return calibrada(e, { mPorUnidad: l.mPorUnidad, n: l.n, ref: { a: e.cota.a, b: e.cota.b, metros: l.metros } });
 }
 
 /* ---- el reductor ---------------------------------------------------------------- */
@@ -408,26 +368,6 @@ export function cicloReducer(e: EstadoCiclo, ev: EventoCiclo): Paso {
     const previo = aMedio(e) || (e.fase === 'reposo' && e.sustituye) ? salir(e as { sustituye: string | null; armada: Armada }).efectos : [];
     return { estado: reposo(ev.herramienta, ev.lineId), efectos: previo };
   }
-  if (ev.tipo === 'comprobar') {
-    const previo = aMedio(e)
-      ? salir(e, [{ tipo: 'descartada', que: 'herramienta' }]).efectos
-      : e.fase === 'reposo' && e.sustituye
-        ? salir(e).efectos
-        : [];
-    return {
-      estado: {
-        fase: 'calibrando',
-        paso: 'comprobacion',
-        armada: e.armada,
-        cota: { a: ev.ref.a, b: ev.ref.b, metros: cifra(ev.ref.metros) },
-        comprobacion: { ...TRAMO_VACIO },
-        aviso: null,
-        plausibleOk: false,
-        soloComprobar: { mPorUnidad: ev.mPorUnidad },
-      },
-      efectos: previo,
-    };
-  }
   if (ev.tipo === 'calibrar') {
     const previo = aMedio(e)
       ? salir(e, [{ tipo: 'descartada', que: 'herramienta' }]).efectos
@@ -437,10 +377,8 @@ export function cicloReducer(e: EstadoCiclo, ev: EventoCiclo): Paso {
     return {
       estado: {
         fase: 'calibrando',
-        paso: 'cota',
         armada: e.armada,
         cota: { ...TRAMO_VACIO },
-        comprobacion: { ...TRAMO_VACIO },
         aviso: null,
         plausibleOk: false,
       },
@@ -534,27 +472,23 @@ export function cicloReducer(e: EstadoCiclo, ev: EventoCiclo): Paso {
         case 'clic':
           return clicCalibrando(e, ev);
         case 'moverPunto': {
-          const t = e[e.paso];
+          const t = e.cota;
           if (!t[ev.cual]) return quieto(e);
           const zoom = ev.px ? { [ev.cual === 'a' ? 'pxA' : 'pxB']: ev.px } : {};
-          return quieto({ ...e, [e.paso]: { ...t, [ev.cual]: ev.p, ...zoom }, aviso: null } as typeof e);
+          return quieto({ ...e, cota: { ...t, [ev.cual]: ev.p, ...zoom }, aviso: null });
         }
         case 'metros':
-          return quieto({ ...e, [ev.cual]: { ...e[ev.cual], metros: ev.texto }, aviso: null } as typeof e);
+          return quieto({ ...e, cota: { ...e.cota, metros: ev.texto }, aviso: null });
         case 'confirmar':
-          return confirmarCalibracion(e, ev.px, ev.userUnit, ev.cajetin ?? null);
+          return confirmarCalibracion(e, ev.px, ev.userUnit, ev.declarada ?? null);
         case 'enter':
           return quieto(e); // Enter lo traduce el visor a «confirmar» con px y userUnit
         case 'esCorrecta':
-          return confirmarCalibracion({ ...e, plausibleOk: true }, ev.px, ev.userUnit, ev.cajetin ?? null);
-        case 'rehacerCota': {
-          // Rehacer la cota de una escala sin comprobar es calibrar de nuevo.
-          const { soloComprobar: _sc, ...resto } = e;
-          void _sc;
-          return quieto({ ...resto, paso: 'cota', cota: { ...TRAMO_VACIO }, aviso: null, plausibleOk: false });
-        }
-        case 'rehacerComprobacion':
-          return quieto({ ...e, paso: 'comprobacion', comprobacion: { ...TRAMO_VACIO }, aviso: null, plausibleOk: false });
+          return confirmarCalibracion({ ...e, plausibleOk: true }, ev.px, ev.userUnit, ev.declarada ?? null);
+        case 'usar':
+          return usar(e, ev.cual, ev.px, ev.userUnit, ev.declarada ?? null);
+        case 'rehacerCota':
+          return quieto({ ...e, cota: { ...TRAMO_VACIO }, aviso: null, plausibleOk: false });
         case 'esc':
           return quieto(reposo(e.armada));
         default:

@@ -414,14 +414,10 @@
   stroke-dasharray: 6 4;
 }
 .cota path,
-.comprobacion path,
 .cotaTrazo {
   stroke: var(--capa-accent);
   stroke-width: 2;
   fill: none;
-}
-.comprobacion path {
-  stroke-dasharray: 5 3;
 }
 .cotaPunto {
   fill: #fff;
@@ -847,23 +843,6 @@
   gap: var(--sp-6);
   width: 100%;
 }
-.pasos {
-  display: flex;
-  gap: var(--sp-6);
-  font-size: var(--fs-caption);
-  /* Los pasos que vienen son información, no controles apagados: contraste AA. */
-  color: var(--text-secondary);
-}
-.pasoOn {
-  color: var(--accent);
-  font-weight: 600;
-}
-.pasoHecho {
-  color: var(--text-secondary);
-}
-.precision {
-  color: var(--text-secondary);
-}
 .avisoCalibrar {
   display: flex;
   align-items: center;
@@ -1067,6 +1046,10 @@
   flex-direction: column;
   gap: var(--sp-8);
 }
+/* «Marcar todas» en «Usar 1:50 en otras páginas»: a su tamaño, no a lo ancho. */
+.marcarTodas {
+  align-self: flex-start;
+}
 .recalculo p {
   margin: 0;
 }
@@ -1098,27 +1081,6 @@
   background: color-mix(in srgb, var(--state-warn) 12%, transparent);
 }
 
-/* ---- escala del cajetín (A1) --------------------------------------------------- */
-.popoverAjuste {
-  position: absolute;
-  top: var(--sp-8);
-  right: var(--sp-8);
-  z-index: 6;
-  max-width: 340px;
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-6);
-  padding: 10px 12px;
-  border: 1px solid var(--border-main);
-  border-radius: 8px;
-  background: var(--bg-elevated);
-  color: var(--text-primary);
-  box-shadow: var(--shadow-float);
-  font-size: var(--fs-table);
-}
-.popoverAjuste p {
-  margin: 0;
-}
 .popoverAcciones {
   display: flex;
   flex-wrap: wrap;

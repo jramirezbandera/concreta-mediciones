@@ -14,16 +14,16 @@ const pct = (f: number) => `${fmtNum(f * 100, 1)} %`;
 
 export function textoAvisoCalibrar(a: AvisoCalibrar): string {
   switch (a.tipo) {
+    case 'nada':
+      return 'Escribe la escala del plano o marca una cota conocida.';
     case 'faltan-puntos':
       return 'Marca los dos extremos de la cota.';
     case 'metros':
-      return 'Escribe la distancia real en metros.';
+      return 'Escribe la distancia real de la cota en metros.';
     case 'corta':
-      return `${a.cual === 'cota' ? 'La cota es demasiado corta' : 'La comprobación es demasiado corta'} a este zoom (precisión ±${pct(a.precision)}): acerca el zoom y vuelve a marcar sus extremos, o elige una más larga.`;
-    case 'desviacion':
-      return `La cota da ${textoEscala(a.nCota)} y la comprobación ${textoEscala(a.nComp)}: difieren un ${pct(a.valor)} y, con la precisión de los clics, se admite ±${pct(a.tolerancia)}. Revisa la cifra o los extremos de una de las dos.`;
+      return `La cota es demasiado corta a este zoom (precisión ±${pct(a.precision)}): acerca el zoom y vuelve a marcar sus extremos, o elige una más larga.`;
     case 'no-cuadra-plano':
-      return `La cota da ${textoEscala(a.nCota)} y la escala del plano es ${textoEscala(a.declarada)}: ¿el PDF está a otro tamaño (p. ej. un A1 exportado a A3)? Comprueba la escala con otra cota o rehaz la cota y corrige la escala.`;
+      return `La cota da ${textoEscala(a.nCota)} y el plano dice ${textoEscala(a.declarada)} (difieren un ${pct(a.valor)}). Si el PDF se exportó a otro tamaño de papel, vale la cota; si la cota está mal marcada, vale el plano.`;
     case 'plausibilidad':
       return a.clase === 'fuera'
         ? `${textoEscala(a.n)} no parece la escala de un plano: ¿la cota está en metros?`
@@ -56,10 +56,7 @@ export const TEXTO_DESCARTE_BORRADOR = {
 } as const;
 
 /** [A1] El aviso de «Usar este PDF para este plano» (§9.3). */
-export function textoReenlazado(lineas: number, calibradas: number): string {
+export function textoReenlazado(lineas: number): string {
   const l = lineas ? `: ${lineas} ${lineas === 1 ? 'línea conserva' : 'líneas conservan'} sus números` : '';
-  const c = calibradas
-    ? ` Comprueba ${calibradas === 1 ? 'la escala de su página calibrada' : `la escala de sus ${calibradas} páginas calibradas`} con otra cota antes de medir.`
-    : '';
-  return `Plano reenlazado${l}.${c}`;
+  return `Plano reenlazado${l}.`;
 }

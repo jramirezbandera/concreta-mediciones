@@ -47,36 +47,24 @@ const total = (m: Map<number, number> | undefined) => [...(m?.values() ?? [])].r
 const mb = (bytes: number) => `${fmtNum(bytes / 1048576, 1)} MB`;
 const medidasTexto = (n: number) => `${n} ${n === 1 ? 'medida' : 'medidas'}`;
 
-/** Chip de escala (§5.2): «Sin calibrar» o «1:50 · ±0,3 %». */
+/** Chip de escala (§5.2): «Sin calibrar» o «1:50». Solo informa: la escala se cambia calibrando. */
 function ChipEscala({ plano, pagina }: { plano: PlanoMeta; pagina: number }) {
   const e = escalaDe(plano, pagina);
   if (!e) return <span className={`${styles.chip} ${styles.chipNeutro}`}>Sin calibrar</span>;
-  if (!e.comprobacion)
+  // [A1] Una calibración antigua que no cuadra con la escala del plano.
+  const noCuadra = !!e.escalaDeclarada && !e.ajustada && desviacionCajetin(e.n, e.escalaDeclarada) > DESVIACION_MAX;
+  if (noCuadra)
     return (
-      <span className={`mono ${styles.chip} ${styles.chipAviso}`} title="Comprueba la escala con otra cota antes de medir">
-        {textoEscala(e.n)} · sin comprobar
+      <span className={`mono ${styles.chip} ${styles.chipAviso}`} title={`El plano dice ${textoEscala(e.escalaDeclarada!)}`}>
+        {textoEscala(e.n)} · no cuadra con el plano
       </span>
     );
-  // [A1] Con escala en el cajetín, el chip abre la comparación (lo pinta el visor).
-  if (e.escalaDeclarada) {
-    const noCuadra = !e.ajustada && desviacionCajetin(e.n, e.escalaDeclarada) > DESVIACION_MAX;
-    return (
-      <button
-        type="button"
-        className={`mono ${styles.chip} ${noCuadra ? styles.chipAviso : styles.chipAccent}`}
-        title={`El plano dice ${textoEscala(e.escalaDeclarada)}`}
-        onClick={() => usePlanoUiStore.getState().pedirAlVisor('ajuste')}
-      >
-        {textoEscala(e.n)}
-        {e.ajustada ? ' ajustada' : noCuadra ? ' · no cuadra con el cajetín' : ` · ±${fmtNum(e.comprobacion.desviacion * 100, 1)} %`}
-      </button>
-    );
-  }
-  const d = e.comprobacion.desviacion;
   return (
-    <span className={`mono ${styles.chip} ${styles.chipAccent}`} title="Escala calibrada y comprobada">
+    <span
+      className={`mono ${styles.chip} ${styles.chipAccent}`}
+      title={e.ref ? 'Escala calibrada con una cota' : 'A la escala del plano sobre el papel del PDF'}
+    >
       {textoEscala(e.n)}
-      {d !== undefined && ` · ±${fmtNum(d * 100, 1)} %`}
     </span>
   );
 }
@@ -298,7 +286,7 @@ export function PlanosPanel({
                   <button type="button" role="menuitem" className={styles.menuItem} disabled={readonly} onClick={() => (setMenu(null), setDialogo('etiquetas'))}>
                     <Icon name="list" size={14} /> Etiquetas de página
                   </button>
-                  {escalaDe(plano, pagina)?.escalaDeclarada && (
+                  {escalaDe(plano, pagina) && (
                     <button
                       type="button"
                       role="menuitem"
@@ -306,7 +294,7 @@ export function PlanosPanel({
                       disabled={readonly}
                       onClick={() => (setMenu(null), usePlanoUiStore.getState().pedirAlVisor('copiarEscala'))}
                     >
-                      <Icon name="ruler" size={14} /> Usar esta calibración en otras páginas…
+                      <Icon name="ruler" size={14} /> Usar esta escala en otras páginas…
                     </button>
                   )}
                   <button

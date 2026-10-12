@@ -21,7 +21,7 @@
 import { create, type StateCreator } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import type { Agente, Cert, Comprobacion, Escala, MedForma, MedLine, Partida, PlanoMeta, Rates, ResourceType } from '../core/types';
+import type { Agente, Cert, Escala, MedForma, MedLine, Partida, PlanoMeta, Rates, ResourceType } from '../core/types';
 import { composeCertFirmantes, firmaCertDefinitiva } from '../core/listado';
 import { ancestorIds, findNode } from '../core/tree';
 import { rawUuid } from '../core/id';
@@ -94,7 +94,6 @@ export interface MedResult {
     | 'stale'
     | 'no-plano'
     | 'sin-calibrar'
-    | 'sin-comprobar'
     | 'no-encaja'
     | 'certificada'
     | 'falta-dimension'
@@ -606,8 +605,7 @@ export interface ObraState extends ObraData {
    *  siguiente si no viene); el anterior no se toca (§9.3). Tras guardar los bytes. */
   attachPlanoRevision: (a: { meta: PlanoMeta; sustituye: string; expect: ExpectDoc }) => MedResult;
   /** [A1] «Usar este PDF para este plano»: huella nueva (la anterior a
-   *  `huellasAnteriores`), mismas escalas y líneas; cada página calibrada pierde
-   *  su comprobación y pide otra (§9.3). Tras guardar los bytes. */
+   *  `huellasAnteriores`), mismas escalas y líneas (§9.3). Tras guardar los bytes. */
   relinkPlano: (a: {
     planoId: string;
     huella: string;
@@ -638,30 +636,12 @@ export interface ObraState extends ObraData {
   acceptLineValues: (a: { lineId: string; expect: ExpectLinea }) => MedResult;
   /** [A1] «Desvincular del plano»: quita `origen` y conserva los números. */
   unlinkLineOrigen: (a: { lineId: string; expect: ExpectLinea }) => MedResult;
-  /** [A1] Ajuste al cajetín (`ajustada`) o «Usar la calibrada». `rev` nueva;
-   *  con líneas medidas devuelve `has-lines` (van por `rescalePlanoPage`). */
-  setPlanoScaleAdjusted: (a: {
-    planoId: string;
-    pagina: number;
-    ajustada: boolean;
-    userUnit: number;
-    expect: ExpectDoc & { calRev: string };
-  }) => MedResult;
   /** [A1] «Usar esta calibración en otras páginas»: copia la escala de `desde`
-   *  a `paginas` (sin escala), con `rev` nueva y SIN comprobación: cada página
-   *  pide la suya. UN paso de Deshacer. */
+   *  a `paginas` (sin escala), con `rev` nueva. UN paso de Deshacer. */
   copyPlanoPageScale: (a: {
     planoId: string;
     desde: number;
     paginas: number[];
-    expect: ExpectDoc & { calRev: string };
-  }) => MedResult;
-  /** [A1] Añade la comprobación a una escala «sin comprobar», sin cambiar la
-   *  escala ni su `rev`: las líneas siguen al día. */
-  setPlanoPageCheck: (a: {
-    planoId: string;
-    pagina: number;
-    comprobacion: Comprobacion;
     expect: ExpectDoc & { calRev: string };
   }) => MedResult;
 
