@@ -1,0 +1,743 @@
+{
+ "_nota": "Valores calculados por la propia hoja 20130712RCDs.xlsm (ECO-eficiencia) en Excel, 2026-10-16, con las entradas de cada caso (scratchpad/scripts/eco_golden.ps1). m3 aparentes; t de la hoja PASO3.",
+ "casos": [
+  {
+   "id": "detallado-unifamiliar",
+   "nivel": "detallado",
+   "entrada": {
+    "superficieConstruida": 180,
+    "superficieSolar": 400,
+    "superficieOcupacion": 110,
+    "plantasBajoRasante": 0,
+    "opciones": {
+     "tipologia": "unifamiliarExento",
+     "plantas": "2-3",
+     "cimentacion": "zapatas",
+     "estructuraVertical": "hormigonArmado",
+     "estructuraHorizontal": "unidireccionalBovedillaCeramica",
+     "cubierta": "planaAndaluza",
+     "fachada": "ceramicaRevestida",
+     "pavimento": "baldosaCeramica"
+    },
+    "superficies": {
+     "arquetas": 3,
+     "forjados": 200,
+     "cubiertas": 110,
+     "hojaExterior": 230,
+     "particiones": 320,
+     "pavimentos": 170
+    }
+   },
+   "filas": [
+    {
+     "ler": "15 01 01",
+     "nombre": "Envases de papel y cartón",
+     "m3": 1.962682956280361,
+     "t": 0.13738780693962527
+    },
+    {
+     "ler": "15 01 02",
+     "nombre": "Envases de plástico",
+     "m3": 1.9206,
+     "t": 0.153648
+    },
+    {
+     "ler": "15 01 03",
+     "nombre": "Envases de madera",
+     "m3": 12.481392199861208,
+     "t": 7.488835319916724
+    },
+    {
+     "ler": "15 01 04",
+     "nombre": "Envases metálicos",
+     "m3": 0.8892219569743234,
+     "t": 0.1778443913948647
+    },
+    {
+     "ler": "15 01 06",
+     "nombre": "Envases mezclados",
+     "m3": 0.19206,
+     "t": 0.076824
+    },
+    {
+     "ler": "08 01 12",
+     "nombre": "Pinturas",
+     "m3": 0.00806652,
+     "t": 0.0016133040000000003
+    },
+    {
+     "ler": "10 13 99",
+     "nombre": "Cal",
+     "m3": 0.1340690756419153,
+     "t": 0.08044144538514918
+    },
+    {
+     "ler": "17 01 01",
+     "nombre": "Hormigón",
+     "m3": 2.903177958881888,
+     "t": 4.3547669383228325
+    },
+    {
+     "ler": "17 01 02",
+     "nombre": "Ladrillos",
+     "m3": 1.5113822527689103,
+     "t": 1.3602440274920193
+    },
+    {
+     "ler": "17 01 03",
+     "nombre": "Cerámicos",
+     "m3": 3.9417165216000005,
+     "t": 3.5475448694400007
+    },
+    {
+     "ler": "17 01 07",
+     "nombre": "Mezclas horm, ladr, tejas y cerám.",
+     "m3": 1.49461092,
+     "t": 1.793533104
+    },
+    {
+     "ler": "17 02 01",
+     "nombre": "Madera",
+     "m3": 0.21664368000000003,
+     "t": 0.075825288
+    },
+    {
+     "ler": "17 02 02",
+     "nombre": "Vidrio",
+     "m3": 0.00806652,
+     "t": 0.0032266080000000006
+    },
+    {
+     "ler": "17 02 03",
+     "nombre": "Plásticos",
+     "m3": 0.006914160000000002,
+     "t": 0.0005531328000000002
+    },
+    {
+     "ler": "17 03 02",
+     "nombre": "Mezclas bituminosas",
+     "m3": 0.00921888,
+     "t": 0.007375104
+    },
+    {
+     "ler": "17 04 01",
+     "nombre": "Cobre",
+     "m3": 0.00230472,
+     "t": 0.0063840744
+    },
+    {
+     "ler": "17 04 02",
+     "nombre": "Aluminio",
+     "m3": 0.00230472,
+     "t": 0.004148496000000001
+    },
+    {
+     "ler": "17 04 05",
+     "nombre": "Hierro y Acero",
+     "m3": 0.006914160000000002,
+     "t": 0.037336464000000014
+    },
+    {
+     "ler": "17 04 11",
+     "nombre": "Cables",
+     "m3": 0.00230472,
+     "t": 0.0063840744
+    },
+    {
+     "ler": "17 06 04",
+     "nombre": "Materiales de aislamiento",
+     "m3": 0.14634972000000002,
+     "t": 0.0036587430000000008
+    },
+    {
+     "ler": "17 08 02",
+     "nombre": "Derivados del Yeso",
+     "m3": 0.25697628,
+     "t": 0.14133695400000001
+    },
+    {
+     "ler": "17 09 04",
+     "nombre": "Residuos mezclados",
+     "m3": 0.5934654,
+     "t": 0.5934654
+    },
+    {
+     "ler": "17 05 04",
+     "nombre": "Tierras de la limpieza y desbroce",
+     "m3": 80,
+     "t": 64
+    },
+    {
+     "ler": "17 05 04",
+     "nombre": "Tierras de la excavación",
+     "m3": 83.13397640527411,
+     "t": 149.6411575294934
+    },
+    {
+     "ler": "17 05 04",
+     "nombre": "Áridos",
+     "m3": 0.5230180232338654,
+     "t": 0.9414324418209576
+    },
+    {
+     "ler": "17 05 04",
+     "nombre": "Piedras naturales",
+     "m3": 0.01843776,
+     "t": 0.033187968000000005
+    },
+    {
+     "ler": "17 05 04",
+     "nombre": "Albero",
+     "m3": 0.013828320000000003,
+     "t": 0.024890976000000006
+    }
+   ]
+  },
+  {
+   "id": "detallado-plurifamiliar",
+   "nivel": "detallado",
+   "entrada": {
+    "superficieConstruida": 1200,
+    "superficieSolar": 500,
+    "superficieOcupacion": 300,
+    "plantasBajoRasante": 1,
+    "opciones": {
+     "tipologia": "plurifamiliarEntreMedianeras",
+     "plantas": "4-5",
+     "cimentacion": "losa",
+     "estructuraVertical": "acero",
+     "estructuraHorizontal": "reticular",
+     "cubierta": "inclinadaTeja",
+     "fachada": "bloqueRevestido",
+     "pavimento": "baldosaCeramica"
+    },
+    "superficies": {
+     "arquetas": 0,
+     "forjados": 0,
+     "cubiertas": 0,
+     "hojaExterior": 0,
+     "particiones": 0,
+     "pavimentos": 0
+    }
+   },
+   "filas": [
+    {
+     "ler": "15 01 01",
+     "nombre": "Envases de papel y cartón",
+     "m3": 10.259999999999998,
+     "t": 0.7182
+    },
+    {
+     "ler": "15 01 02",
+     "nombre": "Envases de plástico",
+     "m3": 10.1574,
+     "t": 0.8125920000000001
+    },
+    {
+     "ler": "15 01 03",
+     "nombre": "Envases de madera",
+     "m3": 56.88144,
+     "t": 34.128864
+    },
+    {
+     "ler": "15 01 04",
+     "nombre": "Envases metálicos",
+     "m3": 4.56,
+     "t": 0.9119999999999999
+    },
+    {
+     "ler": "15 01 06",
+     "nombre": "Envases mezclados",
+     "m3": 1.14,
+     "t": 0.45599999999999996
+    },
+    {
+     "ler": "08 01 12",
+     "nombre": "Pinturas",
+     "m3": 0.04788,
+     "t": 0.009576000000000001
+    },
+    {
+     "ler": "10 13 99",
+     "nombre": "Cal",
+     "m3": 0.34199999999999997,
+     "t": 0.20519999999999997
+    },
+    {
+     "ler": "17 01 01",
+     "nombre": "Hormigón",
+     "m3": 20.221023271680004,
+     "t": 30.331534907520005
+    },
+    {
+     "ler": "17 01 02",
+     "nombre": "Ladrillos",
+     "m3": 4.3962048,
+     "t": 3.9565843199999997
+    },
+    {
+     "ler": "17 01 03",
+     "nombre": "Cerámicos",
+     "m3": 17.997408,
+     "t": 16.1976672
+    },
+    {
+     "ler": "17 01 07",
+     "nombre": "Mezclas horm, ladr, tejas y cerám.",
+     "m3": 5.5890324,
+     "t": 6.706838879999999
+    },
+    {
+     "ler": "17 02 01",
+     "nombre": "Madera",
+     "m3": 1.2859200000000002,
+     "t": 0.450072
+    },
+    {
+     "ler": "17 02 02",
+     "nombre": "Vidrio",
+     "m3": 0.04788,
+     "t": 0.019152000000000002
+    },
+    {
+     "ler": "17 02 03",
+     "nombre": "Plásticos",
+     "m3": 0.04104,
+     "t": 0.0032832
+    },
+    {
+     "ler": "17 03 02",
+     "nombre": "Mezclas bituminosas",
+     "m3": 0.05472,
+     "t": 0.043776
+    },
+    {
+     "ler": "17 04 01",
+     "nombre": "Cobre",
+     "m3": 0.01368,
+     "t": 0.0378936
+    },
+    {
+     "ler": "17 04 02",
+     "nombre": "Aluminio",
+     "m3": 0.01368,
+     "t": 0.024624
+    },
+    {
+     "ler": "17 04 05",
+     "nombre": "Hierro y Acero",
+     "m3": 0.05417280000000001,
+     "t": 0.29253312000000004
+    },
+    {
+     "ler": "17 04 11",
+     "nombre": "Cables",
+     "m3": 0.01368,
+     "t": 0.0378936
+    },
+    {
+     "ler": "17 06 04",
+     "nombre": "Materiales de aislamiento",
+     "m3": 0.955548,
+     "t": 0.0238887
+    },
+    {
+     "ler": "17 08 02",
+     "nombre": "Derivados del Yeso",
+     "m3": 1.5253199999999998,
+     "t": 0.838926
+    },
+    {
+     "ler": "17 09 04",
+     "nombre": "Residuos mezclados",
+     "m3": 3.5225999999999997,
+     "t": 3.5225999999999997
+    },
+    {
+     "ler": "17 05 04",
+     "nombre": "Tierras de la limpieza y desbroce",
+     "m3": 100,
+     "t": 80
+    },
+    {
+     "ler": "17 05 04",
+     "nombre": "Tierras de la excavación",
+     "m3": 175.5,
+     "t": 315.90000000000003
+    },
+    {
+     "ler": "17 05 04",
+     "nombre": "Tierras vaciado sotano",
+     "m3": 900,
+     "t": 1620
+    },
+    {
+     "ler": "17 05 04",
+     "nombre": "Áridos",
+     "m3": 3.182652,
+     "t": 5.7287736
+    },
+    {
+     "ler": "17 05 04",
+     "nombre": "Piedras naturales",
+     "m3": 0.10944,
+     "t": 0.196992
+    },
+    {
+     "ler": "17 05 04",
+     "nombre": "Albero",
+     "m3": 0.08208,
+     "t": 0.14774400000000001
+    }
+   ]
+  },
+  {
+   "id": "basico-nueva-no-residencial",
+   "nivel": "basico",
+   "entrada": {
+    "tipo": "nuevaNoResidencial",
+    "superficie": 500,
+    "plantas": "2-4",
+    "estructuraHormigon": true
+   },
+   "filas": [
+    {
+     "ler": "15 01 01",
+     "nombre": "Envases de papel y cartón",
+     "m3": 1.6199999999999999,
+     "t": 0.1134
+    },
+    {
+     "ler": "15 01 02",
+     "nombre": "Envases de plástico",
+     "m3": 3.2399999999999998,
+     "t": 0.2592
+    },
+    {
+     "ler": "15 01 03",
+     "nombre": "Envases de madera",
+     "m3": 23.220000000000002,
+     "t": 13.932
+    },
+    {
+     "ler": "15 01 04",
+     "nombre": "Envases metálicos",
+     "m3": 1.08,
+     "t": 0.21600000000000003
+    },
+    {
+     "ler": "15 01 06",
+     "nombre": "Envases mezclados",
+     "m3": 0.54,
+     "t": 0.21600000000000003
+    },
+    {
+     "ler": "08 01 12",
+     "nombre": "Pinturas",
+     "m3": 0.06300000000000001,
+     "t": 0.012600000000000004
+    },
+    {
+     "ler": "10 13 99",
+     "nombre": "Cal",
+     "m3": 0.18900000000000003,
+     "t": 0.11340000000000001
+    },
+    {
+     "ler": "17 01 01",
+     "nombre": "Hormigón",
+     "m3": 9.18,
+     "t": 13.77
+    },
+    {
+     "ler": "17 01 02",
+     "nombre": "Ladrillos",
+     "m3": 2.16,
+     "t": 1.9440000000000002
+    },
+    {
+     "ler": "17 01 03",
+     "nombre": "Cerámicos",
+     "m3": 4.32,
+     "t": 3.8880000000000003
+    },
+    {
+     "ler": "17 01 07",
+     "nombre": "Mezclas horm, ladr, tejas y cerám.",
+     "m3": 1.08,
+     "t": 1.296
+    },
+    {
+     "ler": "17 02 01",
+     "nombre": "Madera",
+     "m3": 2.7,
+     "t": 0.945
+    },
+    {
+     "ler": "17 02 02",
+     "nombre": "Vidrio",
+     "m3": 0.27,
+     "t": 0.10800000000000001
+    },
+    {
+     "ler": "17 02 03",
+     "nombre": "Plásticos",
+     "m3": 0.8099999999999999,
+     "t": 0.0648
+    },
+    {
+     "ler": "17 03 02",
+     "nombre": "Mezclas bituminosas",
+     "m3": 0.54,
+     "t": 0.43200000000000005
+    },
+    {
+     "ler": "17 04 01",
+     "nombre": "Cobre",
+     "m3": 0.216,
+     "t": 0.59832
+    },
+    {
+     "ler": "17 04 02",
+     "nombre": "Aluminio",
+     "m3": 0.054,
+     "t": 0.0972
+    },
+    {
+     "ler": "17 04 05",
+     "nombre": "Hierro y Acero",
+     "m3": 1.08,
+     "t": 5.832000000000001
+    },
+    {
+     "ler": "17 04 11",
+     "nombre": "Cables",
+     "m3": 0.054,
+     "t": 0.14958
+    },
+    {
+     "ler": "17 06 04",
+     "nombre": "Materiales de aislamiento",
+     "m3": 0.054,
+     "t": 0.00135
+    },
+    {
+     "ler": "17 08 02",
+     "nombre": "Derivados del Yeso",
+     "m3": 0.108,
+     "t": 0.0594
+    },
+    {
+     "ler": "17 09 04",
+     "nombre": "Residuos mezclados",
+     "m3": 1.674,
+     "t": 1.674
+    },
+    {
+     "ler": "17 05 04",
+     "nombre": "Áridos",
+     "m3": 1.4000000000000001,
+     "t": 2.5200000000000005
+    },
+    {
+     "ler": "17 05 04",
+     "nombre": "Piedras naturales",
+     "m3": 0.7000000000000001,
+     "t": 1.2600000000000002
+    },
+    {
+     "ler": "17 05 04",
+     "nombre": "Albero",
+     "m3": 0.35000000000000003,
+     "t": 0.6300000000000001
+    }
+   ]
+  },
+  {
+   "id": "basico-demolicion-residencial-hormigon",
+   "nivel": "basico",
+   "entrada": {
+    "tipo": "demolicionResidencial",
+    "superficie": 250,
+    "plantas": "1",
+    "estructuraHormigon": true
+   },
+   "filas": [
+    {
+     "ler": "17 01 01",
+     "nombre": "Hormigón",
+     "m3": 120,
+     "t": 180
+    },
+    {
+     "ler": "17 01 03",
+     "nombre": "Cerámicos",
+     "m3": 67.5,
+     "t": 60.75
+    },
+    {
+     "ler": "17 01 07",
+     "nombre": "Mezclas horm, ladr, tejas y cerám.",
+     "m3": 37.5,
+     "t": 45
+    },
+    {
+     "ler": "17 02 01",
+     "nombre": "Madera",
+     "m3": 7.5,
+     "t": 2.625
+    },
+    {
+     "ler": "17 02 02",
+     "nombre": "Vidrio",
+     "m3": 0.25,
+     "t": 0.1
+    },
+    {
+     "ler": "17 02 03",
+     "nombre": "Plásticos",
+     "m3": 0.25,
+     "t": 0.02
+    },
+    {
+     "ler": "17 03 02",
+     "nombre": "Mezclas bituminosas",
+     "m3": 1.25,
+     "t": 1
+    },
+    {
+     "ler": "17 04 05",
+     "nombre": "Hierro y Acero",
+     "m3": 6.25,
+     "t": 33.75
+    },
+    {
+     "ler": "17 09 04",
+     "nombre": "Residuos mezclados",
+     "m3": 9.5,
+     "t": 9.5
+    }
+   ]
+  },
+  {
+   "id": "basico-rehabilitacion-residencial",
+   "nivel": "basico",
+   "entrada": {
+    "tipo": "rehabilitacionResidencial",
+    "superficie": 90,
+    "plantas": "1",
+    "estructuraHormigon": false
+   },
+   "filas": [
+    {
+     "ler": "15 01 01",
+     "nombre": "Envases de papel y cartón",
+     "m3": 1.0799999999999998,
+     "t": 0.0756
+    },
+    {
+     "ler": "15 01 02",
+     "nombre": "Envases de plástico",
+     "m3": 2.1599999999999997,
+     "t": 0.17279999999999998
+    },
+    {
+     "ler": "15 01 03",
+     "nombre": "Envases de madera",
+     "m3": 14.4,
+     "t": 8.64
+    },
+    {
+     "ler": "15 01 04",
+     "nombre": "Envases metálicos",
+     "m3": 2.8800000000000003,
+     "t": 0.5760000000000001
+    },
+    {
+     "ler": "15 01 06",
+     "nombre": "Envases mezclados",
+     "m3": 0.36000000000000004,
+     "t": 0.14400000000000002
+    },
+    {
+     "ler": "17 01 01",
+     "nombre": "Hormigón",
+     "m3": 2.1599999999999997,
+     "t": 3.2399999999999993
+    },
+    {
+     "ler": "17 01 02",
+     "nombre": "Ladrillos",
+     "m3": 0.7200000000000001,
+     "t": 0.6480000000000001
+    },
+    {
+     "ler": "17 01 03",
+     "nombre": "Cerámicos",
+     "m3": 2.1599999999999997,
+     "t": 1.9439999999999997
+    },
+    {
+     "ler": "17 01 07",
+     "nombre": "Mezclas horm, ladr, tejas y cerám.",
+     "m3": 3.9600000000000004,
+     "t": 4.752000000000001
+    },
+    {
+     "ler": "17 02 01",
+     "nombre": "Madera",
+     "m3": 0.36000000000000004,
+     "t": 0.126
+    },
+    {
+     "ler": "17 02 02",
+     "nombre": "Vidrio",
+     "m3": 0.36000000000000004,
+     "t": 0.14400000000000002
+    },
+    {
+     "ler": "17 03 02",
+     "nombre": "Mezclas bituminosas",
+     "m3": 0.36000000000000004,
+     "t": 0.28800000000000003
+    },
+    {
+     "ler": "17 04 05",
+     "nombre": "Hierro y Acero",
+     "m3": 0.36000000000000004,
+     "t": 1.9440000000000004
+    },
+    {
+     "ler": "17 06 04",
+     "nombre": "Materiales de aislamiento",
+     "m3": 0.18000000000000002,
+     "t": 0.0045000000000000005
+    },
+    {
+     "ler": "17 08 02",
+     "nombre": "Derivados del Yeso",
+     "m3": 0.18000000000000002,
+     "t": 0.09900000000000002
+    },
+    {
+     "ler": "17 09 04",
+     "nombre": "Residuos mezclados",
+     "m3": 4.319999999999999,
+     "t": 4.319999999999999
+    },
+    {
+     "ler": "17 05 04",
+     "nombre": "Áridos",
+     "m3": 1.0799999999999998,
+     "t": 1.9439999999999997
+    },
+    {
+     "ler": "17 05 04",
+     "nombre": "Piedras naturales",
+     "m3": 0.36000000000000004,
+     "t": 0.6480000000000001
+    }
+   ]
+  }
+ ]
+}

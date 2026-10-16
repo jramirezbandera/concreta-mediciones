@@ -43,8 +43,10 @@ const rows = () => screen.queryAllByLabelText(/^Seleccionar BIG/).length;
 describe('tope de render por contenedor (REF_BROWSE_CAP)', () => {
   // Un solo render (montar 450 filas en jsdom es caro): pinta topado, sube el
   // tope en tramos y agota el contenedor. Timeout holgado: bajo la suite entera
-  // en paralelo este spec ha llegado a ~7,5 s (en aislamiento, <2 s).
-  it('pinta 200 filas + «Mostrar más», que sube el tope en tramos hasta agotar', { timeout: 20_000 }, () => {
+  // en paralelo este spec ha llegado a ~7,5 s (en aislamiento, <2 s), y a 20–25 s
+  // desde que la suite creció con el estudio de residuos (2026-10-16; aislado,
+  // ~4,7 s). Es una guarda contra cuelgues, no una medida de rendimiento.
+  it('pinta 200 filas + «Mostrar más», que sube el tope en tramos hasta agotar', { timeout: 40_000 }, () => {
     render(<ReferenciaPanel onImport={() => {}} />);
     // 450 > REF_AUTOOPEN_MAX → arranca colapsado; se abre a mano.
     fireEvent.click(screen.getByLabelText('Desplegar Gigante'));

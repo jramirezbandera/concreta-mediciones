@@ -1,0 +1,28 @@
+{
+ "id": "ley-7-2022-anexos-ii-iii",
+ "norma": "Ley 7/2022, de 8 de abril, de residuos y suelos contaminados para una economía circular",
+ "edicion": "Texto consolidado del BOE, última modificación 2025-04-02",
+ "tabla": "Anexo II (operaciones de valorización, pp. 119–120) y anexo III (operaciones de eliminación, p. 121)",
+ "cita": "Ley 7/2022, anexos II y III",
+ "verificacion": "R0506, R0508, R0511, R1201 y D0501–D0503: K-RCD.8 (VERIFICADO (texto)). El resto, transcrito de la columna «Operación» del mismo volcado del BOE (2026-10-16)",
+ "operaciones": [
+  { "codigo": "R0304", "nombre": "Reciclado de residuos de papel para la producción de pasta para la fabricación de papel." },
+  { "codigo": "R0305", "nombre": "Reciclado de residuos orgánicos en la fabricación de nuevos productos." },
+  { "codigo": "R0309", "nombre": "Preparación para la reutilización de sustancias orgánicas." },
+  { "codigo": "R0401", "nombre": "Reciclado de chatarra y residuos metálicos en hornos de fundición." },
+  { "codigo": "R0403", "nombre": "Reciclado de residuos metálicos para la obtención de chatarra." },
+  { "codigo": "R0404", "nombre": "Preparación para la reutilización de residuos de metales y compuestos metálicos." },
+  { "codigo": "R0503", "nombre": "Reciclado de residuos de vidrio (calcín) para la fabricación de vidrio u otros productos." },
+  { "codigo": "R0504", "nombre": "Reciclado de residuos de vidrio para la producción de calcín." },
+  { "codigo": "R0506", "nombre": "Valorización de residuos inorgánicos para la producción de áridos." },
+  { "codigo": "R0507", "nombre": "Reciclado de residuos inorgánicos en sustitución de materias primas en otros procesos de fabricación." },
+  { "codigo": "R0508", "nombre": "Valorización de materiales inorgánicos en operaciones de relleno (backfilling)." },
+  { "codigo": "R0511", "nombre": "Preparación para la reutilización de residuos inorgánicos." },
+  { "codigo": "R1201", "nombre": "Clasificación de residuos." },
+  { "codigo": "R1202", "nombre": "Desmontaje y separación de los distintos componentes de los residuos, incluida la retirada de sustancias peligrosas." },
+  { "codigo": "R1203", "nombre": "Tratamiento mecánico (trituración, fragmentación, corte, compactación, etc.)." },
+  { "codigo": "D0501", "nombre": "Depósito en vertederos de residuos inertes." },
+  { "codigo": "D0502", "nombre": "Depósito en vertederos de residuos no peligrosos." },
+  { "codigo": "D0503", "nombre": "Depósito en vertederos de residuos peligrosos." }
+ ]
+}

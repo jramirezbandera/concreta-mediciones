@@ -11,7 +11,7 @@ export interface BottomTabBarProps {
 export function BottomTabBar({ view, onView }: BottomTabBarProps) {
   return (
     <nav className={`no-print ${styles.bar}`} aria-label="Vistas">
-      {TABS.map((t) => {
+      {TABS.filter((t) => t.enBarraInferior !== false).map((t) => {
         const active = view === t.k;
         return (
           <button

@@ -18,7 +18,7 @@ import { create } from 'zustand';
 import type { PegadoPreparado } from '../core/medPaste';
 import { useObraStore } from './obraStore';
 
-export type DetailTab = 'medicion' | 'descripcion' | 'justif';
+export type DetailTab = 'medicion' | 'descripcion' | 'justif' | 'residuos';
 
 /** Foco que el panel aplica tras el próximo render (las filas se mueven o se
  *  crean, así que el foco no puede fijarse en el mismo evento). */

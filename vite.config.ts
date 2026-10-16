@@ -75,6 +75,10 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     css: true,
+    // Los tests que montan la app entera tardan ~0,8 s solos, pero con toda la
+    // suite en paralelo (160 ficheros en jsdom) rozaban los 5 s por defecto.
+    // Es una guarda contra cuelgues, no una medida de rendimiento.
+    testTimeout: 15_000,
     // Los `*.node.test.ts` (pdf.js real) van en su propio proyecto: vitest.node.config.ts.
     exclude: [...configDefaults.exclude, 'src/**/*.node.test.ts'],
     coverage: {

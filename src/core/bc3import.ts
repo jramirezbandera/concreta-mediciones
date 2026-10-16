@@ -28,6 +28,7 @@ import { round2, toCents, type Cents } from './money';
 import { nextPos } from './numbering';
 import { costesDirectos as cdOf } from './totales';
 import { DEFAULT_RATES } from './seed';
+import { leerResiduosBc3 } from './rcd/bc3';
 import type { Banco, Cert, Chapter, Item, MedLine, Obra, PartidasMap, Rates, ResourceType, SubChapter } from './types';
 
 /**
@@ -68,6 +69,9 @@ export interface Bc3Report {
   diagnostics: { info: number; warn: number; error: number };
   /** Avisos no fatales (charset no soportado, sin ~K, etc.). */
   warnings: string[];
+  /** Partidas que traen sus residuos del banco (`~R`, FIEBDC-3/2016): entran
+   *  como propuestas del estudio de residuos. */
+  residuos: number;
 }
 
 export interface Bc3ImportResult {
@@ -162,7 +166,9 @@ function examples(ds: ParserDiag[], n: number): string[] {
 }
 
 export function summarizeParserWarnings(diags: ParserDiag[]): string[] {
-  const issues = diags.filter((d) => d.level !== 'info');
+  // El ~R (residuos) no lo modela el parser, pero sí se lee: `core/rcd/bc3`.
+  const esResiduo = (d: ParserDiag) => d.code === 'BC3_UNKNOWN_RECORD' && (d.recordType === 'R' || quoted(d.message) === '~R');
+  const issues = diags.filter((d) => d.level !== 'info' && !esResiduo(d));
   if (!issues.length) return [];
   const groups = new Map<string, ParserDiag[]>();
   for (const d of issues) {
@@ -207,7 +213,7 @@ export function summarizeParserWarnings(diags: ParserDiag[]): string[] {
 }
 
 /* ---- parseo + selección de charset ---------------------------------------- */
-function parseDocument(bytes: Uint8Array, warnings: string[]): { doc: BC3Document; charset: string; declared?: string } {
+function parseDocument(bytes: Uint8Array, warnings: string[]): { doc: BC3Document; charset: string; declared?: string; text: string } {
   let enc = 'windows-1252';
   let text = decodeWith(bytes, enc) ?? new TextDecoder().decode(bytes);
   let parsed = BC3.parse(text, { mode: 'lenient' });
@@ -241,7 +247,7 @@ function parseDocument(bytes: Uint8Array, warnings: string[]): { doc: BC3Documen
   // ~C puede ser una partida perdida o una variante paramétrica no expandida:
   // el resumen lo explica con ejemplos del código afectado.
   warnings.push(...summarizeParserWarnings(parsed.diagnostics));
-  return { doc: parsed.document, charset: enc, declared };
+  return { doc: parsed.document, charset: enc, declared, text };
 }
 
 /* ---- tasas del registro ~K -------------------------------------------------
@@ -320,7 +326,7 @@ function applyCostesIndirectos(
    =========================================================================== */
 export function bc3ToObra(bytes: Uint8Array): Bc3ImportResult {
   const warnings: string[] = [];
-  const { doc, charset, declared } = parseDocument(bytes, warnings);
+  const { doc, charset, declared, text } = parseDocument(bytes, warnings);
 
   // Tipos de concepto: type 1/2/3 = recurso (MO/MQ/MAT); 0 = estructural.
   const typeByCode = new Map<string, number>();
@@ -564,6 +570,25 @@ export function bc3ToObra(bytes: Uint8Array): Bc3ImportResult {
       if (items.length && round2(p.precio) !== descompUnit(items, recursos)) p.precioManual = true;
     }
 
+  // Residuos del banco (~R/~X de FIEBDC-3/2016, CYPE): cada partida que los
+  // trae los lleva como PROPUESTA del estudio de residuos (core/rcd/bc3).
+  const rcd = leerResiduosBc3(text);
+  let residuos = 0;
+  for (const ps of Object.values(partidas))
+    for (const p of ps) {
+      const comps = rcd.porCodigo.get(p.code);
+      if (!comps) continue;
+      p.rcd = {
+        estado: 'propuesta',
+        origen: { tipo: 'banco', ref: doc.metadata?.program, motivo: `Residuos del banco de precios (~R)${doc.metadata?.program ? ` · ${doc.metadata.program}` : ''}` },
+        componentes: structuredClone(comps),
+      };
+      residuos += 1;
+    }
+  if (residuos)
+    warnings.push(`${residuos} partida${residuos === 1 ? '' : 's'} traen sus residuos del banco (~R): entran como propuestas por revisar en Residuos.`);
+  for (const a of rcd.avisos.slice(0, 5)) warnings.push(`Residuos: ${a}`);
+
   const coefK = rates.coefK;
   // Sin retención por defecto (design): la obra importada la fija a voluntad como
   // línea de ajuste; una obra sin retenciones no arrastra una fila forzada.
@@ -602,6 +627,7 @@ export function bc3ToObra(bytes: Uint8Array): Bc3ImportResult {
     deltaCents: rootPriceCents != null ? pemCents - rootPriceCents : null,
     diagnostics: summary.diagnostics,
     warnings,
+    residuos,
   };
 
   return { data, report };

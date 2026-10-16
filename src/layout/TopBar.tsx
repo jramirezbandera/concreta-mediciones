@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Icon } from '../components/Icon';
 import type { Breakpoint } from '../hooks/useBreakpoint';
 import type { Theme } from '../hooks/useTheme';
-import { TABS, type View } from './types';
+import { TABS, VIEW_LABEL, type View } from './types';
 import { UndoRedoButtons } from './UndoRedoButtons';
 import styles from './TopBar.module.css';
 
@@ -36,8 +36,9 @@ export interface TopBarProps {
   moreBadge?: boolean;
 }
 
-/** Ancho desde el que las acciones secundarias del escritorio llevan texto. */
-export const ROOMY_W = 1400;
+/** Ancho desde el que las acciones secundarias del escritorio llevan texto.
+ *  Era 1400; la pestaña «Residuos» ocupa 82 px y a 1440 dejaba la obra en 0 px. */
+export const ROOMY_W = 1500;
 
 /** Barra superior: lockup de marca Concreta, breadcrumb, tabs y acciones. */
 export function TopBar({
@@ -67,9 +68,9 @@ export function TopBar({
   // táctil cada .icon-btn crece a 44px). En móvil la fila desbordaba pisando la
   // marca; en tablet (junto a las pestañas) dejaba el selector de obra en 0px.
   const useMenu = isCompact;
-  // Escritorio por debajo de 1400: Referencia e Importar partidas van como icono;
+  // Escritorio por debajo de ROOMY_W: Referencia e Importar partidas van como icono;
   // con texto, el selector de obra se quedaba sin nombre (medido: 0px a 1024 y a
-  // 1181, cuando aparece el wordmark; el nombre entero cabe desde ~1400).
+  // 1181, cuando aparece el wordmark; con cinco pestañas, también a 1440).
   const roomy = bp.w >= ROOMY_W;
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
@@ -293,6 +294,20 @@ export function TopBar({
                   Planos · ver el PDF
                 </button>
               )}
+              {isMobile &&
+                TABS.filter((t) => t.enBarraInferior === false).map((t) => (
+                  <button
+                    key={t.k}
+                    type="button"
+                    role="menuitem"
+                    aria-current={view === t.k ? 'page' : undefined}
+                    onClick={() => onView(t.k)}
+                    className={`tcol ${styles.menuItem} ${view === t.k ? styles.menuItemOn : ''}`}
+                  >
+                    <Icon name={t.icon} size={16} />
+                    {VIEW_LABEL[t.k]}
+                  </button>
+                ))}
               {importAction && <div className={styles.menuSlot}>{importAction}</div>}
               {onObra && (
                 <button type="button" role="menuitem" onClick={onObra} className={`tcol ${styles.menuItem}`}>

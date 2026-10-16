@@ -94,7 +94,7 @@ describe('TopBar — menú «Más» en móvil (la fila de acciones pisaba la mar
     expect(within(menu).queryByRole('button', { name: 'Deshacer' })).toBeNull();
   });
 
-  it('en escritorio estrecho (<1400) Referencia va como icono para dejar sitio a la obra', () => {
+  it('en escritorio estrecho (<ROOMY_W) Referencia va como icono para dejar sitio a la obra', () => {
     const narrow: Breakpoint = { w: 1100, isMobile: false, isTablet: false, isDesktop: true, isCompact: false };
     renderBar(narrow);
     expect(screen.getByRole('button', { name: 'Referencia' })).not.toHaveTextContent('Referencia');

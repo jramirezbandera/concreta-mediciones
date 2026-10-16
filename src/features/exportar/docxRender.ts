@@ -47,29 +47,29 @@ import { docFileName } from './fileName';
 /* ---- constantes de página y paleta (espejo del doc de impresión) ---------- */
 
 // Twips: A4 (210×297 mm) con márgenes 14/12/16/12 mm → contenido 10546.
-const PAGE = { width: 11906, height: 16838 };
-const MARGIN = { top: 794, right: 680, bottom: 907, left: 680 };
+export const PAGE = { width: 11906, height: 16838 };
+export const MARGIN = { top: 794, right: 680, bottom: 907, left: 680 };
 
 // Tamaños en MEDIOS puntos (docx): 9pt cuerpo, 8pt tablas densas, 16pt título.
-const T_TITULO = 32;
-const T_BODY = 18;
-const T_SMALL = 16;
-const T_TINY = 14;
+export const T_TITULO = 32;
+export const T_BODY = 18;
+export const T_SMALL = 16;
+export const T_TINY = 14;
 
-const NEGRO = '111827';
-const GRIS = '64748B';
-const BORDE = 'D8DEE6';
-const BANDA = 'EEF1F6';
-const ACENTO = '2563EB';
-const WARN = 'B45309';
+export const NEGRO = '111827';
+export const GRIS = '64748B';
+export const BORDE = 'D8DEE6';
+export const BANDA = 'EEF1F6';
+export const ACENTO = '2563EB';
+export const WARN = 'B45309';
 
-interface RunOpts {
+export interface RunOpts {
   bold?: boolean;
   color?: string;
   size?: number;
 }
 
-function run(text: string, o: RunOpts = {}): TextRun {
+export function run(text: string, o: RunOpts = {}): TextRun {
   return new TextRun({ text, bold: o.bold, color: o.color ?? NEGRO, size: o.size ?? T_BODY });
 }
 
@@ -77,7 +77,7 @@ function paraRuns(children: TextRun[], align?: (typeof AlignmentType)[keyof type
   return new Paragraph({ alignment: align, children });
 }
 
-interface CellOpts extends RunOpts {
+export interface CellOpts extends RunOpts {
   width: number;
   right?: boolean;
   fill?: string;
@@ -86,11 +86,11 @@ interface CellOpts extends RunOpts {
 }
 
 /** Celda de un solo texto (la variante multi-párrafo usa `cellPars`). */
-function cell(text: string, o: CellOpts): TableCell {
+export function cell(text: string, o: CellOpts): TableCell {
   return cellPars([paraRuns([run(text, o)], o.right ? AlignmentType.RIGHT : undefined)], o);
 }
 
-function cellPars(children: Paragraph[], o: CellOpts): TableCell {
+export function cellPars(children: Paragraph[], o: CellOpts): TableCell {
   return new TableCell({
     // Las celdas con columnSpan (width 0) dejan que Word reparta el ancho.
     width: o.width > 0 ? { size: o.width, type: WidthType.DXA } : undefined,
@@ -113,7 +113,7 @@ const SIN_BORDES = {
 } as const;
 
 /** Tabla del listado: ancho fijo, sin verticales, horizontales finas. */
-function tabla(columnWidths: number[], rows: TableRow[]): Table {
+export function tabla(columnWidths: number[], rows: TableRow[]): Table {
   return new Table({
     width: { size: columnWidths.reduce((a, b) => a + b, 0), type: WidthType.DXA },
     columnWidths,
@@ -135,7 +135,7 @@ function tablaDerecha(columnWidths: number[], rows: TableRow[]): Table {
   });
 }
 
-const vacio = (spacing = 120) => new Paragraph({ spacing: { after: spacing }, children: [] });
+export const vacio = (spacing = 120) => new Paragraph({ spacing: { after: spacing }, children: [] });
 
 /** ISO → dd/mm/aaaa ('' si falta/inválida). */
 function fechaCorta(iso?: string): string {
@@ -146,7 +146,7 @@ function fechaCorta(iso?: string): string {
 
 /* ---- cabecera y firma compartidas (contrato de metadatos §4) -------------- */
 
-function cabecera(titulo: string, meta: ObraMeta, extra: [string, string][] = []): Paragraph[] {
+export function cabecera(titulo: string, meta: ObraMeta, extra: [string, string][] = []): Paragraph[] {
   const pares: [string, string][] = [
     ['Expediente', meta.expediente],
     ['Promotor', meta.promotor],
@@ -202,7 +202,7 @@ function firmaCelda(f: Firmante, width: number): TableCell {
  * de bloques de firmante (tabla sin bordes; 1 firmante → a la derecha). Vacío si
  * no hay firmantes.
  */
-function firma(f: Firma): (Paragraph | Table)[] {
+export function firma(f: Firma): (Paragraph | Table)[] {
   if (f.firmantes.length === 0) return [];
   const W = 10546; // ancho de contenido (espeja W_PRES)
   const lf = firmaLugarFecha(f);

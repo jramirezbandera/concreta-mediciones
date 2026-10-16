@@ -124,13 +124,14 @@ describe.each(FIXTURES)('%s cumple el contrato v6', (_n, obra) => {
   const medidas = lineas.filter((l): l is Linea & { origen: Origen } => !!l.origen);
   const plano = (id: string) => obra.planos.find((p) => p.id === id)!;
 
-  it('es v6: esta app la lee tal cual, sin migrar ni apartar nada', () => {
-    expect(obra.schemaVersion).toBe(SCHEMA_VERSION);
+  it('es v6: esta app la lee sin apartar nada y solo sube la versión', () => {
+    expect(obra.schemaVersion).toBe(6);
     expect(newerVersionOf({ schemaVersion: 6, savedAt: 'x', appVersion: 'x', data: obra })).toBeNull();
     expect(isObraData(obra)).toBe(true); // forma v5 intacta: v6 solo añade campos
     const leida = fromSerializable(structuredClone(obra) as unknown as ObraData);
     expect(leida._ilegible).toBeUndefined();
-    expect(leida).toEqual(obra); // lo que A0 no entiende (A1) se conserva igual
+    // lo que A0 no entiende (A1) se conserva igual; la v7 solo cambia la versión
+    expect(leida).toEqual({ ...obra, schemaVersion: SCHEMA_VERSION });
   });
 
   it('claves de página enteras de 1 a `paginas`', () => {

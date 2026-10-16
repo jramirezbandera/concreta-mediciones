@@ -42,6 +42,7 @@ import {
   Pencil,
   Pentagon,
   Plus,
+  Recycle,
   Redo2,
   RefreshCw,
   Ruler,
@@ -133,6 +134,8 @@ export const ICONS = {
   zoomIn: ZoomIn,
   zoomOut: ZoomOut,
   scan: Scan,
+  // Estudio de gestión de residuos
+  recycle: Recycle,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICONS;

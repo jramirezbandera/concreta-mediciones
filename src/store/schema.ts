@@ -9,6 +9,8 @@
    =========================================================================== */
 import type { Banco, Cert, Chapter, Ilegible, Obra, PartidaBaja, PartidasMap, PlanoMeta, Rates } from '../core/types';
 import { apartarIlegibles } from '../core/planoDatos';
+import { apartarRcdIlegibles } from '../core/rcd/datos';
+import type { EstudioRcdDatos } from '../core/rcd/tipos';
 import { buildRecursos, precioCuadraDescompuesto, recursoUsage } from '../core/banco';
 import { CHAPTERS, DEFAULT_OBRA, DEFAULT_RATES, PARTIDAS, makeCertsInit } from '../core/seed';
 import { nextAgenteId } from './base';
@@ -47,8 +49,14 @@ import { nextAgenteId } from './base';
  *   subetapas siguientes no suben la versión. Regla: todo cambio que amplíe las
  *   formas o los valores válidos que se guardan sube `SCHEMA_VERSION`, para que
  *   el código anterior pase a solo lectura (Etapa 0) en vez de reinterpretar.
+ *
+ *   v6 → v7 (2026-10-16, estudio de gestión de residuos): `estudioRcd` (datos
+ *   del estudio) y `Partida.rcd` (residuo de cada partida), los dos opcionales
+ *   (docs/plan-estudio-residuos.md). Migración: solo sube la versión. Se sube
+ *   por la regla de arriba: una pestaña con la app anterior pasa a solo lectura
+ *   en vez de borrar los `rcd` al guardar. Mismo espacio de claves `concreta6.*`.
  */
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 /** Estado de dominio de la obra (lo que persistiría en F6). Serializable. */
 export interface ObraData {
@@ -67,6 +75,9 @@ export interface ObraData {
   /** Planos adjuntos (v6): metadatos, escalas y etiquetas. Los bytes del PDF
    *  van aparte, en el almacén `concreta-planos`, por su huella. */
   planos: PlanoMeta[];
+  /** Estudio de gestión de residuos (v7): los datos que no son de una partida.
+   *  Ausente = la obra no tiene estudio. Ver `core/rcd/tipos`. */
+  estudioRcd?: EstudioRcdDatos;
   /** Datos de planos que romperían el render y se apartaron al cargar, con su
    *  valor crudo y su ruta. Se escriben de vuelta tal cual (ver
    *  `core/planoDatos.apartarIlegibles`). Ausente = ninguno. */
@@ -90,6 +101,7 @@ export const DOMAIN_KEYS = [
   'obra',
   'bajas',
   'planos',
+  'estudioRcd',
   '_ilegible',
 ] as const satisfies readonly (keyof ObraData)[];
 export type DomainKey = (typeof DOMAIN_KEYS)[number];
@@ -130,6 +142,9 @@ export function seedObraData(): ObraData {
     obra: { ...DEFAULT_OBRA },
     bajas: {},
     planos: [],
+    // Explícito (aunque sea opcional): `reset` hace Object.assign con esto y un
+    // campo ausente no borraría el estudio de la obra anterior.
+    estudioRcd: undefined,
   };
 }
 
@@ -150,6 +165,7 @@ export function blankObraData(name = 'Obra nueva'): ObraData {
     obra: { denominacion: name, direccion: '', localidad: '' },
     bajas: {},
     planos: [],
+    estudioRcd: undefined,
   };
 }
 
@@ -178,6 +194,7 @@ export function toSerializable(s: ObraData): ObraData {
     obra: s.obra,
     bajas: s.bajas,
     planos: s.planos ?? [],
+    ...(s.estudioRcd ? { estudioRcd: s.estudioRcd } : {}),
     ...(s._ilegible?.length ? { _ilegible: s._ilegible } : {}),
   };
 }
@@ -218,6 +235,8 @@ const MIGRATIONS: Record<number, (d: ObraData) => ObraData> = {
   4: (d) => ({ ...d, rates: { ...d.rates, ci: 0 }, schemaVersion: 5 }),
   // v5 → v6 (planos PDF): la obra no tenía planos; sus líneas, ningún `origen`.
   5: (d) => ({ ...d, planos: [], schemaVersion: 6 }),
+  // v6 → v7 (estudio de residuos): `estudioRcd` y `Partida.rcd` son opcionales.
+  6: (d) => ({ ...d, schemaVersion: 7 }),
 };
 
 /**
@@ -239,5 +258,5 @@ export function fromSerializable(data: ObraData): ObraData {
       `schemaVersion ${data.schemaVersion} no soportada (esperada ≤ ${SCHEMA_VERSION}); sin ruta de migración.`,
     );
   }
-  return apartarIlegibles(d);
+  return apartarRcdIlegibles(apartarIlegibles(d));
 }

@@ -8,6 +8,7 @@
    Portado verbatim de design_handoff/refdata.js.
    =========================================================================== */
 import type { Banco, Chapter, Item, Partida, PartidasMap, ResourceType } from './types';
+import type { ResiduoPartida } from './rcd/tipos';
 
 /** Partida de una fuente de referencia (subconjunto de `Partida`: sin `med`). La
  *  descripción larga viene de `REF_DESC` por código (bases estáticas) o de `desc`
@@ -31,6 +32,9 @@ export interface RefPartida {
   /** % de costes indirectos del ~K de la fuente (.bc3), para mostrarlo por partida
    *  (no se mezcla en silencio con la convención de la obra destino). 0/undefined = sin CI. */
   ciPct?: number;
+  /** Residuo de la partida (estudio de residuos): del `~R` de un banco (como
+   *  propuesta) o de otra obra propia (tal cual). */
+  rcd?: ResiduoPartida;
 }
 
 /** Fuente de referencia: base de precios o presupuesto ajeno. */
@@ -413,6 +417,7 @@ export function partidaToRefCopyItem(p: Partida, recursos: Banco, sourceName: st
       mainType: p.mainType,
       desc: p.desc,
       items: p.items.map((it) => hydrateItem(it, recursos)),
+      ...(p.rcd ? { rcd: p.rcd } : {}),
     },
   };
 }
@@ -446,6 +451,7 @@ export function obraToRefSource(
       mainType: p.mainType,
       desc: p.desc,
       items: p.items.map((it) => hydrateItem(it, recursos)),
+      ...(p.rcd ? { rcd: p.rcd } : {}),
     }));
   }
   return {

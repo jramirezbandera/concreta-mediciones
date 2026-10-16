@@ -144,6 +144,8 @@ function applyCopy(
       desc: p.desc ?? REF_DESC[p.code] ?? '',
       med: [],
       items: newItems,
+      // El residuo viaja con la partida (plan del estudio de residuos §3).
+      ...(p.rcd ? { rcd: structuredClone(p.rcd) } : {}),
       // Procedencia 'clip' (portapapeles) = trabajo tuyo → partida limpia, sin
       // chip BASE ni baseSource. 'base' (panel Referencia) mantiene el chip.
       fromBase: provenance === 'clip' ? undefined : !contra,

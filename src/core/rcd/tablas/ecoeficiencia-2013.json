@@ -1,0 +1,2241 @@
+{
+ "id": "ecoeficiencia-2013",
+ "fuente": "«-RCDs = +ECO-eficiencia. Herramienta de ayuda a la reducción de residuos en el diseño y construcción de viviendas en Andalucía»",
+ "autor": "Equipo de investigación ECO-ARQ, Departamento de Construcciones Arquitectónicas I, Escuela Técnica Superior de Arquitectura, Universidad de Sevilla",
+ "edicion": "Manual de octubre de 2012; hoja de cálculo 20130712RCDs.xlsm (12-07-2013)",
+ "subvencion": "Consejería de Fomento y Vivienda de la Junta de Andalucía (Orden de 3-03-2009)",
+ "metodo": "Llatas, C. (2011). A model for quantifying construction waste in projects according to the European waste list. Waste Management, 31(6), 1261-1276.",
+ "derechos": "El manual (ap. 1.5) no permite la difusión, comercialización o reproducción sin autorización escrita de la Consejería y de los autores. Uso provisional, pendiente de permiso (plan D8).",
+ "ambito": "Vivienda de nueva planta en Andalucía (obras de VPO 2009-2012); nivel básico estimativo para otros usos, rehabilitación y demolición.",
+ "unidad": "m³ aparentes por m² (de superficie construida, de solar, de ocupación, demolida o rehabilitada según la fila); densidad aparente en t/m³",
+ "referencia": {
+  "arquetas": 37,
+  "superficieConstruida": 2882,
+  "forjados": 3586,
+  "cubiertas": 824,
+  "hojaExterior": 2133,
+  "particiones": 5442,
+  "pavimentos": 2139
+ },
+ "opciones": {
+  "tipologia": [
+   {
+    "id": "plurifamiliarExento",
+    "hoja": "Plur.Exent"
+   },
+   {
+    "id": "plurifamiliarEntreMedianeras",
+    "hoja": "Pentrem"
+   },
+   {
+    "id": "unifamiliarExento",
+    "hoja": "Uexento"
+   },
+   {
+    "id": "unifamiliarEntreMedianeras",
+    "hoja": "U.Entrem"
+   },
+   {
+    "id": "unifamiliarPareado",
+    "hoja": "Pareado"
+   }
+  ],
+  "plantas": [
+   {
+    "id": "1",
+    "hoja": "1"
+   },
+   {
+    "id": "2-3",
+    "hoja": "2-3"
+   },
+   {
+    "id": "4-5",
+    "hoja": "4-5"
+   },
+   {
+    "id": "6-8",
+    "hoja": "6-8"
+   },
+   {
+    "id": ">8",
+    "hoja": ">8"
+   }
+  ],
+  "cimentacion": [
+   {
+    "id": "zapatas",
+    "hoja": "Zapatas"
+   },
+   {
+    "id": "losa",
+    "hoja": "Losa"
+   },
+   {
+    "id": "pilotesInSitu",
+    "hoja": "Pilotes in situ"
+   },
+   {
+    "id": "pilotesPrefabricados",
+    "hoja": "Plot.prefab"
+   },
+   {
+    "id": "murosSotano",
+    "hoja": "Muros de sotano"
+   }
+  ],
+  "estructuraVertical": [
+   {
+    "id": "hormigonArmado",
+    "hoja": "Hormigón armado"
+   },
+   {
+    "id": "acero",
+    "hoja": "Acero"
+   },
+   {
+    "id": "murosCarga",
+    "hoja": "Muros de carga"
+   },
+   {
+    "id": "otros",
+    "hoja": "Otros"
+   }
+  ],
+  "estructuraHorizontal": [
+   {
+    "id": "unidireccionalBovedillaCeramica",
+    "hoja": "Unidir. Bov. Cerámica"
+   },
+   {
+    "id": "unidireccionalBovedillaMortero",
+    "hoja": "Forjado Unidir. Bov. Mortero"
+   },
+   {
+    "id": "reticular",
+    "hoja": "Forjado Reticular"
+   },
+   {
+    "id": "otros",
+    "hoja": "Otros"
+   }
+  ],
+  "cubierta": [
+   {
+    "id": "planaAndaluza",
+    "hoja": "Plana a la andaluza"
+   },
+   {
+    "id": "planaInvertida",
+    "hoja": "Plana Invertida"
+   },
+   {
+    "id": "inclinadaTeja",
+    "hoja": "Inclinada de teja"
+   },
+   {
+    "id": "otros",
+    "hoja": "Otros"
+   }
+  ],
+  "fachada": [
+   {
+    "id": "ceramicaCaraVista",
+    "hoja": "Cerámica cara vista"
+   },
+   {
+    "id": "ceramicaRevestida",
+    "hoja": "Cerámica revestido continuo"
+   },
+   {
+    "id": "bloqueCaraVista",
+    "hoja": "Bloques mortero cara vista"
+   },
+   {
+    "id": "bloqueRevestido",
+    "hoja": "Bloques mortero revestido continuo"
+   },
+   {
+    "id": "ventiladaAplacado",
+    "hoja": "Ventilada aplacado"
+   },
+   {
+    "id": "otros",
+    "hoja": "Otros"
+   }
+  ],
+  "pavimento": [
+   {
+    "id": "piedraNatural",
+    "hoja": "P.Natural"
+   },
+   {
+    "id": "piedraArtificial",
+    "hoja": "P.Artific"
+   },
+   {
+    "id": "baldosaCeramica",
+    "hoja": "B.Ceramica"
+   },
+   {
+    "id": "otros",
+    "hoja": "Otros"
+   }
+  ]
+ },
+ "detallado": [
+  {
+   "ler": "15 01 01",
+   "nombre": "Envases de papel y cartón",
+   "grupo": "envases",
+   "m3PorM2": 0.009,
+   "densidadAparente": 0.07,
+   "coef": {
+    "tipologia": [
+     1.03,
+     1.0,
+     1.1,
+     1.06,
+     1.08
+    ],
+    "plantas": [
+     1.1,
+     0.97,
+     0.95,
+     0.93,
+     0.9
+    ],
+    "cimentacion": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraVertical": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraHorizontal": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "cubierta": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "fachada": [
+     0.8,
+     1.0,
+     0.8,
+     1.0,
+     0.8,
+     1.0
+    ],
+    "pavimento": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ]
+   },
+   "sumandos": {
+    "cubiertas": 0.004
+   }
+  },
+  {
+   "ler": "15 01 02",
+   "nombre": "Envases de plástico",
+   "grupo": "envases",
+   "m3PorM2": 0.01,
+   "densidadAparente": 0.08,
+   "coef": {
+    "tipologia": [
+     1.03,
+     1.0,
+     1.1,
+     1.06,
+     1.08
+    ],
+    "plantas": [
+     1.1,
+     0.97,
+     0.95,
+     0.93,
+     0.9
+    ],
+    "cimentacion": [
+     1.0,
+     0.9,
+     0.95,
+     0.9,
+     1.0
+    ],
+    "estructuraVertical": [
+     1.0,
+     1.0,
+     1.1,
+     1.0
+    ],
+    "estructuraHorizontal": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "cubierta": [
+     1.0,
+     0.95,
+     1.1,
+     1.0
+    ],
+    "fachada": [
+     0.8,
+     1.0,
+     0.8,
+     0.9,
+     0.8,
+     1.0
+    ],
+    "pavimento": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ]
+   },
+   "sumandos": {}
+  },
+  {
+   "ler": "15 01 03",
+   "nombre": "Envases de madera",
+   "grupo": "envases",
+   "m3PorM2": 0.056,
+   "densidadAparente": 0.6,
+   "coef": {
+    "tipologia": [
+     1.03,
+     1.0,
+     1.1,
+     1.06,
+     1.08
+    ],
+    "plantas": [
+     1.1,
+     0.97,
+     0.95,
+     0.93,
+     0.9
+    ],
+    "cimentacion": [
+     1.0,
+     0.9,
+     0.95,
+     0.9,
+     1.0
+    ],
+    "estructuraVertical": [
+     1.0,
+     1.0,
+     1.2,
+     1.0
+    ],
+    "estructuraHorizontal": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "cubierta": [
+     1.0,
+     0.95,
+     1.1,
+     1.0
+    ],
+    "fachada": [
+     0.8,
+     1.0,
+     0.8,
+     0.9,
+     0.8,
+     1.0
+    ],
+    "pavimento": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ]
+   },
+   "sumandos": {
+    "forjados": 0.0046,
+    "cubiertas": 0.014,
+    "hojaExterior": 0.0119,
+    "particiones": 0.01026,
+    "pavimentos": 0.0019
+   }
+  },
+  {
+   "ler": "15 01 04",
+   "nombre": "Envases metálicos",
+   "grupo": "envases",
+   "m3PorM2": 0.004,
+   "densidadAparente": 0.2,
+   "coef": {
+    "tipologia": [
+     1.03,
+     1.0,
+     1.1,
+     1.06,
+     1.08
+    ],
+    "plantas": [
+     1.1,
+     0.97,
+     0.95,
+     0.93,
+     0.9
+    ],
+    "cimentacion": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraVertical": [
+     1.0,
+     1.0,
+     1.2,
+     1.0
+    ],
+    "estructuraHorizontal": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "cubierta": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "fachada": [
+     0.6,
+     1.0,
+     0.6,
+     1.0,
+     0.6,
+     1.0
+    ],
+    "pavimento": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ]
+   },
+   "sumandos": {
+    "forjados": 0.001,
+    "cubiertas": 0.0009,
+    "hojaExterior": 0.0012,
+    "particiones": 0.0012
+   }
+  },
+  {
+   "ler": "15 01 06",
+   "nombre": "Envases mezclados",
+   "grupo": "envases",
+   "m3PorM2": 0.001,
+   "densidadAparente": 0.4,
+   "coef": {
+    "tipologia": [
+     1.03,
+     1.0,
+     1.1,
+     1.06,
+     1.08
+    ],
+    "plantas": [
+     1.1,
+     0.97,
+     0.95,
+     0.93,
+     0.9
+    ],
+    "cimentacion": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraVertical": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraHorizontal": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "cubierta": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "fachada": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "pavimento": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ]
+   },
+   "sumandos": {}
+  },
+  {
+   "ler": "08 01 12",
+   "nombre": "Pinturas",
+   "grupo": "restos",
+   "m3PorM2": 4.2e-05,
+   "densidadAparente": 0.2,
+   "coef": {
+    "tipologia": [
+     1.03,
+     1.0,
+     1.1,
+     1.06,
+     1.08
+    ],
+    "plantas": [
+     1.1,
+     0.97,
+     0.95,
+     0.93,
+     0.9
+    ],
+    "cimentacion": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraVertical": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraHorizontal": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "cubierta": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "fachada": [
+     0.6,
+     1.0,
+     0.6,
+     1.0,
+     0.6,
+     1.0
+    ],
+    "pavimento": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ]
+   },
+   "sumandos": {}
+  },
+  {
+   "ler": "10 13 99",
+   "nombre": "Cal",
+   "grupo": "restos",
+   "m3PorM2": 0.0003,
+   "densidadAparente": 0.6,
+   "coef": {
+    "tipologia": [
+     1.03,
+     1.0,
+     1.1,
+     1.06,
+     1.08
+    ],
+    "plantas": [
+     1.1,
+     0.97,
+     0.95,
+     0.93,
+     0.9
+    ],
+    "cimentacion": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraVertical": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraHorizontal": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "cubierta": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "fachada": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "pavimento": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ]
+   },
+   "sumandos": {
+    "pavimentos": 0.0021
+   }
+  },
+  {
+   "ler": "17 01 01",
+   "nombre": "Hormigón",
+   "grupo": "restos",
+   "m3PorM2": 0.028272,
+   "densidadAparente": 1.5,
+   "coef": {
+    "tipologia": [
+     1.03,
+     1.0,
+     1.1,
+     1.06,
+     1.08
+    ],
+    "plantas": [
+     1.1,
+     0.97,
+     0.95,
+     0.93,
+     0.9
+    ],
+    "cimentacion": [
+     1.0,
+     0.97,
+     0.92,
+     0.85,
+     1.1
+    ],
+    "estructuraVertical": [
+     1.0,
+     0.7,
+     0.7,
+     1.0
+    ],
+    "estructuraHorizontal": [
+     0.7,
+     1.0,
+     1.1,
+     1.0
+    ],
+    "cubierta": [
+     1.0,
+     0.9,
+     0.75,
+     1.0
+    ],
+    "fachada": [
+     0.9,
+     1.0,
+     1.6,
+     1.6,
+     0.9,
+     1.0
+    ],
+    "pavimento": [
+     0.7,
+     1.0,
+     0.7,
+     1.0
+    ]
+   },
+   "sumandos": {
+    "forjados": 0.007,
+    "cubiertas": 0.0045,
+    "hojaExterior": 0.0016,
+    "particiones": 0.0004
+   }
+  },
+  {
+   "ler": "17 01 02",
+   "nombre": "Ladrillos",
+   "grupo": "restos",
+   "m3PorM2": 0.004944,
+   "densidadAparente": 0.9,
+   "coef": {
+    "tipologia": [
+     1.03,
+     1.0,
+     1.1,
+     1.06,
+     1.08
+    ],
+    "plantas": [
+     1.1,
+     0.97,
+     0.95,
+     0.93,
+     0.9
+    ],
+    "cimentacion": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraVertical": [
+     1.0,
+     1.0,
+     1.2,
+     1.0
+    ],
+    "estructuraHorizontal": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "cubierta": [
+     1.0,
+     0.95,
+     1.3,
+     1.0
+    ],
+    "fachada": [
+     1.3,
+     1.0,
+     0.6,
+     0.6,
+     0.85,
+     1.0
+    ],
+    "pavimento": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ]
+   },
+   "sumandos": {
+    "hojaExterior": 0.0071,
+    "particiones": 0.0063
+   }
+  },
+  {
+   "ler": "17 01 03",
+   "nombre": "Cerámicos",
+   "grupo": "restos",
+   "m3PorM2": 0.012144,
+   "densidadAparente": 0.9,
+   "coef": {
+    "tipologia": [
+     1.03,
+     1.0,
+     1.1,
+     1.06,
+     1.08
+    ],
+    "plantas": [
+     1.1,
+     0.97,
+     0.95,
+     0.93,
+     0.9
+    ],
+    "cimentacion": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraVertical": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraHorizontal": [
+     1.3,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "cubierta": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "fachada": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "pavimento": [
+     1.0,
+     1.0,
+     1.3,
+     1.0
+    ]
+   },
+   "sumandos": {}
+  },
+  {
+   "ler": "17 01 07",
+   "nombre": "Mezclas horm, ladr, tejas y cerám.",
+   "grupo": "restos",
+   "m3PorM2": 0.007782,
+   "densidadAparente": 1.2,
+   "coef": {
+    "tipologia": [
+     1.03,
+     1.0,
+     1.1,
+     1.06,
+     1.08
+    ],
+    "plantas": [
+     1.1,
+     0.97,
+     0.95,
+     0.93,
+     0.9
+    ],
+    "cimentacion": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraVertical": [
+     1.0,
+     1.0,
+     1.1,
+     1.0
+    ],
+    "estructuraHorizontal": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "cubierta": [
+     1.0,
+     1.0,
+     1.05,
+     1.0
+    ],
+    "fachada": [
+     0.9,
+     1.0,
+     0.6,
+     0.6,
+     1.0,
+     1.0
+    ],
+    "pavimento": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ]
+   },
+   "sumandos": {}
+  },
+  {
+   "ler": "17 02 01",
+   "nombre": "Madera",
+   "grupo": "restos",
+   "m3PorM2": 0.001128,
+   "densidadAparente": 0.35,
+   "coef": {
+    "tipologia": [
+     1.03,
+     1.0,
+     1.1,
+     1.06,
+     1.08
+    ],
+    "plantas": [
+     1.1,
+     0.97,
+     0.95,
+     0.93,
+     0.9
+    ],
+    "cimentacion": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraVertical": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraHorizontal": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "cubierta": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "fachada": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "pavimento": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ]
+   },
+   "sumandos": {}
+  },
+  {
+   "ler": "17 02 02",
+   "nombre": "Vidrio",
+   "grupo": "restos",
+   "m3PorM2": 4.2e-05,
+   "densidadAparente": 0.4,
+   "coef": {
+    "tipologia": [
+     1.03,
+     1.0,
+     1.1,
+     1.06,
+     1.08
+    ],
+    "plantas": [
+     1.1,
+     0.97,
+     0.95,
+     0.93,
+     0.9
+    ],
+    "cimentacion": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraVertical": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraHorizontal": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "cubierta": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "fachada": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "pavimento": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ]
+   },
+   "sumandos": {}
+  },
+  {
+   "ler": "17 02 03",
+   "nombre": "Plásticos",
+   "grupo": "restos",
+   "m3PorM2": 3.6e-05,
+   "densidadAparente": 0.08,
+   "coef": {
+    "tipologia": [
+     1.03,
+     1.0,
+     1.1,
+     1.06,
+     1.08
+    ],
+    "plantas": [
+     1.1,
+     0.97,
+     0.95,
+     0.93,
+     0.9
+    ],
+    "cimentacion": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraVertical": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraHorizontal": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "cubierta": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "fachada": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "pavimento": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ]
+   },
+   "sumandos": {}
+  },
+  {
+   "ler": "17 03 02",
+   "nombre": "Mezclas bituminosas",
+   "grupo": "restos",
+   "m3PorM2": 4.8e-05,
+   "densidadAparente": 0.8,
+   "coef": {
+    "tipologia": [
+     1.03,
+     1.0,
+     1.1,
+     1.06,
+     1.08
+    ],
+    "plantas": [
+     1.1,
+     0.97,
+     0.95,
+     0.93,
+     0.9
+    ],
+    "cimentacion": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraVertical": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraHorizontal": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "cubierta": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "fachada": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "pavimento": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ]
+   },
+   "sumandos": {}
+  },
+  {
+   "ler": "17 04 01",
+   "nombre": "Cobre",
+   "grupo": "restos",
+   "m3PorM2": 1.2e-05,
+   "densidadAparente": 2.77,
+   "coef": {
+    "tipologia": [
+     1.03,
+     1.0,
+     1.1,
+     1.06,
+     1.08
+    ],
+    "plantas": [
+     1.1,
+     0.97,
+     0.95,
+     0.93,
+     0.9
+    ],
+    "cimentacion": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraVertical": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraHorizontal": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "cubierta": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "fachada": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "pavimento": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ]
+   },
+   "sumandos": {}
+  },
+  {
+   "ler": "17 04 02",
+   "nombre": "Aluminio",
+   "grupo": "restos",
+   "m3PorM2": 1.2e-05,
+   "densidadAparente": 1.8,
+   "coef": {
+    "tipologia": [
+     1.03,
+     1.0,
+     1.1,
+     1.06,
+     1.08
+    ],
+    "plantas": [
+     1.1,
+     0.97,
+     0.95,
+     0.93,
+     0.9
+    ],
+    "cimentacion": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraVertical": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraHorizontal": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "cubierta": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "fachada": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.2,
+     1.0
+    ],
+    "pavimento": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ]
+   },
+   "sumandos": {}
+  },
+  {
+   "ler": "17 04 05",
+   "nombre": "Hierro y Acero",
+   "grupo": "restos",
+   "m3PorM2": 3.6e-05,
+   "densidadAparente": 5.4,
+   "coef": {
+    "tipologia": [
+     1.03,
+     1.0,
+     1.1,
+     1.06,
+     1.08
+    ],
+    "plantas": [
+     1.1,
+     0.97,
+     0.95,
+     0.93,
+     0.9
+    ],
+    "cimentacion": [
+     1.0,
+     1.0,
+     1.0,
+     1.1,
+     1.1
+    ],
+    "estructuraVertical": [
+     1.0,
+     1.2,
+     1.0,
+     1.0
+    ],
+    "estructuraHorizontal": [
+     1.0,
+     1.0,
+     1.1,
+     1.0
+    ],
+    "cubierta": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "fachada": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "pavimento": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ]
+   },
+   "sumandos": {}
+  },
+  {
+   "ler": "17 04 11",
+   "nombre": "Cables",
+   "grupo": "restos",
+   "m3PorM2": 1.2e-05,
+   "densidadAparente": 2.77,
+   "coef": {
+    "tipologia": [
+     1.03,
+     1.0,
+     1.1,
+     1.06,
+     1.08
+    ],
+    "plantas": [
+     1.1,
+     0.97,
+     0.95,
+     0.93,
+     0.9
+    ],
+    "cimentacion": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraVertical": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraHorizontal": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "cubierta": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "fachada": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "pavimento": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ]
+   },
+   "sumandos": {}
+  },
+  {
+   "ler": "17 06 04",
+   "nombre": "Materiales de aislamiento",
+   "grupo": "restos",
+   "m3PorM2": 0.000762,
+   "densidadAparente": 0.025,
+   "coef": {
+    "tipologia": [
+     1.03,
+     1.0,
+     1.1,
+     1.06,
+     1.08
+    ],
+    "plantas": [
+     1.1,
+     0.97,
+     0.95,
+     0.93,
+     0.9
+    ],
+    "cimentacion": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraVertical": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraHorizontal": [
+     1.0,
+     1.0,
+     1.1,
+     1.0
+    ],
+    "cubierta": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "fachada": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "pavimento": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ]
+   },
+   "sumandos": {}
+  },
+  {
+   "ler": "17 08 02",
+   "nombre": "Derivados del Yeso",
+   "grupo": "restos",
+   "m3PorM2": 0.001338,
+   "densidadAparente": 0.55,
+   "coef": {
+    "tipologia": [
+     1.03,
+     1.0,
+     1.1,
+     1.06,
+     1.08
+    ],
+    "plantas": [
+     1.1,
+     0.97,
+     0.95,
+     0.93,
+     0.9
+    ],
+    "cimentacion": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraVertical": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraHorizontal": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "cubierta": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "fachada": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "pavimento": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ]
+   },
+   "sumandos": {}
+  },
+  {
+   "ler": "17 09 04",
+   "nombre": "Residuos mezclados",
+   "grupo": "restos",
+   "m3PorM2": 0.00309,
+   "densidadAparente": 1.0,
+   "coef": {
+    "tipologia": [
+     1.03,
+     1.0,
+     1.1,
+     1.06,
+     1.08
+    ],
+    "plantas": [
+     1.1,
+     0.97,
+     0.95,
+     0.93,
+     0.9
+    ],
+    "cimentacion": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraVertical": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraHorizontal": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "cubierta": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "fachada": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "pavimento": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ]
+   },
+   "sumandos": {}
+  },
+  {
+   "ler": "17 05 04",
+   "nombre": "Áridos",
+   "grupo": "tierras",
+   "m3PorM2": 0.002538,
+   "densidadAparente": 1.8,
+   "coef": {
+    "tipologia": [
+     1.03,
+     1.0,
+     1.1,
+     1.06,
+     1.08
+    ],
+    "plantas": [
+     1.1,
+     0.97,
+     0.95,
+     0.93,
+     0.9
+    ],
+    "cimentacion": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraVertical": [
+     1.0,
+     1.0,
+     1.2,
+     1.0
+    ],
+    "estructuraHorizontal": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "cubierta": [
+     1.0,
+     1.0,
+     1.1,
+     1.0
+    ],
+    "fachada": [
+     0.8,
+     1.0,
+     0.8,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "pavimento": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ]
+   },
+   "sumandos": {
+    "pavimentos": 0.0005,
+    "particiones": 0.0001,
+    "hojaExterior": 0.0002
+   }
+  },
+  {
+   "ler": "17 05 04",
+   "nombre": "Piedras naturales",
+   "grupo": "tierras",
+   "m3PorM2": 9.6e-05,
+   "densidadAparente": 1.8,
+   "coef": {
+    "tipologia": [
+     1.03,
+     1.0,
+     1.1,
+     1.06,
+     1.08
+    ],
+    "plantas": [
+     1.1,
+     0.97,
+     0.95,
+     0.93,
+     0.9
+    ],
+    "cimentacion": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraVertical": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraHorizontal": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "cubierta": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "fachada": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.2,
+     1.0
+    ],
+    "pavimento": [
+     1.3,
+     1.0,
+     1.0,
+     1.0
+    ]
+   },
+   "sumandos": {}
+  },
+  {
+   "ler": "17 05 04",
+   "nombre": "Albero",
+   "grupo": "tierras",
+   "m3PorM2": 7.2e-05,
+   "densidadAparente": 1.8,
+   "coef": {
+    "tipologia": [
+     1.03,
+     1.0,
+     1.1,
+     1.06,
+     1.08
+    ],
+    "plantas": [
+     1.1,
+     0.97,
+     0.95,
+     0.93,
+     0.9
+    ],
+    "cimentacion": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraVertical": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "estructuraHorizontal": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "cubierta": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "fachada": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "pavimento": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ]
+   },
+   "sumandos": {}
+  }
+ ],
+ "tierras": {
+  "limpiezaDesbroce": {
+   "ler": "17 05 04",
+   "base": "superficieSolar",
+   "m3PorM2": 0.2,
+   "densidadAparente": 0.8
+  },
+  "excavacion": {
+   "ler": "17 05 04",
+   "base": "superficieOcupacion",
+   "m3PorM2": 0.75,
+   "coefCimentacion": [
+    1.0,
+    0.78,
+    0.3,
+    0.1,
+    0.1
+   ],
+   "arquetas": 0.92,
+   "densidadAparente": 1.8
+  },
+  "vaciadoSotano": {
+   "ler": "17 05 04",
+   "base": "superficieOcupacion",
+   "alturaPorPlanta": 3.0,
+   "densidadAparente": 1.8
+  }
+ },
+ "basico": {
+  "coefPlantas": {
+   "opciones": [
+    "1",
+    "2-4",
+    ">4"
+   ],
+   "valores": [
+    1.0,
+    0.9,
+    0.85
+   ]
+  },
+  "filas": [
+   {
+    "ler": "15 01 01",
+    "nombre": "Envases de papel y cartón",
+    "porTipo": {
+     "nuevaResidencial": 0.0042,
+     "nuevaNoResidencial": 0.0036,
+     "demolicionResidencial": 0.0,
+     "demolicionNoResidencial": 0.0,
+     "rehabilitacionResidencial": 0.012,
+     "rehabilitacionNoResidencial": 0.0105
+    },
+    "densidadAparente": 0.07,
+    "coefPlantas": true
+   },
+   {
+    "ler": "15 01 02",
+    "nombre": "Envases de plástico",
+    "porTipo": {
+     "nuevaResidencial": 0.0084,
+     "nuevaNoResidencial": 0.0072,
+     "demolicionResidencial": 0.0,
+     "demolicionNoResidencial": 0.0,
+     "rehabilitacionResidencial": 0.024,
+     "rehabilitacionNoResidencial": 0.021
+    },
+    "densidadAparente": 0.08,
+    "coefPlantas": true
+   },
+   {
+    "ler": "15 01 03",
+    "nombre": "Envases de madera",
+    "porTipo": {
+     "nuevaResidencial": 0.0602,
+     "nuevaNoResidencial": 0.0516,
+     "demolicionResidencial": 0.0,
+     "demolicionNoResidencial": 0.0,
+     "rehabilitacionResidencial": 0.16,
+     "rehabilitacionNoResidencial": 0.14
+    },
+    "densidadAparente": 0.6,
+    "coefPlantas": true
+   },
+   {
+    "ler": "15 01 04",
+    "nombre": "Envases metálicos",
+    "porTipo": {
+     "nuevaResidencial": 0.0028,
+     "nuevaNoResidencial": 0.0024,
+     "demolicionResidencial": 0.0,
+     "demolicionNoResidencial": 0.0,
+     "rehabilitacionResidencial": 0.032,
+     "rehabilitacionNoResidencial": 0.028
+    },
+    "densidadAparente": 0.2,
+    "coefPlantas": true
+   },
+   {
+    "ler": "15 01 06",
+    "nombre": "Envases mezclados",
+    "porTipo": {
+     "nuevaResidencial": 0.0014,
+     "nuevaNoResidencial": 0.0012,
+     "demolicionResidencial": 0.0,
+     "demolicionNoResidencial": 0.0,
+     "rehabilitacionResidencial": 0.004,
+     "rehabilitacionNoResidencial": 0.0035
+    },
+    "densidadAparente": 0.4,
+    "coefPlantas": true
+   },
+   {
+    "ler": "08 01 12",
+    "nombre": "Pinturas",
+    "porTipo": {
+     "nuevaResidencial": 0.00014,
+     "nuevaNoResidencial": 0.00014,
+     "demolicionResidencial": 0.0,
+     "demolicionNoResidencial": 0.0,
+     "rehabilitacionResidencial": 0.0,
+     "rehabilitacionNoResidencial": 0.0
+    },
+    "densidadAparente": 0.2,
+    "coefPlantas": true
+   },
+   {
+    "ler": "10 13 99",
+    "nombre": "Cal",
+    "porTipo": {
+     "nuevaResidencial": 0.00042,
+     "nuevaNoResidencial": 0.00042,
+     "demolicionResidencial": 0.0,
+     "demolicionNoResidencial": 0.0,
+     "rehabilitacionResidencial": 0.0,
+     "rehabilitacionNoResidencial": 0.0
+    },
+    "densidadAparente": 0.6,
+    "coefPlantas": true
+   },
+   {
+    "ler": "17 01 01",
+    "nombre": "Hormigón",
+    "porTipo": {
+     "nuevaResidencial": 0.0238,
+     "nuevaNoResidencial": 0.0204,
+     "demolicionResidencial": {
+      "estructuraHormigon": 0.48,
+      "otraEstructura": 0.1
+     },
+     "demolicionNoResidencial": {
+      "estructuraHormigon": 0.348,
+      "otraEstructura": 0.24
+     },
+     "rehabilitacionResidencial": 0.024,
+     "rehabilitacionNoResidencial": 0.021
+    },
+    "densidadAparente": 1.5,
+    "coefPlantas": true
+   },
+   {
+    "ler": "17 01 02",
+    "nombre": "Ladrillos",
+    "porTipo": {
+     "nuevaResidencial": 0.0056,
+     "nuevaNoResidencial": 0.0048,
+     "demolicionResidencial": 0.0,
+     "demolicionNoResidencial": 0.0,
+     "rehabilitacionResidencial": 0.008,
+     "rehabilitacionNoResidencial": 0.007
+    },
+    "densidadAparente": 0.9,
+    "coefPlantas": true
+   },
+   {
+    "ler": "17 01 03",
+    "nombre": "Cerámicos",
+    "porTipo": {
+     "nuevaResidencial": 0.0112,
+     "nuevaNoResidencial": 0.0096,
+     "demolicionResidencial": {
+      "estructuraHormigon": 0.27,
+      "otraEstructura": 0.5
+     },
+     "demolicionNoResidencial": {
+      "estructuraHormigon": 0.12,
+      "otraEstructura": 0.24
+     },
+     "rehabilitacionResidencial": 0.024,
+     "rehabilitacionNoResidencial": 0.021
+    },
+    "densidadAparente": 0.9,
+    "coefPlantas": true
+   },
+   {
+    "ler": "17 01 07",
+    "nombre": "Mezclas horm, ladr, tejas y cerám.",
+    "porTipo": {
+     "nuevaResidencial": 0.0028,
+     "nuevaNoResidencial": 0.0024,
+     "demolicionResidencial": {
+      "estructuraHormigon": 0.15,
+      "otraEstructura": 0.31
+     },
+     "demolicionNoResidencial": {
+      "estructuraHormigon": 0.54,
+      "otraEstructura": 0.48
+     },
+     "rehabilitacionResidencial": 0.044,
+     "rehabilitacionNoResidencial": 0.0385
+    },
+    "densidadAparente": 1.2,
+    "coefPlantas": true
+   },
+   {
+    "ler": "17 02 01",
+    "nombre": "Madera",
+    "porTipo": {
+     "nuevaResidencial": 0.007,
+     "nuevaNoResidencial": 0.006,
+     "demolicionResidencial": 0.03,
+     "demolicionNoResidencial": {
+      "estructuraHormigon": 0.0024,
+      "otraEstructura": 0.0036
+     },
+     "rehabilitacionResidencial": 0.004,
+     "rehabilitacionNoResidencial": 0.0035
+    },
+    "densidadAparente": 0.35,
+    "coefPlantas": true
+   },
+   {
+    "ler": "17 02 02",
+    "nombre": "Vidrio",
+    "porTipo": {
+     "nuevaResidencial": 0.0007,
+     "nuevaNoResidencial": 0.0006,
+     "demolicionResidencial": 0.001,
+     "demolicionNoResidencial": {
+      "estructuraHormigon": 0.0012,
+      "otraEstructura": 0.0024
+     },
+     "rehabilitacionResidencial": 0.004,
+     "rehabilitacionNoResidencial": 0.0035
+    },
+    "densidadAparente": 0.4,
+    "coefPlantas": true
+   },
+   {
+    "ler": "17 02 03",
+    "nombre": "Plásticos",
+    "porTipo": {
+     "nuevaResidencial": 0.0021,
+     "nuevaNoResidencial": 0.0018,
+     "demolicionResidencial": 0.001,
+     "demolicionNoResidencial": {
+      "estructuraHormigon": 0.0036,
+      "otraEstructura": 0.0096
+     },
+     "rehabilitacionResidencial": 0.0,
+     "rehabilitacionNoResidencial": 0.0
+    },
+    "densidadAparente": 0.08,
+    "coefPlantas": true
+   },
+   {
+    "ler": "17 03 02",
+    "nombre": "Mezclas bituminosas",
+    "porTipo": {
+     "nuevaResidencial": 0.0014,
+     "nuevaNoResidencial": 0.0012,
+     "demolicionResidencial": 0.005,
+     "demolicionNoResidencial": {
+      "estructuraHormigon": 0.036,
+      "otraEstructura": 0.0012
+     },
+     "rehabilitacionResidencial": 0.004,
+     "rehabilitacionNoResidencial": 0.0035
+    },
+    "densidadAparente": 0.8,
+    "coefPlantas": true
+   },
+   {
+    "ler": "17 04 01",
+    "nombre": "Cobre",
+    "porTipo": {
+     "nuevaResidencial": 0.00056,
+     "nuevaNoResidencial": 0.00048,
+     "demolicionResidencial": 0.0,
+     "demolicionNoResidencial": 0.0,
+     "rehabilitacionResidencial": 0.0,
+     "rehabilitacionNoResidencial": 0.0
+    },
+    "densidadAparente": 2.77,
+    "coefPlantas": true
+   },
+   {
+    "ler": "17 04 02",
+    "nombre": "Aluminio",
+    "porTipo": {
+     "nuevaResidencial": 0.00014,
+     "nuevaNoResidencial": 0.00012,
+     "demolicionResidencial": 0.0,
+     "demolicionNoResidencial": 0.0,
+     "rehabilitacionResidencial": 0.0,
+     "rehabilitacionNoResidencial": 0.0
+    },
+    "densidadAparente": 1.8,
+    "coefPlantas": true
+   },
+   {
+    "ler": "17 04 05",
+    "nombre": "Hierro y Acero",
+    "porTipo": {
+     "nuevaResidencial": 0.0028,
+     "nuevaNoResidencial": 0.0024,
+     "demolicionResidencial": {
+      "estructuraHormigon": 0.025,
+      "otraEstructura": 0.015
+     },
+     "demolicionNoResidencial": {
+      "estructuraHormigon": 0.048,
+      "otraEstructura": 0.12
+     },
+     "rehabilitacionResidencial": 0.004,
+     "rehabilitacionNoResidencial": 0.0035
+    },
+    "densidadAparente": 5.4,
+    "coefPlantas": true
+   },
+   {
+    "ler": "17 04 11",
+    "nombre": "Cables",
+    "porTipo": {
+     "nuevaResidencial": 0.00014,
+     "nuevaNoResidencial": 0.00012,
+     "demolicionResidencial": 0.0,
+     "demolicionNoResidencial": 0.0,
+     "rehabilitacionResidencial": 0.0,
+     "rehabilitacionNoResidencial": 0.0
+    },
+    "densidadAparente": 2.77,
+    "coefPlantas": true
+   },
+   {
+    "ler": "17 06 04",
+    "nombre": "Materiales de aislamiento",
+    "porTipo": {
+     "nuevaResidencial": 0.00014,
+     "nuevaNoResidencial": 0.00012,
+     "demolicionResidencial": 0.0,
+     "demolicionNoResidencial": 0.0,
+     "rehabilitacionResidencial": 0.002,
+     "rehabilitacionNoResidencial": 0.00175
+    },
+    "densidadAparente": 0.025,
+    "coefPlantas": true
+   },
+   {
+    "ler": "17 08 02",
+    "nombre": "Derivados del Yeso",
+    "porTipo": {
+     "nuevaResidencial": 0.00028,
+     "nuevaNoResidencial": 0.00024,
+     "demolicionResidencial": 0.0,
+     "demolicionNoResidencial": 0.0,
+     "rehabilitacionResidencial": 0.002,
+     "rehabilitacionNoResidencial": 0.00175
+    },
+    "densidadAparente": 0.55,
+    "coefPlantas": true
+   },
+   {
+    "ler": "17 09 04",
+    "nombre": "Residuos mezclados",
+    "porTipo": {
+     "nuevaResidencial": 0.00434,
+     "nuevaNoResidencial": 0.00372,
+     "demolicionResidencial": 0.038,
+     "demolicionNoResidencial": {
+      "estructuraHormigon": 0.1008,
+      "otraEstructura": 0.1032
+     },
+     "rehabilitacionResidencial": 0.048,
+     "rehabilitacionNoResidencial": 0.042
+    },
+    "densidadAparente": 1.0,
+    "coefPlantas": true
+   },
+   {
+    "ler": "17 05 04",
+    "nombre": "Áridos",
+    "porTipo": {
+     "nuevaResidencial": 0.0028,
+     "nuevaNoResidencial": 0.0028,
+     "demolicionResidencial": 0.0,
+     "demolicionNoResidencial": 0.0,
+     "rehabilitacionResidencial": 0.012,
+     "rehabilitacionNoResidencial": 0.0105
+    },
+    "densidadAparente": 1.8,
+    "coefPlantas": false
+   },
+   {
+    "ler": "17 05 04",
+    "nombre": "Piedras naturales",
+    "porTipo": {
+     "nuevaResidencial": 0.0014,
+     "nuevaNoResidencial": 0.0014,
+     "demolicionResidencial": 0.0,
+     "demolicionNoResidencial": 0.0,
+     "rehabilitacionResidencial": 0.004,
+     "rehabilitacionNoResidencial": 0.0035
+    },
+    "densidadAparente": 1.8,
+    "coefPlantas": false
+   },
+   {
+    "ler": "17 05 04",
+    "nombre": "Albero",
+    "porTipo": {
+     "nuevaResidencial": 0.0007,
+     "nuevaNoResidencial": 0.0007,
+     "demolicionResidencial": 0.0,
+     "demolicionNoResidencial": 0.0,
+     "rehabilitacionResidencial": 0.0,
+     "rehabilitacionNoResidencial": 0.0
+    },
+    "densidadAparente": 1.8,
+    "coefPlantas": false
+   }
+  ],
+  "tierras": {
+   "nota": "Solo con superficie construida (obra nueva); sobre la superficie del solar",
+   "limpiezaDesbroce": {
+    "ler": "17 05 04",
+    "m3PorM2Solar": 0.2,
+    "densidadAparente": 0.8
+   },
+   "excavacion": {
+    "ler": "17 05 04",
+    "m3PorM2Solar": 0.7,
+    "densidadAparente": 1.8
+   },
+   "vaciadoSotano": {
+    "ler": "17 05 04",
+    "base": "volumen de vaciado tecleado (m³)",
+    "densidadAparente": 1.8
+   }
+  }
+ }
+}

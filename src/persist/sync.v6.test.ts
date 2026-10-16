@@ -3,14 +3,14 @@
    planos PDF, §1.1 de la especificación):
      · el índice v6 nace del v5 y marca `porMigrar`;
      · una v5 se migra UNA vez, solo en la pestaña dueña (ni en solo lectura ni
-       desde Referencia), y sella `concreta.version.<id> = 6`;
+       desde Referencia), y sella `concreta.version.<id>` con la versión actual;
      · cambios antiguos, limpieza a los 30 días y borrar con sus claves v5.
    =========================================================================== */
 import 'fake-indexeddb/auto';
 import { clear, del, get, set } from 'idb-keyval';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { loadObraRefSource } from '../features/referencia/obraSource';
-import { toSerializable, useObraStore, useToastStore, type ObraData } from '../store';
+import { SCHEMA_VERSION, toSerializable, useObraStore, useToastStore, type ObraData } from '../store';
 import { FakeLockManager, heldUntil, tick } from '../test/fakeLocks';
 import { obraKey, obraKeys, saveObra, v5ObraKey, v5VersionKey } from './persist';
 import { usePersistStore } from './persistStore';
@@ -146,21 +146,21 @@ describe('el índice v6 nace del v5', () => {
 });
 
 describe('migrar: una vez y solo la pestaña dueña', () => {
-  it('la dueña migra al abrir: sobre v6, `migracionV5` con los dos savedAt y `concreta.version.<id> = 6`', async () => {
+  it('la dueña migra al abrir: sobre v6, `migracionV5` con los dos savedAt y `concreta.version.<id>` sellada a la versión actual', async () => {
     await dosObrasV5();
     await hydrate();
     await flushPending();
     expect(getActiveObraId()).toBe('a');
     expect(state().planos).toEqual([]);
     const env = (await get(obraKey('a'))) as { schemaVersion: number; data: ObraData };
-    expect(env.schemaVersion).toBe(6);
+    expect(env.schemaVersion).toBe(SCHEMA_VERSION);
     expect(env.data.planos).toEqual([]);
     expect(env.data.obra.denominacion).toBe('A');
     const meta = (await loadIndex()).obras.find((m) => m.id === 'a')!;
     expect(meta.porMigrar).toBeUndefined();
     expect(meta.migracionV5).toMatchObject({ savedAt: T0, indiceSavedAt: T0_INDICE });
     expect(meta.ultimaCopia).toBe('2026-09-10T00:00:00.000Z'); // la meta se fusiona
-    expect(await get(v5VersionKey('a'))).toBe(6);
+    expect(await get(v5VersionKey('a'))).toBe(SCHEMA_VERSION);
     // la copia v5 se queda tal cual
     expect(((await get(v5ObraKey('a'))) as { savedAt: string }).savedAt).toBe(T0);
     // B no se ha abierto: sigue por migrar, sin sobre v6
@@ -196,8 +196,8 @@ describe('migrar: una vez y solo la pestaña dueña', () => {
     otra.abort();
     await vi.waitFor(() => expect(session().readonly).toBe(false));
     await flushPending();
-    await vi.waitFor(async () => expect(await get(v5VersionKey('a'))).toBe(6));
-    expect(((await get(obraKey('a'))) as { schemaVersion: number }).schemaVersion).toBe(6);
+    await vi.waitFor(async () => expect(await get(v5VersionKey('a'))).toBe(SCHEMA_VERSION));
+    expect(((await get(obraKey('a'))) as { schemaVersion: number }).schemaVersion).toBe(SCHEMA_VERSION);
   });
 
   it('Referencia la lee de la clave v5 y no escribe', async () => {
@@ -253,7 +253,7 @@ describe('cambios antiguos', () => {
     const nueva = idx.obras.find((m) => m.name === 'A (cambios de la versión antigua)');
     expect(nueva).toBeTruthy();
     const res = await loadObraData(nueva!.id);
-    expect(res.kind === 'ok' && res.data.schemaVersion).toBe(6);
+    expect(res.kind === 'ok' && res.data.schemaVersion).toBe(SCHEMA_VERSION);
     expect(getActiveObraId()).toBe('a'); // la obra en pantalla no cambia
     await abrirPestana();
     expect(usePersistStore.getState().cambiosAntiguos).toBeNull();

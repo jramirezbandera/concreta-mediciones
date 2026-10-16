@@ -7,6 +7,7 @@ import { useJustRevealed } from '../../hooks/useJustRevealed';
 import { usePartidaRow } from '../../hooks/usePartidaRow';
 import { useReorderSource, useReorderTarget, type ReorderDrag } from '../../hooks/useReorderDrag';
 import { useObraStore } from '../../store';
+import { RcdChip } from '../residuos/RcdChip';
 import { DetailPanel } from './DetailPanel';
 import { PartidaMenu } from './PartidaMenu';
 import { precioOrigenSignal } from './precioOrigen';
@@ -74,6 +75,7 @@ export const PartidaRow = memo(function PartidaRow({
   // es la Σ derivada y se muestra en solo-lectura.
   const sinMedicion = p.med.length === 0;
   const open = useObraStore((s) => s.openPartidaId === p.id);
+  const conEstudio = useObraStore((s) => !!s.estudioRcd);
   const togglePartida = useObraStore((s) => s.togglePartida);
   const reorderPartida = useObraStore((s) => s.reorderPartida);
   const justRevealed = useJustRevealed(p.id);
@@ -162,6 +164,7 @@ export const PartidaRow = memo(function PartidaRow({
             </span>
             {p.contradictorio && <ContraChip />}
             {p.ciPct != null && p.ciPct > 0 && <CiChip pct={p.ciPct} />}
+            {conEstudio && p.rcd && <RcdChip estado={p.rcd.estado} />}
           </div>
         </td>
         <td className={`mono ${styles.cUd}`}>

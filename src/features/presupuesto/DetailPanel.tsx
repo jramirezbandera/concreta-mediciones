@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, type RefObject } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, type RefObject } from 'react';
 import { EditableText, Icon } from '../../components';
 import { medTotal } from '../../core/medicion';
 import { medColumnas, medFormaDe, medFormaDef } from '../../core/medForma';
@@ -22,6 +22,9 @@ import { MedSelectionBar } from './MedSelectionBar';
 import { PriceJustif } from './PriceJustif';
 import { PriceJustifCards } from './PriceJustifCards';
 import styles from './Presupuesto.module.css';
+
+/** El editor de residuos (con el motor y sus tablas) se carga al abrir la pestaña. */
+const EditorResiduo = lazy(() => import('../residuos/EditorResiduo').then((m) => ({ default: m.EditorResiduo })));
 
 /** Cantidad de la partida tal como la usa el importe: la Σ de la medición o,
  *  sin líneas, la cantidad FIJA (que antes el pie enseñaba como 0,00). */
@@ -174,6 +177,7 @@ export function DetailPanel({
   compact?: boolean;
 }) {
   const tab = useMedUiStore((s) => s.tab);
+  const conEstudio = useObraStore((s) => !!s.estudioRcd);
   const setTab = useMedUiStore((s) => s.setTab);
   const hasSel = useMedUiStore((s) => s.partidaId === p.id && s.selected.length > 0);
   const announce = useMedUiStore((s) => s.announce);
@@ -232,6 +236,15 @@ export function DetailPanel({
             {compact ? 'Justificación' : 'Justificación del precio'}
             {p.items.length > 0 && <span className={`mono ${styles.segCount}`}>{p.items.length}</span>}
           </button>
+          {conEstudio && (
+            <button
+              type="button"
+              className={`tcol ${styles.segBtn} ${tab === 'residuos' ? styles.on : ''}`}
+              onClick={() => setTab('residuos')}
+            >
+              Residuos
+            </button>
+          )}
         </div>
         {!compact && (tab === 'medicion' ? formaSelect : <Cantidad p={p} />)}
       </div>
@@ -370,6 +383,14 @@ export function DetailPanel({
         ) : (
           <PriceJustif p={p} chapterId={chapterId} />
         ))}
+
+      {tab === 'residuos' && conEstudio && (
+        <div className={styles.descBox}>
+          <Suspense fallback={<div style={{ color: 'var(--text-disabled)' }}>Cargando…</div>}>
+            <EditorResiduo chapterId={chapterId} p={p} />
+          </Suspense>
+        </div>
+      )}
 
       <MedPasteReview compact={compact} />
     </div>

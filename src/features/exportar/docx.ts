@@ -13,3 +13,11 @@ export async function exportDocx(target: PrintTarget): Promise<void> {
   const out = await docxFor(target, useObraStore.getState());
   if (out) downloadBlob(out.blob, out.fileName);
 }
+
+/** Genera y DESCARGA el estudio de gestión de residuos en Word. `hoy` (ISO)
+ *  es la fecha del estudio si no tiene una. */
+export async function exportDocxRcd(hoy: string): Promise<void> {
+  const { docxRcdFor } = await import('./docxRcd');
+  const out = await docxRcdFor(useObraStore.getState(), hoy);
+  if (out) downloadBlob(out.blob, out.fileName);
+}

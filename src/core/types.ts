@@ -5,6 +5,8 @@
    céntimos enteros en `core/money` (acumulación exacta, §0 decisión 2).
    =========================================================================== */
 
+import type { ResiduoPartida } from './rcd/tipos';
+
 export type ResourceType = 'MO' | 'MQ' | 'MAT' | '%CI';
 
 /** Casillas de una línea de medición, en el orden del ~M de FIEBDC. */
@@ -103,6 +105,13 @@ export interface Partida {
    *  El CI NO se pliega en `precio` (CYPE lo muestra aparte); aquí queda VISIBLE.
    *  undefined = la partida no procede de una base con CI declarado. */
   ciPct?: number;
+  /**
+   * Residuo que da la partida para el estudio de gestión de residuos (schema
+   * v7, `core/rcd`): códigos LER y cómo pasar su medición a t y m³. No es
+   * parte de la definición de precio: asignarlo no pasa por el copy-on-write.
+   * undefined = sin asignar.
+   */
+  rcd?: ResiduoPartida;
 }
 
 /**

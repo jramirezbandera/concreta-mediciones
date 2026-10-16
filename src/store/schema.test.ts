@@ -24,9 +24,37 @@ describe('v5 → v6', () => {
     const v5 = { ...blankObraData(), schemaVersion: 5 } as Partial<ObraData>;
     delete v5.planos;
     const d = fromSerializable(v5 as ObraData);
-    expect(d.schemaVersion).toBe(6);
+    expect(d.schemaVersion).toBe(SCHEMA_VERSION);
     expect(d.planos).toEqual([]);
-    expect(SCHEMA_VERSION).toBe(6);
+  });
+});
+
+describe('v6 → v7 (estudio de residuos)', () => {
+  it('solo sube la versión: sin estudio ni residuos en las partidas', () => {
+    const v6 = { ...blankObraData(), schemaVersion: 6 } as ObraData;
+    delete v6.estudioRcd;
+    const d = fromSerializable(clon(v6));
+    expect(SCHEMA_VERSION).toBe(7);
+    expect(d).toEqual({ ...v6, schemaVersion: 7 });
+    expect(d.estudioRcd).toBeUndefined();
+  });
+
+  it('un `rcd` o un `estudioRcd` ilegible se aparta a `_ilegible` sin romper la obra', () => {
+    const d0 = blankObraData();
+    d0.chapters = [{ id: 'c', code: '1', title: 'C' }];
+    d0.partidas = {
+      c: [
+        { id: 'p1', pos: '1', code: 'A', title: 'A', ud: 'm²', precio: 1, desc: '', med: [], items: [], rcd: { estado: 'raro' } as never },
+        { id: 'p2', pos: '2', code: 'B', title: 'B', ud: 'm²', precio: 1, desc: '', med: [], items: [],
+          rcd: { estado: 'propuesta', origen: { tipo: 'regla', motivo: 'x' }, componentes: [] } },
+      ],
+    };
+    (d0 as { estudioRcd?: unknown }).estudioRcd = { version: 9 };
+    const d = fromSerializable(clon(d0));
+    expect(d.partidas.c![0]!.rcd).toBeUndefined();
+    expect(d.partidas.c![1]!.rcd!.estado).toBe('propuesta');
+    expect(d.estudioRcd).toBeUndefined();
+    expect(d._ilegible!.map((x) => x.donde)).toEqual(['partidas/c/p1/rcd', 'estudioRcd']);
   });
 
   it('isObraData: una v5 sin `planos` es válida; una v6 sin `planos`, no', () => {
@@ -123,7 +151,8 @@ describe('validar sin destruir (§1.4)', () => {
 
   it('el lector A0 ante `obra-v6-a1.json` conserva lo que no entiende y lo devuelve igual al guardar', () => {
     const r = toSerializable(fromSerializable(clon(A1)));
-    expect(JSON.parse(JSON.stringify(r))).toEqual(A1);
+    // Solo cambia la versión (la v7 no toca los planos).
+    expect(JSON.parse(JSON.stringify(r))).toEqual({ ...A1, schemaVersion: SCHEMA_VERSION });
   });
 });
 

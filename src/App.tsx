@@ -34,6 +34,8 @@ import styles from './App.module.css';
 // al usarlo. Sandbox es solo de dev; PrintDoc renderiza la obra entera para imprimir.
 const Sandbox = lazy(() => import('./features/sandbox/Sandbox').then((m) => ({ default: m.Sandbox })));
 const ImportarView = lazy(() => import('./features/importar').then((m) => ({ default: m.ImportarView })));
+// El estudio de residuos (vista, motor y tablas) solo lo carga quien lo abre.
+const ResiduosView = lazy(() => import('./features/residuos/ResiduosView').then((m) => ({ default: m.ResiduosView })));
 const ReferenciaImportModal = lazy(() =>
   import('./features/importar').then((m) => ({ default: m.ReferenciaImportModal })),
 );
@@ -437,6 +439,10 @@ export default function App() {
           ) : view === 'import' ? (
             <Suspense fallback={<div style={{ padding: 24, color: 'var(--text-disabled)' }}>Cargando…</div>}>
               <ImportarView compact={bp.isMobile} />
+            </Suspense>
+          ) : view === 'residuos' ? (
+            <Suspense fallback={<div style={{ padding: 24, color: 'var(--text-disabled)' }}>Cargando…</div>}>
+              <ResiduosView compact={bp.isMobile} onGoPresupuesto={() => changeView('presupuesto')} />
             </Suspense>
           ) : (
             <ResumenView compact={bp.isMobile} />

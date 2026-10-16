@@ -96,6 +96,8 @@ export function refCopyItemsFromObra({ data, report }: Bc3ImportResult): Bc3Part
           ciPct,
           // Hidrata desc/ud/precio desde el banco parseado (lo que lee detectCollisions).
           items: rawItems.map((it) => hydrateItem(it, data.recursos)),
+          // Residuos del banco (~R): llegan como propuesta (los marca bc3ToObra).
+          ...(p.rcd ? { rcd: p.rcd } : {}),
         },
       });
     }

@@ -34,6 +34,8 @@ import { DOMAIN_KEYS, SCHEMA_VERSION, blankObraData, seedObraData, type ObraData
 import { createCertSlice } from './slices/certSlice';
 import { createCopySlice, type PendingCopy } from './slices/copySlice';
 import { createEstructuraSlice } from './slices/estructuraSlice';
+import { createRcdSlice, type FilaCapituloRcd, type RefPartidaRcd } from './slices/rcdSlice';
+import type { EstudioRcdDatos, ResiduoPartida } from '../core/rcd/tipos';
 import {
   createPlanosSlice,
   type DestinoPlano,
@@ -645,6 +647,28 @@ export interface ObraState extends ObraData {
     expect: ExpectDoc & { calRev: string };
   }) => MedResult;
 
+  /* ---- estudio de gestión de residuos (v7, `slices/rcdSlice`) ---- */
+  /** Empieza el estudio: datos vacíos, capítulo de gestión propuesto por el
+   *  título y propuestas de las reglas en las partidas sin asignar. Devuelve
+   *  cuántas propuestas puso. UN paso de Deshacer. No-op si ya hay estudio. */
+  iniciarEstudioRcd: () => number;
+  /** Cambia datos del estudio (merge superficial). */
+  setEstudioRcd: (patch: Partial<EstudioRcdDatos>) => void;
+  /** Quita el estudio de la obra (las asignaciones de las partidas se quedan). */
+  quitarEstudioRcd: () => void;
+  /** Pone (o quita, con `null`) el residuo de una partida. */
+  setResiduoPartida: (chapterId: string, partidaId: string, rcd: ResiduoPartida | null) => void;
+  /** Confirma propuestas (sin componentes → «no genera»). Devuelve cuántas. */
+  confirmarResiduos: (refs: RefPartidaRcd[]) => number;
+  /** Propone residuo en las partidas sin asignar. Devuelve cuántas. */
+  proponerResiduos: () => number;
+  /** Copia el residuo de una partida a las de su mismo código. Devuelve cuántas. */
+  aplicarResiduoAHomonimos: (chapterId: string, partidaId: string) => number;
+  /** Crea el capítulo «Gestión de residuos» con una partida por código estimado
+   *  (t, al precio declarado o a 0) y lo enlaza como 7.º. CAMBIA EL PEM: un paso
+   *  de Deshacer. Devuelve cuántas partidas creó. */
+  crearCapituloGestionRcd: (porCodigo: FilaCapituloRcd[]) => number;
+
   /** Restaura el estado sembrado (datos + UI). Útil en tests y para "nueva obra". */
   reset: () => void;
 }
@@ -815,8 +839,16 @@ export const useObraStore = create<ObraState>()(
           set((s) => {
             // `bajas: {}` y `planos: []` por delante: un `ImportedObra` (.bc3) no
             // trae tombstones ni planos, y sin el default arrastraría los de la
-            // obra ANTERIOR (v3, v6). Lo apartado por ilegible tampoco se hereda.
-            Object.assign(s, { schemaVersion: SCHEMA_VERSION, bajas: {}, planos: [], _ilegible: undefined, ...data });
+            // obra ANTERIOR (v3, v6). Lo apartado por ilegible y el estudio de
+            // residuos (v7) tampoco se heredan.
+            Object.assign(s, {
+              schemaVersion: SCHEMA_VERSION,
+              bajas: {},
+              planos: [],
+              estudioRcd: undefined,
+              _ilegible: undefined,
+              ...data,
+            });
             Object.assign(s, seedUi(data.certs));
             const first = data.chapters[0]?.id;
             s.view = 'presupuesto';
@@ -892,6 +924,7 @@ export const useObraStore = create<ObraState>()(
       ...createCopySlice(set, get, store),
       ...createEstructuraSlice(set, get, store),
       ...createPlanosSlice(set, get, store),
+      ...createRcdSlice(set, get, store),
     };
   }),
   ),

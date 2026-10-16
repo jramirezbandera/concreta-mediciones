@@ -1,0 +1,888 @@
+{
+ "id": "ler-2014-955",
+ "norma": "Decisión 2000/532/CE, sobre la lista de residuos, en la redacción de la Decisión 2014/955/UE",
+ "fecha": "2014-12-18",
+ "aplicableDesde": "2015-06-01",
+ "cita": "Lista europea de residuos (Decisión 2000/532/CE, en la redacción de la Decisión 2014/955/UE), conforme al art. 6.1 de la Ley 7/2022",
+ "fuente": "DOUE L 370, 30-12-2014, pp. 44–86 (volcado de texto del PDF)",
+ "verificacion": "K-RCD.8 y K-RCD.9 (Instalaciones/research/verificacion-residuos.md, 2026-10-16); el resto de capítulos, transcrito del mismo volcado",
+ "codigos": [
+  {
+   "codigo": "01 04 07",
+   "descripcion": "Residuos que contienen sustancias peligrosas procedentes de la transformación física y química de minerales no metálicos",
+   "peligroso": true,
+   "rcd": false,
+   "aviso": "Capítulo 01 (residuos de la prospección y extracción de minerales): no son RCD.",
+   "pagina": "49"
+  },
+  {
+   "codigo": "01 04 08",
+   "descripcion": "Residuos de grava y rocas trituradas distintos de los mencionados en el código 01 04 07",
+   "peligroso": false,
+   "rcd": false,
+   "aviso": "Capítulo 01 (residuos de la prospección y extracción de minerales): no son RCD.",
+   "pagina": "49"
+  },
+  {
+   "codigo": "01 04 09",
+   "descripcion": "Residuos de arena y arcillas",
+   "peligroso": false,
+   "rcd": false,
+   "aviso": "Capítulo 01 (residuos de la prospección y extracción de minerales): no son RCD.",
+   "pagina": "49"
+  },
+  {
+   "codigo": "01 04 10",
+   "descripcion": "Residuos de polvo y arenilla distintos de los mencionados en el código 01 04 07",
+   "peligroso": false,
+   "rcd": false,
+   "aviso": "Capítulo 01 (residuos de la prospección y extracción de minerales): no son RCD.",
+   "pagina": "49"
+  },
+  {
+   "codigo": "01 04 11",
+   "descripcion": "Residuos de la transformación de potasa y sal gema distintos de los mencionados en el código 01 04 07",
+   "peligroso": false,
+   "rcd": false,
+   "aviso": "Capítulo 01 (residuos de la prospección y extracción de minerales): no son RCD.",
+   "pagina": "49"
+  },
+  {
+   "codigo": "01 04 12",
+   "descripcion": "Estériles y otros residuos del lavado y limpieza de minerales, distintos de los mencionados en los códigos 01 04 07 y 01 04 11",
+   "peligroso": false,
+   "rcd": false,
+   "aviso": "Capítulo 01 (residuos de la prospección y extracción de minerales): no son RCD.",
+   "pagina": "49"
+  },
+  {
+   "codigo": "01 04 13",
+   "descripcion": "Residuos del corte y serrado de piedra distintos de los mencionados en el código 01 04 07",
+   "peligroso": false,
+   "rcd": false,
+   "aviso": "Capítulo 01 (residuos de la prospección y extracción de minerales): no son RCD.",
+   "pagina": "49"
+  },
+  {
+   "codigo": "01 04 99",
+   "descripcion": "Residuos no especificados en otra categoría",
+   "peligroso": false,
+   "rcd": false,
+   "aviso": "Capítulo 01 (residuos de la prospección y extracción de minerales): no son RCD.",
+   "pagina": "49"
+  },
+  {
+   "codigo": "08 01 11",
+   "descripcion": "Residuos de pintura y barniz que contienen disolventes orgánicos u otras sustancias peligrosas",
+   "peligroso": true,
+   "pagina": "60"
+  },
+  {
+   "codigo": "08 01 12",
+   "descripcion": "Residuos de pintura y barniz, distintos de los especificados en el código 08 01 11",
+   "peligroso": false,
+   "pagina": "60"
+  },
+  {
+   "codigo": "08 01 13",
+   "descripcion": "Lodos de pintura y barniz que contienen disolventes orgánicos u otras sustancias peligrosas",
+   "peligroso": true,
+   "pagina": "60"
+  },
+  {
+   "codigo": "08 01 14",
+   "descripcion": "Lodos de pintura y barniz, distintos de los especificados en el código 08 01 13",
+   "peligroso": false,
+   "pagina": "60"
+  },
+  {
+   "codigo": "08 01 15",
+   "descripcion": "Lodos acuosos que contienen pintura o barniz con disolventes orgánicos u otras sustancias peligrosas",
+   "peligroso": true,
+   "pagina": "60"
+  },
+  {
+   "codigo": "08 01 16",
+   "descripcion": "Lodos acuosos que contienen pintura o barniz, distintos de los especificados en el código 08 01 15",
+   "peligroso": false,
+   "pagina": "60"
+  },
+  {
+   "codigo": "08 01 17",
+   "descripcion": "Residuos del decapado o eliminación de pintura y barniz que contienen disolventes orgánicos u otras sustancias peligrosas",
+   "peligroso": true,
+   "pagina": "60"
+  },
+  {
+   "codigo": "08 01 18",
+   "descripcion": "Residuos del decapado o eliminación de pintura y barniz, distintos de los especificados en el código 08 01 17",
+   "peligroso": false,
+   "pagina": "60"
+  },
+  {
+   "codigo": "08 01 19",
+   "descripcion": "Suspensiones acuosas que contienen pintura o barniz con disolventes orgánicos u otras sustancias peligrosas",
+   "peligroso": true,
+   "pagina": "60"
+  },
+  {
+   "codigo": "08 01 20",
+   "descripcion": "Suspensiones acuosas que contienen pintura o barniz, distintas de las especificadas en el código 08 01 19",
+   "peligroso": false,
+   "pagina": "60"
+  },
+  {
+   "codigo": "08 01 21",
+   "descripcion": "Residuos de decapantes o eliminadores de pintura y barniz",
+   "peligroso": true,
+   "pagina": "60"
+  },
+  {
+   "codigo": "08 01 99",
+   "descripcion": "Residuos no especificados en otra categoría",
+   "peligroso": false,
+   "pagina": "60"
+  },
+  {
+   "codigo": "10 13 01",
+   "descripcion": "Residuos de la preparación de mezclas antes del proceso de cocción",
+   "peligroso": false,
+   "rcd": false,
+   "aviso": "Capítulo 10 (fabricación de cemento, cal y yeso): no son RCD."
+  },
+  {
+   "codigo": "10 13 04",
+   "descripcion": "Residuos de la calcinación e hidratación de la cal",
+   "peligroso": false,
+   "rcd": false,
+   "aviso": "Capítulo 10 (fabricación de cemento, cal y yeso): no son RCD."
+  },
+  {
+   "codigo": "10 13 06",
+   "descripcion": "Partículas y polvo (excepto los códigos 10 13 12 y 10 13 13)",
+   "peligroso": false,
+   "rcd": false,
+   "aviso": "Capítulo 10 (fabricación de cemento, cal y yeso): no son RCD."
+  },
+  {
+   "codigo": "10 13 07",
+   "descripcion": "Lodos y tortas de filtración del tratamiento de gases",
+   "peligroso": false,
+   "rcd": false,
+   "aviso": "Capítulo 10 (fabricación de cemento, cal y yeso): no son RCD."
+  },
+  {
+   "codigo": "10 13 09",
+   "descripcion": "Residuos de la fabricación de fibrocemento que contienen amianto",
+   "peligroso": true,
+   "rcd": false,
+   "aviso": "Capítulo 10 (fabricación de cemento, cal y yeso): no son RCD."
+  },
+  {
+   "codigo": "10 13 10",
+   "descripcion": "Residuos de la fabricación de fibrocemento distintos de los especificados en el código 10 13 09",
+   "peligroso": false,
+   "rcd": false,
+   "aviso": "Capítulo 10 (fabricación de cemento, cal y yeso): no son RCD."
+  },
+  {
+   "codigo": "10 13 11",
+   "descripcion": "Residuos de materiales compuestos a base de cemento distintos de los especificados en los códigos 10 13 09 y 10 13 10",
+   "peligroso": false,
+   "rcd": false,
+   "aviso": "Capítulo 10 (fabricación de cemento, cal y yeso): no son RCD."
+  },
+  {
+   "codigo": "10 13 12",
+   "descripcion": "Residuos sólidos del tratamiento de gases que contienen sustancias peligrosas",
+   "peligroso": true,
+   "rcd": false,
+   "aviso": "Capítulo 10 (fabricación de cemento, cal y yeso): no son RCD."
+  },
+  {
+   "codigo": "10 13 13",
+   "descripcion": "Residuos sólidos del tratamiento de gases, distintos de los especificados en el código 10 13 12",
+   "peligroso": false,
+   "rcd": false,
+   "aviso": "Capítulo 10 (fabricación de cemento, cal y yeso): no son RCD."
+  },
+  {
+   "codigo": "10 13 14",
+   "descripcion": "Residuos de hormigón y lodos de hormigón",
+   "peligroso": false,
+   "rcd": false,
+   "aviso": "Capítulo 10 (fabricación de cemento, cal y yeso): no son RCD."
+  },
+  {
+   "codigo": "10 13 99",
+   "descripcion": "Residuos no especificados en otra categoría",
+   "peligroso": false,
+   "rcd": false,
+   "aviso": "Capítulo 10 (fabricación de cemento, cal y yeso): no son RCD."
+  },
+  {
+   "codigo": "13 02 04",
+   "descripcion": "Aceites minerales clorados de motor, de transmisión mecánica y lubricantes",
+   "peligroso": true,
+   "pagina": "72"
+  },
+  {
+   "codigo": "13 02 05",
+   "descripcion": "Aceites minerales no clorados de motor, de transmisión mecánica y lubricantes",
+   "peligroso": true,
+   "pagina": "72"
+  },
+  {
+   "codigo": "13 02 06",
+   "descripcion": "Aceites sintéticos de motor, de transmisión mecánica y lubricantes",
+   "peligroso": true,
+   "pagina": "72"
+  },
+  {
+   "codigo": "13 02 07",
+   "descripcion": "Aceites fácilmente biodegradables de motor, de transmisión mecánica y lubricantes",
+   "peligroso": true,
+   "pagina": "72"
+  },
+  {
+   "codigo": "13 02 08",
+   "descripcion": "Otros aceites de motor, de transmisión mecánica y lubricantes",
+   "peligroso": true,
+   "pagina": "72"
+  },
+  {
+   "codigo": "14 06 01",
+   "descripcion": "Clorofluorocarburos, HCFC, HFC",
+   "peligroso": true
+  },
+  {
+   "codigo": "14 06 02",
+   "descripcion": "Otros disolventes y mezclas de disolventes halogenados",
+   "peligroso": true
+  },
+  {
+   "codigo": "14 06 03",
+   "descripcion": "Otros disolventes y mezclas de disolventes",
+   "peligroso": true
+  },
+  {
+   "codigo": "14 06 04",
+   "descripcion": "Lodos o residuos sólidos que contienen disolventes halogenados",
+   "peligroso": true
+  },
+  {
+   "codigo": "14 06 05",
+   "descripcion": "Lodos o residuos sólidos que contienen otros disolventes",
+   "peligroso": true
+  },
+  {
+   "codigo": "15 01 01",
+   "descripcion": "Envases de papel y cartón",
+   "peligroso": false,
+   "pagina": "74"
+  },
+  {
+   "codigo": "15 01 02",
+   "descripcion": "Envases de plástico",
+   "peligroso": false,
+   "pagina": "74"
+  },
+  {
+   "codigo": "15 01 03",
+   "descripcion": "Envases de madera",
+   "peligroso": false,
+   "pagina": "74"
+  },
+  {
+   "codigo": "15 01 04",
+   "descripcion": "Envases metálicos",
+   "peligroso": false,
+   "pagina": "74"
+  },
+  {
+   "codigo": "15 01 05",
+   "descripcion": "Envases compuestos",
+   "peligroso": false,
+   "pagina": "74"
+  },
+  {
+   "codigo": "15 01 06",
+   "descripcion": "Envases mezclados",
+   "peligroso": false,
+   "pagina": "74"
+  },
+  {
+   "codigo": "15 01 07",
+   "descripcion": "Envases de vidrio",
+   "peligroso": false,
+   "pagina": "74"
+  },
+  {
+   "codigo": "15 01 09",
+   "descripcion": "Envases textiles",
+   "peligroso": false,
+   "pagina": "74"
+  },
+  {
+   "codigo": "15 01 10",
+   "descripcion": "Envases que contienen restos de sustancias peligrosas o están contaminados por ellas",
+   "peligroso": true,
+   "pagina": "74"
+  },
+  {
+   "codigo": "15 01 11",
+   "descripcion": "Envases metálicos, incluidos los recipientes a presión vacíos, que contienen una matriz sólida y porosa peligrosa (por ejemplo, amianto)",
+   "peligroso": true,
+   "pagina": "74"
+  },
+  {
+   "codigo": "15 02 02",
+   "descripcion": "Absorbentes, materiales de filtración (incluidos los filtros de aceite no especificados en otra categoría), trapos de limpieza y ropas protectoras contaminados por sustancias peligrosas",
+   "peligroso": true,
+   "pagina": "74"
+  },
+  {
+   "codigo": "15 02 03",
+   "descripcion": "Absorbentes, materiales de filtración, trapos de limpieza y ropas protectoras distintos de los especificados en el código 15 02 02",
+   "peligroso": false,
+   "pagina": "74"
+  },
+  {
+   "codigo": "16 01 07",
+   "descripcion": "Filtros de aceite",
+   "peligroso": true
+  },
+  {
+   "codigo": "16 06 01",
+   "descripcion": "Baterías de plomo",
+   "peligroso": true,
+   "pagina": "76"
+  },
+  {
+   "codigo": "16 06 02",
+   "descripcion": "Acumuladores de Ni-Cd",
+   "peligroso": true,
+   "pagina": "76"
+  },
+  {
+   "codigo": "16 06 03",
+   "descripcion": "Pilas que contienen mercurio",
+   "peligroso": true,
+   "pagina": "76"
+  },
+  {
+   "codigo": "16 06 04",
+   "descripcion": "Pilas alcalinas (excepto 16 06 03)",
+   "peligroso": false,
+   "pagina": "76"
+  },
+  {
+   "codigo": "16 06 05",
+   "descripcion": "Otras pilas y acumuladores",
+   "peligroso": false,
+   "pagina": "76"
+  },
+  {
+   "codigo": "16 06 06",
+   "descripcion": "Electrolitos de pilas y acumuladores recogidos selectivamente",
+   "peligroso": true,
+   "pagina": "76"
+  },
+  {
+   "codigo": "17 01 01",
+   "descripcion": "Hormigón",
+   "peligroso": false,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 01 02",
+   "descripcion": "Ladrillos",
+   "peligroso": false,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 01 03",
+   "descripcion": "Tejas y materiales cerámicos",
+   "peligroso": false,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 01 06",
+   "descripcion": "Mezclas, o fracciones separadas, de hormigón, ladrillos, tejas y materiales cerámicos que contienen sustancias peligrosas",
+   "peligroso": true,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 01 07",
+   "descripcion": "Mezclas de hormigón, ladrillos, tejas y materiales cerámicos, distintas de las especificadas en el código 17 01 06",
+   "peligroso": false,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 02 01",
+   "descripcion": "Madera",
+   "peligroso": false,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 02 02",
+   "descripcion": "Vidrio",
+   "peligroso": false,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 02 03",
+   "descripcion": "Plástico",
+   "peligroso": false,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 02 04",
+   "descripcion": "Vidrio, plástico y madera que contienen sustancias peligrosas o están contaminados por ellas",
+   "peligroso": true,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 03 01",
+   "descripcion": "Mezclas bituminosas que contienen alquitrán de hulla",
+   "peligroso": true,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 03 02",
+   "descripcion": "Mezclas bituminosas distintas de las especificadas en el código 17 03 01",
+   "peligroso": false,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 03 03",
+   "descripcion": "Alquitrán de hulla y productos alquitranados",
+   "peligroso": true,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 04 01",
+   "descripcion": "Cobre, bronce, latón",
+   "peligroso": false,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 04 02",
+   "descripcion": "Aluminio",
+   "peligroso": false,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 04 03",
+   "descripcion": "Plomo",
+   "peligroso": false,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 04 04",
+   "descripcion": "Zinc",
+   "peligroso": false,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 04 05",
+   "descripcion": "Hierro y acero",
+   "peligroso": false,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 04 06",
+   "descripcion": "Estaño",
+   "peligroso": false,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 04 07",
+   "descripcion": "Metales mezclados",
+   "peligroso": false,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 04 09",
+   "descripcion": "Residuos metálicos contaminados con sustancias peligrosas",
+   "peligroso": true,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 04 10",
+   "descripcion": "Cables que contienen hidrocarburos, alquitrán de hulla y otras sustancias peligrosas",
+   "peligroso": true,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 04 11",
+   "descripcion": "Cables distintos de los especificados en el código 17 04 10",
+   "peligroso": false,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 05 03",
+   "descripcion": "Tierra y piedras que contienen sustancias peligrosas",
+   "peligroso": true,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 05 04",
+   "descripcion": "Tierra y piedras distintas de las especificadas en el código 17 05 03",
+   "peligroso": false,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 05 05",
+   "descripcion": "Lodos de drenaje que contienen sustancias peligrosas",
+   "peligroso": true,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 05 06",
+   "descripcion": "Lodos de drenaje distintos de los especificados en el código 17 05 05",
+   "peligroso": false,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 05 07",
+   "descripcion": "Balasto de vías férreas que contiene sustancias peligrosas",
+   "peligroso": true,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 05 08",
+   "descripcion": "Balasto de vías férreas distinto del especificado en el código 17 05 07",
+   "peligroso": false,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 06 01",
+   "descripcion": "Materiales de aislamiento que contienen amianto",
+   "peligroso": true,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 06 03",
+   "descripcion": "Otros materiales de aislamiento que consisten en sustancias peligrosas o contienen dichas sustancias",
+   "peligroso": true,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 06 04",
+   "descripcion": "Materiales de aislamiento distintos de los especificados en los códigos 17 06 01 y 17 06 03",
+   "peligroso": false,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 06 05",
+   "descripcion": "Materiales de construcción que contienen amianto",
+   "peligroso": true,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 08 01",
+   "descripcion": "Materiales de construcción a base de yeso contaminados con sustancias peligrosas",
+   "peligroso": true,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 08 02",
+   "descripcion": "Materiales de construcción a base de yeso distintos de los especificados en el código 17 08 01",
+   "peligroso": false,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 09 01",
+   "descripcion": "Residuos de construcción y demolición que contienen mercurio",
+   "peligroso": true,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 09 02",
+   "descripcion": "Residuos de construcción y demolición que contienen PCB (por ejemplo, sellantes que contienen PCB, revestimientos de suelo a base de resinas que contienen PCB, acristalamientos dobles que contienen PCB, condensadores que contienen PCB)",
+   "peligroso": true,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 09 03",
+   "descripcion": "Otros residuos de construcción y demolición (incluidos los residuos mezclados) que contienen sustancias peligrosas",
+   "peligroso": true,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "17 09 04",
+   "descripcion": "Residuos mezclados de construcción y demolición distintos de los especificados en los códigos 17 09 01, 17 09 02 y 17 09 03",
+   "peligroso": false,
+   "pagina": "78–79"
+  },
+  {
+   "codigo": "20 01 01",
+   "descripcion": "Papel y cartón",
+   "peligroso": false,
+   "pagina": "85"
+  },
+  {
+   "codigo": "20 01 02",
+   "descripcion": "Vidrio",
+   "peligroso": false,
+   "pagina": "85"
+  },
+  {
+   "codigo": "20 01 08",
+   "descripcion": "Residuos biodegradables de cocinas y restaurantes",
+   "peligroso": false,
+   "pagina": "85"
+  },
+  {
+   "codigo": "20 01 10",
+   "descripcion": "Ropa",
+   "peligroso": false,
+   "pagina": "85"
+  },
+  {
+   "codigo": "20 01 11",
+   "descripcion": "Materias textiles",
+   "peligroso": false,
+   "pagina": "85"
+  },
+  {
+   "codigo": "20 01 13",
+   "descripcion": "Disolventes",
+   "peligroso": true,
+   "pagina": "85"
+  },
+  {
+   "codigo": "20 01 14",
+   "descripcion": "Ácidos",
+   "peligroso": true,
+   "pagina": "85"
+  },
+  {
+   "codigo": "20 01 15",
+   "descripcion": "Álcalis",
+   "peligroso": true,
+   "pagina": "85"
+  },
+  {
+   "codigo": "20 01 17",
+   "descripcion": "Productos fotoquímicos",
+   "peligroso": true,
+   "pagina": "85"
+  },
+  {
+   "codigo": "20 01 19",
+   "descripcion": "Plaguicidas",
+   "peligroso": true,
+   "pagina": "85"
+  },
+  {
+   "codigo": "20 01 21",
+   "descripcion": "Tubos fluorescentes y otros residuos que contienen mercurio",
+   "peligroso": true,
+   "pagina": "85"
+  },
+  {
+   "codigo": "20 01 23",
+   "descripcion": "Equipos desechados que contienen clorofluorocarburos",
+   "peligroso": true,
+   "pagina": "85"
+  },
+  {
+   "codigo": "20 01 25",
+   "descripcion": "Aceites y grasas comestibles",
+   "peligroso": false,
+   "pagina": "85"
+  },
+  {
+   "codigo": "20 01 26",
+   "descripcion": "Aceites y grasas distintos de los especificados en el código 20 01 25",
+   "peligroso": true,
+   "pagina": "85"
+  },
+  {
+   "codigo": "20 01 27",
+   "descripcion": "Pinturas, tintas, adhesivos y resinas que contienen sustancias peligrosas",
+   "peligroso": true,
+   "pagina": "85"
+  },
+  {
+   "codigo": "20 01 28",
+   "descripcion": "Pinturas, tintas, adhesivos y resinas distintos de los especificados en el código 20 01 27",
+   "peligroso": false,
+   "pagina": "85"
+  },
+  {
+   "codigo": "20 01 29",
+   "descripcion": "Detergentes que contienen sustancias peligrosas",
+   "peligroso": true,
+   "pagina": "85"
+  },
+  {
+   "codigo": "20 01 30",
+   "descripcion": "Detergentes distintos de los especificados en el código 20 01 29",
+   "peligroso": false,
+   "pagina": "85"
+  },
+  {
+   "codigo": "20 01 31",
+   "descripcion": "Medicamentos citotóxicos y citostáticos",
+   "peligroso": true,
+   "pagina": "85"
+  },
+  {
+   "codigo": "20 01 32",
+   "descripcion": "Medicamentos distintos de los especificados en el código 20 01 31",
+   "peligroso": false,
+   "pagina": "85"
+  },
+  {
+   "codigo": "20 01 33",
+   "descripcion": "Baterías y acumuladores especificados en los códigos 16 06 01, 16 06 02 o 16 06 03 y baterías y acumuladores sin clasificar que contienen esas baterías",
+   "peligroso": true,
+   "pagina": "85"
+  },
+  {
+   "codigo": "20 01 34",
+   "descripcion": "Baterías y acumuladores distintos de los especificados en el código 20 01 33",
+   "peligroso": false,
+   "pagina": "85"
+  },
+  {
+   "codigo": "20 01 35",
+   "descripcion": "Equipos eléctricos y electrónicos desechados, distintos de los especificados en los códigos 20 01 21 y 20 01 23, que contienen componentes peligrosos",
+   "peligroso": true,
+   "pagina": "85"
+  },
+  {
+   "codigo": "20 01 36",
+   "descripcion": "Equipos eléctricos y electrónicos desechados distintos de los especificados en los códigos 20 01 21, 20 01 23 y 20 01 35",
+   "peligroso": false,
+   "pagina": "85"
+  },
+  {
+   "codigo": "20 01 37",
+   "descripcion": "Madera que contiene sustancias peligrosas",
+   "peligroso": true,
+   "pagina": "85"
+  },
+  {
+   "codigo": "20 01 38",
+   "descripcion": "Madera distinta de la especificada en el código 20 01 37",
+   "peligroso": false,
+   "pagina": "85"
+  },
+  {
+   "codigo": "20 01 39",
+   "descripcion": "Plásticos",
+   "peligroso": false,
+   "pagina": "85"
+  },
+  {
+   "codigo": "20 01 40",
+   "descripcion": "Metales",
+   "peligroso": false,
+   "pagina": "85"
+  },
+  {
+   "codigo": "20 01 41",
+   "descripcion": "Residuos del deshollinado de chimeneas",
+   "peligroso": false,
+   "pagina": "85"
+  },
+  {
+   "codigo": "20 01 99",
+   "descripcion": "Otras fracciones no especificadas en otra categoría",
+   "peligroso": false,
+   "pagina": "85"
+  },
+  {
+   "codigo": "20 02 01",
+   "descripcion": "Residuos biodegradables",
+   "peligroso": false,
+   "pagina": "86"
+  },
+  {
+   "codigo": "20 02 02",
+   "descripcion": "Tierra y piedras",
+   "peligroso": false,
+   "pagina": "86"
+  },
+  {
+   "codigo": "20 02 03",
+   "descripcion": "Otros residuos no biodegradables",
+   "peligroso": false,
+   "pagina": "86"
+  },
+  {
+   "codigo": "20 03 01",
+   "descripcion": "Mezclas de residuos municipales",
+   "peligroso": false,
+   "pagina": "86"
+  },
+  {
+   "codigo": "20 03 02",
+   "descripcion": "Residuos de mercados",
+   "peligroso": false,
+   "pagina": "86"
+  },
+  {
+   "codigo": "20 03 03",
+   "descripcion": "Residuos de limpieza viaria",
+   "peligroso": false,
+   "pagina": "86"
+  },
+  {
+   "codigo": "20 03 04",
+   "descripcion": "Lodos de fosas sépticas",
+   "peligroso": false,
+   "pagina": "86"
+  },
+  {
+   "codigo": "20 03 06",
+   "descripcion": "Residuos de la limpieza de alcantarillas",
+   "peligroso": false,
+   "pagina": "86"
+  },
+  {
+   "codigo": "20 03 07",
+   "descripcion": "Residuos voluminosos",
+   "peligroso": false,
+   "pagina": "86"
+  },
+  {
+   "codigo": "20 03 99",
+   "descripcion": "Residuos municipales no especificados en otra categoría",
+   "peligroso": false,
+   "pagina": "86"
+  }
+ ],
+ "versiones": [
+  {
+   "desde": "2026-11-09",
+   "norma": "Decisión Delegada (UE) 2025/934, art. 2",
+   "cita": "y la Decisión Delegada (UE) 2025/934",
+   "veredicto": "VERIFICADO (texto); 16 06 04* cotejado en imagen (K-RCD.8). La corrección de errores que movería la fecha al 2026-12-09 está SIN CONFIRMAR.",
+   "cambios": [
+    {
+     "codigo": "16 06 04",
+     "peligroso": true,
+     "descripcion": "Residuos de pilas y baterías alcalinas (distintos de los especificados en el código 16 06 03)"
+    },
+    {
+     "codigo": "16 06 05",
+     "suprimido": true
+    },
+    {
+     "codigo": "20 01 33",
+     "suprimido": true
+    },
+    {
+     "codigo": "20 01 34",
+     "suprimido": true
+    }
+   ],
+   "nota": "El resto del nuevo subcapítulo 16 06 y los códigos 20 01 42*, 20 01 43* y 20 01 44 no se incluyen: su correspondencia con los nombres sale del orden de lectura (SIN CONFIRMAR)."
+  }
+ ]
+}
