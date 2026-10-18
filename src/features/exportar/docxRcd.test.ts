@@ -41,7 +41,7 @@ describe('Word del estudio de residuos', () => {
 
   it('pendientes en el color de aviso, firma del redactor y nombre del fichero', async () => {
     const { xml, fileName } = await xmlA();
-    expect(xml).toContain('Pendiente: gestor autorizado');
+    expect(xml).toContain('Pendiente: importe de la fianza');
     expect(xml).toContain('B45309');
     expect(xml).toContain('Técnica de prueba');
     expect(xml).toContain('EL TÉCNICO REDACTOR');

@@ -380,7 +380,7 @@ el usuario confirma una a una o en bloque («Aceptar las 14 propuestas de reglas
 | Superficie construida de obra nueva (m²) | Ratios (§1) | Pendiente |
 | Amianto: no / posible / identificado (y en qué elementos) | Inventario, 6.º, RD 396/2006 (K-RCD.3) | Pendiente, obligatorio en obra existente |
 | Tierras reutilizadas en la obra (m³ y destino) | Se restan: RD 105/2008 art. 3.1 a) (K-RCD.6) | Cero |
-| Gestor autorizado por código o fracción (nombre y nº de autorización) | 3.º | Pendiente |
+| Gestor autorizado por código o fracción (nombre y nº de autorización) | 3.º, opcional: lo designa el poseedor (art. 5) | Sin columna |
 | Operación R/D cuando la tabla no la da | 3.º | Pendiente |
 | Precio de gestión (€/t o €/m³), solo sin capítulo enlazado | 7.º | Pendiente |
 | Capítulo de gestión de residuos de la obra | 7.º (§6) | Se propone por el título |

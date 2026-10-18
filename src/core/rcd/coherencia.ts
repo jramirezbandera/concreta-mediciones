@@ -80,12 +80,14 @@ export function coherencia(e: EntradaCoherencia): Aviso[] {
   const avisos: Aviso[] = [];
   /* ---- capítulo de gestión frente a la estimación ---- */
   if (e.hayCapitulo) {
-    const grupos = new Map<string, { gestiona: Gestiona; t: number; m3: number; pt: number; pm3: number; titulo: string }>();
+    // `cap`: el mayor contenedor que cuenta el grupo; contar contenedores redondea
+    // por arriba, así que un exceso de menos de un contenedor no es descuadre.
+    const grupos = new Map<string, { gestiona: Gestiona; t: number; m3: number; pt: number; pm3: number; cap: number; titulo: string }>();
     for (const p of e.gestion) {
       const g = queGestiona(p);
       if (!g) continue;
       const clave = JSON.stringify(g);
-      const acc = grupos.get(clave) ?? { gestiona: g, t: 0, m3: 0, pt: 0, pm3: 0, titulo: p.title };
+      const acc = grupos.get(clave) ?? { gestiona: g, t: 0, m3: 0, pt: 0, pm3: 0, cap: 0, titulo: p.title };
       const q = partidaCantidad(p);
       const u = unidadRcd(p.ud);
       if (u === 't') acc.pt += q;
@@ -93,7 +95,10 @@ export function coherencia(e: EntradaCoherencia): Aviso[] {
       else if (u === 'm3') acc.pm3 += q;
       else if (u === 'ud') {
         const cap = p.rcd?.gestiona?.capacidadContenedorM3 ?? capacidadContenedor(textoDe(p));
-        if (cap) acc.pm3 += q * cap;
+        if (cap) {
+          acc.pm3 += q * cap;
+          acc.cap = Math.max(acc.cap, cap);
+        }
         else avisos.push({ id: `contenedor:${p.id}`, partidaId: p.id, texto: `La partida ${p.code} cuenta contenedores, pero no dice su capacidad («contenedor de 7 m³»): no se puede comparar con la estimación.` });
       }
       grupos.set(clave, acc);
@@ -105,7 +110,8 @@ export function coherencia(e: EntradaCoherencia): Aviso[] {
       const dif = (a: number, b: number) => (Math.max(a, b) > 0 ? Math.abs(a - b) / Math.max(a, b) : 0);
       if (g.pt > 0 && dif(g.pt, g.t) > TOLERANCIA)
         avisos.push({ id: `cuadre-t:${clave}`, texto: `«${g.titulo}»: el presupuesto gestiona ${fmt(g.pt, 't')} y el estudio estima ${fmt(g.t, 't')}.` });
-      if (g.pm3 > 0 && dif(g.pm3, g.m3) > TOLERANCIA)
+      const redondeo = g.cap > 0 && g.pm3 >= g.m3 && g.pm3 - g.m3 < g.cap;
+      if (g.pm3 > 0 && !redondeo && dif(g.pm3, g.m3) > TOLERANCIA)
         avisos.push({ id: `cuadre-m3:${clave}`, texto: `«${g.titulo}»: el presupuesto gestiona ${fmt(g.pm3, 'm³')} y el estudio estima ${fmt(g.m3, 'm³')} aparentes.` });
     }
     const sinGestion = e.porCodigo.filter((f) => f.t > 0 && ![...grupos.values()].some((g) => casa(g.gestiona, f)));

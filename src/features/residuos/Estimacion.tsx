@@ -5,6 +5,7 @@ import { lerConAsterisco, todasLasOperaciones, type EstudioRcd, type EstudioRcdD
 import { flattenContainers } from '../../core/tree';
 import { useObraStore, useToastStore } from '../../store';
 import { getDomainRevision, undo } from '../../store/temporal';
+import { CAPACIDADES_CONTENEDOR, partidasGestion } from '../../core/rcd/capitulo';
 import { CampoNum, CampoTexto } from './Campos';
 import styles from './Residuos.module.css';
 
@@ -15,8 +16,11 @@ const m3 = (n: number | null) => (n == null ? '—' : fmtNum(n, 3));
 export function Estimacion({ r, datos }: { r: EstudioRcd; datos: EstudioRcdDatos }) {
   const setEstudio = useObraStore((s) => s.setEstudioRcd);
   const crearCapitulo = useObraStore((s) => s.crearCapituloGestionRcd);
+  const [capacidad, setCapacidad] = useState(7);
   const chapters = useObraStore((s) => s.chapters);
   const [abierto, setAbierto] = useState<string | null>(null);
+  // Códigos con el gestor desplegado aunque aún esté vacío (el gestor es opcional).
+  const [conGestor, setConGestor] = useState<Set<string>>(new Set());
   const setDestino = (ler: string, patch: Partial<EstudioRcdDatos['destinos'][string]>) =>
     setEstudio({ destinos: { ...datos.destinos, [ler]: { ...datos.destinos[ler], ...patch } } });
   const contenedores = chapters.flatMap((ch) => [
@@ -122,7 +126,7 @@ export function Estimacion({ r, datos }: { r: EstudioRcd; datos: EstudioRcdDatos
                   <th>Código</th>
                   <th>Operación</th>
                   <th>Destino</th>
-                  <th>Gestor autorizado</th>
+                  <th title="Lo designa el contratista en su plan de gestión (RD 105/2008, art. 5); el estudio no lo exige">Gestor (opcional)</th>
                 </tr>
               </thead>
               <tbody>
@@ -149,18 +153,26 @@ export function Estimacion({ r, datos }: { r: EstudioRcd; datos: EstudioRcdDatos
                       <CampoTexto ariaLabel={`Destino de ${d.ler}`} className={styles.wide} value={d.destino} onCommit={(v) => setDestino(d.ler, { destino: v })} />
                     </td>
                     <td>
-                      <CampoTexto
-                        ariaLabel={`Gestor de ${d.ler}`}
-                        placeholder="Nombre del gestor"
-                        value={d.gestor?.nombre}
-                        onCommit={(v) => setDestino(d.ler, { gestor: { nombre: v, autorizacion: d.gestor?.autorizacion ?? '' } })}
-                      />
-                      <CampoTexto
-                        ariaLabel={`Autorización del gestor de ${d.ler}`}
-                        placeholder="Nº de autorización"
-                        value={d.gestor?.autorizacion}
-                        onCommit={(v) => setDestino(d.ler, { gestor: { nombre: d.gestor?.nombre ?? '', autorizacion: v } })}
-                      />
+                      {d.gestor || conGestor.has(d.ler) ? (
+                        <div className={styles.pila}>
+                          <CampoTexto
+                            ariaLabel={`Gestor de ${d.ler}`}
+                            placeholder="Nombre del gestor"
+                            value={d.gestor?.nombre}
+                            onCommit={(v) => setDestino(d.ler, { gestor: { nombre: v, autorizacion: d.gestor?.autorizacion ?? '' } })}
+                          />
+                          <CampoTexto
+                            ariaLabel={`Autorización del gestor de ${d.ler}`}
+                            placeholder="Nº de autorización"
+                            value={d.gestor?.autorizacion}
+                            onCommit={(v) => setDestino(d.ler, { gestor: { nombre: d.gestor?.nombre ?? '', autorizacion: v } })}
+                          />
+                        </div>
+                      ) : (
+                        <button type="button" className={`${styles.link} ${styles.sub}`} onClick={() => setConGestor(new Set(conGestor).add(d.ler))}>
+                          + Añadir gestor
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -321,16 +333,33 @@ export function Estimacion({ r, datos }: { r: EstudioRcd; datos: EstudioRcdDatos
             </p>
             {r.porCodigo.some((f) => f.t > 0) && (
               <div className={styles.btnRow} style={{ marginTop: 10 }}>
+                <label className={styles.check}>
+                  Contenedores de
+                  <select
+                    className={styles.select}
+                    aria-label="Capacidad del contenedor"
+                    value={capacidad}
+                    onChange={(e) => setCapacidad(Number(e.target.value))}
+                  >
+                    {CAPACIDADES_CONTENEDOR.map((c) => (
+                      <option key={c} value={c}>
+                        {c} m³
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <button
                   type="button"
                   className={`tcol ${styles.btn}`}
-                  title="Una partida por código, en t, al precio indicado (o a 0). Cambia el PEM."
+                  title="Por cada fracción que se separa, sus contenedores (m³ aparentes ÷ capacidad) y la entrega al gestor por código, en t. El transporte sale a 0 €: pon tú el precio. Cambia el PEM."
                   onClick={() => {
-                    const n = crearCapitulo(r.porCodigo);
+                    const { partidas, sinM3 } = partidasGestion(r, datos, capacidad);
+                    const n = crearCapitulo(partidas);
+                    const falta = sinM3.length ? `; sin m³ aparentes en ${sinM3.join(', ')}: sus contenedores van a 0` : '';
                     useToastStore
                       .getState()
                       .show(
-                        `Capítulo «Gestión de residuos» creado con ${n} partida${n === 1 ? '' : 's'}: revisa sus precios, cambian el PEM`,
+                        `Capítulo «Gestión de residuos» creado con ${n} partida${n === 1 ? '' : 's'}: pon los precios del transporte, cambian el PEM${falta}`,
                         { label: 'Deshacer', run: () => undo() },
                         { rev: getDomainRevision(), tone: 'warn' },
                       );

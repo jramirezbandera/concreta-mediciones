@@ -191,6 +191,13 @@ export function documentoRcd(r: EstudioRcd, d: EstudioRcdDatos, obra: MetaObraRc
   });
 
   /* ---- 3.º destino ---- */
+  // La columna del gestor solo sale si el técnico ha puesto alguno: el estudio no lo exige.
+  const conGestor = r.destinos.some((x) => x.gestor);
+  const celdasDestino = (x: EstudioRcd['destinos'][number]): Array<string | Trozo> => [
+    lerConAsterisco({ codigo: x.ler, peligroso: x.peligroso }),
+    x.operacion ? `${x.operacion} · ${x.operacionNombre ?? ''}` : pend('la indica el gestor'),
+    x.destino,
+  ];
   s.push({
     id: '3',
     titulo: '3.º Operaciones de reutilización, valorización o eliminación',
@@ -201,24 +208,29 @@ export function documentoRcd(r: EstudioRcd, d: EstudioRcdDatos, obra: MetaObraRc
         andalucia
           ? '; solo se depositan en vertedero los rechazos de las operaciones de valorización, o los residuos cuyo tratamiento sea inviable, con su justificación (Decreto 73/2012, art. 86).'
           : '.',
+        ' El poseedor de los residuos designa los gestores en su plan de gestión y acredita cada entrega (RD 105/2008, art. 5).',
       ),
       r.destinos.length
         ? {
             kind: 'tabla',
-            t: {
-              columnas: [
-                { titulo: 'Código', ancho: 1000 },
-                { titulo: 'Operación', ancho: 3600 },
-                { titulo: 'Destino', ancho: 3146 },
-                { titulo: 'Gestor', ancho: 2800 },
-              ],
-              filas: r.destinos.map((x) => [
-                lerConAsterisco({ codigo: x.ler, peligroso: x.peligroso }),
-                x.operacion ? `${x.operacion} · ${x.operacionNombre ?? ''}` : pend('la indica el gestor'),
-                x.destino,
-                x.gestor?.nombre ? `${x.gestor.nombre}${x.gestor.autorizacion ? ` (${x.gestor.autorizacion})` : ''}` : pend('gestor autorizado'),
-              ]),
-            },
+            t: conGestor
+              ? {
+                  columnas: [
+                    { titulo: 'Código', ancho: 1000 },
+                    { titulo: 'Operación', ancho: 3600 },
+                    { titulo: 'Destino', ancho: 3146 },
+                    { titulo: 'Gestor', ancho: 2800 },
+                  ],
+                  filas: r.destinos.map((x) => [...celdasDestino(x), x.gestor ? [x.gestor.nombre, x.gestor.autorizacion].filter(Boolean).join(' · ') : '—']),
+                }
+              : {
+                  columnas: [
+                    { titulo: 'Código', ancho: 1000 },
+                    { titulo: 'Operación', ancho: 5000 },
+                    { titulo: 'Destino', ancho: 4546 },
+                  ],
+                  filas: r.destinos.map(celdasDestino),
+                },
           }
         : P(pend('destino de los residuos.')),
     ],

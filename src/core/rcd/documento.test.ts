@@ -87,7 +87,7 @@ describe('documento del estudio', () => {
       s.bloques.flatMap((b) => (b.kind === 'p' ? b.p : b.kind === 'lista' ? b.items.flat() : b.t.filas.flat().filter((x) => typeof x !== 'string'))),
     );
     const pendientes = trozos.filter((x) => typeof x !== 'string' && x.pendiente).map((x) => (typeof x === 'string' ? x : x.texto));
-    expect(pendientes).toEqual(expect.arrayContaining(['Pendiente: gestor autorizado', 'Pendiente: importe de la fianza según la ordenanza municipal.']));
+    expect(pendientes).toEqual(expect.arrayContaining(['Pendiente: importe de la fianza según la ordenanza municipal.']));
     expect(pendientes.some((x) => x.includes('ordenanza municipal de residuos'))).toBe(true);
   });
 

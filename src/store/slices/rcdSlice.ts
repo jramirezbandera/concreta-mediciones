@@ -15,12 +15,10 @@ import type { Partida } from '../../core/types';
 import { estudioVacio } from '../../core/rcd/datos';
 import { nextPartidaId } from '../base';
 import { estadoTrasConfirmar, proponerResiduo } from '../../core/rcd/reglas';
-import type { EstudioRcdDatos, FilaCodigo, ResiduoPartida } from '../../core/rcd/tipos';
+import type { PartidaGestionRcd } from '../../core/rcd/capitulo';
+import type { EstudioRcdDatos, ResiduoPartida } from '../../core/rcd/tipos';
 import type { ObraSlice, ObraState } from '../obraStore';
 import { structural } from './estructuraSlice';
-
-/** Lo que hace falta de cada código para crear su partida de gestión. */
-export type FilaCapituloRcd = Pick<FilaCodigo, 'ler' | 'descripcion' | 'peligroso' | 't'>;
 
 export interface RefPartidaRcd {
   chapterId: string;
@@ -142,37 +140,34 @@ export const createRcdSlice: ObraSlice<RcdActions> = (set, get) => ({
     return n;
   },
 
-  crearCapituloGestionRcd: (porCodigo: FilaCapituloRcd[]) => {
-    // Las filas las da la vista (ya calculadas): así el store no carga el motor.
-    if (!get().estudioRcd) return 0;
-    const filas = porCodigo.filter((f) => f.t > 0);
-    if (!filas.length) return 0;
+  crearCapituloGestionRcd: (propuestas: PartidaGestionRcd[]) => {
+    // Las partidas las propone la vista (`partidasGestion`): así el store no carga el motor.
+    if (!get().estudioRcd || !propuestas.length) return 0;
     structural(() =>
       set((s) => {
         const num = s.chapters.reduce((m, c) => Math.max(m, parseInt(c.code, 10) || 0), 0) + 1;
         const chapter = { id: `ch-${rawUuid()}`, code: String(num), title: 'Gestión de residuos', children: [] };
         s.chapters.push(chapter);
         s.partidas[chapter.id] = [];
-        filas.forEach((f, i) => {
-          const precio = s.estudioRcd?.precios[f.ler]?.eurPorT ?? 0;
+        propuestas.forEach((x, i) => {
           s.partidas[chapter.id]!.push({
             id: nextPartidaId(),
             pos: nextPos(chapter.code, i + 1),
             code: nextPartidaCode(s.partidas),
-            title: `Gestión de residuos: ${f.descripcion.length > 70 ? `${f.descripcion.slice(0, 68)}…` : f.descripcion} (${f.ler}${f.peligroso ? '*' : ''})`,
-            ud: 't',
-            precio,
-            cantidad: Math.round(f.t * 1000) / 1000,
-            desc: `Carga, transporte y entrega a gestor autorizado del residuo ${f.ler}${f.peligroso ? '*' : ''} estimado en el estudio de gestión de residuos, incluso canon de gestión y documentación de entrega.`,
+            title: x.title,
+            ud: x.ud,
+            precio: x.precio,
+            cantidad: x.cantidad,
+            desc: x.desc,
             med: [],
             items: [],
-            rcd: { estado: 'gestion', origen: { tipo: 'manual', motivo: 'Creada desde la estimación del estudio' }, componentes: [], gestiona: { codigos: [f.ler] } },
+            rcd: { estado: 'gestion', origen: { tipo: 'manual', motivo: 'Creada desde la estimación del estudio' }, componentes: [], gestiona: structuredClone(x.gestiona) },
           });
         });
         if (s.estudioRcd) s.estudioRcd.capituloGestion = chapter.id;
       }),
     );
-    return filas.length;
+    return propuestas.length;
   },
 
   aplicarResiduoAHomonimos: (chapterId: string, partidaId: string) => {

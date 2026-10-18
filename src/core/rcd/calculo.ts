@@ -339,9 +339,10 @@ export function calcularEstudioRcd(e: EntradaRcd): EstudioRcd {
     const decl = estudio.destinos[f.ler];
     const def = destinoPorDefecto(f.ler, f.fraccion);
     const op = decl?.operacion !== undefined ? decl.operacion : def.operacion;
-    const gestor = decl?.gestor ?? null;
+    // El gestor es opcional: el art. 4.1 a) 3.º pide la operación, no quién la hace; lo
+    // designa el poseedor en su plan de gestión y lo acredita en cada entrega (art. 5).
+    const gestor = decl?.gestor && (decl.gestor.nombre.trim() || decl.gestor.autorizacion.trim()) ? decl.gestor : null;
     if (!op) pend({ id: `op:${f.ler}`, apartado: '3', ler: f.ler, texto: `${f.ler}: falta la operación de tratamiento (la indica el gestor autorizado).` });
-    if (!gestor) pend({ id: `gestor:${f.ler}`, apartado: '3', ler: f.ler, texto: `${f.ler}: falta el gestor autorizado.` });
     if (andalucia && esVertedero(op) && !tieneAmianto(f.ler) && !decl?.justificacionVertedero)
       avisa({ id: `vertedero:${f.ler}`, ler: f.ler,
         texto: `${f.ler} va a vertedero: en Andalucía solo cabe si el tratamiento es inviable y se justifica (Decreto 73/2012, art. 86.2).` });
@@ -517,6 +518,10 @@ function costeDe(
       importe: partidaImporte(p, rates.coefK),
     }));
     const importe = filas.reduce((s, x) => s + x.importe, 0);
+    // Una partida a 0 € (las creadas desde la estimación salen así) no es un coste.
+    for (const x of filas)
+      if (x.precio === 0 && x.cantidad > 0)
+        pend({ id: `precio-partida:${x.id}`, apartado: '7', partidaId: x.id, texto: `La partida ${x.code} «${corta(x.title)}» del capítulo de gestión no tiene precio.` });
     return { modo: 'capitulo', importe, pctPem: pct(importe), capitulo: { id: f.node.id, code: f.node.code, title: f.node.title }, partidas: filas };
   }
   let importe = 0;

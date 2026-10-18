@@ -389,6 +389,11 @@
   width: 280px;
   max-width: 100%;
 }
+.pila {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 .unidad {
   margin-left: 4px;
   color: var(--text-secondary);

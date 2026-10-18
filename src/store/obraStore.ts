@@ -34,7 +34,8 @@ import { DOMAIN_KEYS, SCHEMA_VERSION, blankObraData, seedObraData, type ObraData
 import { createCertSlice } from './slices/certSlice';
 import { createCopySlice, type PendingCopy } from './slices/copySlice';
 import { createEstructuraSlice } from './slices/estructuraSlice';
-import { createRcdSlice, type FilaCapituloRcd, type RefPartidaRcd } from './slices/rcdSlice';
+import type { PartidaGestionRcd } from '../core/rcd/capitulo';
+import { createRcdSlice, type RefPartidaRcd } from './slices/rcdSlice';
 import type { EstudioRcdDatos, ResiduoPartida } from '../core/rcd/tipos';
 import {
   createPlanosSlice,
@@ -664,10 +665,11 @@ export interface ObraState extends ObraData {
   proponerResiduos: () => number;
   /** Copia el residuo de una partida a las de su mismo código. Devuelve cuántas. */
   aplicarResiduoAHomonimos: (chapterId: string, partidaId: string) => number;
-  /** Crea el capítulo «Gestión de residuos» con una partida por código estimado
-   *  (t, al precio declarado o a 0) y lo enlaza como 7.º. CAMBIA EL PEM: un paso
-   *  de Deshacer. Devuelve cuántas partidas creó. */
-  crearCapituloGestionRcd: (porCodigo: FilaCapituloRcd[]) => number;
+  /** Crea el capítulo «Gestión de residuos» con las partidas propuestas desde la
+   *  estimación (`partidasGestion`: contenedores por fracción y entrega por
+   *  código) y lo enlaza como 7.º. CAMBIA EL PEM: un paso de Deshacer. Devuelve
+   *  cuántas partidas creó. */
+  crearCapituloGestionRcd: (partidas: PartidaGestionRcd[]) => number;
 
   /** Restaura el estado sembrado (datos + UI). Útil en tests y para "nueva obra". */
   reset: () => void;

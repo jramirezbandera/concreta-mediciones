@@ -84,7 +84,7 @@ describe('A · reforma pequeña por partidas', () => {
     expect(d.get('17 01 07')).toMatchObject({ operacion: 'R0506', porDefecto: true });
     expect(d.get('17 06 05')!.operacion).toBe('D0503');
     expect(r.avisos.some((a) => a.id.startsWith('vertedero:'))).toBe(false);
-    expect(r.pendientes.some((p) => p.id === 'gestor:17 01 07')).toBe(true);
+    expect(r.pendientes.some((p) => p.id.startsWith('gestor:'))).toBe(false);
   });
 
   it('7.º es el capítulo enlazado de gestión, que no genera residuo', () => {

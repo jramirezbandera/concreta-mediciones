@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Partida } from '../core/types';
 import { calcularEstudioRcd } from '../core/rcd/calculo';
+import { partidasGestion } from '../core/rcd/capitulo';
 import { blankObraData, toSerializable, useObraStore } from './index';
 import { __resetHistoryForTests, initHistory, undo } from './temporal';
 
@@ -96,12 +97,13 @@ describe('estudio de residuos en el store', () => {
     state().confirmarResiduos([{ chapterId: 'd', partidaId: 'p1' }]);
     const st = state();
     const r = calcularEstudioRcd({ chapters: st.chapters, partidas: st.partidas, rates: st.rates, obra: st.obra, estudio: st.estudioRcd!, hoy: '2026-10-16' });
-    const n = state().crearCapituloGestionRcd(r.porCodigo);
-    expect(n).toBe(1);
+    const n = state().crearCapituloGestionRcd(partidasGestion(r, st.estudioRcd!, 7).partidas);
+    expect(n).toBe(2); // contenedores de la fracción mineral + entrega del 17 01 02
     const ch = state().chapters.at(-1)!;
     expect(ch.title).toBe('Gestión de residuos');
     expect(state().estudioRcd!.capituloGestion).toBe(ch.id);
-    const [g] = state().partidas[ch.id]!;
+    const [tr, g] = state().partidas[ch.id]!;
+    expect(tr).toMatchObject({ ud: 'Ud', cantidad: 1, precio: 0, rcd: { estado: 'gestion', gestiona: { capacidadContenedorM3: 7 } } });
     expect(g).toMatchObject({ ud: 't', cantidad: 1.2, precio: 12, rcd: { estado: 'gestion', gestiona: { codigos: ['17 01 02'] } } });
     undo();
     expect(state().chapters.some((c) => c.id === ch.id)).toBe(false);
