@@ -32,7 +32,8 @@ import type {
 } from '../../core/listado';
 import type { MedLineListado } from '../../core/listado';
 import { firmaLugarFecha } from '../../core/listado';
-import { toEur, type Cents } from '../../core/money';
+import { cerradaLabel } from '../../core/certificacion';
+import { fmtNum, toEur, type Cents } from '../../core/money';
 import { docFileName } from './fileName';
 
 /** Formato Excel de dinero/cantidades: 2 dec + miles (es-ES: 1.234,56). */
@@ -433,7 +434,16 @@ export function buildCertXlsx(data: CertListado, meta: ObraMeta, firma: Firma): 
         rows.push([
           txt(r.pos),
           txt(r.code),
-          txt(r.title, { wrap: true }),
+          // Partida cerrada: la etiqueta y lo que no se ejecuta van con el título.
+          txt(
+            r.cerrada
+              ? `[${cerradaLabel(r.ejecutada)}] ${r.title}` +
+                  (r.bajaCant > 0
+                    ? `\nNo se ejecutan ${fmtNum(r.bajaCant)} ${r.ud} · baja ${fmtNum(r.baja / 100)} €`
+                    : '')
+              : r.title,
+            { wrap: true },
+          ),
           txt(r.ud),
           num(r.ofertada),
           num(r.ejecutada),
@@ -560,6 +570,17 @@ export function buildCertXlsx(data: CertListado, meta: ObraMeta, firma: Firma): 
   // Cross-cert: no es derivable de esta hoja, va como valor.
   if (data.retenidoAcumulado != null)
     rows.push(fila('Retenido acumulado (garantía)', eur(data.retenidoAcumulado)));
+  // Informativas (obra que no se ejecuta, partidas cerradas): no mueven el
+  // líquido; fijan la base de la ejecución global. Valores (el presupuesto no
+  // está en esta hoja).
+  if (t.bajaPEM > 0) {
+    const n = t.nCerradas;
+    rows.push(fila('Presupuesto de ejecución material', eur(t.budgetPEM)));
+    rows.push(
+      fila(`Obra no ejecutada (${n} partida${n === 1 ? '' : 's'} cerrada${n === 1 ? '' : 's'})`, eur(-t.bajaPEM)),
+    );
+    rows.push(fila('Presupuesto de ejecución material vigente', eur(t.vigentePEM)));
+  }
   rows.push(...firmaRows(firma));
   return {
     fileName: xlsxFileName(`Certificación nº ${data.num}`, meta.denominacion),

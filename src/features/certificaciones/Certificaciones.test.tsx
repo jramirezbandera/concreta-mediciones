@@ -209,3 +209,24 @@ describe('CertificacionesView (F4.1)', () => {
     expect(useObraStore.getState().certs[0]!.extras).toHaveLength(1);
   });
 });
+
+describe('partidas cerradas («No se ejecuta»)', () => {
+  it('el botón de la fila la cierra, bloquea la cantidad, la descuenta del vigente y se reabre', () => {
+    const s = useObraStore.getState();
+    s.setCurCert(0);
+    s.onCertEdit('p111', 0, 'origen');
+    const p = Object.values(s.partidas)
+      .flat()
+      .find((x) => x.id === 'p111')!;
+    render(<CertificacionesView compact={false} />);
+    fireEvent.click(screen.getByLabelText(`No se ejecuta: ${p.title}`));
+    expect(useObraStore.getState().certs[0]!.cerradas?.p111).toBe(true);
+    // La fila enseña la etiqueta y el resumen, la obra no ejecutada y el vigente.
+    expect(screen.getByText('No se ejecuta', { selector: 'span' })).toBeInTheDocument();
+    expect(screen.getByText(/Obra no ejecutada \(1 partida\)/)).toBeInTheDocument();
+    expect(screen.getByText('PEM vigente')).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText(`Reabrir partida ${p.title}`));
+    expect(useObraStore.getState().certs[0]!.cerradas).toBeUndefined();
+    expect(screen.queryByText('PEM vigente')).not.toBeInTheDocument();
+  });
+});

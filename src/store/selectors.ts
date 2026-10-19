@@ -129,6 +129,8 @@ const _certTotals = memo1(
     certK: number | undefined,
     // Ajustes del resumen: van en la CLAVE de memo (recomputar al editarlos).
     ajustes: Ajuste[],
+    // Partidas cerradas: mueven la base de la ejecución global (presupuesto vigente).
+    cerradas: Record<string, true>,
   ): CertTotals =>
     certTotalsCore(
       Object.values(partidas).flat(),
@@ -141,6 +143,7 @@ const _certTotals = memo1(
       prevExtras,
       certSnapshotOf({ priceSnapshot, coefK: certK }, rates.coefK),
       ajustes,
+      cerradas,
     ),
 );
 const _certChapterRows = memo1(
@@ -153,6 +156,7 @@ const _certChapterRows = memo1(
     extras: CertExtra[],
     priceSnapshot: Record<string, number> | undefined,
     certK: number | undefined,
+    cerradas: Record<string, true>,
   ): CertChapterRow[] =>
     certChapterRowsCore(
       chapters,
@@ -162,12 +166,16 @@ const _certChapterRows = memo1(
       coefK,
       extras,
       certSnapshotOf({ priceSnapshot, coefK: certK }, coefK),
+      cerradas,
     ),
 );
 
 const curCertData = (s: ObraState): Record<string, number> => s.certs[s.curCert]?.data ?? EMPTY_DATA;
 const prevCertData = (s: ObraState): Record<string, number> =>
   s.curCert > 0 ? (s.certs[s.curCert - 1]?.data ?? EMPTY_DATA) : EMPTY_DATA;
+const EMPTY_CERRADAS: Record<string, true> = {};
+const curCertCerradas = (s: ObraState): Record<string, true> =>
+  s.certs[s.curCert]?.cerradas ?? EMPTY_CERRADAS;
 const curCertExtras = (s: ObraState): CertExtra[] => s.certs[s.curCert]?.extras ?? EMPTY_EXTRAS;
 const prevCertExtras = (s: ObraState): CertExtra[] =>
   s.curCert > 0 ? (s.certs[s.curCert - 1]?.extras ?? EMPTY_EXTRAS) : EMPTY_EXTRAS;
@@ -185,6 +193,7 @@ export const selectCertTotals = (s: ObraState): CertTotals =>
     s.certs[s.curCert]?.priceSnapshot,
     s.certs[s.curCert]?.coefK,
     s.certs[s.curCert]?.ajustes ?? EMPTY_AJUSTES,
+    curCertCerradas(s),
   );
 
 /** Avance certificado por capítulo de la cert en curso. */
@@ -198,6 +207,7 @@ export const selectCertChapterRows = (s: ObraState): CertChapterRow[] =>
     curCertExtras(s),
     s.certs[s.curCert]?.priceSnapshot,
     s.certs[s.curCert]?.coefK,
+    curCertCerradas(s),
   );
 
 // Cruza TODAS las certs ≤ curCert → memo por identidad de `[partidas, certs,

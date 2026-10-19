@@ -264,6 +264,14 @@ export interface ObraState extends ObraData {
   ) => void;
   /** Elimina un contradictorio de la cert en curso. */
   deleteContradictorio: (extraId: string) => void;
+  /**
+   * Cierra / reabre una partida en la cert en curso (`Cert.cerradas`): lo que le
+   * falta por ejecutar no se hará y sale del presupuesto vigente (base de la
+   * ejecución global). Sin nada ejecutado = «No se ejecuta»; con algo = se
+   * cierra con lo hecho. Cerrada, su cantidad no se edita (ni completar ni
+   * marcar líneas) hasta reabrirla. No toca cantidades ni dinero.
+   */
+  toggleCerrada: (partidaId: string) => void;
 
   /* ---- ajustes configurables del resumen (pago adelantado, correcciones…) ---- */
   /**

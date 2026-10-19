@@ -84,6 +84,13 @@ export function MassComplete({
               {scope.skipped === 1 ? '' : 'n'}.
             </li>
           )}
+          {scope.closed > 0 && (
+            <li className={styles.massMuted}>
+              <b className="mono">{scope.closed}</b> cerrada{scope.closed === 1 ? '' : 's'} (no se
+              ejecuta{scope.closed === 1 ? '' : 'n'} o ya se cerr{scope.closed === 1 ? 'ó' : 'aron'}):
+              no se toca{scope.closed === 1 ? '' : 'n'}.
+            </li>
+          )}
         </ul>
       </Modal>
     </>

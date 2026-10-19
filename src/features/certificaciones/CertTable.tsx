@@ -2,6 +2,8 @@ import { Fragment, useState, type MouseEvent } from 'react';
 import { Badge, EditableNum, EditableText, Icon, UdSelect } from '../../components';
 import {
   cantidadToPct,
+  cerradaLabel,
+  certBaja,
   certCalc,
   certPrecioK,
   estaCertDisplay,
@@ -41,6 +43,8 @@ export function CertDetail({ p }: { p: Partida }) {
   const med = p.med ?? [];
   const lineQty = useObraStore((s) => s.certs[s.curCert]?.lineQty?.[p.id]);
   const setCertLine = useObraStore((s) => s.setCertLine);
+  // Cerrada: las líneas quedan bloqueadas como la cantidad (hasta reabrirla).
+  const cerrada = useObraStore((s) => Boolean(s.certs[s.curCert]?.cerradas?.[p.id]));
   // D-09: una línea MARCADA cuyo id ya no existe en la medición (se borró la
   // línea después de certificarla). El importe es correcto como histórico
   // (snapshot), pero sin fila no había checkbox con el que desmarcarla — el
@@ -52,7 +56,9 @@ export function CertDetail({ p }: { p: Partida }) {
     <div className={styles.detail}>
       <div className={styles.detailLabel}>Descripción</div>
       <p className={styles.detailDesc}>{p.desc || '—'}</p>
-      <div className={styles.detailLabel}>Mediciones · marca las líneas ejecutadas</div>
+      <div className={styles.detailLabel}>
+        {cerrada ? 'Mediciones · partida cerrada' : 'Mediciones · marca las líneas ejecutadas'}
+      </div>
       {med.length > 0 || deletedMarked.length > 0 ? (
         <div className={styles.detailMed}>
           {med.map((l) => {
@@ -65,6 +71,7 @@ export function CertDetail({ p }: { p: Partida }) {
                   role="checkbox"
                   aria-checked={marked}
                   aria-label={`Marcar línea ejecutada: ${l.comment || 'sin comentario'}`}
+                  disabled={cerrada}
                   className={`tap-target ${check.lineCheck} ${marked ? check.on : ''}`}
                   onClick={() => setCertLine(p.id, l.id, marked ? null : parcial)}
                 >
@@ -85,6 +92,7 @@ export function CertDetail({ p }: { p: Partida }) {
                 role="checkbox"
                 aria-checked
                 aria-label="Desmarcar línea eliminada de la medición"
+                disabled={cerrada}
                 className={`tap-target ${check.lineCheck} ${check.on}`}
                 onClick={() => setCertLine(p.id, id, null)}
               >
@@ -101,6 +109,74 @@ export function CertDetail({ p }: { p: Partida }) {
       ) : (
         <p className={styles.detailEmpty}>Sin líneas de medición.</p>
       )}
+      <CerrarPartida p={p} />
+    </div>
+  );
+}
+
+/** Cerrar / reabrir la partida (la contraparte de los contradictorios): lo que
+ *  falta por ejecutar sale del presupuesto vigente. Sin nada ejecutado es «No se
+ *  ejecuta»; con algo, se cierra con lo hecho. Va en el desplegable (fila y
+ *  tarjeta); la fila tiene además el atajo al pasar el ratón. */
+function CerrarPartida({ p }: { p: Partida }) {
+  const cerrada = useObraStore((s) => Boolean(s.certs[s.curCert]?.cerradas?.[p.id]));
+  const ejecutada = useObraStore((s) => s.certs[s.curCert]?.data[p.id] ?? 0);
+  const coefK = useObraStore((s) => s.rates.coefK);
+  const toggleCerrada = useObraStore((s) => s.toggleCerrada);
+  const { bajaCant, baja } = certBaja(p, ejecutada, coefK);
+  // Ya ejecutada entera: no queda nada que dar de baja → sin acción.
+  if (!cerrada && bajaCant <= 0) return null;
+  const hecha = ejecutada > 0;
+  const falta = `${fmtNum(bajaCant)} ${p.ud}`.trim();
+  return (
+    <div className={`${styles.cerrarBox} ${cerrada ? styles.on : ''}`}>
+      <p className={styles.cerrarText}>
+        {cerrada ? (
+          <>
+            <b>{cerradaLabel(ejecutada)}.</b> No se ejecutan {falta}: {fmtNum(toEur(baja))} € dados
+            de baja del presupuesto vigente.
+          </>
+        ) : hecha ? (
+          <>
+            ¿No se va a ejecutar el resto? Ciérrala con lo ejecutado: lo que falta ({falta}) sale del
+            presupuesto vigente y no cuenta para la ejecución global.
+          </>
+        ) : (
+          <>
+            ¿No se va a ejecutar? Márcala: sale del presupuesto vigente y no cuenta para la ejecución
+            global.
+          </>
+        )}
+      </p>
+      <button type="button" className={`tcol ${styles.cerrarBtn}`} onClick={() => toggleCerrada(p.id)}>
+        <Icon name={cerrada ? 'undo' : 'ban'} size={13} />
+        {cerrada ? 'Reabrir partida' : hecha ? 'Cerrar con lo ejecutado' : 'No se ejecuta'}
+      </button>
+    </div>
+  );
+}
+
+/** Indicador de partida cerrada en la celda del % (fila y tarjeta) + reabrir. */
+export function CerradaTag({ p, ejecutada, pct }: { p: Partida; ejecutada: number; pct: number }) {
+  const toggleCerrada = useObraStore((s) => s.toggleCerrada);
+  return (
+    <div className={styles.pctCellInner}>
+      <span
+        className={styles.cerradaTag}
+        title={`${cerradaLabel(ejecutada)}: lo que falta sale del presupuesto vigente`}
+      >
+        <Icon name="ban" size={11} />
+        {ejecutada > 0 ? `Cerrada · ${fmtNum(pct, 0)} %` : 'No se ejecuta'}
+      </span>
+      <button
+        type="button"
+        className={`tap-target ${styles.reabrirBtn}`}
+        aria-label={`Reabrir partida ${p.title}`}
+        title="Reabrir partida"
+        onClick={() => toggleCerrada(p.id)}
+      >
+        <Icon name="undo" size={12} />
+      </button>
     </div>
   );
 }
@@ -155,9 +231,13 @@ function CertRow({
   const onCertEdit = useObraStore((s) => s.onCertEdit);
   const completePartida = useObraStore((s) => s.completePartida);
   const uncompletePartida = useObraStore((s) => s.uncompletePartida);
+  const toggleCerrada = useObraStore((s) => s.toggleCerrada);
+  const cerrada = useObraStore((s) => Boolean(s.certs[s.curCert]?.cerradas?.[p.id]));
   const [expanded, setExpanded] = useState(false);
   const k = certCalc(p, curData, prevData, coefK, snap);
   const abono = mode === 'origen' ? k.aOrigen : k.estaCert;
+  // Se puede cerrar si aún falta algo por ejecutar (si no, no hay baja).
+  const cerrable = !cerrada && k.ofertada > 0 && k.ejecutada < k.ofertada;
   // «Completada» = ejecutada a origen ≥ ofertada (derivado; sin flag persistido).
   const complete = k.ofertada > 0 && k.ejecutada >= k.ofertada;
   // La cantidad editable (y su %) son las del MODO en curso (a origen / esta cert).
@@ -169,7 +249,7 @@ function CertRow({
     <>
       <tr
         data-editrow=""
-        className={`tcol ${styles.row} ${expanded ? styles.expanded : ''}`}
+        className={`tcol ${styles.row} ${expanded ? styles.expanded : ''} ${cerrada ? styles.rowCerrada : ''}`}
         onClick={() => setExpanded((v) => !v)}
       >
         <td className={`${styles.cell} ${styles.cNum}`}>
@@ -210,22 +290,31 @@ function CertRow({
         </td>
         <td className={`mono ${styles.cell} ${styles.cUd}`}>{p.ud}</td>
         <td className={`mono ${styles.cell} ${styles.cNum2}`}>{fmtNum(k.ofertada)}</td>
-        <td className={`${styles.cell} ${styles.cExec}`} onClick={stop} data-editfield="" data-col="0">
-          <EditableNum
-            value={execValue}
-            dec={2}
-            accent
-            field
-            ariaLabel="Cantidad ejecutada"
-            onCommit={(v) => onCertEdit(p.id, v, mode)}
-          />
-        </td>
+        {cerrada ? (
+          // Cerrada: la cantidad se ve pero no se edita (fuera del grid de Tab).
+          <td className={`mono ${styles.cell} ${styles.cExec} ${styles.execLocked}`}>
+            {fmtNum(execValue)}
+          </td>
+        ) : (
+          <td className={`${styles.cell} ${styles.cExec}`} onClick={stop} data-editfield="" data-col="0">
+            <EditableNum
+              value={execValue}
+              dec={2}
+              accent
+              field
+              ariaLabel="Cantidad ejecutada"
+              onCommit={(v) => onCertEdit(p.id, v, mode)}
+            />
+          </td>
+        )}
         <td
           className={`${styles.cell} ${styles.cPct}`}
           onClick={stop}
-          {...(k.ofertada > 0 ? { 'data-editfield': '', 'data-col': '1' } : {})}
+          {...(k.ofertada > 0 && !cerrada ? { 'data-editfield': '', 'data-col': '1' } : {})}
         >
-          {k.ofertada > 0 ? (
+          {cerrada ? (
+            <CerradaTag p={p} ejecutada={k.ejecutada} pct={k.pct} />
+          ) : k.ofertada > 0 ? (
             <div className={styles.pctCellInner}>
               <div className={styles.pctBarWrap}>
                 <PctBar
@@ -254,7 +343,31 @@ function CertRow({
           )}
         </td>
         <td className={`mono ${styles.cell} ${styles.cPrice}`}>{fmtNum(precioK)}</td>
-        <td className={`mono ${styles.cell} ${styles.cAbono}`}>{fmtNum(toEur(abono))}</td>
+        <td className={`mono ${styles.cell} ${styles.cAbono}`}>
+          {cerrable ? (
+            <span className={styles.extraAbono}>
+              <button
+                type="button"
+                className={`tap-target ${styles.cerrarRowBtn}`}
+                aria-label={k.ejecutada > 0 ? `Cerrar con lo ejecutado: ${p.title}` : `No se ejecuta: ${p.title}`}
+                title={
+                  k.ejecutada > 0
+                    ? 'Cerrar con lo ejecutado: el resto no se hará y sale del presupuesto vigente'
+                    : 'No se ejecuta: sale del presupuesto vigente y no cuenta para la ejecución global'
+                }
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleCerrada(p.id);
+                }}
+              >
+                <Icon name="ban" size={13} />
+              </button>
+              {fmtNum(toEur(abono))}
+            </span>
+          ) : (
+            fmtNum(toEur(abono))
+          )}
+        </td>
       </tr>
       {expanded && (
         <tr>

@@ -38,6 +38,7 @@ import {
   type PresupuestoListado,
   type ResumenListado,
 } from '../../core/listado';
+import { cerradaLabel } from '../../core/certificacion';
 import { fmtCents, fmtNum, type Cents } from '../../core/money';
 import { asciendeLegal } from '../../core/numeroALetras';
 import type { Banco, Cert, Chapter, Firmante, Obra, PartidaBaja, PartidasMap, Rates } from '../../core/types';
@@ -496,7 +497,28 @@ function certBloques(data: CertListado): (Paragraph | Table)[] {
                 ],
                 { width: W_CERT[0]! },
               ),
-              cell(r.title, { width: W_CERT[1]!, size: T_SMALL }),
+              r.cerrada
+                ? // Partida cerrada: etiqueta + lo que no se ejecuta y su baja.
+                  cellPars(
+                    [
+                      paraRuns([
+                        run(`${cerradaLabel(r.ejecutada).toUpperCase()}  `, { bold: true, color: GRIS, size: T_TINY }),
+                        run(r.title, { size: T_SMALL }),
+                      ]),
+                      ...(r.bajaCant > 0
+                        ? [
+                            paraRuns([
+                              run(
+                                `No se ejecutan ${fmtNum(r.bajaCant)} ${r.ud} · baja ${fmtNum(r.baja / 100)} €`,
+                                { color: GRIS, size: T_TINY },
+                              ),
+                            ]),
+                          ]
+                        : []),
+                    ],
+                    { width: W_CERT[1]! },
+                  )
+                : cell(r.title, { width: W_CERT[1]!, size: T_SMALL }),
               cell(r.ud, { width: W_CERT[2]!, size: T_SMALL }),
               cell(fmtNum(r.ofertada), { width: W_CERT[3]!, right: true, size: T_SMALL }),
               cell(fmtNum(r.ejecutada), { width: W_CERT[4]!, right: true, size: T_SMALL }),
@@ -581,6 +603,18 @@ function certBloques(data: CertListado): (Paragraph | Table)[] {
         // ni borde. `null` = la obra no ha tenido retención → no se emite.
         ...(data.retenidoAcumulado != null
           ? [fila('Retenido acumulado (garantía)', data.retenidoAcumulado)]
+          : []),
+        // Informativas (obra que no se ejecuta, partidas cerradas): no mueven el
+        // líquido; fijan la base de la ejecución global. Solo si hay baja.
+        ...(t.bajaPEM > 0
+          ? [
+              fila('Presupuesto de ejecución material', t.budgetPEM),
+              fila(
+                `Obra no ejecutada (${t.nCerradas} partida${t.nCerradas === 1 ? '' : 's'} cerrada${t.nCerradas === 1 ? '' : 's'})`,
+                -t.bajaPEM,
+              ),
+              fila('Presupuesto de ejecución material vigente', t.vigentePEM),
+            ]
           : []),
       ],
     ),

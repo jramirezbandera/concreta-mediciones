@@ -18,6 +18,8 @@ export interface CompleteScope {
   withLines: number;
   /** Ofertada 0: sin 100% definible, se saltan. */
   skipped: number;
+  /** Cerradas («No se ejecuta» / cerradas con lo hecho): no se tocan. */
+  closed: number;
 }
 
 /** Clasifica una lista de partidas visibles para el diálogo de «Completar». */
@@ -25,12 +27,18 @@ export function completeScope(
   ps: Partida[],
   curData: Record<string, number>,
   lineQty: Record<string, Record<string, number>> | undefined,
+  cerradas: Record<string, true> = {},
 ): CompleteScope {
   const ids: string[] = [];
   let already = 0;
   let withLines = 0;
   let skipped = 0;
+  let closed = 0;
   for (const p of ps) {
+    if (cerradas[p.id]) {
+      closed++;
+      continue;
+    }
     const ofertada = partidaCantidad(p);
     if (ofertada <= 0) {
       skipped++;
@@ -44,5 +52,5 @@ export function completeScope(
     ids.push(p.id);
     if (lineQty?.[p.id]) withLines++;
   }
-  return { ids, fill: ids.length, already, withLines, skipped };
+  return { ids, fill: ids.length, already, withLines, skipped, closed };
 }

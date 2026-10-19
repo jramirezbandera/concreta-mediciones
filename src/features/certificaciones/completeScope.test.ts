@@ -32,6 +32,13 @@ describe('completeScope', () => {
       already: 0,
       withLines: 0,
       skipped: 0,
+      closed: 0,
     });
+  });
+
+  it('las cerradas («No se ejecuta» / cerradas con lo hecho) no se tocan', () => {
+    const s = completeScope([mkP('a', 10), mkP('b', 10)], { b: 4 }, undefined, { a: true, b: true });
+    expect(s.ids).toEqual([]);
+    expect(s.closed).toBe(2);
   });
 });

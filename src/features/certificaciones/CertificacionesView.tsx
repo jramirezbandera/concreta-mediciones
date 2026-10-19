@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { CompactHeaderBar, EditableText, EmptyAction, EmptyState, Icon } from '../../components';
 import {
+  certBaja,
   certCalc,
   certDeletedRows,
   certSnapshotOf,
@@ -125,7 +126,7 @@ export function CertificacionesView({
     const allPs = partidas[ch.id] ?? [];
     return focusIds ? allPs.filter((p) => p.sub != null && focusIds.has(p.sub)) : allPs;
   });
-  const scope = completeScope(visiblePs, curData, cur.lineQty);
+  const scope = completeScope(visiblePs, curData, cur.lineQty, cur.cerradas);
   const scopeName = active === ALL ? 'obra' : focusSub ? 'lo visible' : 'capítulo';
 
   return (
@@ -170,7 +171,14 @@ export function CertificacionesView({
               onConfirm={completePartidas}
               compact={compact}
             />
-            <span className={styles.globalPct}>
+            <span
+              className={styles.globalPct}
+              title={
+                totals.bajaPEM > 0
+                  ? 'Sobre el presupuesto vigente: sin la obra que no se ejecuta (partidas cerradas)'
+                  : undefined
+              }
+            >
               Ejecución global <span className="mono">{fmtNum(totals.pctGlobal, 1)}%</span>
             </span>
           </div>
@@ -224,14 +232,19 @@ export function CertificacionesView({
             return mode === 'origen' ? k.aOrigen : k.estaCert;
           }),
         ]);
-        // % del sub aislado: mismo criterio que el core (presupuesto VIVO como
-        // base, certificado con snapshot), acotado a su subárbol.
+        // % del sub aislado: mismo criterio que el core (presupuesto VIGENTE
+        // —vivo menos lo dado de baja por partidas cerradas— como base,
+        // certificado con snapshot), acotado a su subárbol.
         let pct = chapterRows.find((r) => r.id === ch.id)?.pct ?? 0;
         if (focusSub) {
-          const budget = sumCents(ps.map((p) => partidaImporte(p, coefK)));
-          const certed = sumCents(
-            ps.map((p) => certCalc(p, curData, prevData, coefK, snap).aOrigen),
-          );
+          let budget = 0;
+          let certed = 0;
+          for (const p of ps) {
+            const k = certCalc(p, curData, prevData, coefK, snap);
+            budget += partidaImporte(p, coefK);
+            certed += k.aOrigen;
+            if (cur.cerradas?.[p.id]) budget -= certBaja(p, k.ejecutada, coefK).baja;
+          }
           pct = budget > 0 ? (certed / budget) * 100 : 0;
         }
         const band = focusSub ?? ch; // la banda habla de lo que se AÍSLA

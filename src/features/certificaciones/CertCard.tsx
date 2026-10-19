@@ -12,7 +12,7 @@ import {
 import { fmtNum, round2, toEur } from '../../core/money';
 import type { CertExtra, Partida } from '../../core/types';
 import { useObraStore, type CertMode } from '../../store';
-import { CertDetail } from './CertTable';
+import { CertDetail, CerradaTag } from './CertTable';
 import { PctBar } from './PctBar';
 import styles from './Certificaciones.module.css';
 
@@ -41,6 +41,7 @@ export function CertCard({
   const onCertEdit = useObraStore((s) => s.onCertEdit);
   const completePartida = useObraStore((s) => s.completePartida);
   const uncompletePartida = useObraStore((s) => s.uncompletePartida);
+  const cerrada = useObraStore((s) => Boolean(s.certs[s.curCert]?.cerradas?.[p.id]));
   const [expanded, setExpanded] = useState(false);
   const k = certCalc(p, curData, prevData, coefK, snap);
   const abono = mode === 'origen' ? k.aOrigen : k.estaCert;
@@ -51,7 +52,7 @@ export function CertCard({
   const precioK = round2(certPrecioK(p, coefK, snap));
 
   return (
-    <div className={`${styles.card} ${expanded ? styles.open : ''}`}>
+    <div className={`${styles.card} ${expanded ? styles.open : ''} ${cerrada ? styles.cardCerrada : ''}`}>
       <div className={styles.cardHead} onClick={() => setExpanded((v) => !v)}>
         <div className={styles.cardTop}>
           <button
@@ -109,17 +110,24 @@ export function CertCard({
               {mode === 'origen' ? 'Ejec. a origen' : 'Ejec. esta cert.'}
             </div>
             <div className={`mono ${styles.cStatVal}`}>
-              <EditableNum
-                value={execValue}
-                dec={2}
-                accent
-                field
-                ariaLabel="Cantidad ejecutada"
-                onCommit={(v) => onCertEdit(p.id, v, mode)}
-              />
+              {cerrada ? (
+                // Cerrada: la cantidad se ve pero no se edita hasta reabrirla.
+                fmtNum(execValue)
+              ) : (
+                <EditableNum
+                  value={execValue}
+                  dec={2}
+                  accent
+                  field
+                  ariaLabel="Cantidad ejecutada"
+                  onCommit={(v) => onCertEdit(p.id, v, mode)}
+                />
+              )}
             </div>
           </div>
-          {k.ofertada > 0 && (
+          {cerrada ? (
+            <CerradaTag p={p} ejecutada={k.ejecutada} pct={k.pct} />
+          ) : k.ofertada > 0 && (
             <div className={styles.pctCellInner}>
               <div className={styles.pctBarWrap}>
                 <PctBar

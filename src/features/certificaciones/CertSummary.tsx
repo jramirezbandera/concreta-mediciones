@@ -109,6 +109,24 @@ export function CertSummary({
 
       <div className={styles.sumGroup}>
         <Row label="PEM presupuesto" value={totals.budgetPEM} />
+        {/* Partidas cerradas (la contraparte de los contradictorios): lo que no
+            se ejecuta sale del presupuesto VIGENTE, base de la ejecución global.
+            Informativo: no mueve el líquido (lo no ejecutado no se certificaba). */}
+        {totals.bajaPEM > 0 && (
+          <>
+            <div
+              className={styles.sumRow}
+              title="Partidas cerradas: «No se ejecuta» o cerradas con lo ejecutado"
+            >
+              <span className={styles.sumLabel}>
+                <span className={styles.sumDot} style={{ background: 'var(--text-disabled)' }} />
+                Obra no ejecutada ({totals.nCerradas} partida{totals.nCerradas === 1 ? '' : 's'})
+              </span>
+              <span className={`mono ${styles.sumVal}`}>− {fmtCents(totals.bajaPEM)}</span>
+            </div>
+            <Row label="PEM vigente" value={totals.vigentePEM} strong />
+          </>
+        )}
         {/* Con CI de obra, lo que suman los capítulos son los costes DIRECTOS
             certificados; el PEM certificado les añade el mismo % que el
             presupuesto (si el contrato lo lleva dentro, lo ejecutado también).
@@ -390,7 +408,16 @@ export function CertChapterSummary({ rows }: { rows: CertChapterRow[] }) {
             </div>
             <div className={styles.chapSumRight}>
               <div className={`mono ${styles.chapSumCert}`}>{fmtNum(toEur(r.cert))}</div>
-              <div className={`mono ${styles.chapSumBudget}`}>de {fmtNum(toEur(r.budget))}</div>
+              <div
+                className={`mono ${styles.chapSumBudget}`}
+                title={
+                  r.baja > 0
+                    ? `Presupuesto ${fmtNum(toEur(r.budget))} − ${fmtNum(toEur(r.baja))} no ejecutado`
+                    : undefined
+                }
+              >
+                de {fmtNum(toEur(r.budget - r.baja))}
+              </div>
             </div>
             <span className={`mono ${styles.chapSumPct} ${stCls}`}>{fmtNum(r.pct, 0)}%</span>
           </div>

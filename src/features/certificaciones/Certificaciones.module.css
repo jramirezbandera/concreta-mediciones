@@ -662,6 +662,124 @@
   box-shadow: var(--ring-accent);
 }
 
+/* ---- Partida cerrada («No se ejecuta» / cerrada con lo ejecutado) ---------- */
+/* Fila/tarjeta atenuada: sigue en el documento, pero ya no cuenta para lo que
+   falta. */
+.rowCerrada .title,
+.cardCerrada .cardTitle {
+  color: var(--text-secondary);
+}
+/* Cantidad bloqueada: misma cifra que el campo editable, sin la caja (el
+   padding derecho la alinea con el número de las filas abiertas). */
+.execLocked {
+  text-align: right;
+  font-size: var(--fs-table);
+  color: var(--text-secondary);
+  padding-right: calc(var(--sp-4) + var(--sp-8));
+}
+.cerradaTag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-4);
+  flex: 1;
+  min-width: 0;
+  padding: 2px var(--sp-6);
+  border-radius: 5px;
+  font-size: var(--fs-badge);
+  font-weight: 600;
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--text-disabled) 14%, transparent);
+  color: var(--text-secondary);
+}
+.reabrirBtn,
+.cerrarRowBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: var(--sp-2);
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-disabled);
+  cursor: pointer;
+  transition: color 0.12s ease, opacity 0.12s ease;
+}
+.reabrirBtn:hover {
+  color: var(--accent);
+}
+.cerrarRowBtn:hover {
+  color: var(--state-warn);
+}
+.reabrirBtn:focus-visible,
+.cerrarRowBtn:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-accent);
+}
+/* El atajo de cerrar solo asoma al pasar por la fila (o con el teclado): no
+   ensucia la columna de importes. */
+@media (hover: hover) {
+  .cerrarRowBtn {
+    opacity: 0;
+  }
+  .row:hover .cerrarRowBtn,
+  .cerrarRowBtn:focus-visible {
+    opacity: 1;
+  }
+}
+.cerrarBox {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-12);
+  margin-top: var(--sp-12);
+  padding-top: var(--sp-10);
+  border-top: 1px solid var(--border-sub);
+}
+.cerrarText {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--fs-table);
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+.cerrarText b {
+  color: var(--text-primary);
+}
+.cerrarBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-6);
+  flex-shrink: 0;
+  padding: var(--sp-4) var(--sp-10);
+  border: 1px solid var(--border-main);
+  border-radius: 6px;
+  background: var(--bg-surface);
+  font-size: var(--fs-table);
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.cerrarBtn:hover {
+  border-color: color-mix(in srgb, var(--state-warn) 55%, var(--border-main));
+}
+.cerrarBox.on .cerrarBtn:hover {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border-main));
+}
+.cerrarBtn:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-accent);
+}
+@media (max-width: 600px) {
+  .cerrarBox {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .cerrarBtn {
+    justify-content: center;
+  }
+}
+
 /* ---- Botón masivo «Completar {alcance}» + diálogo ------------------------- */
 .headerBottomRight {
   display: flex;

@@ -70,6 +70,35 @@ export function certCalc(
   return { ofertada, ejecutada, prev, pct, aOrigen, anterior, estaCert };
 }
 
+/* ---- Partidas cerradas: «no se ejecuta» / «se cierra con lo hecho» ---------
+   La contraparte de los contradictorios: lo que falta por ejecutar de una
+   partida cerrada (`Cert.cerradas`) sale del presupuesto VIGENTE, que es la base
+   de la ejecución global. No mueve dinero (lo no ejecutado ya no se certificaba):
+   solo la referencia del % y el importe dado de baja que informan el resumen y
+   los documentos. La baja se valora como el presupuesto (precio VIVO × K), no
+   con el snapshot: es lo que se resta de él. */
+
+export interface CertBaja {
+  /** Cantidad que no se ejecuta: max(0, ofertada − ejecutada a origen). */
+  bajaCant: number;
+  /** Importe dado de baja (costes directos, céntimos) sobre el presupuesto. */
+  baja: Cents;
+}
+
+/** Baja de una partida CERRADA con `ejecutada` a origen. Un exceso de medición
+ *  (ejecutada > ofertada) no da baja negativa: 0. */
+export function certBaja(p: Partida, ejecutada: number, coefK = 1): CertBaja {
+  const bajaCant = round2(Math.max(0, partidaCantidad(p) - ejecutada));
+  const vigente = importeCents(ejecutada, (p.precio ?? 0) * coefK);
+  return { bajaCant, baja: Math.max(0, partidaImporte(p, coefK) - vigente) };
+}
+
+/** Etiqueta de una partida cerrada para la pantalla y los documentos: sin nada
+ *  ejecutado no se hace («No se ejecuta»); con algo, se cierra con lo hecho. */
+export function cerradaLabel(ejecutada: number): string {
+  return ejecutada > 0 ? 'Cerrada con lo ejecutado' : 'No se ejecuta';
+}
+
 /* ---- Partidas eliminadas del presupuesto (auditoría D-01) ------------------
    Borrar una partida (o su capítulo) no toca las certs: sus cantidades
    (`Cert.data`) y su precio congelado (`priceSnapshot`, que `addCert` hereda
@@ -312,7 +341,14 @@ export interface CertTotals {
   certPEM: Cents; // PEM certificado a origen = certCD + ciOrigen
   prevCD: Cents; // Σ anterior (costes directos)
   prevPEM: Cents; // PEM certificado anterior = prevCD + su CI
-  pctGlobal: number; // certPEM / budgetPEM · 100
+  /** Obra no ejecutada (partidas cerradas, `Cert.cerradas`), en PEM: lo que se da
+   *  de baja del presupuesto. 0 si no hay ninguna cerrada. */
+  bajaPEM: Cents;
+  /** Presupuesto VIGENTE = budgetPEM − bajaPEM: la base de la ejecución global. */
+  vigentePEM: Cents;
+  /** Cuántas partidas cerradas aportan baja (para la etiqueta del resumen). */
+  nCerradas: number;
+  pctGlobal: number; // certPEM / vigentePEM · 100
   ggbiOrigen: Cents;
   pecOrigen: Cents;
   pecPrev: Cents;
@@ -337,8 +373,11 @@ export function certTotals(
   prevExtras: CertExtra[] = [],
   snap?: CertSnapshot,
   ajustes: Ajuste[] = [],
+  cerradas: Record<string, true> = {},
 ): CertTotals {
   let budgetCD = 0;
+  let bajaCD = 0;
+  let nCerradas = 0;
   let certCD = 0;
   let prevCD = 0;
   for (const p of partidas) {
@@ -348,6 +387,11 @@ export function certTotals(
     const k = certCalc(p, curData, prevData, coefK, snap);
     certCD += k.aOrigen;
     prevCD += k.anterior;
+    if (cerradas[p.id]) {
+      const b = certBaja(p, k.ejecutada, coefK).baja;
+      bajaCD += b;
+      if (b > 0) nCerradas++;
+    }
   }
   // Contradictorios: suman al certificado/anterior pero NO al PEM de presupuesto
   // (no están en el contrato base → el % global puede pasar de 100%).
@@ -372,7 +416,12 @@ export function certTotals(
   const certPEM = certCD + ciOrigen;
   const prevPEM = prevCD + scaleCents(prevCD, rates.ci);
   const budgetPEM = budgetCD + scaleCents(budgetCD, rates.ci);
-  const pctGlobal = budgetPEM > 0 ? (certPEM / budgetPEM) * 100 : 0;
+  // Presupuesto vigente: el CI se aplica a la diferencia (no a la baja aparte),
+  // así vigente + baja = presupuesto al céntimo.
+  const vigenteCD = budgetCD - bajaCD;
+  const vigentePEM = vigenteCD + scaleCents(vigenteCD, rates.ci);
+  const bajaPEM = budgetPEM - vigentePEM;
+  const pctGlobal = vigentePEM > 0 ? (certPEM / vigentePEM) * 100 : 0;
   const ggbi = rates.gg + rates.bi;
   const ggbiOrigen = scaleCents(certPEM, ggbi);
   const pecOrigen = certPEM + ggbiOrigen;
@@ -404,6 +453,9 @@ export function certTotals(
     certPEM,
     prevCD,
     prevPEM,
+    bajaPEM,
+    vigentePEM,
+    nCerradas,
     pctGlobal,
     ggbiOrigen,
     pecOrigen,
@@ -430,8 +482,10 @@ export interface CertChapterRow {
   code: string;
   title: string;
   budget: Cents; // importe presupuestado del capítulo
+  /** Dado de baja por partidas cerradas del capítulo (costes directos). */
+  baja: Cents;
   cert: Cents; // importe certificado a origen del capítulo
-  pct: number; // cert / budget · 100
+  pct: number; // cert / (budget − baja) · 100
 }
 
 /** Avance certificado por capítulo (céntimos). Filtra los de presupuesto 0.
@@ -446,15 +500,19 @@ export function certChapterRows(
   coefK = 1,
   extras: CertExtra[] = [],
   snap?: CertSnapshot,
+  cerradas: Record<string, true> = {},
 ): CertChapterRow[] {
   const chapterIds = new Set(chapters.map((c) => c.id));
-  const rows = chapters
+  const rows: CertChapterRow[] = chapters
     .map((ch) => {
       let budget = 0;
+      let baja = 0;
       let cert = 0;
       for (const p of partidas[ch.id] ?? []) {
         budget += partidaImporte(p, coefK);
-        cert += certCalc(p, curData, prevData, coefK, snap).aOrigen;
+        const k = certCalc(p, curData, prevData, coefK, snap);
+        cert += k.aOrigen;
+        if (cerradas[p.id]) baja += certBaja(p, k.ejecutada, coefK).baja;
       }
       // Contradictorios del capítulo: certifican pero no aumentan el presupuesto.
       for (const e of extras) {
@@ -465,8 +523,9 @@ export function certChapterRows(
         code: ch.code,
         title: ch.title,
         budget,
+        baja,
         cert,
-        pct: budget > 0 ? (cert / budget) * 100 : 0,
+        pct: budget - baja > 0 ? (cert / (budget - baja)) * 100 : 0,
       };
     })
     .filter((r) => r.budget > 0 || r.cert > 0);
@@ -484,6 +543,7 @@ export function certChapterRows(
       code: '—',
       title: 'Eliminado del presupuesto',
       budget: 0,
+      baja: 0,
       cert: deletedCert,
       pct: 0,
     });

@@ -82,7 +82,7 @@ function dropLineQty(cert: Cert, partidaId: string): void {
  */
 function completeDraft(s: ObraState, p: Partida): void {
   const cert = s.certs[s.curCert];
-  if (!cert) return;
+  if (!cert || cert.cerradas?.[p.id]) return; // cerrada: su cantidad no se toca
   const ofertada = partidaCantidad(p);
   if (ofertada <= 0) return;
   const prev = prevDataOf(s.certs, s.curCert)[p.id] ?? 0;
@@ -118,6 +118,7 @@ type CertSlice = Pick<
   | 'addContradictorio'
   | 'editContradictorio'
   | 'deleteContradictorio'
+  | 'toggleCerrada'
   | 'addAjuste'
   | 'editAjuste'
   | 'deleteAjuste'
@@ -127,7 +128,8 @@ export const createCertSlice: ObraSlice<CertSlice> = (set) => ({
   onCertEdit: (partidaId, value, mode) =>
     set((s) => {
       const cert = s.certs[s.curCert];
-      if (!cert) return;
+      // Partida cerrada: la cantidad queda bloqueada hasta reabrirla.
+      if (!cert || cert.cerradas?.[partidaId]) return;
       if (mode === 'esta') {
         const prev = prevDataOf(s.certs, s.curCert)[partidaId] ?? 0;
         cert.data[partidaId] = estaCertToOrigen(prev, value);
@@ -147,7 +149,7 @@ export const createCertSlice: ObraSlice<CertSlice> = (set) => ({
   setCertLine: (partidaId, lineId, qty) =>
     set((s) => {
       const cert = s.certs[s.curCert];
-      if (!cert) return;
+      if (!cert || cert.cerradas?.[partidaId]) return;
       const lineQty = (cert.lineQty ??= {});
       const lines = (lineQty[partidaId] ??= {});
       // E12: una línea negativa (Restar) se certifica con su cantidad negativa;
@@ -187,7 +189,7 @@ export const createCertSlice: ObraSlice<CertSlice> = (set) => ({
   uncompletePartida: (partidaId) =>
     set((s) => {
       const cert = s.certs[s.curCert];
-      if (!cert) return;
+      if (!cert || cert.cerradas?.[partidaId]) return;
       // Descompletar = volver al a-origen del periodo anterior (suelo D-06), no
       // a 0 a origen (no borrar lo ya certificado). prev==0 → borra la entrada.
       const prev = prevDataOf(s.certs, s.curCert)[partidaId] ?? 0;
@@ -229,6 +231,8 @@ export const createCertSlice: ObraSlice<CertSlice> = (set) => ({
       }
       // Los contradictorios se heredan a-origen (mismo id → "anterior" cuadra).
       const extras = last?.extras?.map((e) => ({ ...e }));
+      // Las partidas cerradas siguen cerradas (lo que no se ejecuta no vuelve solo).
+      const cerradas = last?.cerradas ? { ...last.cerradas } : undefined;
       // Ajustes: solo los recurrentes (pago adelantado, retención extra…), con
       // id nuevo por cert (no tienen enlace inter-cert, a diferencia de extras).
       // Los puntuales (una corrección de una cert concreta) NO se arrastran.
@@ -252,6 +256,7 @@ export const createCertSlice: ObraSlice<CertSlice> = (set) => ({
         data,
         lineQty,
         extras,
+        cerradas,
         ajustes,
         priceSnapshot: precios,
         coefK: last?.coefK ?? s.rates.coefK,
@@ -307,6 +312,18 @@ export const createCertSlice: ObraSlice<CertSlice> = (set) => ({
       if (!cert?.extras) return;
       cert.extras = cert.extras.filter((e) => e.id !== extraId);
       if (cert.extras.length === 0) cert.extras = undefined;
+    }),
+
+  toggleCerrada: (partidaId) =>
+    set((s) => {
+      const cert = s.certs[s.curCert];
+      if (!cert) return;
+      if (cert.cerradas?.[partidaId]) {
+        delete cert.cerradas[partidaId];
+        if (Object.keys(cert.cerradas).length === 0) cert.cerradas = undefined;
+      } else {
+        (cert.cerradas ??= {})[partidaId] = true;
+      }
     }),
 
   addAjuste: (preset) =>

@@ -5,6 +5,8 @@ import {
   ajusteImporte,
   ajusteLabel,
   cantidadToPct,
+  cerradaLabel,
+  certBaja,
   certCalc,
   certChapterRows,
   certDeletedTotals,
@@ -444,6 +446,75 @@ describe('certChapterRows (avance por capítulo, F4)', () => {
     expect(r.budget).toBe(toCents(1000)); // 100 · 10
     expect(r.cert).toBe(toCents(500)); // 50 · 10 a origen
     expect(r.pct).toBeCloseTo(50);
+  });
+});
+
+describe('partidas cerradas: «no se ejecuta» / cerrada con lo hecho', () => {
+  const p1 = partida({ id: 'p1', cantidad: 10, precio: 100 }); // 1.000 €
+  const p2 = partida({ id: 'p2', cantidad: 20, precio: 50 }); // 1.000 €
+
+  it('certBaja: lo que falta por ejecutar, a precio de presupuesto (× K)', () => {
+    expect(certBaja(p1, 0)).toEqual({ bajaCant: 10, baja: toCents(1000) });
+    expect(certBaja(p1, 4)).toEqual({ bajaCant: 6, baja: toCents(600) });
+    expect(certBaja(p1, 4, 0.9)).toEqual({ bajaCant: 6, baja: toCents(540) });
+    // Exceso de medición: no hay baja negativa.
+    expect(certBaja(p1, 12)).toEqual({ bajaCant: 0, baja: 0 });
+  });
+
+  it('cerradaLabel distingue «no se hace nada» de «se cierra con lo hecho»', () => {
+    expect(cerradaLabel(0)).toBe('No se ejecuta');
+    expect(cerradaLabel(3)).toBe('Cerrada con lo ejecutado');
+  });
+
+  it('sin cerradas: vigente = presupuesto y baja 0 (nada cambia)', () => {
+    const t = certTotals([p1, p2], { p1: 10 }, {}, rates, 0);
+    expect(t.bajaPEM).toBe(0);
+    expect(t.vigentePEM).toBe(t.budgetPEM);
+    expect(t.nCerradas).toBe(0);
+    expect(t.pctGlobal).toBeCloseTo(50);
+  });
+
+  it('«No se ejecuta»: sale del presupuesto vigente → la obra puede llegar al 100 %', () => {
+    const sin = certTotals([p1, p2], { p1: 10 }, {}, rates, 0);
+    const con = certTotals([p1, p2], { p1: 10 }, {}, rates, 0, 1, [], [], undefined, [], { p2: true });
+    expect(con.bajaPEM).toBe(toCents(1000));
+    expect(con.vigentePEM).toBe(toCents(1000));
+    expect(con.nCerradas).toBe(1);
+    expect(con.pctGlobal).toBeCloseTo(100);
+    // No mueve dinero: lo no ejecutado ya no se certificaba.
+    expect(con.liquido).toBe(sin.liquido);
+    expect(con.certPEM).toBe(sin.certPEM);
+  });
+
+  it('cerrada con lo hecho: solo lo que falta sale del vigente', () => {
+    const t = certTotals([p1, p2], { p1: 10, p2: 8 }, {}, rates, 0, 1, [], [], undefined, [], { p2: true });
+    expect(t.bajaPEM).toBe(toCents(600)); // 12 de 20 × 50
+    expect(t.vigentePEM).toBe(toCents(1400));
+    expect(t.pctGlobal).toBeCloseTo(100); // 1.400 certificados de 1.400 vigentes
+  });
+
+  it('con CI: vigente + baja = presupuesto al céntimo y el % no se mueve por el CI', () => {
+    const conCI: Rates = { ...rates, ci: 0.03 };
+    const t = certTotals([p1, p2], { p1: 10 }, {}, conCI, 0, 1, [], [], undefined, [], { p2: true });
+    expect(t.vigentePEM + t.bajaPEM).toBe(t.budgetPEM);
+    expect(t.vigentePEM).toBe(toCents(1030));
+    expect(t.pctGlobal).toBeCloseTo(100);
+  });
+
+  it('una cerrada ya ejecutada entera no aporta baja ni cuenta', () => {
+    const t = certTotals([p1], { p1: 10 }, {}, rates, 0, 1, [], [], undefined, [], { p1: true });
+    expect(t.bajaPEM).toBe(0);
+    expect(t.nCerradas).toBe(0);
+  });
+
+  it('certChapterRows: baja por capítulo y % sobre lo vigente', () => {
+    const chapters: Chapter[] = [{ id: '01', code: '1', title: 'Uno' }];
+    const rows = certChapterRows(chapters, { '01': [p1, p2] }, { p1: 10 }, {}, 1, [], undefined, {
+      p2: true,
+    });
+    expect(rows[0]!.budget).toBe(toCents(2000));
+    expect(rows[0]!.baja).toBe(toCents(1000));
+    expect(rows[0]!.pct).toBeCloseTo(100);
   });
 });
 

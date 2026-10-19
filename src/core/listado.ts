@@ -9,6 +9,7 @@
 import type { Agente, Cert, CertExtra, Chapter, Firmante, Obra, PartidaBaja, PartidasMap, Rates, SubChapter } from './types';
 import {
   DELETED_ROW_ID,
+  certBaja,
   certCalc,
   certDeletedRows,
   certPrecioK,
@@ -384,6 +385,13 @@ export interface CertListadoRow {
   aOrigen: Cents;
   anterior: Cents;
   estaCert: Cents;
+  /** Partida cerrada en esta cert (`Cert.cerradas`): «No se ejecuta» si no tiene
+   *  nada ejecutado, «Cerrada con lo ejecutado» si sí. */
+  cerrada: boolean;
+  /** Cantidad que no se ejecuta (0 si no está cerrada). */
+  bajaCant: number;
+  /** Importe dado de baja, costes directos a precio de presupuesto (0 si no). */
+  baja: Cents;
 }
 
 export interface CertExtraListadoRow {
@@ -415,6 +423,8 @@ export interface CertCapituloListado {
   aOrigen: Cents;
   anterior: Cents;
   estaCert: Cents;
+  /** Σ dado de baja por partidas cerradas del capítulo (costes directos). */
+  baja: Cents;
 }
 
 export interface CertListado {
@@ -456,6 +466,7 @@ export function buildCertListado(
   const prevExtras = index > 0 ? (certs[index - 1]?.extras ?? []) : [];
   const extras = cert.extras ?? [];
   const snap = certSnapshotOf(cert, rates.coefK);
+  const cerradas = cert.cerradas ?? {};
   const prevExtraCant = extrasCantidad(prevExtras);
   const toExtraRow = (e: CertExtra): CertExtraListadoRow => {
     const k = extraCalc(e, prevExtraCant[e.id] ?? 0);
@@ -486,6 +497,8 @@ export function buildCertListado(
           depth: g.depth,
           rows: g.items.map((p): CertListadoRow => {
             const k = certCalc(p, cert.data, prevData, rates.coefK, snap);
+            const cerrada = Boolean(cerradas[p.id]);
+            const b = cerrada ? certBaja(p, k.ejecutada, rates.coefK) : { bajaCant: 0, baja: 0 };
             return {
               id: p.id,
               pos: p.pos,
@@ -500,6 +513,9 @@ export function buildCertListado(
               aOrigen: k.aOrigen,
               anterior: k.anterior,
               estaCert: k.estaCert,
+              cerrada,
+              bajaCant: b.bajaCant,
+              baja: b.baja,
             };
           }),
         }));
@@ -514,6 +530,7 @@ export function buildCertListado(
         aOrigen: sumCents(all.map((r) => r.aOrigen)),
         anterior: sumCents(all.map((r) => r.anterior)),
         estaCert: sumCents(all.map((r) => r.estaCert)),
+        baja: sumCents(grupos.flatMap((g) => g.rows.map((r) => r.baja))),
       };
     })
     .filter((c) => c.grupos.length > 0 || c.extras.length > 0);
@@ -549,6 +566,9 @@ export function buildCertListado(
     aOrigen: r.aOrigen,
     anterior: r.anterior,
     estaCert: r.estaCert,
+    cerrada: false,
+    bajaCant: 0,
+    baja: 0,
   }));
   const deletedExtras = extras.filter((e) => !chapterIds.has(e.chapterId)).map(toExtraRow);
   if (deletedRows.length > 0 || deletedExtras.length > 0) {
@@ -562,6 +582,7 @@ export function buildCertListado(
       aOrigen: sumCents(all.map((r) => r.aOrigen)),
       anterior: sumCents(all.map((r) => r.anterior)),
       estaCert: sumCents(all.map((r) => r.estaCert)),
+      baja: 0,
     });
   }
 
@@ -583,6 +604,7 @@ export function buildCertListado(
       prevExtras,
       snap,
       cert.ajustes ?? [],
+      cerradas,
     ),
     rates,
     // Cross-cert: la garantía retenida hasta esta cert (calculada una vez con el

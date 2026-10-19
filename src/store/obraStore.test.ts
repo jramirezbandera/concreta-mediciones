@@ -462,6 +462,64 @@ describe('completar partidas (Completado)', () => {
   });
 });
 
+describe('partidas cerradas («No se ejecuta» / cerrada con lo hecho)', () => {
+  const of = (id: string) => partidaCantidad(allPartidas().find((p) => p.id === id)!);
+
+  it('toggleCerrada cierra y reabre en la cert en curso (y limpia el mapa vacío)', () => {
+    state().setCurCert(0);
+    state().toggleCerrada('p111');
+    expect(state().certs[0]!.cerradas).toEqual({ p111: true });
+    expect(state().certs[1]!.cerradas?.p111).toBeUndefined(); // solo la cert en curso
+    state().toggleCerrada('p111');
+    expect(state().certs[0]!.cerradas).toBeUndefined();
+  });
+
+  it('cerrada: la cantidad queda bloqueada (teclear, líneas, completar)', () => {
+    state().setCurCert(0);
+    state().onCertEdit('p111', 5, 'origen');
+    state().toggleCerrada('p111');
+    state().onCertEdit('p111', 20, 'origen');
+    state().setCertLine('p111', 'p111-m1', 61.2);
+    state().completePartida('p111');
+    state().completePartidas(['p111']);
+    state().uncompletePartida('p111');
+    expect(state().certs[0]!.data.p111).toBe(5);
+    expect(state().certs[0]!.lineQty?.p111).toBeUndefined();
+  });
+
+  it('addCert hereda las cerradas (clon independiente)', () => {
+    const last = state().certs.length - 1;
+    state().setCurCert(last);
+    state().toggleCerrada('p111');
+    state().addCert();
+    const nueva = state().certs[state().curCert]!;
+    expect(nueva.cerradas).toEqual({ p111: true });
+    state().toggleCerrada('p111'); // reabrir en la nueva…
+    expect(state().certs[last]!.cerradas).toEqual({ p111: true }); // …no toca la anterior
+  });
+
+  it('el selector descuenta la baja del vigente y el documento la lleva por fila', () => {
+    state().setCurCert(0);
+    state().onCertEdit('p111', 0, 'origen');
+    const antes = selectCertTotals(state());
+    state().toggleCerrada('p111');
+    const t = selectCertTotals(state());
+    expect(t.bajaPEM).toBeGreaterThan(0);
+    expect(t.vigentePEM).toBe(t.budgetPEM - t.bajaPEM);
+    expect(t.liquido).toBe(antes.liquido); // no mueve dinero
+    expect(t.pctGlobal).toBeGreaterThan(antes.pctGlobal);
+    const cap = selectCertChapterRows(state()).find((r) => r.baja > 0);
+    expect(cap?.baja).toBe(t.bajaPEM); // sin CI en la semilla: PEM = directos
+
+    const s = state();
+    const doc = buildCertListado(s.chapters, s.partidas, s.certs, 0, s.rates)!;
+    const row = doc.capitulos.flatMap((c) => c.grupos.flatMap((g) => g.rows)).find((r) => r.id === 'p111')!;
+    expect(row.cerrada).toBe(true);
+    expect(row.bajaCant).toBe(of('p111'));
+    expect(doc.totals.bajaPEM).toBe(t.bajaPEM);
+  });
+});
+
 describe('cableado con el motor de certificación', () => {
   it('el budgetPEM de la cert en curso coincide con el PEM del presupuesto', () => {
     const s = state();

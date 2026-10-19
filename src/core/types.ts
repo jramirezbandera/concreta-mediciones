@@ -201,6 +201,16 @@ export interface Cert {
   lineQty?: Record<string, Record<string, number>>;
   /** Precios contradictorios de ESTA cert (F4.4). Ver `CertExtra`. */
   extras?: CertExtra[];
+  /**
+   * Partidas CERRADAS en esta cert (la contraparte de los contradictorios): lo
+   * que falta por ejecutar (ofertada − ejecutada a origen) no se va a hacer y
+   * sale del presupuesto VIGENTE, que es la base de la ejecución global. Sin
+   * nada ejecutado = «No se ejecuta»; con algo = «se cierra con lo hecho». La
+   * cantidad queda bloqueada mientras esté cerrada. No mueve dinero (lo que no
+   * se ejecuta ya no se certificaba); `addCert` la hereda, y marcarla en la
+   * cert N no reescribe el % de las anteriores. undefined = ninguna.
+   */
+  cerradas?: Record<string, true>;
   /** Ajustes económicos extra del resumen de ESTA cert. Ver `Ajuste`. undefined = ninguno. */
   ajustes?: Ajuste[];
   /**

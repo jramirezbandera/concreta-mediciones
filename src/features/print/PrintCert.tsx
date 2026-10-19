@@ -1,4 +1,5 @@
 import { Fragment } from 'react';
+import { cerradaLabel } from '../../core/certificacion';
 import type { CertListado } from '../../core/listado';
 import { fmtCents, fmtNum, toEur } from '../../core/money';
 
@@ -64,7 +65,15 @@ export function PrintCert({ data }: { data: CertListado }) {
                         <span className="pd-code">{r.code}</span>
                       </td>
                       <td>
-                        <div className="pd-title">{r.title}</div>
+                        <div className="pd-title">
+                          {r.cerrada && <span className="pd-cerrada">{cerradaLabel(r.ejecutada)}</span>}
+                          {r.title}
+                        </div>
+                        {r.cerrada && r.bajaCant > 0 && (
+                          <div className="pd-desc">
+                            No se ejecutan {fmtNum(r.bajaCant)} {r.ud} · baja {fmtNum(toEur(r.baja))} €
+                          </div>
+                        )}
                       </td>
                       <td className="mono">{r.ud}</td>
                       <td className="mono pd-num">{fmtNum(r.ofertada)}</td>
@@ -179,6 +188,27 @@ export function PrintCert({ data }: { data: CertListado }) {
             <span>Retenido acumulado (garantía) hasta esta certificación</span>
             <span className="mono">{fmtCents(data.retenidoAcumulado)}</span>
           </div>
+        )}
+        {/* Informativas: obra que no se ejecuta (partidas cerradas). No mueven
+            el líquido; fijan la base de la ejecución global. */}
+        {t.bajaPEM > 0 && (
+          <>
+            <div className="pd-summary-note">
+              <span>Presupuesto de ejecución material</span>
+              <span className="mono">{fmtCents(t.budgetPEM)}</span>
+            </div>
+            <div className="pd-summary-note">
+              <span>
+                Obra no ejecutada ({t.nCerradas} partida{t.nCerradas === 1 ? '' : 's'} cerrada
+                {t.nCerradas === 1 ? '' : 's'})
+              </span>
+              <span className="mono">−{fmtCents(t.bajaPEM)}</span>
+            </div>
+            <div className="pd-summary-note">
+              <span>Presupuesto de ejecución material vigente</span>
+              <span className="mono">{fmtCents(t.vigentePEM)}</span>
+            </div>
+          </>
         )}
       </div>
     </div>
