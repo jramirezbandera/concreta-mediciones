@@ -42,6 +42,12 @@ export function estudioLegible(x: unknown): x is EstudioRcdDatos {
   );
 }
 
+/** Remisión del 5.º cuando no se indica plano propio (lo habitual en obra
+ *  pequeña): el de emplazamiento con el contenedor y el acopio marcados. El
+ *  documento antepone «el». */
+export const PLANO_POR_DEFECTO =
+  'plano de emplazamiento, en el que se señalan la ubicación del contenedor y la zona de acopio y separación de los residuos';
+
 /** Estudio recién empezado: nada supuesto (lo que falta sale pendiente). */
 export function estudioVacio(over: Partial<EstudioRcdDatos> = {}): EstudioRcdDatos {
   return {

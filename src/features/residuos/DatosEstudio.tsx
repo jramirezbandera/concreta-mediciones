@@ -4,6 +4,7 @@ import {
   GRUPOS_ECO,
   OPCIONES_PLANTAS_BASICO,
   opcionesEco,
+  PLANO_POR_DEFECTO,
   type DatosRatios,
   type EstudioRcdDatos,
   type GrupoOpcionEco,
@@ -171,7 +172,8 @@ export function DatosEstudio({ datos }: { datos: EstudioRcdDatos }) {
           </label>
           <label className={styles.field}>
             Plano de las instalaciones de residuos (5.º)
-            <CampoTexto ariaLabel="Plano de las instalaciones" placeholder="Plano nº … " value={datos.plano} onCommit={(v) => set({ plano: v || null })} />
+            {/* Vacío = el texto por defecto (plano de emplazamiento), que se ve de muestra. */}
+            <CampoTexto ariaLabel="Plano de las instalaciones" placeholder={PLANO_POR_DEFECTO} value={datos.plano} onCommit={(v) => set({ plano: v || null })} />
           </label>
         </div>
       </section>

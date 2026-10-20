@@ -428,8 +428,6 @@ export function calcularEstudioRcd(e: EntradaRcd): EstudioRcd {
   if (!comunidad) pend({ id: 'comunidad', apartado: 'datos', texto: 'Indica la provincia de la obra: decide la normativa autonómica.' });
   else if (!andalucia)
     pend({ id: 'autonomica', apartado: 'datos', texto: 'Normativa autonómica de residuos: pendiente (la app solo trae la de Andalucía).' });
-  if (estudio.fase === 'ejecucion' && !estudio.plano)
-    pend({ id: 'plano', apartado: '5', texto: 'Indica el plano de las instalaciones de almacenamiento, manejo y separación (5.º).' });
   if (!estudio.redactor?.nombre) pend({ id: 'redactor', apartado: 'firma', texto: 'Indica el técnico que redacta y firma el estudio.' });
   if (estudio.inicioPrevisto && estudio.inicioPrevisto > fecha) {
     const usados = porCodigo.map((f) => f.ler);

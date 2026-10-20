@@ -109,6 +109,10 @@ describe('A · reforma pequeña por partidas', () => {
     expect(b.pendientes.some((p) => p.id === 'plano')).toBe(false);
   });
 
+  it('ejecución sin plano indicado: no queda pendiente (va el de emplazamiento)', () => {
+    expect(calculaA({ fase: 'ejecucion', plano: null }).pendientes.some((p) => p.id === 'plano')).toBe(false);
+  });
+
   it('sin capítulo de gestión ni precios: el coste queda pendiente', () => {
     const s = calculaA({ capituloGestion: null });
     expect(s.coste.modo).toBe('pendiente');

@@ -91,6 +91,13 @@ describe('documento del estudio', () => {
     expect(pendientes.some((x) => x.includes('ordenanza municipal de residuos'))).toBe(true);
   });
 
+  it('5.º sin plano indicado: remite al de emplazamiento, sin «Pendiente»', () => {
+    const sin = textoPlano(docA({ plano: null }));
+    expect(sin).toContain('se recogen en el plano de emplazamiento, en el que se señalan la ubicación del contenedor');
+    expect(sin).not.toContain('plano de las instalaciones.');
+    expect(textoPlano(docA({ plano: 'plano nº 03' }))).toContain('se recogen en el plano nº 03.');
+  });
+
   it('firma el técnico redactor; sin él, no hay firmante', () => {
     expect(docA().firma).toEqual({ nombre: 'Técnica de prueba', sub: 'Arquitecta · Col. 0000' });
     expect(docA({ redactor: null }).firma).toBeNull();

@@ -9,6 +9,7 @@
    «Pendiente: …» (D5), nunca supuesto.
    =========================================================================== */
 import { fmtCents, fmtNum } from '../money';
+import { PLANO_POR_DEFECTO } from './datos';
 import { ECO_CITA_CORTA } from './ecoeficiencia';
 import { citaLer, lerConAsterisco } from './ler';
 import type { EstudioRcd, EstudioRcdDatos } from './tipos';
@@ -277,7 +278,7 @@ export function documentoRcd(r: EstudioRcd, d: EstudioRcdDatos, obra: MetaObraRc
       bloques: [
         P(
           'Las instalaciones previstas para el almacenamiento, el manejo, la separación y, en su caso, otras operaciones de gestión de los residuos dentro de la obra se recogen en ',
-          d.plano ? `el ${d.plano}` : pend('el plano de las instalaciones'),
+          `el ${d.plano ?? PLANO_POR_DEFECTO}`,
           '. Podrán adaptarse a las características de la obra y a sus sistemas de ejecución, previo acuerdo de la dirección facultativa.',
         ),
         ...(d.plantaMovil ? [P('Se prevé una planta móvil de tratamiento en la obra, que consta en este proyecto (Decreto 73/2012, art. 85.1).')] : []),
