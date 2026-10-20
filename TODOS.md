@@ -215,6 +215,40 @@ puerta cronometrada se anuló (2026-09-27): entran si el uso en obra lo pide.
   marcan y se borran a mano con «Liberar espacio». Hacerlo solo exige un protocolo
   entre pestañas: publicación de bytes, referencias sin guardar y las dos pilas del
   historial de cada pestaña.
+- **Medición asistida por IA sobre los planos (P2, grande).** Un agente que lee el
+  proyecto, pregunta lo que no sabe («¿tabiquería de ladrillo o de placa?»), propone
+  partidas y mete sus líneas medidas en el visor, como lo haría el usuario. Análisis
+  del 2026-10-20 (sin prototipo todavía):
+  - **Qué hacen bien los modelos:** sacar la estructura de partidas de la memoria y
+    los planos, y leer cifras escritas (cuadros de superficies, cotas, carpintería).
+    Contar símbolos, regular en planos densos.
+  - **Qué hacen mal:** medir o hacer clic por píxeles. Aun con una cota de referencia
+    el error ronda el 10–20 %, y dan la cifra con seguridad. Por eso NO hay que dejar
+    que la IA maneje la pantalla (capturas + clics): es lento, caro y arrastra el mismo
+    error.
+  - **Cómo encajaría:** herramientas que llaman a las acciones del store
+    (`addPlanoLines`, `setPlanoPageScale`, y `crear_partida`/`agregar_lineas` de
+    `ai/ops.ts`) en modo propuesta. Salen las mismas líneas que con el visor, con
+    plano, página y forma, así que «Ver en plano», recalcular y «sin comprobar»
+    funcionan sin tocarlos y revisar es pinchar la línea y corregir.
+  - **El punto crítico es de dónde salen los vértices:** la IA señala y el código
+    mide. Depende del imán a la geometría vectorial (Etapa B, 1), de detectar recintos
+    cerrados en el PDF para que la IA solo diga cuál es cuál, y de usar los textos con
+    posición de `core/planoTexto.ts` como ancla («SALÓN 24,30 m²» → recinto que la
+    contiene → comparar el área medida con la escrita y marcar si no cuadra).
+  - **Requisitos para que se revise bien:** editar vértices (`moveShapeVertices`,
+    Etapa B, 3; hoy no existe), marca «propuesta por IA, sin revisar» en cada línea
+    hasta darla por buena, y lotes por partida o por planta con un solo Deshacer.
+  - **Límites:** hace falta un modelo de gama alta (no `gemini-3.1-flash-lite`); un
+    A1 a 2048 px deja las cotas ilegibles, así que hay que trocear o mandar el PDF
+    entero; los PDF escaneados solo admiten visión, que es lo poco fiable.
+  - **Fases posibles:** primero, sin geometría nueva, leer etiquetas y cuadros y meter
+    líneas con el valor leído para que el usuario corrija sobre el plano; después,
+    imán y recintos para que sea fiable de verdad.
+  - **Primer paso barato:** probar a mano con `ejemplos pdf/` (sin subirlos): ver si
+    los PDF traen recintos cerrados y textos aprovechables, y comparar lo que saca la
+    IA con una medición real. Estimación sin probar: borrador con el 60–80 % de las
+    partidas y cantidades que hay que revisar.
 
 ### Documentos que aún obligan a volver a Presto o a Excel (P2)
 

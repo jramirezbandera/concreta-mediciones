@@ -51,7 +51,7 @@ Fuente única para implementar la Etapa A (tarea X0, 2026-09-25). Reúne el plan
   - DWG/DXF;
   - varias escalas por página (TODOS P3);
   - certificar sobre el plano (P3);
-  - medición automática con IA;
+  - medición automática con IA (análisis en TODOS.md, «Medición asistida por IA sobre los planos»);
   - imprimir el plano con las medidas;
   - sincronizar planos entre equipos;
   - plano marcado para la DF (P2);
