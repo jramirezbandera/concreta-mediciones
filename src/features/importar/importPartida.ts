@@ -10,9 +10,15 @@
    por .bc3, así que preparar un capítulo son 10-15 descargas. Se parsean todos y
    se vuelcan en UNA sola llamada a `requestCopyRefPartidas`: un único preflight
    de colisión (un modal, no doce) y una única inserción.
+
+   OBRA EN BLANCO: soltar el .bc3 de una obra COMPLETA sobre una obra sin
+   capítulos la carga entera, como la vista Importar (no hay nada que reemplazar,
+   así que sin confirmación). Con capítulos, el drop sigue siendo de partidas.
    =========================================================================== */
-import { Bc3ImportError } from '../../core/bc3import';
+import { Bc3ImportError, type Bc3ImportResult } from '../../core/bc3import';
 import { refCopyItemsFromObra } from '../../core/bc3ToPartidas';
+import { fmtCents } from '../../core/money';
+import type { Obra } from '../../core/types';
 import type { RefCopyItem } from '../../core/refdata';
 import { copyTargetOf, selectCopyContra, useObraStore, useToastStore } from '../../store';
 import { parseBc3 } from './parseBc3';
@@ -41,12 +47,17 @@ function readBytes(file: File): Promise<Uint8Array> {
 // abrirían dos modales de colisión a la vez.
 let importing = false;
 
-/** Parsea UN .bc3 a items de copia. `null` = el archivo no aportó ninguna partida
- *  (vacío, ilegible o sin partidas): el lote lo cuenta como fallido y sigue. */
-async function itemsOf(file: File): Promise<RefCopyItem[] | null> {
+/** Parsea UN .bc3 (worker: la UI no se congela). */
+async function parseFile(file: File): Promise<Bc3ImportResult> {
+  return parseBc3(await readBytes(file));
+}
+
+/** Parsea UN .bc3 a items de copia (o reusa su parseo si ya se hizo). `null` = el
+ *  archivo no aportó ninguna partida (vacío, ilegible o sin partidas): el lote lo
+ *  cuenta como fallido y sigue. */
+async function itemsOf(file: File, parsed?: Bc3ImportResult): Promise<RefCopyItem[] | null> {
   try {
-    const bytes = await readBytes(file);
-    const result = await parseBc3(bytes); // worker: la UI no se congela
+    const result = parsed ?? (await parseFile(file));
     const { items, error } = refCopyItemsFromObra(result);
     return error || items.length === 0 ? null : items;
   } catch {
@@ -74,13 +85,28 @@ export async function importPartidasFromFiles(
   target: Target = null,
 ): Promise<void> {
   if (importing) return;
-  const toast = useToastStore.getState().show;
   const bc3s = files.filter(isBc3File);
   if (bc3s.length === 0) {
-    if (files.length > 0) toast('Solo se importan archivos .bc3.');
+    if (files.length > 0) useToastStore.getState().show('Solo se importan archivos .bc3.');
     return;
   }
   importing = true;
+  try {
+    await importarLote(bc3s, target);
+  } finally {
+    importing = false;
+  }
+}
+
+/** Cuerpo de `importPartidasFromFiles` (sin la guarda de reentrada, que pone el
+ *  llamante). `parsed` reusa los parseos ya hechos (el drop en obra en blanco ya
+ *  parseó el archivo para ver si era una obra completa). */
+async function importarLote(
+  bc3s: readonly File[],
+  target: Target,
+  parsed?: ReadonlyMap<File, Bc3ImportResult>,
+): Promise<void> {
+  const toast = useToastStore.getState().show;
   try {
     // Con varios archivos el parseo tarda (12 × worker): avisa de que va en marcha
     // para que el silencio no se lea como «no ha hecho nada».
@@ -90,7 +116,7 @@ export async function importPartidasFromFiles(
     const failed: string[] = [];
     let okFiles = 0;
     for (const f of bc3s) {
-      const got = await itemsOf(f);
+      const got = await itemsOf(f, parsed?.get(f));
       if (got) {
         items.push(...got);
         okFiles += 1;
@@ -140,8 +166,6 @@ export async function importPartidasFromFiles(
         ? 'El .bc3 no contiene ninguna partida importable.'
         : 'No se pudo leer el archivo .bc3.',
     );
-  } finally {
-    importing = false;
   }
 }
 
@@ -150,13 +174,101 @@ export function importPartidaFromFile(file: File, target: Target = null): Promis
   return importPartidasFromFiles([file], target);
 }
 
+/** ¿El .bc3 es una obra completa? La descarga del Generador de Precios de CYPE
+ *  trae UNA sola partida (con su capítulo de clasificación): eso es una partida. */
+export function esObraCompleta(r: Bc3ImportResult): boolean {
+  return r.report.partidas > 1;
+}
+
+/** Nombre que pone `blankObraData` si no se escribe uno: no cuenta como puesto. */
+const NOMBRE_POR_DEFECTO = 'Obra nueva';
+
+/** ¿El dato de la obra en blanco tiene contenido que el .bc3 no debe pisar? */
+function tieneValor(v: unknown): boolean {
+  if (typeof v === 'string') return v.trim() !== '';
+  if (Array.isArray(v)) return v.length > 0;
+  return v != null;
+}
+
+/** Datos de la obra: los que el usuario ya rellenó (el nombre que le puso al
+ *  crearla, la dirección…) mandan; el resto sale del .bc3. */
+function fusionarDatosObra(actual: Obra, delBc3: Obra): Obra {
+  const obra: Obra = { ...delBc3 };
+  for (const [k, v] of Object.entries(actual)) if (tieneValor(v)) obra[k] = v;
+  if (actual.denominacion.trim() === NOMBRE_POR_DEFECTO) obra.denominacion = delBc3.denominacion;
+  return obra;
+}
+
+const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
+
+/** Carga el .bc3 como LA obra (en blanco): lo mismo que «Cargar al presupuesto»
+ *  de la vista Importar, conservando lo que el .bc3 no trae y la obra en blanco
+ *  ya puede tener (datos de la obra, planos subidos, estudio de residuos). */
+function cargarEnObraEnBlanco(result: Bc3ImportResult, fileName: string): void {
+  const st = useObraStore.getState();
+  const data = {
+    ...result.data,
+    obra: fusionarDatosObra(st.obra, result.data.obra),
+    planos: st.planos,
+    estudioRcd: st.estudioRcd,
+  };
+  st.loadObra(data); // salta a Presupuesto (y limpia el toast anterior)
+
+  const r = result.report;
+  // Mismo umbral que el gate de PEM de la vista Importar (1 €, redondeo).
+  const desvio = r.deltaCents != null && Math.abs(r.deltaCents) >= 100;
+  const resumen = `Obra importada de ${fileName}: ${plural(r.chapters, 'capítulo', 'capítulos')} · ${plural(
+    r.partidas,
+    'partida',
+    'partidas',
+  )} · PEM ${fmtCents(r.pemCents)}`;
+  useToastStore
+    .getState()
+    .show(
+      desvio
+        ? `${resumen}. Desviación de PEM de ${fmtCents(r.deltaCents!)} respecto al archivo: revísalo.`
+        : `${resumen}.`,
+      undefined,
+      desvio ? { tone: 'warn' } : undefined,
+    );
+}
+
+/** Drop de UN .bc3 sobre una obra en blanco: si es una obra completa se carga
+ *  entera; si es una partida (CYPE), sigue el camino de siempre sin reparsear. */
+async function importarEnObraEnBlanco(file: File, target: Target): Promise<void> {
+  if (importing) return;
+  importing = true;
+  try {
+    let parsed: Bc3ImportResult;
+    try {
+      parsed = await parseFile(file);
+    } catch (e) {
+      useToastStore
+        .getState()
+        .show(e instanceof Bc3ImportError ? e.message : 'No se pudo leer el archivo .bc3.', undefined, {
+          tone: 'error',
+        });
+      return;
+    }
+    // Se vuelve a mirar tras el parseo (asíncrono): pudo añadirse un capítulo.
+    if (esObraCompleta(parsed) && useObraStore.getState().chapters.length === 0) {
+      cargarEnObraEnBlanco(parsed, file.name);
+      return;
+    }
+    await importarLote([file], target, new Map([[file, parsed]]));
+  } finally {
+    importing = false;
+  }
+}
+
 /**
  * Procesa un drop sobre el presupuesto, con los ficheros y los `types` del
  * `DataTransfer` ya capturados de forma SÍNCRONA por el llamante (el evento de
  * drag no sobrevive al import dinámico). Los .bc3 se importan TODOS de una vez;
  * si no cae ninguno, otro fichero o un ENLACE (arrastrar el icono FIE BDC desde
  * el navegador, que solo entrega la URL y choca con CORS) avisan de forma
- * accionable. Soltar una mezcla importa los .bc3 e ignora el resto.
+ * accionable. Soltar una mezcla importa los .bc3 e ignora el resto. Sobre una
+ * obra en blanco, UN .bc3 de obra completa se carga entero (ver cabecera).
  */
 export function processBudgetDrop(
   files: readonly File[],
@@ -164,6 +276,11 @@ export function processBudgetDrop(
   target: Target = null,
 ): void {
   if (files.length > 0) {
+    const bc3s = files.filter(isBc3File);
+    if (bc3s.length === 1 && useObraStore.getState().chapters.length === 0) {
+      void importarEnObraEnBlanco(bc3s[0]!, target);
+      return;
+    }
     void importPartidasFromFiles(files, target);
     return;
   }

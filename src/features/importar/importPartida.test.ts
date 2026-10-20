@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { rec010File } from '../../core/__fixtures__/rec010Bc3';
-import { useObraStore, useToastStore } from '../../store';
+import { blankObraData, useObraStore, useToastStore } from '../../store';
 import {
   importPartidaFromFile,
   importPartidasFromFiles,
@@ -171,5 +173,51 @@ describe('importPartidasFromFiles (varios .bc3 en un gesto)', () => {
     const n0 = obra().partidas['01']!.length;
     processBudgetDrop([cypeLikeFile('AAA010'), cypeLikeFile('BBB020')], ['Files'], target);
     await vi.waitFor(() => expect(obra().partidas['01']!).toHaveLength(n0 + 2));
+  });
+});
+
+describe('drop sobre una obra EN BLANCO', () => {
+  const prestoMini = () =>
+    new File(
+      [new Uint8Array(readFileSync(resolve(process.cwd(), 'src', 'core', '__fixtures__', 'presto-mini.bc3')))],
+      'presto-mini.bc3',
+    );
+  const enBlanco = (nombre?: string) =>
+    useObraStore.setState({ ...blankObraData(nombre), planos: [{ id: 'pl1' } as never] });
+
+  it('un .bc3 de obra completa se carga entero, como desde Importar', async () => {
+    enBlanco('Pueblo Mediterráneo');
+    processBudgetDrop([prestoMini()], ['Files']);
+    await vi.waitFor(() => expect(obra().chapters).toHaveLength(2));
+    expect(Object.values(obra().partidas).flat()).toHaveLength(3);
+    expect(obra().view).toBe('presupuesto');
+    // Lo que el .bc3 no trae se conserva: el nombre que se le puso y los planos.
+    expect(obra().obra.denominacion).toBe('Pueblo Mediterráneo');
+    expect(obra().planos).toHaveLength(1);
+    expect(lastToast()).toMatch(/Obra importada de presto-mini\.bc3: 2 capítulos · 3 partidas/);
+  });
+
+  it('sin nombre puesto (el de por defecto), toma el del .bc3', async () => {
+    enBlanco();
+    processBudgetDrop([prestoMini()], ['Files']);
+    await vi.waitFor(() => expect(obra().chapters).toHaveLength(2));
+    expect(obra().obra.denominacion).toMatch(/OBRA MINI/);
+  });
+
+  it('la descarga de UNA partida de CYPE sigue siendo importar partida', async () => {
+    enBlanco('Mi obra');
+    processBudgetDrop([sampleFile()], ['Files']);
+    await vi.waitFor(() => expect(lastToast()).toMatch(/REC010|colisiones/));
+    expect(obra().obra.denominacion).toBe('Mi obra');
+    expect(obra().planos).toHaveLength(1);
+  });
+
+  it('con capítulos, una obra completa NO reemplaza: entran sus partidas', async () => {
+    const ch0 = obra().chapters.length;
+    const n0 = obra().partidas['01']!.length;
+    processBudgetDrop([prestoMini()], ['Files'], { chId: '01', subId: null });
+    await vi.waitFor(() => expect(lastToast()).toMatch(/Partida importada|colisiones/));
+    expect(obra().chapters).toHaveLength(ch0);
+    if (!obra().pendingCopy) expect(obra().partidas['01']!.length).toBe(n0 + 3);
   });
 });

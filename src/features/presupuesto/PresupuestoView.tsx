@@ -4,6 +4,7 @@ import type { Chapter, SubChapter } from '../../core/types';
 import { partidaImporte } from '../../core/medicion';
 import { fmtCents, sumCents } from '../../core/money';
 import { ancestorIds, findNode, subtreeIds } from '../../core/tree';
+import { isTouchOnly } from '../../hooks/touchOnly';
 import { useElementWidth } from '../../hooks/useElementWidth';
 import { ALL, selectChapterTotals, selectPem, useObraStore } from '../../store';
 import { AllChapters } from './AllChapters';
@@ -139,7 +140,7 @@ export function PresupuestoView({
         <EmptyState
           icon="building"
           title="Empieza tu primera obra"
-          text="Importa un presupuesto .bc3 de Presto, Arquímedes o CYPE, o crea la estructura de capítulos en blanco."
+          text={`${isTouchOnly() ? 'Importa' : 'Suelta aquí'} un presupuesto .bc3 de Presto, Arquímedes o CYPE, o crea la estructura de capítulos en blanco.`}
         >
           {onImport && (
             <EmptyAction primary onClick={onImport}>

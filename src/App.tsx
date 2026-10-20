@@ -450,7 +450,9 @@ export default function App() {
           {fileOver && !refDrag && (
             <div className={`no-print ${styles.fileDropHint}`} aria-hidden>
               <Icon name="download" size={20} />
-              Suelta el <span className="mono">.bc3</span> para importar la partida
+              {/* Obra en blanco: un .bc3 de obra completa se carga entero (importPartida). */}
+              Suelta el <span className="mono">.bc3</span> para importar{' '}
+              {counts.chapters === 0 ? 'la obra' : 'la partida'}
             </div>
           )}
         </main>
