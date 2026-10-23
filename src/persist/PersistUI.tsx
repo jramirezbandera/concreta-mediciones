@@ -109,7 +109,7 @@ function MasNuevaBanner() {
       <Icon name="refresh" size={16} />
       <span className={styles.bannerText}>
         {masNueva.id === activeId
-          ? 'Esta obra se guardó con una versión más nueva de Concreta: recarga la página. Aquí no se guardan los cambios.'
+          ? 'Esta obra se guardó con una versión más nueva de Concreta: recarga la página. Aquí solo se puede ver.'
           : `La obra «${masNueva.nombre}» se guardó con una versión más nueva de Concreta: recarga la página para abrirla.`}
       </span>
       <button type="button" className={styles.bannerBtn} onClick={recargar} disabled={busy}>
@@ -148,14 +148,15 @@ function CambiosAntiguosBanner() {
 
 const READONLY_TEXT = {
   'otra-pestana':
-    'Esta obra está abierta en otra pestaña. Aquí no se guardan los cambios; cierra la otra pestaña para editar en esta.',
+    'Esta obra está abierta en otra pestaña. Aquí solo se puede ver; cierra la otra pestaña para editar en esta.',
   'sin-recargar':
-    'La otra pestaña ya soltó esta obra, pero no se pudo volver a leer del navegador. Aquí no se guardan los cambios: recarga la página.',
+    'La otra pestaña ya soltó esta obra, pero no se pudo volver a leer del navegador. Aquí solo se puede ver: recarga la página.',
 } as const;
 
 /** Banner de SOLO-LECTURA (T-19): la obra activa está abierta en otra pestaña,
  *  que es la dueña del autosave, o al heredarla no se pudo releer de disco. Aquí
- *  no se guardan los cambios; desaparece cuando esta pestaña toma el control.
+ *  solo se puede ver (el store rechaza las ediciones, `store/soloLectura`);
+ *  desaparece cuando esta pestaña toma el control.
  *  La solo lectura por versión más nueva la explica `MasNuevaBanner`. */
 function ReadonlyBanner() {
   const motivo = useSessionStore((s) => (s.readonly ? s.readonlyMotivo : null));

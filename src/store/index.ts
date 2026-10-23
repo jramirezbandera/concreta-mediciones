@@ -39,3 +39,4 @@ export {
 export type { Counts } from './selectors';
 export { useClipboardStore } from './clipboardStore';
 export { useToastStore, type ToastAction, type ToastTone } from './toastStore';
+export { setBloqueoEdicion, permitirCarga } from './soloLectura';

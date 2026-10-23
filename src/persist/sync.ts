@@ -32,6 +32,7 @@ import {
 } from '../store';
 import { usePlanoUiStore } from '../store/planoUiStore';
 import { DOMAIN_KEYS } from '../store/schema';
+import { permitirCarga } from '../store/soloLectura';
 import { __resetHistoryForTests } from '../store/temporal';
 import { calcularHuella } from './huella';
 import { escucharPreguntasDeHuellas } from './liberar';
@@ -150,6 +151,9 @@ function persistNow(): Promise<boolean> {
   if (!id) {
     id = newObraId(); // 1ª edición de la demo: nace su id
     useSessionStore.getState().setActiveId(id);
+    // T-19: y su candado. Sin él, otra pestaña que abriera la obra se haría dueña
+    // y las dos la guardarían a la vez. Está libre (id nuevo) → sigue dueña.
+    claimActive(id);
   }
   const target = id;
   const migracion = porMigrar?.id === target ? porMigrar : null;
@@ -311,11 +315,12 @@ export function cancelPending(): void {
 /* ---- carga de una obra en el store de dominio ----------------------------- */
 /** Vuelca un `ObraData` ya decodificado en el store con el autosave SUPRIMIDO
  *  durante la mutación (loadObra muta el dominio y no debe disparar guardado).
+ *  También en una pestaña de solo lectura: cargar lo de disco no es editar.
  *  Con `v5`, la obra salió de su clave v5 y queda «por migrar». */
 function loadDataIntoStore(data: ObraData, v5?: { id: string; savedAt: string; indiceSavedAt: string }): void {
   suppress = true;
   try {
-    useObraStore.getState().loadObra(data);
+    permitirCarga(() => useObraStore.getState().loadObra(data));
   } finally {
     suppress = false;
   }

@@ -7,6 +7,7 @@
    crear o borrar); la UI solo lo lee.
    =========================================================================== */
 import { create } from 'zustand';
+import { setBloqueoEdicion } from '../store/soloLectura';
 import type { ObraMeta } from './registry';
 
 interface SessionState {
@@ -53,3 +54,16 @@ export const useSessionStore = create<SessionState>((set) => ({
   setReadonly: (readonly, motivo = 'otra-pestana') =>
     set({ readonly, readonlyMotivo: readonly ? motivo : null }),
 }));
+
+/** Lo que dice el aviso al intentar editar en una pestaña de solo lectura. */
+const AVISO_SOLO_LECTURA: Record<ReadonlyMotivo, string> = {
+  'otra-pestana': 'Esta obra está abierta en otra pestaña: aquí solo se puede ver.',
+  'sin-recargar': 'Aquí solo se puede ver la obra: recarga la página para volver a editarla.',
+  'mas-nueva': 'Esta obra se guardó con una versión más nueva de Concreta: recarga la página para editarla.',
+};
+
+// En solo lectura el store no deja editar la obra (lo tecleado se perdería).
+setBloqueoEdicion(() => {
+  const { readonly, readonlyMotivo } = useSessionStore.getState();
+  return readonly ? AVISO_SOLO_LECTURA[readonlyMotivo ?? 'otra-pestana'] : null;
+});

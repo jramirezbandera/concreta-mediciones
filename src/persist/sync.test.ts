@@ -12,6 +12,8 @@ import {
   getActiveObraId,
   hydrate,
 } from './sync';
+import { __setLockManagerForTests } from './tabLock';
+import { FakeLockManager, tick } from '../test/fakeLocks';
 
 const state = () => useObraStore.getState();
 const withName = (name: string): ObraData => ({
@@ -32,6 +34,21 @@ describe('hydrate (multi-obra)', () => {
     expect(state().obra.denominacion).toContain('C/ Mayor 14');
     expect(await loadIndex()).toEqual({ activeId: null, obras: [] });
     expect(getActiveObraId()).toBeNull();
+  });
+
+  it('1ª edición de la demo se queda con el candado de la obra (T-19)', async () => {
+    const mgr = new FakeLockManager();
+    __setLockManagerForTests(mgr);
+    await hydrate();
+    state().editPartidaField('01', 'p111', 'title', 'Editada');
+    await flushPending();
+    await tick();
+    const id = (await getActiveId())!;
+    let libre: boolean | null = null;
+    await mgr.request(`concreta.obra.${id}`, { mode: 'exclusive', ifAvailable: true }, async (lock) => {
+      libre = lock !== null;
+    });
+    expect(libre).toBe(false); // otra pestaña que abra la obra queda en solo lectura
   });
 
   it('1ª edición de la demo crea el registro y persiste', async () => {

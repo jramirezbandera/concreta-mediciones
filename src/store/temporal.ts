@@ -26,6 +26,7 @@ import { findNode } from '../core/tree';
 import { ALL } from './base';
 import { DOMAIN_KEYS, type DomainKey } from './schema';
 import { useToastStore } from './toastStore';
+import { avisarSoloLectura, edicionBloqueada } from './soloLectura';
 import type { ObraState, ObraStore } from './obraStore';
 
 /** Snapshot del DOMINIO trackeado: las claves de `DOMAIN_KEYS` (fuente única en
@@ -180,9 +181,17 @@ export function initHistory(store: ObraStore): void {
   notify();
 }
 
+/** Si la pestaña es de solo lectura, lo avisa y devuelve `true`: Deshacer y
+ *  Rehacer no tocan las pilas (el `set` rechazaría el cambio y las desalinearía). */
+function bloqueado(): boolean {
+  const msg = edicionBloqueada();
+  if (msg) avisarSoloLectura(msg);
+  return msg !== null;
+}
+
 /** Deshace la última edición de dominio (no-op si no hay historial). */
 export function undo(): void {
-  if (!host || past.length === 0) return;
+  if (!host || past.length === 0 || bloqueado()) return;
   // D-08 simétrico (auditoría): un toast «Deshacer» pendiente capturó estado de
   // ANTES de este undo; dejarlo vivo tras restaurar daría un botón muerto (la
   // guarda de restorePartida lo neutraliza) o una acción sobre estado ya movido.
@@ -199,7 +208,7 @@ export function undo(): void {
 
 /** Rehace la última edición deshecha (no-op si no hay futuro). */
 export function redo(): void {
-  if (!host || future.length === 0) return;
+  if (!host || future.length === 0 || bloqueado()) return;
   useToastStore.getState().clear(); // mismo D-08 simétrico que undo()
   const current = partialize(host.getState());
   const target = future[0]!;

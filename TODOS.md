@@ -28,7 +28,20 @@ con el grid de medición de presupuesto.
 
 ---
 
-## Pestaña de solo-lectura (T-19): las ediciones no se bloquean
+## ~~Pestaña de solo-lectura (T-19): las ediciones no se bloquean~~ — HECHO (2026-10-23)
+
+Resuelto en el store: `store/soloLectura.ts` es un middleware entre
+`subscribeWithSelector` e `immer` que rechaza toda acción que cambie una clave de
+`DOMAIN_KEYS` mientras la pestaña es de solo lectura, y lo avisa con un toast según el
+motivo (otra pestaña, sin recargar, versión más nueva). Navegar sigue libre. Deshacer y
+Rehacer no tocan las pilas. Las cargas de `sync` (traspaso, conmutar) y el ejemplo de
+planos van en `permitirCarga`. El predicado lo inyecta `persist/sessionStore`
+(`setBloqueoEdicion`), así `store/` sigue sin importar `persist/`. Con el arreglo
+también se cerró otro agujero: la primera edición de la obra en memoria le daba id sin
+reclamar el candado (`persistNow` → `claimActive`), y una segunda pestaña la abría
+como dueña.
+
+Contexto original, por si hay que volver:
 
 **Qué:** en una pestaña marcada solo-lectura (otra pestaña es dueña de la obra, Web
 Locks / T-19), hoy solo se inhibe el autosave (`isOwner`) y se muestra un banner
@@ -264,4 +277,4 @@ estos ya están calculados:
 
 ---
 
-_Backlog: 1 TODO (mutaciones en pestaña readonly) + 5 aplazados del plan de líneas de medición + mejoras de producto (recordatorio de copia, guardar en carpeta, obra en el móvil, medir sobre planos con 8 aplazados, documentos). El pase de diseño móvil y la navegación de teclado en certificaciones están hechos._
+_Backlog: 5 aplazados del plan de líneas de medición + mejoras de producto (recordatorio de copia, guardar en carpeta, obra en el móvil, medir sobre planos con 8 aplazados, documentos). El pase de diseño móvil y la navegación de teclado en certificaciones están hechos, y la pestaña de solo lectura ya no deja editar._

@@ -52,6 +52,8 @@ import type { NewPlanoLine } from '../core/planoMedida';
 // undo no cruza obras, análogo D-08). Import de un solo sentido: `temporal` solo
 // importa el TIPO de este módulo (se borra en compilación) → sin ciclo runtime.
 import { pauseHistory } from './temporal';
+// Pestaña de solo lectura (T-19): el `set` rechaza los cambios de la obra.
+import { guardaSoloLectura } from './soloLectura';
 
 // --- superficie pública de `./obraStore` (invariante F-04: no cambia nada) ---
 export { ALL };
@@ -724,6 +726,7 @@ function seedUi(certs: Cert[]) {
 
 export const useObraStore = create<ObraState>()(
   subscribeWithSelector(
+  guardaSoloLectura(
   immer((set, get, store) => {
     // Arranque limpio: la app parte de una obra nueva vacía (sin datos demo). En
     // primera carga `hydrate` (sin obras en IDB) conserva este estado en memoria;
@@ -937,6 +940,7 @@ export const useObraStore = create<ObraState>()(
       ...createRcdSlice(set, get, store),
     };
   }),
+  ),
   ),
 );
 

@@ -10,7 +10,7 @@ import { huellaDe } from '../../core/sha256';
 import type { Partida, PlanoMeta } from '../../core/types';
 import { aislarPestana } from '../../persist';
 import { registrarBytesEnMemoria } from '../../persist/planos';
-import { blankObraData, useObraStore } from '../../store';
+import { blankObraData, permitirCarga, useObraStore } from '../../store';
 import { usePlanoUiStore } from '../../store/planoUiStore';
 import { METRO_1_50, planoEjemplo } from '../../test/pdfMinimo';
 
@@ -75,7 +75,7 @@ export async function abrirEjemploPlanos(): Promise<void> {
   };
   data.planos = [plano];
   const store = useObraStore.getState();
-  store.loadObra(data);
+  permitirCarga(() => store.loadObra(data)); // ejemplo aislado: no se guarda
   store.revealPartida(EJEMPLO.tabique, EJEMPLO.capitulo, null);
   usePlanoUiStore.getState().reset();
   usePlanoUiStore.setState({ docToken: useObraStore.getState().docToken });
