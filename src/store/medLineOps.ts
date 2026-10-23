@@ -33,6 +33,7 @@
               · otro texto ─────────────────► TSV ajeno (cancela un cortado)
               · nada ───────────────────────► nada
    =========================================================================== */
+import { blank } from '../core/medicion';
 import { medFormaDe } from '../core/medForma';
 import {
   lineasCertificadas,
@@ -52,7 +53,7 @@ import { useClipboardStore, type MedClip } from './clipboardStore';
 import { selectionOf, useMedUiStore, type FocusRequest } from './medUiStore';
 import { textoResultado } from './motivos';
 import { useObraStore, type MedResult } from './obraStore';
-import { getDomainRevision, undo } from './temporal';
+import { getDomainRevision, undo, withoutHistory } from './temporal';
 import { useToastStore } from './toastStore';
 
 /** Partida y su capítulo (clave del `PartidasMap`), por id. */
@@ -623,6 +624,22 @@ export function deleteLines(
     `${plural(res.ids.length, 'línea eliminada', 'líneas eliminadas')} · ${cambioCantidad(antes, resumenCantidad(after, coefK()), after.ud)}`,
     { partidaId, kind: 'lines', lineIds: ordered, col: 0 },
   );
+}
+
+/**
+ * Quita la línea que creó un Tab/Enter al final de la última si se quedó en
+ * blanco (sin comentario, casillas ni plano): un Enter de más al terminar no
+ * debe dejar una línea fantasma de 0. Sin paso de Deshacer, sin aviso y sin
+ * mover el foco: el usuario nunca quiso esa línea.
+ */
+export function discardBlankLine(partidaId: string, lineId: string): void {
+  const loc = locatePartida(partidaId);
+  const l = loc?.partida.med.find((x) => x.id === lineId);
+  if (!loc || !l) return;
+  const enBlanco =
+    !l.comment.trim() && blank(l.uds) && blank(l.largo) && blank(l.ancho) && blank(l.alto) && !l.origen;
+  if (!enBlanco) return;
+  withoutHistory(() => useObraStore.getState().deleteMedLines(loc.chapterId, partidaId, [lineId]));
 }
 
 /* ---- reordenar ------------------------------------------------------------- */

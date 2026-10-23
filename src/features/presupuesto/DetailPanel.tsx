@@ -10,7 +10,7 @@ import { useGridNav } from '../../hooks/useGridNav';
 import { useMedGridTab } from '../../hooks/useMedGridTab';
 import { useMedLineKeys } from '../../hooks/useMedLineKeys';
 import { useClipboardStore, useObraStore } from '../../store';
-import { cancelCut, pasteAnchor, pasteLines } from '../../store/medLineOps';
+import { cancelCut, discardBlankLine, pasteAnchor, pasteLines } from '../../store/medLineOps';
 import { selectionOf, useMedUiStore } from '../../store/medUiStore';
 import { FUERA_TITLE } from './format';
 import { MedCards } from './MedCards';
@@ -196,8 +196,13 @@ export function DetailPanel({
   const formaSelect = (
     <MedFormaSelect forma={p.medForma} ud={p.ud} onChange={(f) => setMedForma(chapterId, p.id, f)} />
   );
-  // Tab/Enter encadenan edición y crean fila al final (hoja de cálculo).
-  const medTab = useMedGridTab(() => addMedLine(chapterId, p.id), med.length);
+  // Tab/Enter encadenan edición y crean fila al final (hoja de cálculo); la
+  // fila que se deja en blanco se quita sola.
+  const medTab = useMedGridTab(
+    () => addMedLine(chapterId, p.id),
+    med.length,
+    (lineId) => discardBlankLine(p.id, lineId),
+  );
   const lineKeys = useMedLineKeys(p.id);
   const medRef = useRef<HTMLDivElement>(null);
   const addRef = useRef<HTMLButtonElement>(null);
@@ -291,6 +296,7 @@ export function DetailPanel({
                 gridNav(e);
                 medTab.onKeyDown(e);
               }}
+              onBlur={medTab.onBlur}
               {...lineKeys}
             >
               <table className={styles.medTable}>

@@ -1,6 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useObraStore } from '../../store';
+import { __resetHistoryForTests, initHistory, undo } from '../../store/temporal';
 import type { Partida } from '../../core/types';
 import { DetailPanel } from './DetailPanel';
 
@@ -64,6 +65,82 @@ describe('Tab/Enter editable en líneas de medición', () => {
     fireEvent.click(screen.getAllByLabelText('Unidades')[0]!);
     fireEvent.keyDown(screen.getAllByLabelText('Unidades')[0]!, { key: 'Enter', ctrlKey: true });
     expect(med()).toHaveLength(n + 1);
+  });
+
+  describe('fila provisional (Enter de más al terminar)', () => {
+    /** Enter en la última fila: crea la provisional con su «Unidades» abierto. */
+    function enterAlFinal() {
+      const n = med().length;
+      fireEvent.click(screen.getAllByLabelText('Unidades')[n - 1]!);
+      fireEvent.keyDown(screen.getAllByLabelText('Unidades')[n - 1]!, { key: 'Enter' });
+      expect(med()).toHaveLength(n + 1);
+      return n;
+    }
+
+    it('cerrar la partida con la fila en blanco la quita', () => {
+      const { unmount } = render(<Harness />);
+      const n = enterAlFinal();
+      unmount();
+      expect(med()).toHaveLength(n);
+    });
+
+    it('sacar el foco de la fila en blanco la quita', () => {
+      vi.useFakeTimers();
+      try {
+        render(<Harness />);
+        const n = enterAlFinal();
+        const nueva = screen.getAllByLabelText('Unidades')[n]!;
+        const otra = screen.getAllByLabelText('Unidades')[0]!;
+        otra.focus();
+        fireEvent.blur(nueva, { relatedTarget: otra });
+        act(() => vi.runAllTimers());
+        expect(med()).toHaveLength(n);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('si se escribe algo en ella, se queda', () => {
+      const { unmount } = render(<Harness />);
+      const n = enterAlFinal();
+      const nueva = screen.getAllByLabelText('Unidades')[n]!;
+      fireEvent.change(nueva, { target: { value: '3' } });
+      fireEvent.blur(nueva); // el blur confirma
+      unmount();
+      expect(med()).toHaveLength(n + 1);
+      expect(med()[n]!.uds).toBe(3);
+    });
+
+    it('un Ctrl+Z tras quitarla no la resucita: deshace lo último que sí se escribió', () => {
+      __resetHistoryForTests();
+      initHistory(useObraStore);
+      try {
+        const { unmount } = render(<Harness />);
+        const n = med().length;
+        const antes = med()[n - 1]!.uds;
+        fireEvent.click(screen.getAllByLabelText('Unidades')[n - 1]!);
+        const uds = screen.getAllByLabelText('Unidades')[n - 1]!;
+        fireEvent.change(uds, { target: { value: '7' } });
+        fireEvent.keyDown(uds, { key: 'Enter' }); // confirma 7 y crea la provisional
+        expect(med()).toHaveLength(n + 1);
+        unmount(); // cierra la partida: se quita la provisional
+        expect(med()).toHaveLength(n);
+        undo();
+        expect(med()).toHaveLength(n);
+        expect(med()[n - 1]!.uds).toBe(antes);
+      } finally {
+        __resetHistoryForTests();
+      }
+    });
+
+    it('la de Ctrl+Enter (alta explícita) no se quita', () => {
+      const { unmount } = render(<Harness />);
+      const n = med().length;
+      fireEvent.click(screen.getAllByLabelText('Unidades')[0]!);
+      fireEvent.keyDown(screen.getAllByLabelText('Unidades')[0]!, { key: 'Enter', ctrlKey: true });
+      unmount();
+      expect(med()).toHaveLength(n + 1);
+    });
   });
 
   it('Escape cancela la edición de la celda (vuelve a reposo)', () => {

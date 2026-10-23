@@ -7,7 +7,7 @@ import type { MedLine, Partida } from '../../core/types';
 import { useMedGridTab } from '../../hooks/useMedGridTab';
 import { useMedLineKeys } from '../../hooks/useMedLineKeys';
 import { useObraStore } from '../../store';
-import { deleteLines, toggleLine } from '../../store/medLineOps';
+import { deleteLines, discardBlankLine, toggleLine } from '../../store/medLineOps';
 import { useMedUiStore } from '../../store/medUiStore';
 import check from '../../styles/lineCheck.module.css';
 import { FUERA_TITLE, decOf } from './format';
@@ -131,7 +131,11 @@ export function MedCards({
 }) {
   const addMedLine = useObraStore((s) => s.addMedLine);
   const med = p.med ?? [];
-  const medTab = useMedGridTab(() => addMedLine(chapterId, p.id), med.length);
+  const medTab = useMedGridTab(
+    () => addMedLine(chapterId, p.id),
+    med.length,
+    (lineId) => discardBlankLine(p.id, lineId),
+  );
   const lineKeys = useMedLineKeys(p.id);
 
   if (med.length === 0) return <div className={styles.medCardsEmpty}>{emptyText}</div>;
@@ -143,6 +147,7 @@ export function MedCards({
       data-medgrid={p.id}
       className={styles.medCardList}
       onKeyDown={medTab.onKeyDown}
+      onBlur={medTab.onBlur}
       {...lineKeys}
     >
       {/* Cabecera de columnas (como la tabla de escritorio): una sola vez, no

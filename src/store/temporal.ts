@@ -220,6 +220,15 @@ export function historyCheckpoint(): void {
   throttleUntil = 0;
 }
 
+/**
+ * Ejecuta `fn` sin registrarlo, SIN vaciar el historial (a diferencia de
+ * `pauseHistory`). Para deshacer en silencio algo que el usuario no quiso hacer
+ * (la línea en blanco que creó un Enter de más): un Ctrl+Z no debe resucitarlo.
+ */
+export function withoutHistory<T>(fn: () => T): T {
+  return suspend(fn);
+}
+
 /** Revisión actual del dominio (ver `domainRevision`). */
 export function getDomainRevision(): number {
   return domainRevision;
