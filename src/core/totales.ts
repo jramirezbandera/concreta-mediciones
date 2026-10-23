@@ -10,7 +10,7 @@
        + CI (·ci) .......... costes INDIRECTOS de la obra (`costesIndirectos`)
        = PEM ............... ejecución material (`pem`)
        + GG + BI ........... = PEC s/ IVA (`pec`)
-       + IVA ............... = presupuesto base de licitación (`totalConIva`)
+       + IVA ............... = presupuesto total (`totalConIva`)
 
    Con `rates.ci = 0` (el defecto, y todas las obras anteriores a la v5 del
    esquema) el PEM ES la suma de capítulos: la cadena queda igual que siempre.

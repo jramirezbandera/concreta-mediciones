@@ -78,7 +78,7 @@ describe('E2E: xlsx real generado con fórmulas + impresión', () => {
     const xml = await sheetXmlOf(doc);
     expectWellFormed(xml); // los & de la concatenación van escapados en el <f>
     expect(xml).toContain(
-      '<f>"Asciende el presupuesto base de licitación a la expresada cantidad de "&amp;TEXT(D14,"#,##0.00")&amp;" euros."</f>',
+      '<f>"Asciende el presupuesto total a la expresada cantidad de "&amp;TEXT(D14,"#,##0.00")&amp;" euros."</f>',
     );
     expect(xml).toContain('<mergeCell ref="A16:D16"/>'); // el pie ocupa la fila entera
   });

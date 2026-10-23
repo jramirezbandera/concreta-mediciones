@@ -58,7 +58,7 @@ describe('PrintDoc (F7.1) — doc de impresión bajo demanda', () => {
     expect(doc.querySelector('.pd-summary-big')).toBeTruthy();
     expect(screen.getByText('Presupuesto de Ejecución Material (PEM)')).toBeInTheDocument();
     expect(screen.getByText('26.291,91 €')).toBeInTheDocument(); // PEM seed
-    expect(screen.getByText('34.416,11 €')).toBeInTheDocument(); // base de licitación
+    expect(screen.getByText('34.416,11 €')).toBeInTheDocument(); // presupuesto total
     expect(
       screen.getByText(/TREINTA Y CUATRO MIL CUATROCIENTOS DIECISÉIS EUROS con ONCE CÉNTIMOS/),
     ).toBeInTheDocument();

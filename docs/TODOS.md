@@ -42,6 +42,7 @@ Origen: revisión de ingeniería (`/plan-eng-review`) + voz externa Codex, 2026-
 - **Cons:** generaliza el motor económico (riesgo de sobre-ingeniería si se hace sin datos reales).
 - **Contexto / dónde empezar:** hoy `rates` = {iva, gg, bi} + retención por cert. Explorar con obras reales qué variantes aparecen antes de generalizar. M1 usa el caso base.
 - **Depende de / bloqueado por:** validación con obras reales (la tarea del dogfood). No bloquea M1.
+- **DECISIÓN (2026-10-23):** la app es para obra PRIVADA, no pública. La baja de adjudicación queda descartada, y el total del resumen pasa de «Presupuesto base de licitación» a «Presupuesto total» (pantalla, impresión, Word, Excel y la cantidad en letra). Liquidación final y variantes de retención siguen abiertas.
 
 ---
 

@@ -155,7 +155,7 @@ describe('buildResumenXlsx', () => {
     fecha: '',
   });
   // Layout del fixture: meta 1-4 · cabecera 5 · capítulos 6-7 · blanco 8 ·
-  // PEM 9 · GG 10 · BI 11 · PEC 12 · IVA 13 · licitación 14.
+  // PEM 9 · GG 10 · BI 11 · PEC 12 · IVA 13 · total 14.
 
   it('las tasas GG/BI/IVA son números 0–100 con formato % (editables en la hoja)', () => {
     const pcts = cells(doc.rows).filter((c) => c.format === FMT_PCT && c.type === Number);
@@ -174,7 +174,7 @@ describe('buildResumenXlsx', () => {
     expect(fx).toContain('ROUND(D9*C11/100,2)'); // BI
     expect(fx).toContain('D9+D10+D11'); // PEC
     expect(fx).toContain('ROUND(D12*C13/100,2)'); // IVA sobre el PEC
-    expect(fx).toContain('D12+D13'); // licitación
+    expect(fx).toContain('D12+D13'); // presupuesto total
   });
 
   it('los importes de capítulo siguen siendo valores (vienen del motor)', () => {
@@ -193,7 +193,7 @@ describe('buildResumenXlsx', () => {
     expect(legal.value).toContain('TEXT(D14,'); // celda del presupuesto base
   });
 
-  it('el total de licitación cierra con regla gruesa', () => {
+  it('el presupuesto total cierra con regla gruesa', () => {
     const total = cells(doc.rows).find((c) => c.value === 'D12+D13')!;
     expect(total.topBorderStyle).toBe('medium');
     expect(total.fontWeight).toBe('bold');
@@ -210,7 +210,7 @@ describe('buildResumenXlsx', () => {
       fecha: '',
     });
     // Mismo layout + 2 filas: directos 9 · CI 10 · PEM 11 · GG 12 · BI 13 ·
-    // PEC 14 · IVA 15 · licitación 16.
+    // PEC 14 · IVA 15 · total 16.
 
     it('la hoja encadena directos → CI → PEM y sigue recalculando sola', () => {
       const fx = formulas(conCI.rows);

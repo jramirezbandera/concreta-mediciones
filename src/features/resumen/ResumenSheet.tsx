@@ -19,7 +19,7 @@ const AYUDA = {
   bi: 'Margen del contratista, sobre el PEM. RGLCAP art. 131: 6 %.',
   pec: 'Presupuesto de Ejecución por Contrata: PEM + gastos generales + beneficio industrial. Es el precio del contrato, sin IVA.',
   iva: 'Impuesto sobre el PEC. 21 % general; 10 % en obras de renovación y reparación de vivienda que cumplen los requisitos del art. 91 LIVA.',
-  licitacion: 'PEC + IVA: la cifra que se publica y la que «asciende» el presupuesto.',
+  total: 'PEC + IVA: lo que paga el promotor, y la cifra a la que «asciende» el presupuesto.',
 } as const;
 
 /** Fila de porcentaje (CI/GG/BI): % editable + importe, con su ayuda. */
@@ -70,7 +70,7 @@ function PctRow({
 
 /**
  * Hoja resumen (F7.1) EN PANTALLA: desglose por capítulos + CI → PEM → GG → BI →
- * PEC → IVA → Presupuesto base de licitación, editable (CI/GG/BI inline +
+ * PEC → IVA → Presupuesto total, editable (CI/GG/BI inline +
  * selector de IVA — único hogar de edición de esas tasas). Los documentos
  * exportados NO reutilizan esta hoja: tienen su propia jerarquía de papel
  * (`PrintResumen`, `resumenBloques` del DOCX, `buildResumenXlsx`) sobre el MISMO
@@ -197,9 +197,9 @@ export function ResumenSheet({
         </div>
         <div className={styles.bigRow}>
           <span className={styles.bigLabel}>
-            Presupuesto base de licitación
-            <InfoTip term="Presupuesto base de licitación" align="end">
-              {AYUDA.licitacion}
+            Presupuesto total
+            <InfoTip term="Presupuesto total" align="end">
+              {AYUDA.total}
             </InfoTip>
           </span>
           <span className={`mono ${styles.bigVal}`}>{fmtCents(total)}</span>

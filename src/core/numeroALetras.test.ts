@@ -59,7 +59,7 @@ describe('centsALetras', () => {
 describe('asciendeLegal', () => {
   it('es la frase de cierre completa, con punto final', () => {
     expect(asciendeLegal(3_441_611)).toBe(
-      'Asciende el presupuesto base de licitación a la expresada cantidad de TREINTA Y CUATRO MIL CUATROCIENTOS DIECISÉIS EUROS con ONCE CÉNTIMOS.',
+      'Asciende el presupuesto total a la expresada cantidad de TREINTA Y CUATRO MIL CUATROCIENTOS DIECISÉIS EUROS con ONCE CÉNTIMOS.',
     );
   });
 });

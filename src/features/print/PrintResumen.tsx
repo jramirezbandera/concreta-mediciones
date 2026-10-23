@@ -5,7 +5,7 @@ import { asciendeLegal } from '../../core/numeroALetras';
 /**
  * Doc «Resumen de presupuesto»: desglose por capítulos como TABLA del documento
  * (mismas reglas y escala que presupuesto y certificación) y, a la derecha, la
- * cadena [CI →] PEM → GG → BI → PEC → IVA → base de licitación en el mismo bloque
+ * cadena [CI →] PEM → GG → BI → PEC → IVA → presupuesto total en el mismo bloque
  * `pd-summary` que el resumen económico de la cert. Cierra con la fórmula legal
  * «Asciende el presupuesto…» en letras.
  *
@@ -98,7 +98,7 @@ export function PrintResumen({ data }: { data: ResumenListado }) {
           <span className="mono">{fmtCents(iva)}</span>
         </div>
         <div className="pd-summary-big">
-          <span>Presupuesto base de licitación</span>
+          <span>Presupuesto total</span>
           <span className="mono">{fmtCents(total)}</span>
         </div>
       </div>

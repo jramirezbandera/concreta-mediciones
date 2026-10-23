@@ -1,7 +1,7 @@
 /* ===========================================================================
    core/numeroALetras — importe en LETRAS para el pie legal de los documentos.
    ---------------------------------------------------------------------------
-   «Asciende el presupuesto base de licitación a la expresada cantidad de
+   «Asciende el presupuesto total a la expresada cantidad de
    DOSCIENTOS CINCUENTA Y OCHO MIL CIENTO CUARENTA EUROS con NOVENTA Y CUATRO
    CÉNTIMOS» — la fórmula de cierre de cualquier resumen de presupuesto formal
    (Presto la emite igual). Puro y sin React: lo comparten PDF, XLSX y DOCX.
@@ -92,5 +92,5 @@ export function centsALetras(c: Cents): string {
 
 /** Pie legal completo del resumen (idéntico en PDF, XLSX y DOCX). */
 export function asciendeLegal(total: Cents): string {
-  return `Asciende el presupuesto base de licitación a la expresada cantidad de ${centsALetras(total)}.`;
+  return `Asciende el presupuesto total a la expresada cantidad de ${centsALetras(total)}.`;
 }

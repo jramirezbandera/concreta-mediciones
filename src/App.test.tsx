@@ -31,7 +31,7 @@ describe('App shell (F0)', () => {
     // F7.1: la pestaña Resumen muestra la hoja real (deja de ser placeholder).
     fireEvent.click(screen.getByRole('button', { name: 'Resumen' }));
     expect(screen.getByText('Desglose por capítulos')).toBeInTheDocument();
-    expect(screen.getByText('Presupuesto base de licitación')).toBeInTheDocument();
+    expect(screen.getByText('Presupuesto total')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Certificaciones' }));
     // F4.1: la pestaña Certificaciones muestra la vista real (no el placeholder).

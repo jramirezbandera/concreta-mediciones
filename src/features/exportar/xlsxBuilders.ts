@@ -317,7 +317,7 @@ export function buildResumenXlsx(data: ResumenListado, meta: ObraMeta, firma: Fi
     opts.rate != null
       ? { value: opts.rate * 100, type: Number, format: FMT_PCT, align: 'right', textColor: GRIS }
       : null,
-    // El total de licitación cierra con regla gruesa (es el fin del documento);
+    // El presupuesto total cierra con regla gruesa (es el fin del documento);
     // los hitos intermedios (PEM, PEC), con regla fina.
     opts.strong || opts.cierre
       ? bold({ ...cell, topBorderStyle: opts.cierre ? 'medium' : 'thin' })
@@ -347,7 +347,7 @@ export function buildResumenXlsx(data: ResumenListado, meta: ObraMeta, firma: Fi
   rows.push(linea('IVA', fx(`ROUND(D${pecRow}*C${ivaRow}/100,2)`), { rate: data.rates.iva }));
   const totalRow = rows.length + 1;
   rows.push(
-    linea('Presupuesto base de licitación', fx(`D${pecRow}+D${ivaRow}`), { strong: true, cierre: true }),
+    linea('Presupuesto total', fx(`D${pecRow}+D${ivaRow}`), { strong: true, cierre: true }),
   );
   // Fórmula legal de cierre (el PDF y el Word la escriben en letras). Aquí va
   // como FÓRMULA de texto sobre la celda del total: la hoja es viva —si se
@@ -356,7 +356,7 @@ export function buildResumenXlsx(data: ResumenListado, meta: ObraMeta, firma: Fi
   rows.push([]);
   rows.push([
     {
-      value: `"Asciende el presupuesto base de licitación a la expresada cantidad de "&TEXT(D${totalRow},"${FMT_NUM}")&" euros."`,
+      value: `"Asciende el presupuesto total a la expresada cantidad de "&TEXT(D${totalRow},"${FMT_NUM}")&" euros."`,
       type: 'Formula',
       textColor: GRIS,
       fontSize: 9,

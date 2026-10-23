@@ -360,7 +360,7 @@ const W_RES_ECO = [2900, 1600];
 
 /**
  * Resumen de presupuesto: tabla de capítulos cerrada por el PEM y, debajo a la
- * derecha, la cadena GG → BI → PEC → IVA → base de licitación en el MISMO
+ * derecha, la cadena GG → BI → PEC → IVA → presupuesto total en el MISMO
  * bloque estrecho que el resumen económico de la certificación. El total va a
  * 11pt (no a 13): en un documento la cifra final se marca con la regla y la
  * negrita, no con el tamaño. Cierra con la fórmula legal en letras.
@@ -436,7 +436,7 @@ function resumenBloques(data: ResumenListado): (Paragraph | Table)[] {
       linea(`Beneficio industrial (${pct(data.rates.bi)})`, data.bi),
       linea('Presupuesto de Ejecución por Contrata (s/ IVA)', data.pec, { strong: true }),
       linea(`IVA (${pct(data.rates.iva)})`, data.iva),
-      linea('Presupuesto base de licitación', data.total, { strong: true, size: 22 }),
+      linea('Presupuesto total', data.total, { strong: true, size: 22 }),
     ]),
     new Paragraph({
       spacing: { before: 320 },

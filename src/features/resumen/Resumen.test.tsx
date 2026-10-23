@@ -16,7 +16,7 @@ describe('ResumenView (F7.1) — hoja editable', () => {
     expect(screen.getByText('1.577,51 €')).toBeInTheDocument(); // BI 6%
     expect(screen.getByText('31.287,37 €')).toBeInTheDocument(); // PEC
     expect(screen.getByText('3.128,74 €')).toBeInTheDocument(); // IVA 10%
-    expect(screen.getByText('34.416,11 €')).toBeInTheDocument(); // licitación
+    expect(screen.getByText('34.416,11 €')).toBeInTheDocument(); // presupuesto total
     expect(screen.getByRole('heading', { name: /C\/ Mayor 14/ })).toBeInTheDocument();
   });
 
