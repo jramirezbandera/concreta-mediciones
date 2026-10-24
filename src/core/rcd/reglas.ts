@@ -32,8 +32,15 @@ export function textoDe(p: Pick<Partida, 'title' | 'desc'>): string {
 
 const VERBO_DEMOLICION =
   /\b(demolicion|demoler|derribo|levantad[oa]|levantamiento|desmontaje|desmontad[oa]|desmontar|arranque|arrancad[oa]|picad[oa]|eliminacion de|retirada de (?!residuos|escombros|tierras)|desescombro|apertura de huecos?)\b/;
-/** Capítulos de demoliciones de los bancos conocidos (D2). */
-const CODIGO_DEMOLICION = /^(01[A-Z]|E01D|D[A-Z]{2}\d{3})/;
+/** Capítulos de demoliciones de los bancos conocidos (D2): BCCA `01X`, Precio
+ *  Centro `E01D`, CYPE `DXX000` y Extremadura: E01E demoliciones, R01D
+ *  rehabilitación salvo R01DV (evacuación: transporte y protecciones), Q01D/Q01P
+ *  demoliciones y picados, y de la obra civil solo U01CRE/U01CRF (escarificados
+ *  y fresados de firme: el resto de U01C ya lo cazan los verbos, y U01CRL005 es
+ *  un corte con disco). La regla no sabe de qué banco es la partida: cada
+ *  prefijo va lo bastante cerrado para no casar con otro (en Precio Centro,
+ *  U01C010 son escarificados del terreno). Lo vigila `reglas.bancos.test.ts`. */
+const CODIGO_DEMOLICION = /^(01[A-Z]|E01D|D[A-Z]{2}\d{3}|E01E[A-Z]|R01D[A-UW-Z]|Q01[DP]\d|U01CR[EF])/;
 const EXCAVACION = /\b(excavacion|vaciado|desmonte|zanjas?|pozos?)\b/;
 const TRANSPORTE_ESCOMBRO = /\b(transporte|carga)\b.*\b(escombros?|tierras?|residuos?|rcd)\b/;
 const GESTION = /\b(gestion de residuos|canon de (vertido|gestion)|clasificacion de residuos|alquiler de contenedor(es)?|retirada de (residuos|escombros)|transporte de residuos)\b/;

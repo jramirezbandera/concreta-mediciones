@@ -1,9 +1,9 @@
 # Plan · Bases de precios oficiales con un botón
 
-> Estado: REVISADO (2026-10-24) con `/plan-eng-review`: 13 decisiones aprobadas (D5–D18),
-> listo para implementar desde E0. Enfoque acordado con el usuario el 2026-10-24: no se
-> precargan copias, se descargan de la web oficial al pulsar. El registro de la revisión está
-> al final, en «Revisión de ingeniería».
+> Estado: HECHO (2026-10-24), E0–E4; quedan los TODOs D19 y D20. Revisado antes con
+> `/plan-eng-review` (13 decisiones, D5–D18). Enfoque acordado con el usuario el 2026-10-24:
+> no se precargan copias, se descargan de la web oficial al pulsar. Lo que cambió al
+> implementar está en «Implementación»; el registro de la revisión, al final.
 
 ## Petición
 
@@ -242,6 +242,38 @@ Ninguno toca la red: `fetch` simulado.
   `obra.fuenteOficial`, con copia en la meta.
 - **D4 · Correos de permiso (§6):** apuntados como TODO en la revisión (D19), con las dos
   preguntas de D18. No bloquean E0–E4.
+
+## Implementación (2026-10-24)
+
+Commits en main: E0 `732fbbf`, E1 y E2 `84f2135`, E4 `b5bdfcf`, E3 el siguiente. Probado en el
+navegador contra las webs oficiales: la BCCA (ZIP) y Extremadura (18,7 MB con gzip) se
+descargan, se guardan como referencia y el selector cita su fuente.
+
+Lo que cambió respecto al diseño:
+
+- **Aviso de espacio (D8):** no se calcula con `bytes` × un factor común. Medido: Extremadura
+  ocupa ya importada 33,8 MB (1,8 × su .bc3) y la BCCA 7,9 MB (12,6 × su ZIP). El catálogo
+  guarda lo medido en `descarga.ocupa` y el aviso usa eso con un margen de 1,2.
+- **Madrid sin `actualizada`:** su página no da la fecha de la edición 2024 («Última
+  actualización: 26 marzo 2026» es de la página). `actualizada: null` y no se enseña; con
+  `descarga`, el test exige la fecha.
+- **Nombre del fichero:** la URL de Extremadura acaba en un identificador
+  (`…/BCEXTGREM_26_v1.bc3/8066c810-…`): se toma el último tramo que acaba en `.bc3` o `.zip`.
+- **Fuente mal formada (D6):** `isMeta` no rechaza la meta (eso vaciaría el índice); quien
+  enseña la fuente la valida con `esFuenteOficial`.
+- **`reconcile` (D12):** si no hay obra activa válida, elige la primera obra de trabajo y no
+  una referencia. Borrar la obra activa (`deleteObra`) y `activateFirstLoadable` aún pueden
+  activar una referencia, como antes de este cambio.
+- **Madrid:** su página antigua redirigía (301, lo encontró `comprobar.mjs`); el catálogo
+  apunta a `https://www.comunidad.madrid/vivienda/base-datos-construccion`.
+- **E3 (D17):** en Extremadura las demoliciones son E01E, R01D, Q01D/Q01P y U01C, pero casi
+  todas ya las reconocen los verbos del título. Con el código entero cambiaban 11 partidas y
+  algunas a peor (R01DV es evacuación: transporte y protecciones; U01CRL005 es un corte con
+  disco), y `U01C` choca con los escarificados del terreno de Precio Centro (`U01C010`). Se
+  quedan `E01E[A-Z]`, `R01D` sin `R01DV`, `Q01[DP]` + cifra y `U01CR[EF]`: cambian 6 partidas
+  de Extremadura (5 escarificados y fresados de firme ganan propuesta; la apertura de rozas
+  pierde una de «transporte» que tampoco era correcta) y ninguna de la BCCA, Precio Centro ni
+  la obra de ejemplo (instantánea antes y después sobre las cuatro).
 
 ## Revisión de ingeniería (2026-10-24)
 
