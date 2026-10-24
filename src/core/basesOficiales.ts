@@ -85,7 +85,7 @@ export const BASES_OFICIALES: readonly BaseOficial[] = [
     edicion: '2024',
     actualizada: null,
     // Se descarga desde su aplicación (formularios, sin enlace fijo): solo página.
-    pagina: 'https://www.comunidad.madrid/servicios/vivienda/base-datos-construccion',
+    pagina: 'https://www.comunidad.madrid/vivienda/base-datos-construccion',
     condiciones:
       'Gratuita, para hacer presupuestos. Se descarga desde la aplicación de la Comunidad; condiciones en su web.',
     comprobada: '2026-10-24',
