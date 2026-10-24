@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto';
 import { clear } from 'idb-keyval';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { ImportedObra } from '../core/bc3import';
-import { SCHEMA_VERSION, blankObraData, useObraStore } from '../store';
+import { SCHEMA_VERSION, blankObraData, fromSerializable, useObraStore } from '../store';
 import { loadObraEnvelope, obraKey } from './persist';
 import { loadIndex, loadObraData } from './registry';
 import { usePersistStore } from './persistStore';
@@ -87,5 +87,44 @@ describe('importObraAsReference (importar como referencia, sin reemplazar)', () 
     expect(obras.some((o) => o.id === aId)).toBe(true); // A no se pierde
     expect(obras.find((o) => o.id === refId)?.kind).toBe('reference');
     expect(useSessionStore.getState().activeId).toBe(aId); // activa intacta
+  });
+});
+
+describe('importObraAsReference · marca y fuente oficial en los datos (R2, R8)', () => {
+  const fuente = {
+    baseId: 'bcca',
+    organismo: 'Junta de Andalucía',
+    edicion: 'V02 · enero 2024',
+    actualizada: '2024-01-09',
+    pagina: 'https://example.org/bcca',
+    descargadaEl: '2026-10-24',
+  };
+
+  it('guarda `soloReferencia` y la fuente en `obra`, y la meta las copia', async () => {
+    const id = await importObraAsReference(importedBase('BCCA'), fuente);
+
+    const data = await loadObraData(id);
+    expect(data.kind === 'ok' && data.data.obra.soloReferencia).toBe(true);
+    expect(data.kind === 'ok' && data.data.obra.fuenteOficial).toEqual(fuente);
+    const meta = (await loadIndex()).obras.find((m) => m.id === id);
+    expect(meta).toMatchObject({ kind: 'reference', fuente });
+    expect(useSessionStore.getState().obras.find((o) => o.id === id)?.fuente).toEqual(fuente);
+  });
+
+  it('sin fuente (un .bc3 soltado a mano) lleva la marca pero no fuente', async () => {
+    const id = await importObraAsReference(importedBase('Mía'));
+    const data = await loadObraData(id);
+    expect(data.kind === 'ok' && data.data.obra.soloReferencia).toBe(true);
+    expect(data.kind === 'ok' && 'fuenteOficial' in data.data.obra).toBe(false);
+    expect((await loadIndex()).obras.find((m) => m.id === id)?.fuente).toBeUndefined();
+  });
+
+  it('la fuente sobrevive a la copia .json (viaja en los datos)', async () => {
+    const id = await importObraAsReference(importedBase('BCCA'), fuente);
+    const data = await loadObraData(id);
+    if (data.kind !== 'ok') throw new Error('no cargó');
+    const copia = fromSerializable(JSON.parse(JSON.stringify(data.data)) as typeof data.data);
+    expect(copia.obra.fuenteOficial).toEqual(fuente);
+    expect(copia.obra.soloReferencia).toBe(true);
   });
 });

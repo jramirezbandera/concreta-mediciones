@@ -12,13 +12,21 @@ import { fmtCents, fmtNum, toEur } from '../../core/money';
 import { isTouchOnly } from '../../hooks/touchOnly';
 import styles from './Importar.module.css';
 
-/** Zona de soltar/elegir un .bc3 (con input file accesible). */
+/** Zona de soltar/elegir un .bc3 (con input file accesible). `disabled` la
+ *  apaga de verdad (soltar, clic y teclado), no solo el dibujo; `title` y
+ *  `accept` los cambia el modal de Referencia con una base oficial asociada. */
 export function Bc3Dropzone({
   busy,
   onFile,
+  disabled = false,
+  title,
+  accept = '.bc3',
 }: {
   busy: boolean;
   onFile: (file: File | undefined) => void;
+  disabled?: boolean;
+  title?: string;
+  accept?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
@@ -26,9 +34,13 @@ export function Bc3Dropzone({
   const touch = isTouchOnly();
   return (
     <div
-      className={`${styles.drop} ${over ? styles.over : ''}`}
+      className={`${styles.drop} ${over ? styles.over : ''} ${disabled ? styles.dropOff : ''}`}
       onDragOver={(e) => {
         e.preventDefault();
+        if (disabled) {
+          e.dataTransfer.dropEffect = 'none';
+          return;
+        }
         e.dataTransfer.dropEffect = 'copy';
         if (!over) setOver(true);
       }}
@@ -36,26 +48,32 @@ export function Bc3Dropzone({
       onDrop={(e) => {
         e.preventDefault();
         setOver(false);
-        onFile(e.dataTransfer.files?.[0]);
+        if (!disabled) onFile(e.dataTransfer.files?.[0]);
       }}
-      onClick={() => inputRef.current?.click()}
+      onClick={() => {
+        if (!disabled) inputRef.current?.click();
+      }}
       role="button"
-      tabIndex={0}
-      aria-label="Soltar o elegir un archivo .bc3"
+      tabIndex={disabled ? -1 : 0}
+      aria-disabled={disabled || undefined}
+      aria-label={title ?? 'Soltar o elegir un archivo .bc3'}
       onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') inputRef.current?.click();
+        if (!disabled && (e.key === 'Enter' || e.key === ' ')) inputRef.current?.click();
       }}
     >
       <input
         ref={inputRef}
         type="file"
-        accept=".bc3"
+        accept={accept}
+        disabled={disabled}
         className={styles.fileInput}
-        onChange={(e) => onFile(e.target.files?.[0] ?? undefined)}
+        onChange={(e) => {
+          if (!disabled) onFile(e.target.files?.[0] ?? undefined);
+        }}
       />
       <Icon name={busy ? 'loader' : 'upload'} size={28} className={busy ? styles.spin : ''} />
       <div className={styles.dropTitle}>
-        {busy ? 'Procesando…' : touch ? 'Elige un archivo .bc3' : 'Suelta el .bc3 aquí'}
+        {busy ? 'Procesando…' : (title ?? (touch ? 'Elige un archivo .bc3' : 'Suelta el .bc3 aquí'))}
       </div>
       <div className={styles.dropHint}>
         {touch ? 'Toca para buscarlo en el dispositivo' : 'o haz clic para elegir un archivo'}

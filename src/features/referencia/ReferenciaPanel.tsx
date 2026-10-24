@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '../../components';
+import { edicionNueva, esFuenteOficial, textoFuente } from '../../core/basesOficiales';
 import { REF_SOURCES, type RefCopyItem, type RefPartida, type RefSource } from '../../core/refdata';
 import { deleteObraById, useSessionStore } from '../../persist';
 import { selectCopyContra, selectCopyTarget, useObraStore } from '../../store';
@@ -56,13 +57,21 @@ export function ReferenciaPanel({ onImport }: { onImport: () => void }) {
     const bases: SourceDesc[] = REF_SOURCES.map((s) => ({ id: s.id, kind: s.kind, name: s.name, org: s.org }));
     const propias: SourceDesc[] = obras
       .filter((o) => o.id !== activeObraId)
-      .map((o) => ({
-        id: `obra:${o.id}`,
-        kind: 'presupuesto',
-        name: o.name,
-        org: o.kind === 'reference' ? 'Referencia importada' : 'Obra propia',
-        removable: o.kind === 'reference',
-      }));
+      .map((o) => {
+        // Una base oficial cita de dónde sale y su fecha (Ley 37/2007, art. 8).
+        const f = esFuenteOficial(o.fuente) ? o.fuente : null;
+        return {
+          id: `obra:${o.id}`,
+          kind: f ? 'base' : 'presupuesto',
+          name: o.name,
+          org: f
+            ? `${textoFuente(f)}${edicionNueva(f) ? ' · hay edición nueva: añádela con «Añadir base de referencia…»' : ''}`
+            : o.kind === 'reference'
+              ? 'Referencia importada'
+              : 'Obra propia',
+          removable: o.kind === 'reference',
+        };
+      });
     return [...bases, ...propias];
   }, [obras, activeObraId]);
 

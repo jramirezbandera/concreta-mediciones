@@ -299,7 +299,26 @@ export interface Obra {
    * de firma. Sustituye al antiguo `redactor`/`lugar`/`fecha` (migración v3→v4).
    */
   direccionFacultativa?: Agente[];
+  /** De qué base oficial sale esta obra de referencia (`core/basesOficiales`).
+   *  Viaja con los datos: sobrevive a la copia `.json` y a rehacer el índice. */
+  fuenteOficial?: FuenteOficial;
+  /** Obra de SOLO referencia (para copiar partidas, no para editar). Duplica el
+   *  `kind` de la meta dentro de los datos: si el índice se pierde, `reconcile`
+   *  la recupera como referencia y no como obra de trabajo. */
+  soloReferencia?: true;
   [k: string]: unknown; // promotor/constructor… se completan en F6
+}
+
+/** Origen de una referencia descargada de una base oficial: lo que se cita
+ *  (organismo, edición, fecha de actualización) y cuándo se bajó. Fechas ISO
+ *  `aaaa-mm-dd`; `actualizada` es `null` si el organismo no la publica. */
+export interface FuenteOficial {
+  baseId: string;
+  organismo: string;
+  edicion: string;
+  actualizada: string | null;
+  pagina: string;
+  descargadaEl: string;
 }
 
 /**

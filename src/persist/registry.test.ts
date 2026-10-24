@@ -17,6 +17,7 @@ import {
   setActiveId,
   setUltimaCopia,
   huellasDeObraGuardada,
+  metaOf,
 } from './registry';
 
 const data = (name: string): ObraData => ({
@@ -246,5 +247,60 @@ describe('[A1] registry · huellas de PDF en la meta (§1.6)', () => {
     await saveObra(obraKey('huerfana'), conPlano('Huérfana'));
     const m = (await reconcile()).obras.find((x) => x.id === 'huerfana')!;
     expect(m).toMatchObject({ huellas: [H], huellasDe: m.savedAt });
+  });
+});
+
+describe('registry · referencias que vuelven de un blob huérfano (R8)', () => {
+  const fuente = {
+    baseId: 'extremadura',
+    organismo: 'Junta de Extremadura',
+    edicion: '2026',
+    actualizada: '2026-06-23',
+    pagina: 'https://example.org/ex',
+    descargadaEl: '2026-10-24',
+  };
+  const referencia = (name: string, extra: Record<string, unknown> = {}): ObraData => {
+    const d = data(name);
+    return { ...d, obra: { ...d.obra, soloReferencia: true, ...extra } };
+  };
+
+  // Es el estado que deja `createObra` si falla la escritura del índice tras la
+  // del blob: el blob está y el índice no lo conoce.
+  it('con la marca vuelve como referencia, con su fuente, y no se activa', async () => {
+    await saveObra(obraKey('ref-huerfana'), referencia('BPC Extremadura', { fuenteOficial: fuente }));
+    const idx = await reconcile();
+    const m = idx.obras.find((x) => x.id === 'ref-huerfana')!;
+    expect(m).toMatchObject({ kind: 'reference', fuente });
+    expect(idx.activeId).toBeNull(); // no hay obra de trabajo: nada activo
+  });
+
+  it('si hay una obra de trabajo, es esa la que queda activa', async () => {
+    await saveObra(obraKey('ref-huerfana'), referencia('BCCA'));
+    await saveObra(obraKey('obra-huerfana'), data('Mi obra'));
+    const idx = await reconcile();
+    expect(idx.obras.find((x) => x.id === 'ref-huerfana')?.kind).toBe('reference');
+    expect(idx.activeId).toBe('obra-huerfana');
+  });
+
+  it('sin la marca (referencias de antes de este cambio) sigue como hoy', async () => {
+    await saveObra(obraKey('vieja'), data('Referencia vieja'));
+    const idx = await reconcile();
+    expect(idx.obras.find((x) => x.id === 'vieja')?.kind).toBeUndefined();
+    expect(idx.activeId).toBe('vieja');
+  });
+
+  it('una fuente mal formada en los datos no llega a la meta', async () => {
+    await saveObra(obraKey('rara'), referencia('Rara', { fuenteOficial: { ...fuente, descargadaEl: 'ayer' } }));
+    const m = (await reconcile()).obras.find((x) => x.id === 'rara')!;
+    expect(m.kind).toBe('reference');
+    expect(m.fuente).toBeUndefined();
+  });
+
+  it('metaOf toma kind y fuente de los datos y no arrastra una fuente vieja de `prev`', () => {
+    const conFuente = metaOf('r', referencia('BPC', { fuenteOficial: fuente }));
+    expect(conFuente).toMatchObject({ kind: 'reference', fuente });
+    const sinFuente = metaOf('r', data('Otra'), undefined, conFuente);
+    expect(sinFuente.fuente).toBeUndefined();
+    expect(sinFuente.kind).toBe('reference'); // `kind` de la meta previa se conserva
   });
 });

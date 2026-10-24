@@ -20,6 +20,7 @@
    =========================================================================== */
 import { shallow } from 'zustand/shallow';
 import type { ImportedObra } from '../core/bc3import';
+import type { FuenteOficial } from '../core/types';
 import { huellasEnUso, planoLegible } from '../core/planoDatos';
 import {
   SCHEMA_VERSION,
@@ -478,12 +479,17 @@ async function switchObraImpl(id: string): Promise<void> {
  * schema antes de persistir — sin ello el blob/índice quedarían inválidos. La
  * lista del selector se refresca con `upsertObra` (no `loadIndex`+`setObras`
  * entero, que podría regresar la meta de la activa si entra un autosave en medio).
+ *
+ * Los datos llevan `obra.soloReferencia` (si el índice se pierde, `reconcile`
+ * la recupera como referencia) y, si viene de una base oficial, su
+ * `obra.fuenteOficial` (docs/plan-bases-oficiales.md, R2 y R8).
  */
-export function importObraAsReference(data: ImportedObra): Promise<string> {
-  return serializeOp(() => importObraAsReferenceImpl(data));
+export function importObraAsReference(data: ImportedObra, fuente?: FuenteOficial): Promise<string> {
+  return serializeOp(() => importObraAsReferenceImpl(data, fuente));
 }
-async function importObraAsReferenceImpl(data: ImportedObra): Promise<string> {
-  const obraData: ObraData = { schemaVersion: SCHEMA_VERSION, bajas: {}, planos: [], ...data };
+async function importObraAsReferenceImpl(data: ImportedObra, fuente?: FuenteOficial): Promise<string> {
+  const obra = { ...data.obra, soloReferencia: true as const, ...(fuente ? { fuenteOficial: fuente } : {}) };
+  const obraData: ObraData = { schemaVersion: SCHEMA_VERSION, bajas: {}, planos: [], ...data, obra };
   const id = await createObra(obraData, 'reference');
   useSessionStore.getState().upsertObra(metaOf(id, obraData, 'reference'));
   return id;

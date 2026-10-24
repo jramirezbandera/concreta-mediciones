@@ -8,6 +8,7 @@ vi.mock('../../core/refdata', async (importOriginal) => {
   return { ...actual, REF_SOURCES: actual.DEMO_REF_SOURCES };
 });
 
+import { useSessionStore } from '../../persist';
 import { useObraStore } from '../../store';
 import { ReferenciaPanel } from './ReferenciaPanel';
 
@@ -91,5 +92,50 @@ describe('ReferenciaPanel (F5.1)', () => {
     expect(drag!.contra).toBe(false);
     fireEvent.dragEnd(screen.getByText('ADE010'));
     expect(useObraStore.getState().refDrag).toBeNull();
+  });
+});
+
+describe('ReferenciaPanel · referencia de una base oficial (docs/plan-bases-oficiales.md)', () => {
+  const fuente = {
+    baseId: 'extremadura',
+    organismo: 'Junta de Extremadura',
+    edicion: '2026',
+    actualizada: '2026-06-23',
+    pagina: 'https://example.org/ex',
+    descargadaEl: '2026-10-24',
+  };
+  const meta = (f: typeof fuente | { roto: true }) => ({
+    id: 'ref-ex',
+    name: 'BPC Extremadura · 2026 (Junta de Extremadura)',
+    savedAt: '2026-10-24T00:00:00Z',
+    schemaVersion: 1,
+    kind: 'reference' as const,
+    fuente: f as typeof fuente,
+  });
+  afterEach(() => {
+    useSessionStore.setState({ obras: [], activeId: null });
+  });
+
+  it('cita organismo, edición, fecha de actualización y de descarga (D16)', () => {
+    useSessionStore.setState({ obras: [meta(fuente)], activeId: 'otra' });
+    useObraStore.getState().setRefSource('obra:ref-ex');
+    render(<ReferenciaPanel onImport={() => {}} />);
+    expect(
+      screen.getByText('Junta de Extremadura · 2026 · actualizada el 23/06/2026 · descargada el 24/10/2026'),
+    ).toBeInTheDocument();
+  });
+
+  it('avisa de una edición nueva en el catálogo, sin cambiar nada', () => {
+    useSessionStore.setState({ obras: [meta({ ...fuente, edicion: '2025' })], activeId: 'otra' });
+    useObraStore.getState().setRefSource('obra:ref-ex');
+    render(<ReferenciaPanel onImport={() => {}} />);
+    expect(screen.getByText(/hay edición nueva: añádela con «Añadir base de referencia…»/)).toBeInTheDocument();
+  });
+
+  it('una fuente mal formada en la meta se ignora: queda como referencia importada', () => {
+    useSessionStore.setState({ obras: [meta({ roto: true })], activeId: 'otra' });
+    useObraStore.getState().setRefSource('obra:ref-ex');
+    render(<ReferenciaPanel onImport={() => {}} />);
+    expect(screen.getByText('Referencia importada')).toBeInTheDocument();
   });
 });

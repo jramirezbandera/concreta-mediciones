@@ -23,8 +23,10 @@
        antigua siguió guardando en ella.
    =========================================================================== */
 import { del, get, set } from 'idb-keyval';
+import { esFuenteOficial } from '../core/basesOficiales';
 import { rawUuid } from '../core/id';
 import { huellasEnCrudo, huellasEnUso } from '../core/planoDatos';
+import type { FuenteOficial } from '../core/types';
 import { SCHEMA_VERSION, fromSerializable, type ObraData } from '../store';
 import {
   OBRA_KEY,
@@ -62,6 +64,10 @@ export interface ObraMeta {
   schemaVersion: number;
   /** Ausente = obra de trabajo (compat). `'reference'` = solo fuente de copia. */
   kind?: ObraKind;
+  /** Copia de `obra.fuenteOficial` (la base oficial de la que sale), para que el
+   *  selector la enseñe sin abrir la obra. La deriva `metaOf` de los datos; quien
+   *  la lea la valida con `esFuenteOficial` (una meta vieja o tocada a mano). */
+  fuente?: FuenteOficial;
   /** Cuándo se DESCARGÓ la última copia .json de esta obra (ISO 8601). Vive en
    *  la meta y no en `ObraData`: no es dominio ni viaja en la copia. Ausente =
    *  nunca. El navegador no confirma que el fichero se guardara. */
@@ -162,6 +168,18 @@ export async function loadObraData(id: string): Promise<LoadObraResult> {
 }
 
 const nameOf = (data: ObraData): string => data.obra.denominacion || 'Obra sin nombre';
+
+/** `kind` y `fuente` que dicen los propios datos (`obra.soloReferencia`,
+ *  `obra.fuenteOficial`): así un índice rehecho desde los blobs no convierte una
+ *  referencia en obra de trabajo (R8) ni pierde su origen (R2). Lee en crudo:
+ *  vale para un sobre sin migrar. */
+function marcasDe(data: unknown): Pick<ObraMeta, 'kind' | 'fuente'> {
+  const obra = (data as { obra?: Record<string, unknown> } | null)?.obra;
+  return {
+    ...(obra?.soloReferencia === true ? { kind: 'reference' as const } : {}),
+    ...(esFuenteOficial(obra?.fuenteOficial) ? { fuente: obra.fuenteOficial } : {}),
+  };
+}
 
 /* ---- índice: lectura/escritura -------------------------------------------- */
 export async function loadIndex(): Promise<ObraIndex> {
@@ -285,6 +303,7 @@ export function reconcile(): Promise<ObraIndex> {
           name: nameOf(res.envelope.data),
           savedAt: res.envelope.savedAt,
           schemaVersion: res.envelope.schemaVersion,
+          ...marcasDe(res.envelope.data),
           // [A1] en crudo: el sobre aún no está migrado (siempre de más)
           huellas: huellasEnCrudo(res.envelope.data),
           huellasDe: res.envelope.savedAt,
@@ -300,11 +319,12 @@ export function reconcile(): Promise<ObraIndex> {
       obras.push({ ...m, porMigrar: true });
       conocidas.add(m.id);
     }
-    // 3) activeId válido, o el primero, o null
+    // 3) activeId válido, o la primera obra de trabajo, o null: una referencia
+    //    (recuperada de un blob huérfano, R8) no pasa a ser la obra en pantalla.
     const activeId =
       idx.activeId && obras.some((m) => m.id === idx.activeId)
         ? idx.activeId
-        : (obras[0]?.id ?? null);
+        : (obras.find((m) => m.kind !== 'reference')?.id ?? null);
     const next: ObraIndex = { activeId, obras };
     // Sin cambios → devuelve el MISMO objeto para que updateIndex no reescriba.
     return JSON.stringify(next) === JSON.stringify(idx) ? idx : next;
@@ -457,13 +477,19 @@ export async function deleteObra(id: string): Promise<ObraIndex> {
  *  FUSIONA: conserva sus campos y solo renueva los que salen del blob. */
 export function metaOf(id: string, data: ObraData, kind?: ObraKind, prev?: ObraMeta): ObraMeta {
   const savedAt = new Date().toISOString();
+  // La fuente sale siempre de los datos: una vieja en `prev` no sobrevive.
+  const { fuente: _f, ...resto } = prev ?? {};
+  void _f;
+  const marcas = marcasDe(data);
+  const k = kind ?? marcas.kind;
   return {
-    ...prev,
+    ...resto,
     id,
     name: nameOf(data),
     savedAt,
     schemaVersion: data.schemaVersion,
-    ...(kind ? { kind } : {}),
+    ...(k ? { kind: k } : {}),
+    ...(marcas.fuente ? { fuente: marcas.fuente } : {}),
     huellas: huellasEnUso(data),
     huellasDe: savedAt,
   };
