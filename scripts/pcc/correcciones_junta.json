@@ -1,0 +1,133 @@
+{
+ "veto": "\\bEHE\\b|EHE-0?8|EHE-98|EFHE|\\bEAE\\b|RC-0[38]|1630/1992|89/106|\\bDITE\\b|Sello INCE|\\bNBE\\b|RL-88|RB-90|RY-85|clases? generales|MOPU|UNE[- ]EN 13829|UNE 833(00|01|03|04|09|13)|UNE 7474|UNE 7262|UNE 70[0-9]{2}:19|UNE 36068|UNE 36088|UNE 36096|UNE 36462|UNE 670(2[6-9]|3[0-9])|UNE 104281|UNE 104242|UNE 53112|UNE 53020|art[íi]culo 37",
+ "anotaciones": [
+  {
+   "fuente": "Hoja auxiliar «03_C_y_E_AUX_CALC AMASADAS» y fórmulas del cap. 03 (D-ejemplos.md §3.3): la cantidad la calcula la app con el Código Estructural.",
+   "ids": ["j03-008", "j03-023"],
+   "cambia": {"lote": {"calculo": "resistencia"}}
+  },
+  {"fuente": "Ídem: una consistencia por toma de resistencia (=K8).", "ids": ["j03-009"], "cambia": {"lote": {"calculo": "consistencia"}}},
+  {"fuente": "Ídem: autocompactante, un escurrimiento por toma (=K23).", "ids": ["j03-024"], "cambia": {"lote": {"calculo": "escurrimiento"}}},
+  {"fuente": "Ídem: autocompactante, anillo japonés = escurrimientos / 4 (=K24/4).", "ids": ["j03-025"], "cambia": {"lote": {"calculo": "anilloJapones"}}},
+  {"fuente": "Ídem, parte 2 (durabilidad), fila 330: aire ocluido al inicio del suministro.", "ids": ["j03-027"], "cambia": {"lote": {"calculo": "aireOcluido", "momento": "inicio"}}},
+  {"fuente": "Ídem, fila 330: aire ocluido durante el suministro.", "ids": ["j03-028"], "cambia": {"lote": {"calculo": "aireOcluido", "momento": "durante"}}},
+  {"fuente": "Ídem, filas 330 y 331: penetración de agua al inicio del suministro.", "ids": ["j03-029"], "cambia": {"lote": {"calculo": "penetracion", "momento": "inicio"}}},
+  {"fuente": "Ídem, filas 330 y 331: penetración de agua durante el suministro.", "ids": ["j03-030"], "cambia": {"lote": {"calculo": "penetracion", "momento": "durante"}}},
+  {"fuente": "Ídem, pilotes in situ (UNE-EN 1536): docilidad.", "ids": ["j03-048", "j03-051", "j03-053", "j03-056"], "cambia": {"lote": {"calculo": "pilotesConsistencia"}}},
+  {"fuente": "Ídem, pilotes in situ (UNE-EN 1536): resistencia.", "ids": ["j03-049", "j03-054", "j03-057"], "cambia": {"lote": {"calculo": "pilotesResistencia"}}},
+  {"fuente": "Ídem, encepados: consistencia en cada toma.", "ids": ["j03-064"], "cambia": {"lote": {"calculo": "consistencia"}}},
+  {"fuente": "Ídem, encepados: resistencia.", "ids": ["j03-065"], "cambia": {"lote": {"calculo": "resistencia"}}},
+  {"fuente": "Ídem, muros pantalla (UNE-EN 1538): docilidad.", "ids": ["j03-069", "j03-071"], "cambia": {"lote": {"calculo": "pantallasConsistencia"}}},
+  {"fuente": "Ídem, muros pantalla (UNE-EN 1538): resistencia.", "ids": ["j03-072"], "cambia": {"lote": {"calculo": "pantallasResistencia"}}},
+  {
+   "fuente": "Fórmula de la hoja 08: IF(med=0;0;MAX(1;ROUNDUP(med×%×n/5))): las pruebas por porcentaje se agrupan en visitas de 5.",
+   "ids": ["j08-047", "j08-060", "j08-073", "j08-080", "j08-082", "j08-083", "j08-088", "j08-090", "j08-108", "j08-109", "j08-111"],
+   "cambia": {"lote": {"porVisita": 5}}
+  },
+  {"fuente": "Fórmula de la hoja 08, fila 117: visitas de 10.", "ids": ["j08-117"], "cambia": {"lote": {"porVisita": 10}}},
+  {
+   "fuente": "Observación de la hoja: el nº de pilotes ensayados lo fija el CTE (DB SE-C 5.4.2.1.9, K-PCC.16); lo calcula la app.",
+   "ids": ["j03-060", "j03-061", "j03-062"],
+   "cambia": {"lote": {"tipo": "G", "calculo": "integridadPilotes"}}
+  }
+ ],
+ "filas": [
+  {
+   "ids": ["j03-008", "j03-023"],
+   "cambia": {"obs": "Tomas y amasadas por lote según la tabla 57.5.4.1 del Código Estructural, con volumen, superficie, plantas y tiempo, con y sin distintivo. Las calcula la app."},
+   "motivo": "La hoja no aplica las plantas ni el tiempo, no calcula el distintivo y remite a su hoja auxiliar.",
+   "cita": "K-PCC.39 (1, 2 y 6); CodE tabla 57.5.4.1"
+  },
+  {
+   "ids": ["j03-027"],
+   "cambia": {"obs": "Solo hormigones con clase de exposición XF2 o XF4 y sin distintivo de calidad oficialmente reconocido: al inicio del suministro y una vez cada seis meses."},
+   "motivo": "«Clases generales de exposición» es nomenclatura de la EHE-08.",
+   "cita": "K-PCC.52; CodE 57.5.7 (K-PCC.30)"
+  },
+  {
+   "ids": ["j03-029"],
+   "cambia": {"obs": "Solo hormigones con clase de exposición XA, XS, XD, XF o XM y sin distintivo de calidad oficialmente reconocido: al inicio del suministro y una vez cada seis meses, por dosificación."},
+   "motivo": "«Clases generales de exposición» es nomenclatura de la EHE-08; un tipo con dos clases se cuenta una vez.",
+   "cita": "K-PCC.52, K-PCC.59; CodE 57.5.7 (K-PCC.30)"
+  },
+  {
+   "ids": ["j03-065"],
+   "cambia": {"obs": "Encepados: lotes por la fila de cimentaciones de la tabla 57.5.4.1 del Código Estructural."},
+   "motivo": "La hoja remite a la EHE-08 (derogada) para la lotificación; los encepados están dentro del Código.",
+   "cita": "K-PCC.39 (7); CodE art. 26 y tabla 57.5.4.1"
+  },
+  {
+   "ids": ["j03-083", "j03-084", "j03-085"],
+   "cambia": {
+    "lote": {"tipo": "G", "calculo": "armaduras", "n": null, "tamano": null, "ud": null},
+    "obs": "Acero elaborado en obra: art. 58, lotes de 30 t por serie de diámetros, dos barras por lote. Ferralla de taller: art. 59.2, lotes de 25 t. Los calcula la app."
+   },
+   "motivo": "La hoja aplica a toda la armadura «2 ensayos / 30 t» sin series de diámetros y sin distinguir la ferralla de taller.",
+   "cita": "K-PCC.31, K-PCC.32, K-PCC.39 (8); CodE arts. 58 y 59.2"
+  },
+  {
+   "ids": ["j03-087", "j03-088", "j03-089"],
+   "cambia": {
+    "lote": {"tipo": "G", "calculo": "mallas", "n": null, "tamano": null, "ud": null},
+    "obs": "Mallas sin distintivo: lotes de 30 t por fabricante, tipo de acero y serie de diámetros; dos mallas por lote con tracción, doblado, masa por metro, geometría, despegue de nudo, dimensiones y nº de elementos. Los calcula la app."
+   },
+   "motivo": "La hoja da geometría, despegue y tracción; el Código pide además doblado, masa por metro, dimensiones y nº de elementos.",
+   "cita": "K-PCC.32, K-PCC.39 (9); CodE 59.1.4.2"
+  },
+  {
+   "ids": ["j03-092", "j03-095", "j03-098"],
+   "cambia": {"obs": "De cada diámetro empleado, un ensayo cada 30 t. Especificaciones del acero de pretensar: art. 36 del Código Estructural; control de recepción: art. 60."},
+   "motivo": "La hoja cita el «artículo 37» para el acero de pretensar.",
+   "cita": "K-PCC.39 (10); CodE arts. 36 y 60"
+  },
+  {
+   "ids": ["j03-110", "j03-111", "j03-112", "j03-113", "j03-114", "j03-115", "j03-116", "j03-117", "j03-118"],
+   "cambia": {"obs": "Opcional: el Código Estructural no exige estos ensayos a los perfiles con marcado CE (art. 97.3); la hoja los recomienda en estructuras de más de 100 t."},
+   "motivo": "La hoja los presenta como exigibles en estructuras de más de 100 t.",
+   "cita": "K-PCC.39 (11); CodE 97.3"
+  },
+  {
+   "ids": ["j03-110", "j03-111", "j03-112", "j03-113"],
+   "cambia": {"norma": null, "normaPendiente": "Análisis químico del acero: norma UNE de 1950-1951 sustituida; la vigente se fija antes de usar la fila."},
+   "motivo": "Normas de ensayo sustituidas.",
+   "cita": "K-PCC.51"
+  },
+  {
+   "ids": ["j03-183", "j06-013"],
+   "cambia": {"norma": "UNE 136029:2019"},
+   "motivo": "UNE 67029:1995 EX sustituida; la propia hoja indica la vigente.",
+   "cita": "K-PCC.51; observación de la hoja"
+  },
+  {
+   "ids": ["j03-182", "j03-184", "j06-012", "j06-014", "j07-010"],
+   "cambia": {"norma": null, "normaPendiente": "Norma UNE 670xx experimental sustituida; la vigente se fija antes de usar la fila."},
+   "motivo": "Normas de ensayo sustituidas.",
+   "cita": "K-PCC.51"
+  },
+  {
+   "ids": ["j07-020"],
+   "cambia": {"norma": null, "normaPendiente": "UNE 104281/6-3:1990 sustituida; la vigente se fija antes de usar la fila."},
+   "motivo": "Normas de ensayo sustituidas.",
+   "cita": "K-PCC.51"
+  },
+  {
+   "ids": ["j08-009", "j08-024"],
+   "cambia": {"norma": null, "normaPendiente": "Pliego de prescripciones técnicas del MOPU (1974 o 1986); se sustituye por el procedimiento de la norma de producto o del pliego del proyecto."},
+   "motivo": "Pliegos del MOPU que las plantillas arrastran.",
+   "cita": "D-ejemplos.md §6.2"
+  },
+  {
+   "ids": ["j08-138"],
+   "cambia": {"norma": "UNE-EN ISO 9972:2019"},
+   "motivo": "UNE-EN 13829:2002 anulada por la UNE-EN ISO 9972; la hoja da las dos.",
+   "cita": "D-ejemplos.md §6.2"
+  }
+ ],
+ "quitarDeObs": [
+  {
+   "patron": "\\*?\\s*M[íi]nimo 5 ensayos por desplazamiento\\.?",
+   "motivo": "Práctica comercial del laboratorio, no norma.",
+   "cita": "K-PCC.39 (13)"
+  }
+ ]
+}

@@ -635,7 +635,10 @@ vuelve al plan lo que cambie el diseño.
 
 - **E0 · Datos** (sin código de la app):
   1. `scripts/pcc/extraer_junta.py` y `catalogo.json` con las correcciones de §3 bis; test de
-     que cada fila tiene tipo de lote y unidad.
+     que cada fila tiene tipo de lote y unidad. **Hecho (2026-10-25):** 540 ensayos de la V04
+     (sin el cap. 15), 44 filas corregidas con su original, motivo y cita
+     (`scripts/pcc/correcciones_junta.json`); `src/core/pcc/tablas.test.ts`. Las normas UNE
+     sustituidas sin la vigente verificada quedan con `norma: null` y `normaPendiente`.
   2. `enlace-bcca.json` curado sobre el emparejamiento de D §4.2 (los 83 «solo precio», a mano).
   3. Pedir al estudio un .bc3 de CYPE con el capítulo de control y otro exportado con pliego
      (`~L`), para `enlace-cype` y los prefijos CYPE sin confirmar (D §5).
