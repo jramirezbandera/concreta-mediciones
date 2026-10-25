@@ -126,8 +126,8 @@ estudio se cita sin datos de la obra.
 Vienen detallados en la sección (c) de «Para la app» de cada informe. Los que afectan al diseño:
 
 - Código Estructural:
-  - γc = 1,5 del anejo 19, del que depende vetar el control indirecto con HA-25;
-  - si el × 5 del distintivo alcanza también a plantas y semanas;
+  - si el × 5 del distintivo alcanza también a plantas y semanas (el diario original del BOE no
+    lo aclara);
   - qué hacer con un lote que tiene menos amasadas reales que N;
   - el anejo 4 (documentación de suministro);
   - la lista vigente de distintivos.

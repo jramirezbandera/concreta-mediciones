@@ -282,7 +282,7 @@ la app» y B (b) tiene un sitio, quién lo propone y qué pasa si falta. Regla g
 | S (m² construidos) y P (plantas) del grupo | `planCalidad.grupos[g]` → `planCalidad.superficieConstruida` y `plantas` (D7) | — | Ese criterio no se aplica, con aviso |
 | T (semanas de hormigonado) del grupo | `planCalidad.grupos[g].semanas` | — | Dentro de plazo, con aviso (K-PCC.29) |
 | Distintivo del hormigón, dispersión certificada | `planCalidad.hormigon.distintivo` | — | Sin distintivo, con aviso (D3) |
-| Modalidad (estadístico o 100 %) | `planCalidad.hormigon.modalidad` | — | Estadístico; el indirecto no se ofrece (γc) |
+| Modalidad (estadístico o 100 %) | `planCalidad.hormigon.modalidad` | — | Estadístico; el indirecto no se ofrece en v1 (§5.3) |
 | Volumen de cuba | `planCalidad.hormigon.cubaM3` | — | Sin nota (*) ni tope de N |
 | Meses de suministro por dosificación | `planCalidad.dosificaciones[d].meses` | — | Pendiente si la clase pide durabilidad |
 | kg de acero | Medición en kg, o medición × `kgPorUd` | `kgPorUd` desde la descomposición (O3) | Pendiente |
@@ -352,9 +352,12 @@ Todo en `core/pcc/estructura.ts`, con los algoritmos de B «Para la app» A2–A
 3. **Lo que queda SIN CONFIRMAR no se aplica como norma** (README): el × 5 sobre plantas y
    semanas se aplica (es el literal, «los valores de la tabla»), pero el plan lo dice en una
    nota; la nota (*) de pilares (500 → 1000 m²) y el tope de N por amasadas reales solo con el
-   volumen de cuba declarado, y marcados como interpretación (caso E5 de A6); el control
-   indirecto no se ofrece hasta confirmar γc = 1,5 del anejo 19 (el caso E11 comprueba que no se
-   ofrece).
+   volumen de cuba declarado, y marcados como interpretación (caso E5 de A6). El control
+   indirecto no se ofrece en v1: con γc = 1,5 (anejo 19, tabla A19.2.1, verificado en E0.4) y
+   αcc = 1, ningún HA lo admite, porque el fck de un armado no baja de 25 (art. 33.4) y da
+   fcd = 16,7 > 15. Solo cabría con un HM-20 con distintivo en viviendas pequeñas, un caso que no
+   compensa los datos que pediría (uso, luces, αcc). El plan lo cita al justificar la modalidad
+   estadística, y el caso E11 comprueba el motivo con un HA-25.
 4. **Durabilidad:** por tipo de hormigón (dosificación) con clase que lo pida, sin distintivo:
    `1 + floor((meses − ε)/6)` penetraciones; aire ocluido con XF2 o XF4. Un tipo con dos clases
    se cuenta una vez (K-PCC.59).
@@ -397,7 +400,7 @@ Todo en `core/pcc/estructura.ts`, con los algoritmos de B «Para la app» A2–A
 | Distintivo del acero, de las mallas y de la ferralla | Armaduras | Sin distintivo, con aviso |
 | Procedencia de la ferralla: taller u obra; enderezado; soldadura | Art. 58 o 59.2 | **Taller**, con aviso (D3) |
 | Volumen de cuba (m³) | Nota (*) y tope de N (interpretación) | Sin aplicar |
-| Modalidad del control de resistencia: estadístico o 100 % | Lotes | Estadístico (el indirecto no se ofrece) |
+| Modalidad del control de resistencia: estadístico o 100 % | Lotes | Estadístico (el indirecto no se ofrece en v1) |
 | Nivel de control de ejecución: normal o intenso; opción A o B del art. 17 | Pliego, ejecución | **Normal** (D3); opción A |
 | Clase de ejecución del acero estructural; soldadura en obra; tipos de cordón | §5.7 | Clase 2; el resto pendiente si hay acero |
 | Zona sísmica | Art. 58: cargas cíclicas | De la provincia, si hay tabla; si no, pendiente |
@@ -661,6 +664,13 @@ vuelve al plan lo que cambie el diseño.
      (`~L`), para `enlace-cype` y los prefijos CYPE sin confirmar (D §5).
   4. Los SIN CONFIRMAR que afectan al cálculo (γc del anejo 19; × 5 en plantas y semanas) se
      intentan cerrar leyendo el anejo 19 en imagen; si no se cierran, quedan como dice §5.3.
+     **Hecho (2026-10-25):** el diario original del BOE (núm. 190) tiene texto en los anejos, a
+     diferencia del consolidado. **γc = 1,5 queda verificado** (tabla A19.2.1, pág. 98304) y, con
+     el fck mínimo de 25 del armado (art. 33.4), ningún HA con αcc = 1 admite el control
+     indirecto; sigue fuera de v1 (§5.3). **El × 5 sobre plantas y semanas sigue SIN CONFIRMAR:**
+     el diario dice lo mismo que el consolidado, la corrección de 2024 no toca el 57.5.4.1 y no
+     hay respuesta publicada del Ministerio; se aplica el literal con su nota, como dice §5.3.
+     Detalle en el informe B (K-PCC.26 y «SIN CONFIRMAR»).
   5. `enlace-bcca` y `catalogo` con lo que cubre cada precio (`{ probetas?, incluye? }`, O4).
      **Hecho (2026-10-25):** `cubre` en 64 filas del catálogo, sacado del nombre, de las
      observaciones o de las fórmulas de la hoja (sección `cubre` de `correcciones_junta.json`,
@@ -693,8 +703,8 @@ Cada etapa en verde (`tsc -b`, `vitest run`, `eslint`, `vite build`) y subida a 
 - **Tablas:** filas de la tabla 57.5.4.1 iguales a B A1; Kₙ; series de diámetros; ninguna fila
   SIN CONFIRMAR; cada corrección de §3 bis con su fila original.
 - **Estructura:** los 16 casos de A6 (E5 solo con volumen de cuba, como interpretación; E11
-  comprueba que el control indirecto no se ofrece); grupos por (fila, dosificación): XC1 y XC2
-  separados por defecto y juntos con la misma dosificación; redondeo hacia arriba; fila sin tipo
+  comprueba que el control indirecto no se ofrece y que un HA-25 da fcd = 16,7 > 15); grupos
+  por (fila, dosificación): XC1 y XC2 separados por defecto y juntos con la misma dosificación; redondeo hacia arriba; fila sin tipo
   convencional/autocompactante cuenta como convencional con aviso (K-PCC.56); forjado en m² sin
   `m3PorUd` → pendiente; obra A con superficie y plantas de la obra y sin datos por grupo da los
   lotes del caso A, y un grupo con su dato manda; sin procedencia → art. 59.2 con aviso, con
@@ -741,7 +751,8 @@ Cada etapa en verde (`tsc -b`, `vitest run`, `eslint`, `vite build`) y subida a 
 - Filas de obra civil de la tabla 57.5.4.1 (puentes, túneles, marcos).
 - Urbanización y viales (capítulo 15 de la hoja), salvo lo que reconozcan las reglas de
   movimiento de tierras.
-- Control indirecto del hormigón, hasta cerrar γc.
+- Control indirecto del hormigón: con γc ya verificado, no lo admite ningún HA con αcc = 1, y
+  el caso del HM-20 no compensa en v1 (§5.3).
 - Normativa de otras comunidades más allá de la estatal; exigencias del COA o del COAAT de Málaga
   (SIN CONFIRMAR).
 - PDF, impresión y Excel del plan.
@@ -842,9 +853,9 @@ A1, A2, P1, P2, T1 y las abiertas D3 (ferralla), D4, D5, D7, D8 y D9 del plan.
 - **Tests de reglas:** los .bc3 de `docs/spike/samples/` no están en git. Como en
   `core/rcd/reglas.bancos.test.ts`, en la CI va un juego de códigos escrito a mano y el
   recorrido de las bases enteras queda `skipIf` en local.
-- **E11 de A6:** con γc SIN CONFIRMAR el control indirecto no se ofrece (§5.3), así que el test
-  comprueba que no se ofrece, no que se rechaza por fcd. E5 solo con el volumen de cuba declarado,
-  marcado como interpretación.
+- **E11 de A6:** el control indirecto no se ofrece (§5.3), así que el test comprueba que no se
+  ofrece y que el motivo que da para un HA-25 es fcd = 16,7 > 15 (γc verificado en E0.4). E5
+  solo con el volumen de cuba declarado, marcado como interpretación.
 
 ## Decision ledger
 
