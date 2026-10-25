@@ -1,14 +1,27 @@
 import { describe, expect, it } from 'vitest';
 import catalogo from './tablas/catalogo.json';
+import enlaceBcca from './tablas/enlace-bcca.json';
 
 /* Catálogo de ensayos de la hoja de la Junta (V04), generado por
-   scripts/pcc/extraer_junta.py con scripts/pcc/correcciones_junta.json
-   (docs/plan-control-calidad.md, §3 y §3 bis). */
+   scripts/pcc/extraer_junta.py con scripts/pcc/correcciones_junta.json, y su enlace con el
+   capítulo 18 de la BCCA 2023, generado por scripts/pcc/enlazar_bcca.py con la tabla curada
+   scripts/pcc/enlace_bcca.json (docs/plan-control-calidad.md, §3, §3 bis y §8). */
 
+interface Cubre {
+  por?: string;
+  porEnsayo?: number;
+  probetas?: number;
+  determinaciones?: number;
+  puntos?: number;
+  incluye?: string[];
+  nota?: string;
+  segun?: string;
+}
 type Fila = (typeof catalogo.ensayos)[number] & {
   lote: { tipo: string; n: number | null; tamano?: number | null; ud?: string | null; calculo?: string };
   correcciones?: Array<{ original: object; motivo: string; cita: string }>;
   alternativaDe?: string;
+  cubre?: Cubre;
 };
 const ensayos = catalogo.ensayos as Fila[];
 const porId = new Map(ensayos.map((e) => [e.id, e]));
@@ -35,7 +48,7 @@ describe('catálogo de ensayos de la Junta', () => {
     for (const e of ensayos) {
       expect(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'], e.id).toContain(e.lote.tipo);
       expect([1, 2, 3], e.id).toContain(e.nivel);
-      expect(['ensayo', 'visita'], e.id).toContain(e.unidad);
+      expect(['ensayo', 'visita', 'amasada', 'm'], e.id).toContain(e.unidad);
       if (['A', 'B', 'C'].includes(e.lote.tipo)) {
         expect(e.lote.tamano, e.id).toBeGreaterThan(0);
         expect(e.lote.ud, e.id).toBeTruthy();
@@ -95,5 +108,104 @@ describe('catálogo de ensayos de la Junta', () => {
     const alt = ensayos.filter((e) => e.alternativaDe);
     expect(alt.map((e) => e.id)).toEqual(['j03-132', 'j03-140', 'j03-141']);
     for (const e of alt) expect(e.lote).toEqual(porId.get(e.alternativaDe!)?.lote);
+  });
+
+  it('lo que cubre el precio de la hoja dice de dónde sale (O4)', () => {
+    const conCubre = ensayos.filter((e) => e.cubre);
+    expect(conCubre.length).toBeGreaterThan(50);
+    for (const e of conCubre) {
+      expect(e.cubre!.segun, e.id).toBeTruthy();
+      for (const k of ['porEnsayo', 'probetas', 'determinaciones', 'puntos'] as const)
+        if (e.cubre![k] !== undefined) expect(Number.isInteger(e.cubre![k]) && e.cubre![k]! > 0, `${e.id} ${k}`).toBe(true);
+    }
+    // Compresión y consistencia: un precio por amasada controlada, sin inventar probetas.
+    expect(porId.get('j03-008')).toMatchObject({ unidad: 'amasada', cubre: { por: 'amasada' } });
+    expect(porId.get('j03-008')?.cubre?.probetas).toBeUndefined();
+    expect(porId.get('j03-009')?.unidad).toBe('amasada');
+    expect(porId.get('j03-029')?.cubre?.probetas).toBe(3);
+    // «Precio por testigo (la norma pide 10)» y «precio por punto, mínimo 10 puntos».
+    expect(porId.get('j02-101')?.cubre).toMatchObject({ por: 'testigo', porEnsayo: 10 });
+    expect(porId.get('j10-070')?.cubre).toMatchObject({ por: 'punto', porEnsayo: 10 });
+    expect(porId.get('j10-080')?.cubre?.determinaciones).toBe(5);
+    expect(porId.get('j08-008')).toMatchObject({ unidad: 'm', precio: 2 });
+    expect(porId.get('j10-084')?.unidad).toBe('visita');
+  });
+});
+
+type Enlace = (typeof enlaceBcca.enlaces)[number] & {
+  motivo?: string;
+  cubre?: Cubre;
+  citasVetadas?: string[];
+  precioComoLaHoja?: boolean;
+};
+const enlaces = enlaceBcca.enlaces as Enlace[];
+const enlace = new Map(enlaces.map((f) => [f.ensayo, f]));
+const codigos = (id: string) => enlace.get(id)?.partidas.map((p) => p.codigo);
+
+describe('enlace del catálogo con la BCCA 2023', () => {
+  it('cada ensayo del catálogo está una vez, en el mismo orden', () => {
+    expect(enlaceBcca.version).toBe('bcca-2023-V02');
+    expect(enlaceBcca.catalogo).toBe(catalogo.version);
+    expect(enlaces.map((f) => f.ensayo)).toEqual(ensayos.map((e) => e.id));
+  });
+
+  it('cada fila dice cómo casa, en qué unidad y, si no es una partida con el precio de la hoja, por qué', () => {
+    for (const f of enlaces) {
+      const n = f.partidas.length;
+      expect(f.como, f.ensayo).toBe(n === 0 ? 'sinCodigo' : n === 1 ? 'partida' : 'compuesto');
+      for (const p of f.partidas) expect(p.codigo, f.ensayo).toMatch(/^18[A-Z]{2,5}\d{5}$/);
+      expect(f.unidad, f.ensayo).toBe(porId.get(f.ensayo)?.unidad);
+      if (f.como !== 'partida' || f.precioComoLaHoja === false) expect(f.motivo, f.ensayo).toBeTruthy();
+      if (f.como === 'sinCodigo') expect(f.cubre, f.ensayo).toBeUndefined();
+    }
+    expect(enlaceBcca.cuenta).toEqual({ partida: 478, compuesto: 4, sinCodigo: 58 });
+  });
+
+  it('las parejas de referencia de la verificación (D §4.2)', () => {
+    expect(codigos('j03-008')).toEqual(['18HHL00010']);
+    expect(codigos('j03-009')).toEqual(['18HHL00020']);
+    expect(codigos('j03-029')).toEqual(['18HHL00030']);
+    expect(codigos('j03-011')).toEqual(['18HHI00040']);
+    expect(codigos('j03-014')).toEqual(['18HHI00010']);
+    expect(codigos('j02-017')).toEqual(['18ALF00070']);
+    expect(codigos('j02-018')).toEqual(['18ASS00010']);
+    expect(codigos('j03-060')).toEqual(['18CPI00010']);
+    expect(codigos('j08-130')).toEqual(['18UBB00010']);
+    expect(codigos('j08-138')).toEqual(['18UDA00010']);
+    // El pavimento de hormigón continuo tiene sus propias partidas.
+    expect(codigos('j10-064')).toEqual(['18BSH00010']);
+  });
+
+  it('el acero para armar y el aire ocluido no tienen código', () => {
+    for (const id of ['j03-083', 'j03-084', 'j03-085', 'j03-087', 'j03-088', 'j03-089', 'j03-027', 'j03-028'])
+      expect(enlace.get(id)?.como, id).toBe('sinCodigo');
+  });
+
+  it('los «solo precio» falsos no se enlazan (nunca por importe)', () => {
+    // 210 € = química del acero y compresión de suelo-cemento; 95 € = bovedillas y baldosas;
+    // 500 € = anclaje y compresión de muros de fábrica.
+    for (const id of ['j03-039', 'j03-196', 'j03-107', 'j03-034'])
+      expect(enlace.get(id)?.como, id).toBe('sinCodigo');
+    expect(codigos('j02-082')).toEqual(['18ALF00090']);
+  });
+
+  it('un precio de la hoja que es la suma de varios ensayos casa con varias partidas', () => {
+    expect(enlace.get('j03-162')).toMatchObject({ como: 'compuesto', precioComoLaHoja: true });
+    expect(codigos('j03-162')).toHaveLength(4);
+    expect(enlace.get('j03-174')).toMatchObject({ como: 'compuesto', precioComoLaHoja: false });
+  });
+
+  it('lo que cubre el precio de la BCCA cuando no es lo de la hoja (O4)', () => {
+    // La hoja: 125 € por punto, mínimo 10; la BCCA: 125 € por ensayo.
+    expect(porId.get('j10-070')?.cubre?.porEnsayo).toBe(10);
+    expect(enlace.get('j10-070')?.cubre).toMatchObject({ porEnsayo: 1 });
+    expect(enlace.get('j03-076')?.cubre?.determinaciones).toBe(2);
+    for (const f of enlaces.filter((x) => x.cubre)) expect(f.cubre!.segun, f.ensayo).toMatch(/^Texto de 18/);
+  });
+
+  it('el texto de banco con citas vetadas queda señalado (K-PCC.68)', () => {
+    expect(enlace.get('j03-029')?.citasVetadas).toEqual(['18HHL00030: clases generales']);
+    expect(enlace.get('j03-150')?.citasVetadas?.[0]).toMatch(/^18SCA00010: m[íi]nimo 5 ensayos por desplazamiento/i);
+    expect(enlace.get('j08-009')?.citasVetadas).toEqual(['18IAAA00020: MOPU']);
   });
 });

@@ -129,5 +129,147 @@
    "motivo": "Práctica comercial del laboratorio, no norma.",
    "cita": "K-PCC.39 (13)"
   }
+ ],
+ "cubre": [
+  {
+   "ids": ["j03-008", "j03-023", "j03-049", "j03-054", "j03-057", "j03-065", "j03-072"],
+   "unidad": "amasada",
+   "cubre": {"por": "amasada", "nota": "Un precio por amasada controlada; ni la hoja ni la BCCA dicen cuántas probetas entran (el Código pide la media de dos a 28 días y deja dos de reserva)."},
+   "segun": "Hoja auxiliar de amasadas: compresión = nº de amasadas (D-ejemplos.md §3.3); CodE 57.2"
+  },
+  {
+   "ids": ["j03-009", "j03-024", "j03-048", "j03-051", "j03-053", "j03-056", "j03-064", "j03-069", "j03-071"],
+   "unidad": "amasada",
+   "cubre": {"por": "amasada"},
+   "segun": "Hoja auxiliar de amasadas: consistencia y escurrimiento, uno por toma (D-ejemplos.md §3.3); CodE 57.5.2.1"
+  },
+  {
+   "ids": ["j03-054", "j03-057", "j03-072"],
+   "cubre": {"por": "amasada", "nota": "La hoja pide un mínimo de 4 probetas por serie; el precio es por serie."},
+   "segun": "Observación de la hoja: «El número mínimo de probetas por serie será de 4»"
+  },
+  {
+   "ids": ["j03-029", "j03-030"],
+   "cubre": {"probetas": 3},
+   "segun": "Nombre de la hoja: «(3 probetas)»; CodE 57.3.3"
+  },
+  {
+   "ids": ["j02-088"],
+   "cubre": {"probetas": 3},
+   "segun": "Nombre de la hoja: «sobre 3 probetas»"
+  },
+  {
+   "ids": ["j02-101"],
+   "cubre": {"por": "testigo", "porEnsayo": 10},
+   "segun": "Observación de la hoja: «Precio por testigo (la norma pide 10)»"
+  },
+  {
+   "ids": ["j10-070"],
+   "cubre": {"por": "punto", "porEnsayo": 10},
+   "segun": "Observación de la hoja: «precio por punto, mínimo 10 puntos»"
+  },
+  {
+   "ids": ["j11-007", "j13-011", "j13-020", "j13-029"],
+   "cubre": {"por": "punto", "porEnsayo": 5},
+   "segun": "Observación de la hoja: «Precio por punto, mínimo 5 determinaciones»"
+  },
+  {
+   "ids": ["j13-038"],
+   "cubre": {"determinaciones": 5, "nota": "La observación dice «precio por punto, mínimo 5», pero 200,55 € es el precio del ensayo de adherencia por tracción completo (UNE-EN ISO 4624), no el de un punto: se toma como un ensayo de cinco determinaciones."},
+   "segun": "Nombre de la hoja: «(cinco determinaciones)»"
+  },
+  {
+   "ids": ["j10-074", "j10-080", "j10-081", "j10-085", "j10-092", "j10-103"],
+   "cubre": {"determinaciones": 5},
+   "segun": "Nombre de la hoja: «(incluye 5 determinaciones)»"
+  },
+  {
+   "ids": ["j13-010", "j13-019", "j13-028", "j13-037"],
+   "cubre": {"determinaciones": 5},
+   "segun": "Nombre de la hoja: «(cinco determinaciones)»"
+  },
+  {
+   "ids": ["j10-098", "j10-104"],
+   "cubre": {"determinaciones": 5},
+   "segun": "Observación de la hoja (fila j10-098): «Un ensayo consta de 5 determinaciones»"
+  },
+  {
+   "ids": ["j03-150", "j03-154", "j03-156"],
+   "cubre": {"puntos": 10},
+   "segun": "Nombre de la hoja: «(10 puntos de medición por unidad de ensayo)»"
+  },
+  {
+   "ids": ["j03-151", "j03-152"],
+   "cubre": {"puntos": 5},
+   "segun": "Nombre de la hoja: «(5 puntos de medición por unidad de ensayo)»"
+  },
+  {
+   "ids": ["j03-158"],
+   "cubre": {"puntos": 15},
+   "segun": "Nombre de la hoja: «(15 puntos de medición por unidad de ensayo)»"
+  },
+  {
+   "ids": ["j08-038", "j08-039"],
+   "cubre": {"puntos": 5, "nota": "La hoja pide un mínimo de 5 medidas sin decir si el precio es por medida; se toma por ensayo."},
+   "segun": "Observación de la hoja: «Mínimo 5 puntos» / «mínimo 5 ensayos»"
+  },
+  {
+   "ids": ["j03-044", "j03-059", "j03-060", "j03-061", "j03-062"],
+   "cubre": {"por": "pilote"},
+   "segun": "Observación de la hoja: «Precio de ensayo por pilote»"
+  },
+  {
+   "ids": ["j03-074"],
+   "cubre": {"determinaciones": 3},
+   "segun": "Observación de la hoja: «Precio por cada 3 diagrafías»"
+  },
+  {
+   "ids": ["j03-012", "j03-013"],
+   "cubre": {"por": "lote"},
+   "segun": "Observación de la hoja: «Precio por lote de control de obra»"
+  },
+  {
+   "ids": ["j02-099"],
+   "cubre": {"nota": "No incluye la preparación de la muestra en molino."},
+   "segun": "Observación de la hoja"
+  },
+  {
+   "ids": ["j03-191"],
+   "cubre": {"nota": "No incluye la extracción de la probeta testigo, que corre a cargo del cliente."},
+   "segun": "Observación de la hoja"
+  },
+  {
+   "ids": ["j03-162", "j03-174"],
+   "cubre": {"nota": "Suma de cuatro ensayos: geometría, compresión, humedad (y contracción, en la aserrada) y densidad."},
+   "segun": "Observación de la hoja: «Ensayos: - Característica geométricas 80 € - Compresión 80 € …»"
+  },
+  {
+   "ids": ["j10-084"],
+   "unidad": "visita",
+   "cubre": {"puntos": 20, "nota": "Visita de técnico de media jornada, con un máximo de 20 puntos."},
+   "segun": "Observación de la hoja: «Visita de técnico 1/2 jornada con comprobación de un máximo de 20 puntos»"
+  },
+  {
+   "ids": ["j06-038", "j10-112"],
+   "unidad": "visita",
+   "cubre": {"nota": "Media jornada de técnico."},
+   "segun": "Observación de la hoja (fila j06-038): «1/2 jornada de técnico»"
+  },
+  {
+   "ids": ["j09-006"],
+   "cubre": {"nota": "Hasta 10 ensayos por media jornada."},
+   "segun": "Observación de la hoja: «En cada media jornada de trabajo se realizarán hasta 10 ensayos»"
+  },
+  {
+   "ids": ["j08-008"],
+   "unidad": "m",
+   "cubre": {"por": "m", "nota": "Precio por metro de red, con un mínimo de 250 m."},
+   "segun": "Lote de la hoja (1 por m) y observación: «Mínimo 250 m»"
+  },
+  {
+   "ids": ["j08-131"],
+   "cubre": {"nota": "La hoja da el lote por 50 m² y dice que el precio está estimado para 150 m² de cubierta; el agua la aporta el peticionario."},
+   "segun": "Observación de la hoja"
+  }
  ]
 }

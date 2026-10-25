@@ -135,7 +135,8 @@ for sh in b.sheets():
             'loteHoja': {'tamano': lote, 'ud': ud},
             'precio': num(v(c_pre)),
             # En qué se mide el precio (K-PCC.60): las inspecciones se pagan por visita de
-            # ½ jornada o jornada; lo demás, por ensayo. Lo que cubre cada precio, en el enlace.
+            # ½ jornada o jornada; lo demás, por ensayo, salvo lo que diga `cubre` en las
+            # correcciones (por amasada, por metro).
             'unidad': 'visita' if re.search(r'jornada|visita de t[eé]cnico', nombre, re.I) else 'ensayo',
             'obs': txt(v(c_obs)) or None,
         }
@@ -199,14 +200,26 @@ for q in corr['quitarDeObs']:
             e.setdefault('correcciones', []).append(
                 {'original': {'obs': original}, 'motivo': q['motivo'], 'cita': q['cita']})
 
+# Lo que cubre el precio de la hoja (O4) y en qué se mide, cuando la hoja lo dice en el nombre, en
+# la observación o en sus fórmulas. No son correcciones: van con `segun`, de dónde sale. Varias
+# entradas sobre la misma fila se suman.
+for c in corr['cubre']:
+    for e in filas(c):
+        cubre = {**e.get('cubre', {}), **c['cubre']}
+        cubre['segun'] = '; '.join(filter(None, [e.get('cubre', {}).get('segun'), c['segun']]))
+        e['cubre'] = cubre
+        if 'unidad' in c:
+            e['unidad'] = c['unidad']
+
 # Normas de ensayo sustituidas (K-PCC.51) y citas derogadas (K-PCC.50) que no tienen corrección:
 # abortan, para que ninguna llegue al JSON sin decidir qué se hace con ella.
 VETO = re.compile(corr['veto'], re.I)
 for e in ensayos:
-    for k in ('ensayo', 'norma', 'obs'):
-        if e.get(k) and VETO.search(e[k]):
-            problemas.append(f'{e["id"]} {k}: cita vetada sin corregir: {VETO.search(e[k]).group(0)!r}'
-                             f' en {e[k][:80]!r}')
+    for k, t in (('ensayo', e['ensayo']), ('norma', e['norma']), ('obs', e['obs']),
+                 ('cubre', (e.get('cubre') or {}).get('nota'))):
+        if t and VETO.search(t):
+            problemas.append(f'{e["id"]} {k}: cita vetada sin corregir: {VETO.search(t).group(0)!r}'
+                             f' en {t[:80]!r}')
 
 for e in ensayos:
     if e['lote']['tipo'] == 'G' and not e['lote'].get('calculo'):

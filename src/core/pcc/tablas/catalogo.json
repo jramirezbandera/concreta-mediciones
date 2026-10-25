@@ -1200,7 +1200,11 @@
    },
    "precio": 210.0,
    "unidad": "ensayo",
-   "obs": "Para suelos tipo S-EST3 Las probetas se fabricarán según el procedimiento descrito en la UNE-EN 13286-51 y con la densidad exigida en obra"
+   "obs": "Para suelos tipo S-EST3 Las probetas se fabricarán según el procedimiento descrito en la UNE-EN 13286-51 y con la densidad exigida en obra",
+   "cubre": {
+    "probetas": 3,
+    "segun": "Nombre de la hoja: «sobre 3 probetas»"
+   }
   },
   {
    "id": "j02-090",
@@ -1332,7 +1336,11 @@
    },
    "precio": 92.0,
    "unidad": "ensayo",
-   "obs": "* Aclaración al precio: tomado la fracción de árido en cantera. No incluye preparación de la muestra en molino."
+   "obs": "* Aclaración al precio: tomado la fracción de árido en cantera. No incluye preparación de la muestra en molino.",
+   "cubre": {
+    "nota": "No incluye la preparación de la muestra en molino.",
+    "segun": "Observación de la hoja"
+   }
   },
   {
    "id": "j02-100",
@@ -1364,7 +1372,12 @@
    },
    "precio": 62.37,
    "unidad": "ensayo",
-   "obs": "* Precio por testigo (la norma pide 10)"
+   "obs": "* Precio por testigo (la norma pide 10)",
+   "cubre": {
+    "por": "testigo",
+    "porEnsayo": 10,
+    "segun": "Observación de la hoja: «Precio por testigo (la norma pide 10)»"
+   }
   },
   {
    "id": "j02-102",
@@ -1808,7 +1821,7 @@
     "calculo": "resistencia"
    },
    "precio": 59.28,
-   "unidad": "ensayo",
+   "unidad": "amasada",
    "obs": "Tomas y amasadas por lote según la tabla 57.5.4.1 del Código Estructural, con volumen, superficie, plantas y tiempo, con y sin distintivo. Las calcula la app.",
    "correcciones": [
     {
@@ -1818,7 +1831,12 @@
      "motivo": "La hoja no aplica las plantas ni el tiempo, no calcula el distintivo y remite a su hoja auxiliar.",
      "cita": "K-PCC.39 (1, 2 y 6); CodE tabla 57.5.4.1"
     }
-   ]
+   ],
+   "cubre": {
+    "por": "amasada",
+    "nota": "Un precio por amasada controlada; ni la hoja ni la BCCA dicen cuántas probetas entran (el Código pide la media de dos a 28 días y deja dos de reserva).",
+    "segun": "Hoja auxiliar de amasadas: compresión = nº de amasadas (D-ejemplos.md §3.3); CodE 57.2"
+   }
   },
   {
    "id": "j03-009",
@@ -1834,7 +1852,7 @@
     "calculo": "consistencia"
    },
    "precio": 17.26,
-   "unidad": "ensayo",
+   "unidad": "amasada",
    "obs": "* Al menos en cada toma de muestra para resistencia a compresión se medirá la consistencia. ** No se realiza sin el hormigón es del tipo autocompactante (AC)",
    "correcciones": [
     {
@@ -1844,7 +1862,11 @@
      "motivo": "Práctica comercial del laboratorio, no norma.",
      "cita": "K-PCC.39 (13)"
     }
-   ]
+   ],
+   "cubre": {
+    "por": "amasada",
+    "segun": "Hoja auxiliar de amasadas: consistencia y escurrimiento, uno por toma (D-ejemplos.md §3.3); CodE 57.5.2.1"
+   }
   },
   {
    "id": "j03-011",
@@ -1876,7 +1898,11 @@
    },
    "precio": 210.0,
    "unidad": "ensayo",
-   "obs": "* La DF estimará los reconocimientos necesarios a realizar en su caso. Precio por lote de control de obra"
+   "obs": "* La DF estimará los reconocimientos necesarios a realizar en su caso. Precio por lote de control de obra",
+   "cubre": {
+    "por": "lote",
+    "segun": "Observación de la hoja: «Precio por lote de control de obra»"
+   }
   },
   {
    "id": "j03-013",
@@ -1892,7 +1918,11 @@
    },
    "precio": 210.0,
    "unidad": "ensayo",
-   "obs": "* La DF estimará los reconocimientos necesarios a realizar en su caso. Precio por lote de control de obra"
+   "obs": "* La DF estimará los reconocimientos necesarios a realizar en su caso. Precio por lote de control de obra",
+   "cubre": {
+    "por": "lote",
+    "segun": "Observación de la hoja: «Precio por lote de control de obra»"
+   }
   },
   {
    "id": "j03-014",
@@ -2004,7 +2034,7 @@
     "calculo": "resistencia"
    },
    "precio": 59.28,
-   "unidad": "ensayo",
+   "unidad": "amasada",
    "obs": "Tomas y amasadas por lote según la tabla 57.5.4.1 del Código Estructural, con volumen, superficie, plantas y tiempo, con y sin distintivo. Las calcula la app.",
    "correcciones": [
     {
@@ -2014,7 +2044,12 @@
      "motivo": "La hoja no aplica las plantas ni el tiempo, no calcula el distintivo y remite a su hoja auxiliar.",
      "cita": "K-PCC.39 (1, 2 y 6); CodE tabla 57.5.4.1"
     }
-   ]
+   ],
+   "cubre": {
+    "por": "amasada",
+    "nota": "Un precio por amasada controlada; ni la hoja ni la BCCA dicen cuántas probetas entran (el Código pide la media de dos a 28 días y deja dos de reserva).",
+    "segun": "Hoja auxiliar de amasadas: compresión = nº de amasadas (D-ejemplos.md §3.3); CodE 57.2"
+   }
   },
   {
    "id": "j03-024",
@@ -2030,8 +2065,12 @@
     "calculo": "escurrimiento"
    },
    "precio": 14.39,
-   "unidad": "ensayo",
-   "obs": null
+   "unidad": "amasada",
+   "obs": null,
+   "cubre": {
+    "por": "amasada",
+    "segun": "Hoja auxiliar de amasadas: consistencia y escurrimiento, uno por toma (D-ejemplos.md §3.3); CodE 57.5.2.1"
+   }
   },
   {
    "id": "j03-025",
@@ -2120,7 +2159,11 @@
      "motivo": "«Clases generales de exposición» es nomenclatura de la EHE-08; un tipo con dos clases se cuenta una vez.",
      "cita": "K-PCC.52, K-PCC.59; CodE 57.5.7 (K-PCC.30)"
     }
-   ]
+   ],
+   "cubre": {
+    "probetas": 3,
+    "segun": "Nombre de la hoja: «(3 probetas)»; CodE 57.3.3"
+   }
   },
   {
    "id": "j03-030",
@@ -2138,7 +2181,11 @@
    },
    "precio": 151.45,
    "unidad": "ensayo",
-   "obs": null
+   "obs": null,
+   "cubre": {
+    "probetas": 3,
+    "segun": "Nombre de la hoja: «(3 probetas)»; CodE 57.3.3"
+   }
   },
   {
    "id": "j03-033",
@@ -2299,7 +2346,11 @@
      "motivo": "Práctica comercial del laboratorio, no norma.",
      "cita": "K-PCC.39 (13)"
     }
-   ]
+   ],
+   "cubre": {
+    "por": "pilote",
+    "segun": "Observación de la hoja: «Precio de ensayo por pilote»"
+   }
   },
   {
    "id": "j03-048",
@@ -2315,8 +2366,12 @@
     "calculo": "pilotesConsistencia"
    },
    "precio": 17.26,
-   "unidad": "ensayo",
-   "obs": "*Se tomará una serie por cada uno de los 3 primeros pilotes de la obra."
+   "unidad": "amasada",
+   "obs": "*Se tomará una serie por cada uno de los 3 primeros pilotes de la obra.",
+   "cubre": {
+    "por": "amasada",
+    "segun": "Hoja auxiliar de amasadas: consistencia y escurrimiento, uno por toma (D-ejemplos.md §3.3); CodE 57.5.2.1"
+   }
   },
   {
    "id": "j03-049",
@@ -2332,8 +2387,13 @@
     "calculo": "pilotesResistencia"
    },
    "precio": 59.28,
-   "unidad": "ensayo",
-   "obs": "*Se tomará una serie por cada uno de los 3 primeros pilotes de la obra."
+   "unidad": "amasada",
+   "obs": "*Se tomará una serie por cada uno de los 3 primeros pilotes de la obra.",
+   "cubre": {
+    "por": "amasada",
+    "nota": "Un precio por amasada controlada; ni la hoja ni la BCCA dicen cuántas probetas entran (el Código pide la media de dos a 28 días y deja dos de reserva).",
+    "segun": "Hoja auxiliar de amasadas: compresión = nº de amasadas (D-ejemplos.md §3.3); CodE 57.2"
+   }
   },
   {
    "id": "j03-051",
@@ -2349,8 +2409,12 @@
     "calculo": "pilotesConsistencia"
    },
    "precio": 17.26,
-   "unidad": "ensayo",
-   "obs": "* La norma UNE-EN 1536 obliga realizar la consistencia cada camión o cada 10 m3."
+   "unidad": "amasada",
+   "obs": "* La norma UNE-EN 1536 obliga realizar la consistencia cada camión o cada 10 m3.",
+   "cubre": {
+    "por": "amasada",
+    "segun": "Hoja auxiliar de amasadas: consistencia y escurrimiento, uno por toma (D-ejemplos.md §3.3); CodE 57.5.2.1"
+   }
   },
   {
    "id": "j03-053",
@@ -2366,8 +2430,12 @@
     "calculo": "pilotesConsistencia"
    },
    "precio": 17.26,
-   "unidad": "ensayo",
-   "obs": null
+   "unidad": "amasada",
+   "obs": null,
+   "cubre": {
+    "por": "amasada",
+    "segun": "Hoja auxiliar de amasadas: consistencia y escurrimiento, uno por toma (D-ejemplos.md §3.3); CodE 57.5.2.1"
+   }
   },
   {
    "id": "j03-054",
@@ -2383,8 +2451,13 @@
     "calculo": "pilotesResistencia"
    },
    "precio": 59.28,
-   "unidad": "ensayo",
-   "obs": "* Se tomará una serie por cada 5 pilotes (cada 15 pilotes si el volumen por unidad fuera ≤ 4 m3. ** Si hubieran interrupciones de los trabajos superiores a los 7 días, tomar 2 series adicionales. *** Si se hormigona al día 75 m3, se tomará una serie adicional. **** El número mínimo de probetas por serie será de 4."
+   "unidad": "amasada",
+   "obs": "* Se tomará una serie por cada 5 pilotes (cada 15 pilotes si el volumen por unidad fuera ≤ 4 m3. ** Si hubieran interrupciones de los trabajos superiores a los 7 días, tomar 2 series adicionales. *** Si se hormigona al día 75 m3, se tomará una serie adicional. **** El número mínimo de probetas por serie será de 4.",
+   "cubre": {
+    "por": "amasada",
+    "nota": "La hoja pide un mínimo de 4 probetas por serie; el precio es por serie.",
+    "segun": "Hoja auxiliar de amasadas: compresión = nº de amasadas (D-ejemplos.md §3.3); CodE 57.2; Observación de la hoja: «El número mínimo de probetas por serie será de 4»"
+   }
   },
   {
    "id": "j03-056",
@@ -2400,8 +2473,12 @@
     "calculo": "pilotesConsistencia"
    },
    "precio": 17.26,
-   "unidad": "ensayo",
-   "obs": null
+   "unidad": "amasada",
+   "obs": null,
+   "cubre": {
+    "por": "amasada",
+    "segun": "Hoja auxiliar de amasadas: consistencia y escurrimiento, uno por toma (D-ejemplos.md §3.3); CodE 57.5.2.1"
+   }
   },
   {
    "id": "j03-057",
@@ -2417,8 +2494,13 @@
     "calculo": "pilotesResistencia"
    },
    "precio": 59.28,
-   "unidad": "ensayo",
-   "obs": "* Se tomará una serie por cada pilote. ** Si hubieran interrupciones de los trabajos superiores a los 7 días, tomar 2 series adicionales. *** Si se hormigona al día 75 m3, se tomrá una serie adicional. **** El número mínimo de probetas por serie será de 4."
+   "unidad": "amasada",
+   "obs": "* Se tomará una serie por cada pilote. ** Si hubieran interrupciones de los trabajos superiores a los 7 días, tomar 2 series adicionales. *** Si se hormigona al día 75 m3, se tomrá una serie adicional. **** El número mínimo de probetas por serie será de 4.",
+   "cubre": {
+    "por": "amasada",
+    "nota": "La hoja pide un mínimo de 4 probetas por serie; el precio es por serie.",
+    "segun": "Hoja auxiliar de amasadas: compresión = nº de amasadas (D-ejemplos.md §3.3); CodE 57.2; Observación de la hoja: «El número mínimo de probetas por serie será de 4»"
+   }
   },
   {
    "id": "j03-059",
@@ -2445,7 +2527,11 @@
      "motivo": "Práctica comercial del laboratorio, no norma.",
      "cita": "K-PCC.39 (13)"
     }
-   ]
+   ],
+   "cubre": {
+    "por": "pilote",
+    "segun": "Observación de la hoja: «Precio de ensayo por pilote»"
+   }
   },
   {
    "id": "j03-060",
@@ -2471,7 +2557,11 @@
      "motivo": "Práctica comercial del laboratorio, no norma.",
      "cita": "K-PCC.39 (13)"
     }
-   ]
+   ],
+   "cubre": {
+    "por": "pilote",
+    "segun": "Observación de la hoja: «Precio de ensayo por pilote»"
+   }
   },
   {
    "id": "j03-061",
@@ -2488,7 +2578,11 @@
    },
    "precio": 289.8,
    "unidad": "ensayo",
-   "obs": null
+   "obs": null,
+   "cubre": {
+    "por": "pilote",
+    "segun": "Observación de la hoja: «Precio de ensayo por pilote»"
+   }
   },
   {
    "id": "j03-062",
@@ -2505,7 +2599,11 @@
    },
    "precio": 346.5,
    "unidad": "ensayo",
-   "obs": null
+   "obs": null,
+   "cubre": {
+    "por": "pilote",
+    "segun": "Observación de la hoja: «Precio de ensayo por pilote»"
+   }
   },
   {
    "id": "j03-064",
@@ -2521,7 +2619,7 @@
     "calculo": "consistencia"
    },
    "precio": 17.26,
-   "unidad": "ensayo",
+   "unidad": "amasada",
    "obs": "* Al menos en cada toma de muestra para resistencia a compresión se medirá la consistencia",
    "correcciones": [
     {
@@ -2531,7 +2629,11 @@
      "motivo": "Práctica comercial del laboratorio, no norma.",
      "cita": "K-PCC.39 (13)"
     }
-   ]
+   ],
+   "cubre": {
+    "por": "amasada",
+    "segun": "Hoja auxiliar de amasadas: consistencia y escurrimiento, uno por toma (D-ejemplos.md §3.3); CodE 57.5.2.1"
+   }
   },
   {
    "id": "j03-065",
@@ -2547,7 +2649,7 @@
     "calculo": "resistencia"
    },
    "precio": 59.28,
-   "unidad": "ensayo",
+   "unidad": "amasada",
    "obs": "Encepados: lotes por la fila de cimentaciones de la tabla 57.5.4.1 del Código Estructural.",
    "correcciones": [
     {
@@ -2557,7 +2659,12 @@
      "motivo": "La hoja remite a la EHE-08 (derogada) para la lotificación; los encepados están dentro del Código.",
      "cita": "K-PCC.39 (7); CodE art. 26 y tabla 57.5.4.1"
     }
-   ]
+   ],
+   "cubre": {
+    "por": "amasada",
+    "nota": "Un precio por amasada controlada; ni la hoja ni la BCCA dicen cuántas probetas entran (el Código pide la media de dos a 28 días y deja dos de reserva).",
+    "segun": "Hoja auxiliar de amasadas: compresión = nº de amasadas (D-ejemplos.md §3.3); CodE 57.2"
+   }
   },
   {
    "id": "j03-069",
@@ -2573,8 +2680,12 @@
     "calculo": "pantallasConsistencia"
    },
    "precio": 17.26,
-   "unidad": "ensayo",
-   "obs": "* La norma UNE-EN 1538 en la tabla B.1 contempla, como mínimo, una determinación del cono Abrams por cada comienzo de panel. No están incluidos los realizados para la toma de control de reistencia"
+   "unidad": "amasada",
+   "obs": "* La norma UNE-EN 1538 en la tabla B.1 contempla, como mínimo, una determinación del cono Abrams por cada comienzo de panel. No están incluidos los realizados para la toma de control de reistencia",
+   "cubre": {
+    "por": "amasada",
+    "segun": "Hoja auxiliar de amasadas: consistencia y escurrimiento, uno por toma (D-ejemplos.md §3.3); CodE 57.5.2.1"
+   }
   },
   {
    "id": "j03-071",
@@ -2590,8 +2701,12 @@
     "calculo": "pantallasConsistencia"
    },
    "precio": 17.26,
-   "unidad": "ensayo",
-   "obs": null
+   "unidad": "amasada",
+   "obs": null,
+   "cubre": {
+    "por": "amasada",
+    "segun": "Hoja auxiliar de amasadas: consistencia y escurrimiento, uno por toma (D-ejemplos.md §3.3); CodE 57.5.2.1"
+   }
   },
   {
    "id": "j03-072",
@@ -2607,8 +2722,13 @@
     "calculo": "pantallasResistencia"
    },
    "precio": 59.28,
-   "unidad": "ensayo",
-   "obs": "* El número mínimo de probetas por serie será de 4."
+   "unidad": "amasada",
+   "obs": "* El número mínimo de probetas por serie será de 4.",
+   "cubre": {
+    "por": "amasada",
+    "nota": "La hoja pide un mínimo de 4 probetas por serie; el precio es por serie.",
+    "segun": "Hoja auxiliar de amasadas: compresión = nº de amasadas (D-ejemplos.md §3.3); CodE 57.2; Observación de la hoja: «El número mínimo de probetas por serie será de 4»"
+   }
   },
   {
    "id": "j03-074",
@@ -2624,7 +2744,11 @@
    },
    "precio": 226.8,
    "unidad": "ensayo",
-   "obs": "* Precio por cada 3 diagrafías"
+   "obs": "* Precio por cada 3 diagrafías",
+   "cubre": {
+    "determinaciones": 3,
+    "segun": "Observación de la hoja: «Precio por cada 3 diagrafías»"
+   }
   },
   {
    "id": "j03-076",
@@ -3802,7 +3926,11 @@
      "motivo": "Práctica comercial del laboratorio, no norma.",
      "cita": "K-PCC.39 (13)"
     }
-   ]
+   ],
+   "cubre": {
+    "puntos": 10,
+    "segun": "Nombre de la hoja: «(10 puntos de medición por unidad de ensayo)»"
+   }
   },
   {
    "id": "j03-151",
@@ -3820,7 +3948,11 @@
    },
    "precio": 200.55,
    "unidad": "ensayo",
-   "obs": "*Se realizará un ensayo u otro en función del espesor previsto"
+   "obs": "*Se realizará un ensayo u otro en función del espesor previsto",
+   "cubre": {
+    "puntos": 5,
+    "segun": "Nombre de la hoja: «(5 puntos de medición por unidad de ensayo)»"
+   }
   },
   {
    "id": "j03-152",
@@ -3838,7 +3970,11 @@
    },
    "precio": 200.55,
    "unidad": "ensayo",
-   "obs": null
+   "obs": null,
+   "cubre": {
+    "puntos": 5,
+    "segun": "Nombre de la hoja: «(5 puntos de medición por unidad de ensayo)»"
+   }
   },
   {
    "id": "j03-154",
@@ -3865,7 +4001,11 @@
      "motivo": "Práctica comercial del laboratorio, no norma.",
      "cita": "K-PCC.39 (13)"
     }
-   ]
+   ],
+   "cubre": {
+    "puntos": 10,
+    "segun": "Nombre de la hoja: «(10 puntos de medición por unidad de ensayo)»"
+   }
   },
   {
    "id": "j03-156",
@@ -3892,7 +4032,11 @@
      "motivo": "Práctica comercial del laboratorio, no norma.",
      "cita": "K-PCC.39 (13)"
     }
-   ]
+   ],
+   "cubre": {
+    "puntos": 10,
+    "segun": "Nombre de la hoja: «(10 puntos de medición por unidad de ensayo)»"
+   }
   },
   {
    "id": "j03-158",
@@ -3910,7 +4054,11 @@
    },
    "precio": 392.0,
    "unidad": "visita",
-   "obs": "El apriete se realizará según la métrica y calidad del tornillo, se debe controlar un 10% de las uniones atornilladas."
+   "obs": "El apriete se realizará según la métrica y calidad del tornillo, se debe controlar un 10% de las uniones atornilladas.",
+   "cubre": {
+    "puntos": 15,
+    "segun": "Nombre de la hoja: «(15 puntos de medición por unidad de ensayo)»"
+   }
   },
   {
    "id": "j03-161",
@@ -3942,7 +4090,11 @@
    },
    "precio": 270.0,
    "unidad": "ensayo",
-   "obs": "*Ensayos: - Característica geométricas 80 € - Compresión 80 € - Contenido en humedad y Contracción lineal y volumétrica e higroscopicidad 80 € - Densidad y peso específico 30 €"
+   "obs": "*Ensayos: - Característica geométricas 80 € - Compresión 80 € - Contenido en humedad y Contracción lineal y volumétrica e higroscopicidad 80 € - Densidad y peso específico 30 €",
+   "cubre": {
+    "nota": "Suma de cuatro ensayos: geometría, compresión, humedad (y contracción, en la aserrada) y densidad.",
+    "segun": "Observación de la hoja: «Ensayos: - Característica geométricas 80 € - Compresión 80 € …»"
+   }
   },
   {
    "id": "j03-163",
@@ -4120,7 +4272,11 @@
    },
    "precio": 220.0,
    "unidad": "ensayo",
-   "obs": "*Ensayos: - Característica geométricas 80 € - Compresión 80 € - Contenido en humedad 30 € - Densidad 30 €"
+   "obs": "*Ensayos: - Característica geométricas 80 € - Compresión 80 € - Contenido en humedad 30 € - Densidad 30 €",
+   "cubre": {
+    "nota": "Suma de cuatro ensayos: geometría, compresión, humedad (y contracción, en la aserrada) y densidad.",
+    "segun": "Observación de la hoja: «Ensayos: - Característica geométricas 80 € - Compresión 80 € …»"
+   }
   },
   {
    "id": "j03-177",
@@ -4365,7 +4521,11 @@
    },
    "precio": 500.0,
    "unidad": "ensayo",
-   "obs": "*Extracción de la probeta testigo por parte del cliente"
+   "obs": "*Extracción de la probeta testigo por parte del cliente",
+   "cubre": {
+    "nota": "No incluye la extracción de la probeta testigo, que corre a cargo del cliente.",
+    "segun": "Observación de la hoja"
+   }
   },
   {
    "id": "j03-195",
@@ -5057,8 +5217,12 @@
     "n": 1.0
    },
    "precio": 392.0,
-   "unidad": "ensayo",
-   "obs": "*1/2 jornada de técnico"
+   "unidad": "visita",
+   "obs": "*1/2 jornada de técnico",
+   "cubre": {
+    "nota": "Media jornada de técnico.",
+    "segun": "Observación de la hoja (fila j06-038): «1/2 jornada de técnico»"
+   }
   },
   {
    "id": "j06-039",
@@ -5519,8 +5683,13 @@
     "ud": "m"
    },
    "precio": 2.0,
-   "unidad": "ensayo",
-   "obs": "*Mínimo 250 m **En caso de varios edificios con una red propia antes de verter en la municipal deberá contemplarse."
+   "unidad": "m",
+   "obs": "*Mínimo 250 m **En caso de varios edificios con una red propia antes de verter en la municipal deberá contemplarse.",
+   "cubre": {
+    "por": "m",
+    "nota": "Precio por metro de red, con un mínimo de 250 m.",
+    "segun": "Lote de la hoja (1 por m) y observación: «Mínimo 250 m»"
+   }
   },
   {
    "id": "j08-009",
@@ -5906,7 +6075,12 @@
    },
    "precio": 48.25,
    "unidad": "ensayo",
-   "obs": "*La medición por método magnético (mínimo 5 ensayos) para el recubrimiento de zinc"
+   "obs": "*La medición por método magnético (mínimo 5 ensayos) para el recubrimiento de zinc",
+   "cubre": {
+    "puntos": 5,
+    "nota": "La hoja pide un mínimo de 5 medidas sin decir si el precio es por medida; se toma por ensayo.",
+    "segun": "Observación de la hoja: «Mínimo 5 puntos» / «mínimo 5 ensayos»"
+   }
   },
   {
    "id": "j08-039",
@@ -5922,7 +6096,12 @@
    },
    "precio": 48.25,
    "unidad": "ensayo",
-   "obs": "*Mínimo 5 puntos"
+   "obs": "*Mínimo 5 puntos",
+   "cubre": {
+    "puntos": 5,
+    "nota": "La hoja pide un mínimo de 5 medidas sin decir si el precio es por medida; se toma por ensayo.",
+    "segun": "Observación de la hoja: «Mínimo 5 puntos» / «mínimo 5 ensayos»"
+   }
   },
   {
    "id": "j08-041",
@@ -7024,7 +7203,11 @@
    },
    "precio": 360.0,
    "unidad": "ensayo",
-   "obs": "* Criterio de lote aproximado, influyen caudal, presión de agua, tipología de cubierta, accesibilidad, etc, ajustar al caso concreto Precio estimado para 150 m2 de cubierta. El agua debe ser aportada por peticionario"
+   "obs": "* Criterio de lote aproximado, influyen caudal, presión de agua, tipología de cubierta, accesibilidad, etc, ajustar al caso concreto Precio estimado para 150 m2 de cubierta. El agua debe ser aportada por peticionario",
+   "cubre": {
+    "nota": "La hoja da el lote por 50 m² y dice que el precio está estimado para 150 m² de cubierta; el agua la aporta el peticionario.",
+    "segun": "Observación de la hoja"
+   }
   },
   {
    "id": "j08-132",
@@ -7171,7 +7354,11 @@
    },
    "precio": 210.0,
    "unidad": "visita",
-   "obs": "*En cada media jornada de trabajo se realizarán hasta 10 ensayos"
+   "obs": "*En cada media jornada de trabajo se realizarán hasta 10 ensayos",
+   "cubre": {
+    "nota": "Hasta 10 ensayos por media jornada.",
+    "segun": "Observación de la hoja: «En cada media jornada de trabajo se realizarán hasta 10 ensayos»"
+   }
   },
   {
    "id": "j09-007",
@@ -8381,7 +8568,12 @@
    },
    "precio": 125.0,
    "unidad": "ensayo",
-   "obs": "* Ensayo por norma UNE EN 13892-4 (BCA), precio por punto, mínimo 10 puntos"
+   "obs": "* Ensayo por norma UNE EN 13892-4 (BCA), precio por punto, mínimo 10 puntos",
+   "cubre": {
+    "por": "punto",
+    "porEnsayo": 10,
+    "segun": "Observación de la hoja: «precio por punto, mínimo 10 puntos»"
+   }
   },
   {
    "id": "j10-072",
@@ -8429,7 +8621,11 @@
    },
    "precio": 200.0,
    "unidad": "ensayo",
-   "obs": null
+   "obs": null,
+   "cubre": {
+    "determinaciones": 5,
+    "segun": "Nombre de la hoja: «(incluye 5 determinaciones)»"
+   }
   },
   {
    "id": "j10-077",
@@ -8495,7 +8691,11 @@
    },
    "precio": 200.0,
    "unidad": "ensayo",
-   "obs": "*Sólo en fachadas"
+   "obs": "*Sólo en fachadas",
+   "cubre": {
+    "determinaciones": 5,
+    "segun": "Nombre de la hoja: «(incluye 5 determinaciones)»"
+   }
   },
   {
    "id": "j10-081",
@@ -8513,7 +8713,11 @@
    },
    "precio": 200.0,
    "unidad": "ensayo",
-   "obs": "*Sólo en fachadas"
+   "obs": "*Sólo en fachadas",
+   "cubre": {
+    "determinaciones": 5,
+    "segun": "Nombre de la hoja: «(incluye 5 determinaciones)»"
+   }
   },
   {
    "id": "j10-083",
@@ -8546,8 +8750,13 @@
     "ud": "m²"
    },
    "precio": 392.0,
-   "unidad": "ensayo",
-   "obs": "*Visita de técnico 1/2 jornada con comprobación de un máximo de 20 puntos"
+   "unidad": "visita",
+   "obs": "*Visita de técnico 1/2 jornada con comprobación de un máximo de 20 puntos",
+   "cubre": {
+    "puntos": 20,
+    "nota": "Visita de técnico de media jornada, con un máximo de 20 puntos.",
+    "segun": "Observación de la hoja: «Visita de técnico 1/2 jornada con comprobación de un máximo de 20 puntos»"
+   }
   },
   {
    "id": "j10-085",
@@ -8565,7 +8774,11 @@
    },
    "precio": 200.0,
    "unidad": "ensayo",
-   "obs": null
+   "obs": null,
+   "cubre": {
+    "determinaciones": 5,
+    "segun": "Nombre de la hoja: «(incluye 5 determinaciones)»"
+   }
   },
   {
    "id": "j10-087",
@@ -8647,7 +8860,11 @@
    },
    "precio": 200.0,
    "unidad": "ensayo",
-   "obs": null
+   "obs": null,
+   "cubre": {
+    "determinaciones": 5,
+    "segun": "Nombre de la hoja: «(incluye 5 determinaciones)»"
+   }
   },
   {
    "id": "j10-093",
@@ -8743,7 +8960,11 @@
    },
    "precio": 50.0,
    "unidad": "ensayo",
-   "obs": "*Un ensayo consta de 5 determinaciones"
+   "obs": "*Un ensayo consta de 5 determinaciones",
+   "cubre": {
+    "determinaciones": 5,
+    "segun": "Observación de la hoja (fila j10-098): «Un ensayo consta de 5 determinaciones»"
+   }
   },
   {
    "id": "j10-100",
@@ -8809,7 +9030,11 @@
    },
    "precio": 200.0,
    "unidad": "ensayo",
-   "obs": null
+   "obs": null,
+   "cubre": {
+    "determinaciones": 5,
+    "segun": "Nombre de la hoja: «(incluye 5 determinaciones)»"
+   }
   },
   {
    "id": "j10-104",
@@ -8825,7 +9050,11 @@
    },
    "precio": 50.0,
    "unidad": "ensayo",
-   "obs": null
+   "obs": null,
+   "cubre": {
+    "determinaciones": 5,
+    "segun": "Observación de la hoja (fila j10-098): «Un ensayo consta de 5 determinaciones»"
+   }
   },
   {
    "id": "j10-107",
@@ -8904,8 +9133,12 @@
     "n": 1.0
    },
    "precio": 392.0,
-   "unidad": "ensayo",
-   "obs": null
+   "unidad": "visita",
+   "obs": null,
+   "cubre": {
+    "nota": "Media jornada de técnico.",
+    "segun": "Observación de la hoja (fila j06-038): «1/2 jornada de técnico»"
+   }
   },
   {
    "id": "j10-113",
@@ -8953,7 +9186,12 @@
    },
    "precio": 48.25,
    "unidad": "ensayo",
-   "obs": "*Precio por punto, mínimo 5 determinaciones"
+   "obs": "*Precio por punto, mínimo 5 determinaciones",
+   "cubre": {
+    "por": "punto",
+    "porEnsayo": 5,
+    "segun": "Observación de la hoja: «Precio por punto, mínimo 5 determinaciones»"
+   }
   },
   {
    "id": "j11-008",
@@ -9177,7 +9415,11 @@
    },
    "precio": 140.0,
    "unidad": "ensayo",
-   "obs": "*Ensayo realizado sobre cata en pared con medida de microscopio"
+   "obs": "*Ensayo realizado sobre cata en pared con medida de microscopio",
+   "cubre": {
+    "determinaciones": 5,
+    "segun": "Nombre de la hoja: «(cinco determinaciones)»"
+   }
   },
   {
    "id": "j13-011",
@@ -9193,7 +9435,12 @@
    },
    "precio": 50.0,
    "unidad": "ensayo",
-   "obs": "*Precio por punto, mínimo 5 determinaciones"
+   "obs": "*Precio por punto, mínimo 5 determinaciones",
+   "cubre": {
+    "por": "punto",
+    "porEnsayo": 5,
+    "segun": "Observación de la hoja: «Precio por punto, mínimo 5 determinaciones»"
+   }
   },
   {
    "id": "j13-012",
@@ -9305,7 +9552,11 @@
    },
    "precio": 140.0,
    "unidad": "ensayo",
-   "obs": "*Ensayo realizado sobre cata en pared con medida de microscopio"
+   "obs": "*Ensayo realizado sobre cata en pared con medida de microscopio",
+   "cubre": {
+    "determinaciones": 5,
+    "segun": "Nombre de la hoja: «(cinco determinaciones)»"
+   }
   },
   {
    "id": "j13-020",
@@ -9321,7 +9572,12 @@
    },
    "precio": 50.0,
    "unidad": "ensayo",
-   "obs": "*Precio por punto, mínimo 5 determinaciones"
+   "obs": "*Precio por punto, mínimo 5 determinaciones",
+   "cubre": {
+    "por": "punto",
+    "porEnsayo": 5,
+    "segun": "Observación de la hoja: «Precio por punto, mínimo 5 determinaciones»"
+   }
   },
   {
    "id": "j13-021",
@@ -9433,7 +9689,11 @@
    },
    "precio": 140.0,
    "unidad": "ensayo",
-   "obs": "*Ensayo realizado sobre cata en pared con medida de microscopio"
+   "obs": "*Ensayo realizado sobre cata en pared con medida de microscopio",
+   "cubre": {
+    "determinaciones": 5,
+    "segun": "Nombre de la hoja: «(cinco determinaciones)»"
+   }
   },
   {
    "id": "j13-029",
@@ -9449,7 +9709,12 @@
    },
    "precio": 50.0,
    "unidad": "ensayo",
-   "obs": "*Precio por punto, mínimo 5 determinaciones"
+   "obs": "*Precio por punto, mínimo 5 determinaciones",
+   "cubre": {
+    "por": "punto",
+    "porEnsayo": 5,
+    "segun": "Observación de la hoja: «Precio por punto, mínimo 5 determinaciones»"
+   }
   },
   {
    "id": "j13-030",
@@ -9561,7 +9826,11 @@
    },
    "precio": 140.0,
    "unidad": "ensayo",
-   "obs": "*Ensayo realizado sobre cata en pared con medida de microscopio"
+   "obs": "*Ensayo realizado sobre cata en pared con medida de microscopio",
+   "cubre": {
+    "determinaciones": 5,
+    "segun": "Nombre de la hoja: «(cinco determinaciones)»"
+   }
   },
   {
    "id": "j13-038",
@@ -9577,7 +9846,12 @@
    },
    "precio": 200.55,
    "unidad": "ensayo",
-   "obs": "*Precio por punto, mínimo 5 determinaciones"
+   "obs": "*Precio por punto, mínimo 5 determinaciones",
+   "cubre": {
+    "determinaciones": 5,
+    "nota": "La observación dice «precio por punto, mínimo 5», pero 200,55 € es el precio del ensayo de adherencia por tracción completo (UNE-EN ISO 4624), no el de un punto: se toma como un ensayo de cinco determinaciones.",
+    "segun": "Nombre de la hoja: «(cinco determinaciones)»"
+   }
   },
   {
    "id": "j13-039",

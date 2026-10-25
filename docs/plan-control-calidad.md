@@ -214,8 +214,8 @@ CONFIRMAR», como en `rcd/tablas`.
 | `durabilidad` | Clases que piden penetración de agua y aire ocluido; profundidades de la tabla 57.5.7 | CodE 57.5.7 (K-PCC.30) | ídem |
 | `armaduras` | Series de diámetros, lotes de 30 t (barras, mallas) y 25 t (ferralla), tabla 59.2.4.3, 15 unidades | CodE arts. 58–59 (K-PCC.31–32; B A4) | ídem |
 | `ejecucion` | Tabla 63.1 (edificación), tabla 101.1 (acero), anejo 15 orientativo y su opción simplificada, anejo 17 (END por tipo de cordón) | CodE (K-PCC.33, K-PCC.35; B A5) | ídem |
-| `catalogo` | Ensayos: id, nombre, norma, nº por lote, tipo de lote (A–I de D §3.2), unidad, nivel 1/2/3 de la Junta, código DR, precio de referencia con fecha y lo que cubre (`{ probetas?, incluye? }`) | Hoja de la Junta V04 (D1), **corregida** donde la norma la contradice (§3 bis) | `junta-PCC-V04-2023` |
-| `enlace-bcca` | Ensayo del catálogo → código BCCA 2023 cap. 18 (o «sin código»), con lo que cubre ese precio (`{ probetas?, incluye?: ensayo[] }`, O4) | Tabla curada a mano sobre el emparejamiento de D §4.2; sin los «solo precio» falsos | `bcca-2023-V02` |
+| `catalogo` | Ensayos: id, nombre, norma, nº por lote, tipo de lote (A–I de D §3.2), unidad, nivel 1/2/3 de la Junta, código DR, precio de referencia con fecha y lo que cubre (`cubre`, §8) | Hoja de la Junta V04 (D1), **corregida** donde la norma la contradice (§3 bis) | `junta-PCC-V04-2023` |
+| `enlace-bcca` | Ensayo del catálogo → partida (o partidas, si el precio de la hoja es una suma) de la BCCA 2023 cap. 18, o «sin código», con lo que cubre ese precio (`cubre`, §8, O4) y las citas vetadas de su texto | Tabla curada a mano sobre el emparejamiento de D §4.2; sin los «solo precio» falsos | `bcca-2023-V02` |
 | `enlace-cype` | Ensayo → código del Generador de precios de CYPE | SIN CONFIRMAR hasta tener un .bc3 de CYPE con el capítulo de control (E0.3); vacía mientras tanto | — |
 | `familias` | Familia → cómo reconocerla (prefijos BCCA, Centro, CYPE; texto; unidad) → recepción documental, ejecución, obra terminada, ensayos del catálogo, obligatoriedad R/P/C y quién lo hace | A «Para la app» (a) + D §5, cada fila con su cita | Con la app |
 | `citas-prohibidas` | Listas de K-PCC.50–51, A (d), B (d), C (d), con lo que las sustituye; y la lista de lo que **no** se veta | Verificación | Con la app |
@@ -442,13 +442,21 @@ Todo en `core/pcc/estructura.ts`, con los algoritmos de B «Para la app» A2–A
   3. el que teclee el usuario;
   4. si no hay ninguno, pendiente.
   La fuente se ve en la vista y en el Word; sin coeficientes ocultos (K-PCC.67).
-- **La unidad manda** (K-PCC.60): la fila guarda en qué se mide el ensayo y el precio; una
-  compresión por amasada (BCCA, 2 probetas) y una por probeta (Centro) no se mezclan. Si no
-  casan, la fila sale pendiente con el motivo.
-- **Lo que cubre cada precio** (O4): el enlace y el catálogo dicen `{ probetas?, incluye? }`.
-  Si un precio cubre menos probetas de las exigidas, la fila cuenta los precios que hacen falta
-  y lo dice (2 probetas por precio y 4 exigidas → 2 precios por amasada), o queda pendiente con
-  el motivo; un ensayo incluido en otro precio (la consistencia en la toma) no se valora aparte.
+- **La unidad manda** (K-PCC.60): la fila guarda en qué se mide el ensayo y el precio
+  (`ensayo`, `visita`, `amasada`, `m`); una compresión por amasada (hoja y BCCA) y una por
+  probeta (Centro, «2 probetas») no se mezclan. Si no casan, la fila sale pendiente con el motivo.
+- **Lo que cubre cada precio** (O4): el catálogo y el enlace dicen `cubre: { por?, porEnsayo?,
+  probetas?, determinaciones?, puntos?, incluye?, nota?, segun }`, solo donde la fuente lo dice
+  (`segun`). `porEnsayo` son los precios que hacen falta por ensayo («precio por testigo, la
+  norma pide 10» → 10). Sin `cubre` en el enlace, el precio del banco cubre lo mismo que dice el
+  catálogo. Si un precio cubre menos probetas de las exigidas, la fila cuenta los precios que
+  hacen falta y lo dice (2 probetas por precio y 4 exigidas → 2 precios por amasada), o queda
+  pendiente con el motivo; un ensayo incluido en otro precio no se valora aparte. Lo que salió
+  al curar la BCCA (E0.5): ningún precio del capítulo 18 incluye otro ensayo del catálogo (la
+  consistencia va aparte, 18HHL00020) y la compresión no dice cuántas probetas cubre: hoja y BCCA
+  dan un precio por amasada controlada. Las diferencias reales están en la hoja (por punto, por
+  testigo) frente a la BCCA (por ensayo): desgaste por rozamiento, espesor de anodizado y
+  adherencia de pinturas.
 - **Sin regla de porcentaje.** El total sale también como % del PEM, como dato; ninguna norma
   fija un mínimo (K-PCC.5, K-PCC.42). **Base** (Q1, O1b): `pem()` de los costes directos sin el
   capítulo de control enlazado, con los mismos `rates`; el % no cambia al crear el capítulo y el
@@ -640,11 +648,25 @@ vuelve al plan lo que cambie el diseño.
      (`scripts/pcc/correcciones_junta.json`); `src/core/pcc/tablas.test.ts`. Las normas UNE
      sustituidas sin la vigente verificada quedan con `norma: null` y `normaPendiente`.
   2. `enlace-bcca.json` curado sobre el emparejamiento de D §4.2 (los 83 «solo precio», a mano).
+     **Hecho (2026-10-25):** la tabla curada es `scripts/pcc/enlace_bcca.json` y
+     `scripts/pcc/enlazar_bcca.py` la comprueba contra la BCCA (que no se versiona) y el catálogo:
+     478 ensayos con una partida, 4 compuestos (madera aserrada y laminada, exudación y volumen
+     de la lechada) y 58 sin código, con su motivo (acero para armar y activo, aire ocluido,
+     bovedillas, geotextiles, anclajes, química del acero…). 11 casan con otro precio y lo dicen.
+     El enlace guarda código, resumen y unidad del banco, no el precio (A1). 11 partidas llevan
+     en su texto citas vetadas (`citasVetadas`: «clases generales», MOPU, UNE de 1950, «mínimo 5
+     ensayos por desplazamiento»). Fuera del enlace quedan, por falsas, las parejas solo por
+     importe (210 €, 95 €, 500 €) y 18SPP00100 (inspección previa a soldaduras, a 0 € en la BCCA).
   3. Pedir al estudio un .bc3 de CYPE con el capítulo de control y otro exportado con pliego
      (`~L`), para `enlace-cype` y los prefijos CYPE sin confirmar (D §5).
   4. Los SIN CONFIRMAR que afectan al cálculo (γc del anejo 19; × 5 en plantas y semanas) se
      intentan cerrar leyendo el anejo 19 en imagen; si no se cierran, quedan como dice §5.3.
   5. `enlace-bcca` y `catalogo` con lo que cubre cada precio (`{ probetas?, incluye? }`, O4).
+     **Hecho (2026-10-25):** `cubre` en 64 filas del catálogo, sacado del nombre, de las
+     observaciones o de las fórmulas de la hoja (sección `cubre` de `correcciones_junta.json`,
+     con `segun`), y en 13 del enlace donde el texto de la BCCA dice otra cosa. Compresión y
+     consistencia del hormigón pasan a medirse por `amasada`; la cámara en red enterrada, por
+     `m`; la dureza Shore y el control de perfilería, por `visita`. Lo que cambia el diseño, en §8.
 - **Antes de E1:** el contrato de entradas del §4 (T1, hecho) y la clave de los grupos (T14,
   hecho: fila y dosificación).
 - **E1 · Motor de estructura** (`core/pcc/estructura.ts`, `hormigon.ts`, tablas de lotes,

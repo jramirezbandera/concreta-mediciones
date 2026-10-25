@@ -1,0 +1,6867 @@
+{
+ "id": "enlace-bcca",
+ "norma": "Base de Costes de la Construcción de Andalucía (BCCA), capítulo 18 «Control de calidad, pruebas y ensayos». Junta de Andalucía",
+ "edicion": "BCCA 2023, V02 (FIEBDC-3/2020)",
+ "version": "bcca-2023-V02",
+ "catalogo": "junta-PCC-V04-2023",
+ "verificacion": "docs/research/control-calidad/D-ejemplos.md §4.2; K-PCC.60, K-PCC.67, K-PCC.68",
+ "veredicto": "CURADO A MANO",
+ "reglas": {
+  "como": "partida: una partida de la BCCA; compuesto: el precio de la hoja es la suma de varias partidas; sinCodigo: la BCCA no tiene el ensayo (o lo tiene con un precio que no se sabe qué cubre) y queda el precio de la hoja o el que se teclee.",
+  "unidad": "En qué se mide el precio, la misma que la fila del catálogo (K-PCC.60). La `ud` de cada partida es la que escribe la BCCA, que a veces pone m² o m³ (el tamaño del lote) en ensayos que se pagan por ensayo: manda `unidad`.",
+  "cubre": "Solo cuando el texto de la BCCA dice algo distinto de la hoja o lo añade; si falta, el precio de la BCCA cubre lo mismo que dice el `cubre` del catálogo. `porEnsayo`: precios que hacen falta por cada ensayo.",
+  "precioComoLaHoja": "El precio de la BCCA 2023 es el de la hoja (±0,5 %); si no, `motivo` lo dice.",
+  "citasVetadas": "Citas derogadas o sustituidas en el texto de la partida (K-PCC.68): «Crear capítulo» no copia ese texto sin filtrar."
+ },
+ "cuenta": {
+  "partida": 478,
+  "sinCodigo": 58,
+  "compuesto": 4
+ },
+ "enlaces": [
+  {
+   "ensayo": "j02-007",
+   "partidas": [
+    {
+     "codigo": "18ALF00010",
+     "resumen": "Análisis granulométrico de suelos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-008",
+   "partidas": [
+    {
+     "codigo": "18ALF00020",
+     "resumen": "Límites de Atterberg",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-009",
+   "partidas": [
+    {
+     "codigo": "18ALQ00010",
+     "resumen": "Contenido de sales solubles en suelos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-010",
+   "partidas": [
+    {
+     "codigo": "18ALQ00020",
+     "resumen": "Contenido de materia orgánica en suelos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-011",
+   "partidas": [
+    {
+     "codigo": "18ALF00030",
+     "resumen": "Ensayo de hinchamiento libre de edómetro",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-012",
+   "partidas": [
+    {
+     "codigo": "18ALF00040",
+     "resumen": "Índice C.B.R de un suelo",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-013",
+   "partidas": [
+    {
+     "codigo": "18ALF00050",
+     "resumen": "Ensayo de compactación. Proctor normal",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-014",
+   "partidas": [
+    {
+     "codigo": "18ALF00060",
+     "resumen": "Ensayo colapso de suelos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-015",
+   "partidas": [
+    {
+     "codigo": "18ALQ00030",
+     "resumen": "Contenido de yeso en suelos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-017",
+   "partidas": [
+    {
+     "codigo": "18ALF00070",
+     "resumen": "Ensayo de compactación. Próctor modificado.",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-018",
+   "partidas": [
+    {
+     "codigo": "18ASS00010",
+     "resumen": "Densidad y humedad \"in situ\"",
+     "ud": "m2"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-021",
+   "partidas": [
+    {
+     "codigo": "18ALF00070",
+     "resumen": "Ensayo de compactación. Próctor modificado.",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-022",
+   "partidas": [
+    {
+     "codigo": "18ALF00010",
+     "resumen": "Análisis granulométrico de suelos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-023",
+   "partidas": [
+    {
+     "codigo": "18ALF00020",
+     "resumen": "Límites de Atterberg",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-024",
+   "partidas": [
+    {
+     "codigo": "18ALF00040",
+     "resumen": "Índice C.B.R de un suelo",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-025",
+   "partidas": [
+    {
+     "codigo": "18ALQ00020",
+     "resumen": "Contenido de materia orgánica en suelos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-026",
+   "partidas": [
+    {
+     "codigo": "18ALQ00010",
+     "resumen": "Contenido de sales solubles en suelos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-027",
+   "partidas": [
+    {
+     "codigo": "18ALF00050",
+     "resumen": "Ensayo de compactación. Proctor normal",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-028",
+   "partidas": [
+    {
+     "codigo": "18ALQ00030",
+     "resumen": "Contenido de yeso en suelos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-029",
+   "partidas": [
+    {
+     "codigo": "18ALF00030",
+     "resumen": "Ensayo de hinchamiento libre de edómetro",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-030",
+   "partidas": [
+    {
+     "codigo": "18ALF00060",
+     "resumen": "Ensayo colapso de suelos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-032",
+   "partidas": [
+    {
+     "codigo": "18ALF00070",
+     "resumen": "Ensayo de compactación. Próctor modificado.",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-033",
+   "partidas": [
+    {
+     "codigo": "18ALF00010",
+     "resumen": "Análisis granulométrico de suelos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-034",
+   "partidas": [
+    {
+     "codigo": "18ALF00020",
+     "resumen": "Límites de Atterberg",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-035",
+   "partidas": [
+    {
+     "codigo": "18ALF00040",
+     "resumen": "Índice C.B.R de un suelo",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-036",
+   "partidas": [
+    {
+     "codigo": "18ALQ00020",
+     "resumen": "Contenido de materia orgánica en suelos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-037",
+   "partidas": [
+    {
+     "codigo": "18ALQ00010",
+     "resumen": "Contenido de sales solubles en suelos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-038",
+   "partidas": [
+    {
+     "codigo": "18ALQ00070",
+     "resumen": "Sulfatos solubles en agua en áridos reciclados",
+     "ud": "m³"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-039",
+   "partidas": [
+    {
+     "codigo": "18ALF00050",
+     "resumen": "Ensayo de compactación. Proctor normal",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-040",
+   "partidas": [
+    {
+     "codigo": "18ALQ00030",
+     "resumen": "Contenido de yeso en suelos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-041",
+   "partidas": [
+    {
+     "codigo": "18ALF00030",
+     "resumen": "Ensayo de hinchamiento libre de edómetro",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-042",
+   "partidas": [
+    {
+     "codigo": "18ALF00060",
+     "resumen": "Ensayo colapso de suelos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-044",
+   "partidas": [
+    {
+     "codigo": "18ASS00010",
+     "resumen": "Densidad y humedad \"in situ\"",
+     "ud": "m2"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-045",
+   "partidas": [
+    {
+     "codigo": "18ASS00020",
+     "resumen": "Carga con placa estática",
+     "ud": "m²"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-048",
+   "partidas": [
+    {
+     "codigo": "18ALF00010",
+     "resumen": "Análisis granulométrico de suelos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-049",
+   "partidas": [
+    {
+     "codigo": "18ALF00020",
+     "resumen": "Límites de Atterberg",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-050",
+   "partidas": [
+    {
+     "codigo": "18ALQ00020",
+     "resumen": "Contenido de materia orgánica en suelos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-051",
+   "partidas": [
+    {
+     "codigo": "18ALQ00050",
+     "resumen": "Contenido de sulfatos solubles en suelos",
+     "ud": "m³"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-052",
+   "partidas": [
+    {
+     "codigo": "18ALQ00040",
+     "resumen": "Contenido de carbonatos",
+     "ud": "m3"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-053",
+   "partidas": [
+    {
+     "codigo": "18ALF00050",
+     "resumen": "Ensayo de compactación. Proctor normal",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-054",
+   "partidas": [
+    {
+     "codigo": "18ALF00030",
+     "resumen": "Ensayo de hinchamiento libre de edómetro",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-055",
+   "partidas": [
+    {
+     "codigo": "18ALF00060",
+     "resumen": "Ensayo colapso de suelos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-056",
+   "partidas": [
+    {
+     "codigo": "18ALQ00060",
+     "resumen": "PH en suelos",
+     "ud": "m³"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-058",
+   "partidas": [
+    {
+     "codigo": "18ALF00020",
+     "resumen": "Límites de Atterberg",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-059",
+   "partidas": [
+    {
+     "codigo": "18ALF00070",
+     "resumen": "Ensayo de compactación. Próctor modificado.",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-060",
+   "partidas": [
+    {
+     "codigo": "18ALF00040",
+     "resumen": "Índice C.B.R de un suelo",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-061",
+   "partidas": [
+    {
+     "codigo": "18ALQ00060",
+     "resumen": "PH en suelos",
+     "ud": "m³"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-062",
+   "partidas": [
+    {
+     "codigo": "18ALF00030",
+     "resumen": "Ensayo de hinchamiento libre de edómetro",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-063",
+   "partidas": [
+    {
+     "codigo": "18ALF00060",
+     "resumen": "Ensayo colapso de suelos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-065",
+   "partidas": [
+    {
+     "codigo": "18ALQ00060",
+     "resumen": "PH en suelos",
+     "ud": "m³"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-066",
+   "partidas": [
+    {
+     "codigo": "18ALF00080",
+     "resumen": "Determinación del índice C.B.R. a 1, 4 y 7 días",
+     "ud": "m³"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-068",
+   "partidas": [
+    {
+     "codigo": "18ASS00010",
+     "resumen": "Densidad y humedad \"in situ\"",
+     "ud": "m2"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-069",
+   "partidas": [
+    {
+     "codigo": "18ASS00020",
+     "resumen": "Carga con placa estática",
+     "ud": "m²"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-072",
+   "partidas": [
+    {
+     "codigo": "18ALF00010",
+     "resumen": "Análisis granulométrico de suelos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-073",
+   "partidas": [
+    {
+     "codigo": "18ALF00020",
+     "resumen": "Límites de Atterberg",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-074",
+   "partidas": [
+    {
+     "codigo": "18ALQ00020",
+     "resumen": "Contenido de materia orgánica en suelos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-075",
+   "partidas": [
+    {
+     "codigo": "18ALQ00050",
+     "resumen": "Contenido de sulfatos solubles en suelos",
+     "ud": "m³"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-076",
+   "partidas": [
+    {
+     "codigo": "18ALF00050",
+     "resumen": "Ensayo de compactación. Proctor normal",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-077",
+   "partidas": [
+    {
+     "codigo": "18ALF00030",
+     "resumen": "Ensayo de hinchamiento libre de edómetro",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-078",
+   "partidas": [
+    {
+     "codigo": "18ALF00060",
+     "resumen": "Ensayo colapso de suelos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-080",
+   "partidas": [
+    {
+     "codigo": "18ALF00070",
+     "resumen": "Ensayo de compactación. Próctor modificado.",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-081",
+   "partidas": [
+    {
+     "codigo": "18ALF00080",
+     "resumen": "Determinación del índice C.B.R. a 1, 4 y 7 días",
+     "ud": "m³"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-082",
+   "partidas": [
+    {
+     "codigo": "18ALF00090",
+     "resumen": "Resistencia a compresión simple (7días)",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "motivo": "Estudio de estabilización: «un ensayo por cada tipo de suelo con al menos 3 porcentajes de cemento», como 18ALF00090; 18ALF00100 es el de control (j02-088)."
+  },
+  {
+   "ensayo": "j02-083",
+   "partidas": [
+    {
+     "codigo": "18ALF00110",
+     "resumen": "Determinación de los plazos de trabajabilidad",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-084",
+   "partidas": [
+    {
+     "codigo": "18ALF00030",
+     "resumen": "Ensayo de hinchamiento libre de edómetro",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-085",
+   "partidas": [
+    {
+     "codigo": "18ALF00060",
+     "resumen": "Ensayo colapso de suelos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-087",
+   "partidas": [
+    {
+     "codigo": "18ALF00080",
+     "resumen": "Determinación del índice C.B.R. a 1, 4 y 7 días",
+     "ud": "m³"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-088",
+   "partidas": [
+    {
+     "codigo": "18ALF00100",
+     "resumen": "Resistencia a compresión simple (7 días) sobre 3 probetas",
+     "ud": "m³"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-090",
+   "partidas": [
+    {
+     "codigo": "18ASS00010",
+     "resumen": "Densidad y humedad \"in situ\"",
+     "ud": "m2"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-091",
+   "partidas": [
+    {
+     "codigo": "18ASS00020",
+     "resumen": "Carga con placa estática",
+     "ud": "m²"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-093",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene ensayos de geotextiles (D §4.2)."
+  },
+  {
+   "ensayo": "j02-095",
+   "partidas": [
+    {
+     "codigo": "18CEE00010",
+     "resumen": "Muestreo y reducción de muestras",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-096",
+   "partidas": [
+    {
+     "codigo": "18CEE00020",
+     "resumen": "Análisis granulométrico de material para escollera",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-097",
+   "partidas": [
+    {
+     "codigo": "18CEE00030",
+     "resumen": "Forma particulas en escollera",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-098",
+   "partidas": [
+    {
+     "codigo": "18CEE00040",
+     "resumen": "Resistencia frente a disoluciones de sulfato magnésico",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-099",
+   "partidas": [
+    {
+     "codigo": "18CEE00050",
+     "resumen": "Coeficiente de desgaste Los Ángeles",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "motivo": "Escollera: la BCCA tiene Los Ángeles en escolleras (18CEE00050) y en áridos (18ALF00160); esta fila es la de escolleras."
+  },
+  {
+   "ensayo": "j02-100",
+   "partidas": [
+    {
+     "codigo": "18CEE00060",
+     "resumen": "Determinación de la densidad de partículas y absorción de agua",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-101",
+   "partidas": [
+    {
+     "codigo": "18CEE00070",
+     "resumen": "Resistencia a compresión uniaxial (incluyendo extracción y tallado del testigo)",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": false,
+   "motivo": "Mismo ensayo y norma; la BCCA da 62,00 € y la hoja 62,37 €."
+  },
+  {
+   "ensayo": "j02-102",
+   "partidas": [
+    {
+     "codigo": "18CEE00080",
+     "resumen": "Estabilidad frente a la acción de desmoronamiento en agua",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-103",
+   "partidas": [
+    {
+     "codigo": "18CEE00090",
+     "resumen": "Estabilidad frente a la acción de ciclos humedad sequedad",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-106",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA solo tiene la granulometría de suelos (18ALF00010, UNE-EN ISO 17892-4), no la de áridos (UNE-EN 933-1)."
+  },
+  {
+   "ensayo": "j02-107",
+   "partidas": [
+    {
+     "codigo": "18ALF00020",
+     "resumen": "Límites de Atterberg",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-108",
+   "partidas": [
+    {
+     "codigo": "18ALF00070",
+     "resumen": "Ensayo de compactación. Próctor modificado.",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-109",
+   "partidas": [
+    {
+     "codigo": "18ALF00160",
+     "resumen": "Coeficiente de desgaste Los Ángeles",
+     "ud": "m³"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "motivo": "Zahorras: Los Ángeles de áridos (18ALF00160), no el de escolleras (18CEE00050)."
+  },
+  {
+   "ensayo": "j02-110",
+   "partidas": [
+    {
+     "codigo": "18ALF00130",
+     "resumen": "Equivalente de arena de áridos (SE4)",
+     "ud": "m³"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-111",
+   "partidas": [
+    {
+     "codigo": "18ALF00140",
+     "resumen": "Índice de lajas",
+     "ud": "m³"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-112",
+   "partidas": [
+    {
+     "codigo": "18ALF00150",
+     "resumen": "Proporción de caras de fractura de las partículas del árido grueso",
+     "ud": "m³"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-113",
+   "partidas": [
+    {
+     "codigo": "18ALQ00080",
+     "resumen": "Contenido total en azufre en áridos",
+     "ud": "m³"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-114",
+   "partidas": [
+    {
+     "codigo": "18ALQ00090",
+     "resumen": "Azul metileno en áridos",
+     "ud": "m³"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-116",
+   "partidas": [
+    {
+     "codigo": "18ALF00120",
+     "resumen": "Clasificación de los componentes en áridos gruesos",
+     "ud": "m³"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-117",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA solo tiene la granulometría de suelos (18ALF00010, UNE-EN ISO 17892-4), no la de áridos (UNE-EN 933-1)."
+  },
+  {
+   "ensayo": "j02-118",
+   "partidas": [
+    {
+     "codigo": "18ALF00070",
+     "resumen": "Ensayo de compactación. Próctor modificado.",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-119",
+   "partidas": [
+    {
+     "codigo": "18ALF00130",
+     "resumen": "Equivalente de arena de áridos (SE4)",
+     "ud": "m³"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-120",
+   "partidas": [
+    {
+     "codigo": "18ALF00020",
+     "resumen": "Límites de Atterberg",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-121",
+   "partidas": [
+    {
+     "codigo": "18ALF00140",
+     "resumen": "Índice de lajas",
+     "ud": "m³"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-122",
+   "partidas": [
+    {
+     "codigo": "18ALF00150",
+     "resumen": "Proporción de caras de fractura de las partículas del árido grueso",
+     "ud": "m³"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-123",
+   "partidas": [
+    {
+     "codigo": "18ALF00160",
+     "resumen": "Coeficiente de desgaste Los Ángeles",
+     "ud": "m³"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "motivo": "Zahorras: Los Ángeles de áridos (18ALF00160), no el de escolleras (18CEE00050)."
+  },
+  {
+   "ensayo": "j02-124",
+   "partidas": [
+    {
+     "codigo": "18ALQ00070",
+     "resumen": "Sulfatos solubles en agua en áridos reciclados",
+     "ud": "m³"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-125",
+   "partidas": [
+    {
+     "codigo": "18ALQ00080",
+     "resumen": "Contenido total en azufre en áridos",
+     "ud": "m³"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-126",
+   "partidas": [
+    {
+     "codigo": "18ALQ00090",
+     "resumen": "Azul metileno en áridos",
+     "ud": "m³"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-128",
+   "partidas": [
+    {
+     "codigo": "18ASS00010",
+     "resumen": "Densidad y humedad \"in situ\"",
+     "ud": "m2"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j02-129",
+   "partidas": [
+    {
+     "codigo": "18ASS00020",
+     "resumen": "Carga con placa estática",
+     "ud": "m²"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-008",
+   "partidas": [
+    {
+     "codigo": "18HHL00010",
+     "resumen": "Resistencia a compresión en hormigón endurecido",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "amasada",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-009",
+   "partidas": [
+    {
+     "codigo": "18HHL00020",
+     "resumen": "Ensayo de asentamiento en hormigón endurecido",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "amasada",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "motivo": "El resumen de la BCCA dice «hormigón endurecido», pero el ensayo (UNE-EN 12350-2) es de hormigón fresco, como dice su texto."
+  },
+  {
+   "ensayo": "j03-011",
+   "partidas": [
+    {
+     "codigo": "18HHI00040",
+     "resumen": "Extracción de testigos, examen y rotura a compresión",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-012",
+   "partidas": [
+    {
+     "codigo": "18HHI00020",
+     "resumen": "Determinación del índice de rebote con el esclerómetro",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-013",
+   "partidas": [
+    {
+     "codigo": "18HHI00030",
+     "resumen": "Determinación de la velocidad de los impulsos ultrasónicos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-014",
+   "partidas": [
+    {
+     "codigo": "18HHI00010",
+     "resumen": "Realización de ensayos estáticos de puesta en carga sobre forjados",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-017",
+   "partidas": [
+    {
+     "codigo": "18HHL00010",
+     "resumen": "Resistencia a compresión en hormigón endurecido",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-018",
+   "partidas": [
+    {
+     "codigo": "18HHI00050",
+     "resumen": "Ensayo fluidez. Escurrimiento.",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-019",
+   "partidas": [
+    {
+     "codigo": "18HHI00060",
+     "resumen": "Ensayo tiempo de flujo. Embudo en V.",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-020",
+   "partidas": [
+    {
+     "codigo": "18HHI00070",
+     "resumen": "Ensayo de fluidez en presencia de barras. Caja en L.",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-021",
+   "partidas": [
+    {
+     "codigo": "18HHI00080",
+     "resumen": "Ensayo de fluidez en presencia de barras. Escurrimiento con anillo japonés.",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-023",
+   "partidas": [
+    {
+     "codigo": "18HHL00010",
+     "resumen": "Resistencia a compresión en hormigón endurecido",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "amasada",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-024",
+   "partidas": [
+    {
+     "codigo": "18HHI00050",
+     "resumen": "Ensayo fluidez. Escurrimiento.",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "amasada",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-025",
+   "partidas": [
+    {
+     "codigo": "18HHI00080",
+     "resumen": "Ensayo de fluidez en presencia de barras. Escurrimiento con anillo japonés.",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-027",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene el contenido de aire del hormigón fresco (UNE-EN 12350-7); 18ORR00070 es el del mortero (D §4.2)."
+  },
+  {
+   "ensayo": "j03-028",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene el contenido de aire del hormigón fresco (UNE-EN 12350-7); 18ORR00070 es el del mortero (D §4.2)."
+  },
+  {
+   "ensayo": "j03-029",
+   "partidas": [
+    {
+     "codigo": "18HHL00030",
+     "resumen": "Ensayo de profundidad de penetración de agua bajo presión en hormigón endurecido",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "citasVetadas": [
+    "18HHL00030: clases generales"
+   ],
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-030",
+   "partidas": [
+    {
+     "codigo": "18HHL00030",
+     "resumen": "Ensayo de profundidad de penetración de agua bajo presión en hormigón endurecido",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "citasVetadas": [
+    "18HHL00030: clases generales"
+   ],
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-033",
+   "partidas": [
+    {
+     "codigo": "18CMM00010",
+     "resumen": "Resistencia a compresión",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": false,
+   "motivo": "La BCCA lo da para lechadas de tendones de pretensado (UNE-EN 445), que es la norma de las dos filas; 49,40 € frente a 48,40 € de la hoja."
+  },
+  {
+   "ensayo": "j03-034",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene la densidad de la lechada; 18CLL00010 es la de lodos bentoníticos, con el mismo precio (D §4.2)."
+  },
+  {
+   "ensayo": "j03-035",
+   "partidas": [
+    {
+     "codigo": "18CMM00020",
+     "resumen": "Fluidez de lechada de inyección",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": false,
+   "motivo": "Mismo ensayo (fluidez de la lechada, UNE-EN 445); la BCCA da 49,83 € y la hoja 33,71 €."
+  },
+  {
+   "ensayo": "j03-036",
+   "partidas": [
+    {
+     "codigo": "18CMM00030",
+     "resumen": "Exudación de lechada de inyección",
+     "ud": "ud"
+    },
+    {
+     "codigo": "18CMM00040",
+     "resumen": "Reducción de volumen",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "compuesto",
+   "precioComoLaHoja": false,
+   "motivo": "La hoja da exudación y variación de volumen en un ensayo (650 €); la BCCA los parte en exudación (52,58 €) y reducción de volumen (90,28 €), los dos por UNE-EN 445."
+  },
+  {
+   "ensayo": "j03-038",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: 18SPP00060 es la tracción de perfiles de estructuras de más de 100 t, no la de los tubos de micropilote (API 5CT); mismo precio por casualidad."
+  },
+  {
+   "ensayo": "j03-039",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene este ensayo; la partida de mismo precio es otro ensayo (D §4.2, «solo precio» falso)."
+  },
+  {
+   "ensayo": "j03-040",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene la geometría de los tubos de micropilote (API 5CT)."
+  },
+  {
+   "ensayo": "j03-041",
+   "partidas": [],
+   "unidad": "visita",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene la visita de inspección de acopios de tubos."
+  },
+  {
+   "ensayo": "j03-044",
+   "partidas": [
+    {
+     "codigo": "18CPP00010",
+     "resumen": "Comprobación integridad estructural. Ensayo sónico de impedencia mecánica con martillo de mano.",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-048",
+   "partidas": [
+    {
+     "codigo": "18HHL00020",
+     "resumen": "Ensayo de asentamiento en hormigón endurecido",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "amasada",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "motivo": "El resumen de la BCCA dice «hormigón endurecido», pero el ensayo (UNE-EN 12350-2) es de hormigón fresco, como dice su texto."
+  },
+  {
+   "ensayo": "j03-049",
+   "partidas": [
+    {
+     "codigo": "18HHL00010",
+     "resumen": "Resistencia a compresión en hormigón endurecido",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "amasada",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-051",
+   "partidas": [
+    {
+     "codigo": "18HHL00020",
+     "resumen": "Ensayo de asentamiento en hormigón endurecido",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "amasada",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "motivo": "El resumen de la BCCA dice «hormigón endurecido», pero el ensayo (UNE-EN 12350-2) es de hormigón fresco, como dice su texto."
+  },
+  {
+   "ensayo": "j03-053",
+   "partidas": [
+    {
+     "codigo": "18HHL00020",
+     "resumen": "Ensayo de asentamiento en hormigón endurecido",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "amasada",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "motivo": "El resumen de la BCCA dice «hormigón endurecido», pero el ensayo (UNE-EN 12350-2) es de hormigón fresco, como dice su texto."
+  },
+  {
+   "ensayo": "j03-054",
+   "partidas": [
+    {
+     "codigo": "18HHL00010",
+     "resumen": "Resistencia a compresión en hormigón endurecido",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "amasada",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-056",
+   "partidas": [
+    {
+     "codigo": "18HHL00020",
+     "resumen": "Ensayo de asentamiento en hormigón endurecido",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "amasada",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "motivo": "El resumen de la BCCA dice «hormigón endurecido», pero el ensayo (UNE-EN 12350-2) es de hormigón fresco, como dice su texto."
+  },
+  {
+   "ensayo": "j03-057",
+   "partidas": [
+    {
+     "codigo": "18HHL00010",
+     "resumen": "Resistencia a compresión en hormigón endurecido",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "amasada",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-059",
+   "partidas": [
+    {
+     "codigo": "18CPP00010",
+     "resumen": "Comprobación integridad estructural. Ensayo sónico de impedencia mecánica con martillo de mano.",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-060",
+   "partidas": [
+    {
+     "codigo": "18CPI00010",
+     "resumen": "Ensayo transparencia sónica en pilote instrumentado con 3 tubos de acero.",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "cubre": {
+    "determinaciones": 3,
+    "nota": "Tres diagrafías por pilote.",
+    "segun": "Texto de 18CPI00010"
+   }
+  },
+  {
+   "ensayo": "j03-061",
+   "partidas": [
+    {
+     "codigo": "18CPI00020",
+     "resumen": "Ensayo transparencia sónica en pilote instrumentado con 4 tubos de acero.",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-062",
+   "partidas": [
+    {
+     "codigo": "18CPI00030",
+     "resumen": "Ensayo transparencia sónica en pilote instrumentado con más de 4 tubos de acero.",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-064",
+   "partidas": [
+    {
+     "codigo": "18HHL00020",
+     "resumen": "Ensayo de asentamiento en hormigón endurecido",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "amasada",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "motivo": "El resumen de la BCCA dice «hormigón endurecido», pero el ensayo (UNE-EN 12350-2) es de hormigón fresco, como dice su texto."
+  },
+  {
+   "ensayo": "j03-065",
+   "partidas": [
+    {
+     "codigo": "18HHL00010",
+     "resumen": "Resistencia a compresión en hormigón endurecido",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "amasada",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-069",
+   "partidas": [
+    {
+     "codigo": "18HHL00020",
+     "resumen": "Ensayo de asentamiento en hormigón endurecido",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "amasada",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "motivo": "El resumen de la BCCA dice «hormigón endurecido», pero el ensayo (UNE-EN 12350-2) es de hormigón fresco, como dice su texto."
+  },
+  {
+   "ensayo": "j03-071",
+   "partidas": [
+    {
+     "codigo": "18HHL00020",
+     "resumen": "Ensayo de asentamiento en hormigón endurecido",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "amasada",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "motivo": "El resumen de la BCCA dice «hormigón endurecido», pero el ensayo (UNE-EN 12350-2) es de hormigón fresco, como dice su texto."
+  },
+  {
+   "ensayo": "j03-072",
+   "partidas": [
+    {
+     "codigo": "18HHL00010",
+     "resumen": "Resistencia a compresión en hormigón endurecido",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "amasada",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-074",
+   "partidas": [
+    {
+     "codigo": "18CAA00010",
+     "resumen": "Ensayo de transparecia sónica en muro pantalla.",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-076",
+   "partidas": [
+    {
+     "codigo": "18CLL00010",
+     "resumen": "Densidad de lodos bentoníticos o suspensiones poliméricas",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "cubre": {
+    "determinaciones": 2,
+    "nota": "Uno sobre lodo fresco y otro sobre lodo reutilizado.",
+    "segun": "Texto de 18CLL00010-60"
+   }
+  },
+  {
+   "ensayo": "j03-077",
+   "partidas": [
+    {
+     "codigo": "18CLL00020",
+     "resumen": "Viscosidad en cono de Marsh en lodos bentonícos o suspensiones poliméricas",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "cubre": {
+    "determinaciones": 2,
+    "nota": "Uno sobre lodo fresco y otro sobre lodo reutilizado.",
+    "segun": "Texto de 18CLL00010-60"
+   }
+  },
+  {
+   "ensayo": "j03-078",
+   "partidas": [
+    {
+     "codigo": "18CLL00030",
+     "resumen": "Contenido de arena en volumen en lodos bentoníticos o suspensiones polimércias",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "cubre": {
+    "determinaciones": 2,
+    "nota": "Uno sobre lodo fresco y otro sobre lodo reutilizado.",
+    "segun": "Texto de 18CLL00010-60"
+   }
+  },
+  {
+   "ensayo": "j03-079",
+   "partidas": [
+    {
+     "codigo": "18CLL00040",
+     "resumen": "Determinación de pH en lodos bentoníticos o suspensiones poliméricas",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "cubre": {
+    "determinaciones": 2,
+    "nota": "Uno sobre lodo fresco y otro sobre lodo reutilizado.",
+    "segun": "Texto de 18CLL00010-60"
+   }
+  },
+  {
+   "ensayo": "j03-080",
+   "partidas": [
+    {
+     "codigo": "18CLL00050",
+     "resumen": "Ensayo de filtrado en lodos bentoníticos o suspensiones poliméricas",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "cubre": {
+    "determinaciones": 2,
+    "nota": "Uno sobre lodo fresco y otro sobre lodo reutilizado.",
+    "segun": "Texto de 18CLL00010-60"
+   }
+  },
+  {
+   "ensayo": "j03-081",
+   "partidas": [
+    {
+     "codigo": "18CLL00060",
+     "resumen": "Ensayo Cake en lodos bentoníticos o suspensiones poliméricas",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "cubre": {
+    "determinaciones": 2,
+    "nota": "Uno sobre lodo fresco y otro sobre lodo reutilizado.",
+    "segun": "Texto de 18CLL00010-60"
+   }
+  },
+  {
+   "ensayo": "j03-083",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene ensayos de barras ni de mallas de acero para armar (D §4.2, K-PCC.31–32); partida propia de la app."
+  },
+  {
+   "ensayo": "j03-084",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene ensayos de barras ni de mallas de acero para armar (D §4.2, K-PCC.31–32); partida propia de la app."
+  },
+  {
+   "ensayo": "j03-085",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene ensayos de barras ni de mallas de acero para armar (D §4.2, K-PCC.31–32); partida propia de la app."
+  },
+  {
+   "ensayo": "j03-087",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene ensayos de barras ni de mallas de acero para armar (D §4.2, K-PCC.31–32); partida propia de la app."
+  },
+  {
+   "ensayo": "j03-088",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene ensayos de barras ni de mallas de acero para armar (D §4.2, K-PCC.31–32); partida propia de la app."
+  },
+  {
+   "ensayo": "j03-089",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene ensayos de barras ni de mallas de acero para armar (D §4.2, K-PCC.31–32); partida propia de la app."
+  },
+  {
+   "ensayo": "j03-092",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene ensayos de acero para armaduras activas."
+  },
+  {
+   "ensayo": "j03-093",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene ensayos de acero para armaduras activas."
+  },
+  {
+   "ensayo": "j03-095",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene ensayos de acero para armaduras activas."
+  },
+  {
+   "ensayo": "j03-096",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene ensayos de acero para armaduras activas."
+  },
+  {
+   "ensayo": "j03-098",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene ensayos de acero para armaduras activas."
+  },
+  {
+   "ensayo": "j03-099",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene ensayos de acero para armaduras activas."
+  },
+  {
+   "ensayo": "j03-101",
+   "partidas": [
+    {
+     "codigo": "18CMM00010",
+     "resumen": "Resistencia a compresión",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": false,
+   "motivo": "La BCCA lo da para lechadas de tendones de pretensado (UNE-EN 445), que es la norma de las dos filas; 49,40 € frente a 48,40 € de la hoja."
+  },
+  {
+   "ensayo": "j03-102",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene la densidad de la lechada; 18CLL00010 es la de lodos bentoníticos, con el mismo precio (D §4.2)."
+  },
+  {
+   "ensayo": "j03-103",
+   "partidas": [
+    {
+     "codigo": "18CMM00020",
+     "resumen": "Fluidez de lechada de inyección",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": false,
+   "motivo": "Mismo ensayo (fluidez de la lechada, UNE-EN 445); la BCCA da 49,83 € y la hoja 33,71 €."
+  },
+  {
+   "ensayo": "j03-104",
+   "partidas": [
+    {
+     "codigo": "18CMM00030",
+     "resumen": "Exudación de lechada de inyección",
+     "ud": "ud"
+    },
+    {
+     "codigo": "18CMM00040",
+     "resumen": "Reducción de volumen",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "compuesto",
+   "precioComoLaHoja": false,
+   "motivo": "La hoja da exudación y variación de volumen en un ensayo (650 €); la BCCA los parte en exudación (52,58 €) y reducción de volumen (90,28 €), los dos por UNE-EN 445."
+  },
+  {
+   "ensayo": "j03-106",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene la puesta en carga de anclajes (D §4.2)."
+  },
+  {
+   "ensayo": "j03-107",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene la puesta en carga de anclajes; 18EEF00020 (compresión de muros de fábrica) tiene el mismo precio (D §4.2, «solo precio» falso)."
+  },
+  {
+   "ensayo": "j03-110",
+   "partidas": [
+    {
+     "codigo": "18SPP00010",
+     "resumen": "Ensayo de carbono total en perfiles de acero",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "citasVetadas": [
+    "18SPP00010: UNE 7014:19"
+   ],
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-111",
+   "partidas": [
+    {
+     "codigo": "18SPP00020",
+     "resumen": "Ensayo de cuantía de fósforo en perfiles de acero",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-112",
+   "partidas": [
+    {
+     "codigo": "18SPP00030",
+     "resumen": "Ensayo de cuantía de azufre en perfiles de acero",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "citasVetadas": [
+    "18SPP00030: UNE 7019:19"
+   ],
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-113",
+   "partidas": [
+    {
+     "codigo": "18SPP00040",
+     "resumen": "Ensayo de cuantia de manganeso en perfiles de acero",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "citasVetadas": [
+    "18SPP00040: UNE 7027:19"
+   ],
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-114",
+   "partidas": [
+    {
+     "codigo": "18SPP00050",
+     "resumen": "Ensayo de cuantía de nitrógeno por método espectofotométrico",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-115",
+   "partidas": [
+    {
+     "codigo": "18SPP00060",
+     "resumen": "Ensayo de tracción en perfiles metálicos",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-116",
+   "partidas": [
+    {
+     "codigo": "18SPP00070",
+     "resumen": "Ensayo de doblado sobre probetas",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-117",
+   "partidas": [
+    {
+     "codigo": "18SPP00080",
+     "resumen": "Ensayo de flexión por choque",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-118",
+   "partidas": [
+    {
+     "codigo": "18SPP00090",
+     "resumen": "Ensayo de espesor de capa de pintura en perfiles de acero",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "motivo": "El resumen de la BCCA dice «espesor de capa de pintura», pero su texto cita la UNE-EN 10029 (tolerancias de chapa), como la hoja, y el precio es el mismo."
+  },
+  {
+   "ensayo": "j03-119",
+   "partidas": [
+    {
+     "codigo": "18SPP00060",
+     "resumen": "Ensayo de tracción en perfiles metálicos",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "motivo": "Mismo ensayo (tracción con mecanizado de probetas); la BCCA no separa el acero inoxidable."
+  },
+  {
+   "ensayo": "j03-120",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene este ensayo; la partida de mismo precio es otro ensayo (D §4.2, «solo precio» falso)."
+  },
+  {
+   "ensayo": "j03-122",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: exigencia documental, sin precio."
+  },
+  {
+   "ensayo": "j03-124",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: exigencia documental, sin precio."
+  },
+  {
+   "ensayo": "j03-125",
+   "partidas": [],
+   "unidad": "visita",
+   "como": "sinCodigo",
+   "motivo": "Sin código: 18SPP00100 es esta inspección, pero la BCCA la da a 0 €; queda el precio de la hoja."
+  },
+  {
+   "ensayo": "j03-127",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: exigencia documental, sin precio."
+  },
+  {
+   "ensayo": "j03-128",
+   "partidas": [],
+   "unidad": "visita",
+   "como": "sinCodigo",
+   "motivo": "Sin código: 18SPP00100 es esta inspección, pero la BCCA la da a 0 €; queda el precio de la hoja."
+  },
+  {
+   "ensayo": "j03-130",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: exigencia documental, sin precio."
+  },
+  {
+   "ensayo": "j03-131",
+   "partidas": [
+    {
+     "codigo": "18SSA00010",
+     "resumen": "Inspección por líquidos penetrantes",
+     "ud": "u"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-132",
+   "partidas": [
+    {
+     "codigo": "18SSA00020",
+     "resumen": "Inspección por partículas magnéticas",
+     "ud": "u"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-133",
+   "partidas": [
+    {
+     "codigo": "18SSA00030",
+     "resumen": "Inspección visual y control geométrico",
+     "ud": "u"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-135",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: exigencia documental, sin precio."
+  },
+  {
+   "ensayo": "j03-136",
+   "partidas": [
+    {
+     "codigo": "18SST00010",
+     "resumen": "Ensayo por ultrasonido de soldadura",
+     "ud": "u"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": false,
+   "motivo": "Mismo ensayo y la misma media jornada con un mínimo de 15 unidades; la BCCA da 392,01 € y la hoja 523 €."
+  },
+  {
+   "ensayo": "j03-137",
+   "partidas": [
+    {
+     "codigo": "18SST00020",
+     "resumen": "Ensayo radiográfico de soldadura",
+     "ud": "u"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": false,
+   "motivo": "Mismo ensayo y la misma media jornada; la BCCA da 392,01 € y la hoja 600 €."
+  },
+  {
+   "ensayo": "j03-139",
+   "partidas": [
+    {
+     "codigo": "18SSC00010",
+     "resumen": "Inspección visual sobre pernos conectores",
+     "ud": "u"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-140",
+   "partidas": [
+    {
+     "codigo": "18SSC00020",
+     "resumen": "Ensayo sónico sobre pernos conectores",
+     "ud": "u"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-141",
+   "partidas": [
+    {
+     "codigo": "18SSC00030",
+     "resumen": "Ensayo de doblado a 15º sobre pernos conectores",
+     "ud": "u"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-143",
+   "partidas": [
+    {
+     "codigo": "18SEE00010",
+     "resumen": "Inspección de despieces",
+     "ud": "u"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-144",
+   "partidas": [],
+   "unidad": "visita",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene el control topográfico de conjuntos terminados."
+  },
+  {
+   "ensayo": "j03-148",
+   "partidas": [
+    {
+     "codigo": "18SCS00010",
+     "resumen": "Inspección visual del chorreado o granallado",
+     "ud": ""
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-150",
+   "partidas": [
+    {
+     "codigo": "18SCA00010",
+     "resumen": "Control del micraje de la protección anticorrosiva",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "citasVetadas": [
+    "18SCA00010: mínimo 5 ensayos por desplazamiento"
+   ],
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-151",
+   "partidas": [
+    {
+     "codigo": "18PMC00010",
+     "resumen": "Ensayo de adherencia por corte",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-152",
+   "partidas": [
+    {
+     "codigo": "18PMC00020",
+     "resumen": "Ensayo de adherencia por tracción",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-154",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: 18SCG00010 es esta inspección, pero a 392,01 € y sin unidad (precio de media jornada) frente a 48,25 € por ensayo de la hoja; no se sabe qué cubre."
+  },
+  {
+   "ensayo": "j03-156",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: 18SCF00010 es este control, pero a 392,01 € por inspección cada 20 t frente a 48,25 € por ensayo de la hoja; no se sabe qué cubre."
+  },
+  {
+   "ensayo": "j03-158",
+   "partidas": [
+    {
+     "codigo": "18SEE00020",
+     "resumen": "Verificación del par de apriete",
+     "ud": "u"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-161",
+   "partidas": [
+    {
+     "codigo": "18MAA00010",
+     "resumen": "Inspección visual de madera aserrada para clasificación",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-162",
+   "partidas": [
+    {
+     "codigo": "18MAA00020",
+     "resumen": "Características geométricas de madera aserrada",
+     "ud": "u"
+    },
+    {
+     "codigo": "18MAA00030",
+     "resumen": "Ensayo a compresión de madera aserrada",
+     "ud": "u"
+    },
+    {
+     "codigo": "18MAA00040",
+     "resumen": "Contenido en humedad, de higroscopicidad, contracción lineal y volumétrica de madera aserrada",
+     "ud": "u"
+    },
+    {
+     "codigo": "18MAA00050",
+     "resumen": "Densidad y peso específico de madera aserrada",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "compuesto",
+   "precioComoLaHoja": true,
+   "motivo": "La hoja lo da como suma de cuatro ensayos (geometría 80, compresión 80, humedad y contracción 80, densidad 30 €); son estas cuatro partidas de la BCCA."
+  },
+  {
+   "ensayo": "j03-163",
+   "partidas": [
+    {
+     "codigo": "18MAA00060",
+     "resumen": "Medidas y tolerancias",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-164",
+   "partidas": [
+    {
+     "codigo": "18MAA00070",
+     "resumen": "Contenido de humedad en madera aserrada. Método de secado en estufa.",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-165",
+   "partidas": [
+    {
+     "codigo": "18MAA00080",
+     "resumen": "Contenido de humerad en madera aserrada. Método de la resistencia eléctrica",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-167",
+   "partidas": [
+    {
+     "codigo": "18MTT00010",
+     "resumen": "Propiedades mecánicas de los tableros derivados de la madera",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-168",
+   "partidas": [
+    {
+     "codigo": "18MTT00020",
+     "resumen": "Características dimensionales de tableros de partículas",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-169",
+   "partidas": [
+    {
+     "codigo": "18MTT00030",
+     "resumen": "Características dimensionales de tableros de virutas orientadas (OSB)",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-170",
+   "partidas": [
+    {
+     "codigo": "18MTT00040",
+     "resumen": "Características dimensionales de tableros de fibras",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-171",
+   "partidas": [
+    {
+     "codigo": "18MTT00050",
+     "resumen": "Características dimensionales de tableros contrachapados",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-173",
+   "partidas": [
+    {
+     "codigo": "18MLL00010",
+     "resumen": "Características dimensionales de madera laminada encolada y madera maciza encolada",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-174",
+   "partidas": [
+    {
+     "codigo": "18MLL00020",
+     "resumen": "Características geométricas en madera laminada encolada",
+     "ud": "u"
+    },
+    {
+     "codigo": "18MLL00030",
+     "resumen": "Ensayo a compresión en madera laminada encolada",
+     "ud": "u"
+    },
+    {
+     "codigo": "18MLL00040",
+     "resumen": "Contenido de humedad en madera laminada encolada",
+     "ud": "u"
+    },
+    {
+     "codigo": "18MLL00050",
+     "resumen": "Densidad en madera laminada encolada",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "compuesto",
+   "precioComoLaHoja": false,
+   "motivo": "La hoja lo da como suma de cuatro ensayos (geometría 80, compresión 80, humedad 30, densidad 30 €); la BCCA tiene los cuatro, con la humedad a 80 €."
+  },
+  {
+   "ensayo": "j03-177",
+   "partidas": [
+    {
+     "codigo": "18RRR00050",
+     "resumen": "Resistencia a compresión en ladrillos y bloques cerámicos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-178",
+   "partidas": [
+    {
+     "codigo": "18RRR00010",
+     "resumen": "Tolerancia dimensional en ladrillos y bloques cerámicos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-179",
+   "partidas": [
+    {
+     "codigo": "18RRR00020",
+     "resumen": "Densidad aparente en ladrillos y bloques cerámicos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-180",
+   "partidas": [
+    {
+     "codigo": "18RRR00030",
+     "resumen": "Absorción de agua en ladrillos y bloques cerámicos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-181",
+   "partidas": [
+    {
+     "codigo": "18RRR00040",
+     "resumen": "Absorción por capilaridad en ladrillos y bloques cerámicos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-182",
+   "partidas": [
+    {
+     "codigo": "18RRR00060",
+     "resumen": "Determinación de inclusiones calcáreas en ladrillos y bloques cerámicos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "citasVetadas": [
+    "18RRR00060: UNE 67039"
+   ],
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-183",
+   "partidas": [
+    {
+     "codigo": "18RRR00070",
+     "resumen": "Eflorescencias en ladrillos y bloques cerámicos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-184",
+   "partidas": [
+    {
+     "codigo": "18RRR00080",
+     "resumen": "Helacidad en ladrillos y bloques cerámicos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-186",
+   "partidas": [
+    {
+     "codigo": "18ORR00010",
+     "resumen": "Resistencia a flexión y compresión de mortero endurecido",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-187",
+   "partidas": [
+    {
+     "codigo": "18ORR00060",
+     "resumen": "Consistencia del mortero",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-188",
+   "partidas": [
+    {
+     "codigo": "18ORR00070",
+     "resumen": "Contenido en aire del mortero",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-190",
+   "partidas": [
+    {
+     "codigo": "18EEF00010",
+     "resumen": "Prueba de empuje en elementos divisorios",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-191",
+   "partidas": [
+    {
+     "codigo": "18EEF00020",
+     "resumen": "Ensayo de compresión en muros de fábrica",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j03-195",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene ensayos de bovedillas; las partidas de mismo precio son de baldosas, láminas o áridos (D §4.2, «solo precio» falso)."
+  },
+  {
+   "ensayo": "j03-196",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene ensayos de bovedillas; las partidas de mismo precio son de baldosas, láminas o áridos (D §4.2, «solo precio» falso)."
+  },
+  {
+   "ensayo": "j03-197",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene ensayos de bovedillas; 18TAA00060 es la misma norma (UNE-EN 826) en placas de aislamiento, a 190 €."
+  },
+  {
+   "ensayo": "j03-199",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene ensayos de bovedillas; las partidas de mismo precio son de baldosas, láminas o áridos (D §4.2, «solo precio» falso)."
+  },
+  {
+   "ensayo": "j03-200",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene ensayos de bovedillas; las partidas de mismo precio son de baldosas, láminas o áridos (D §4.2, «solo precio» falso)."
+  },
+  {
+   "ensayo": "j03-201",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene ensayos de bovedillas; las partidas de mismo precio son de baldosas, láminas o áridos (D §4.2, «solo precio» falso)."
+  },
+  {
+   "ensayo": "j03-202",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene ensayos de bovedillas; las partidas de mismo precio son de baldosas, láminas o áridos (D §4.2, «solo precio» falso)."
+  },
+  {
+   "ensayo": "j03-203",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene ensayos de bovedillas; las partidas de mismo precio son de baldosas, láminas o áridos (D §4.2, «solo precio» falso)."
+  },
+  {
+   "ensayo": "j03-205",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene ensayos de bovedillas; las partidas de mismo precio son de baldosas, láminas o áridos (D §4.2, «solo precio» falso)."
+  },
+  {
+   "ensayo": "j03-206",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene ensayos de bovedillas; las partidas de mismo precio son de baldosas, láminas o áridos (D §4.2, «solo precio» falso)."
+  },
+  {
+   "ensayo": "j03-207",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene ensayos de bovedillas; las partidas de mismo precio son de baldosas, láminas o áridos (D §4.2, «solo precio» falso)."
+  },
+  {
+   "ensayo": "j03-208",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene ensayos de bovedillas; las partidas de mismo precio son de baldosas, láminas o áridos (D §4.2, «solo precio» falso)."
+  },
+  {
+   "ensayo": "j03-209",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene ensayos de bovedillas; las partidas de mismo precio son de baldosas, láminas o áridos (D §4.2, «solo precio» falso)."
+  },
+  {
+   "ensayo": "j03-211",
+   "partidas": [
+    {
+     "codigo": "18HHI00010",
+     "resumen": "Realización de ensayos estáticos de puesta en carga sobre forjados",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j06-007",
+   "partidas": [
+    {
+     "codigo": "18RRR00010",
+     "resumen": "Tolerancia dimensional en ladrillos y bloques cerámicos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j06-008",
+   "partidas": [
+    {
+     "codigo": "18RRR00020",
+     "resumen": "Densidad aparente en ladrillos y bloques cerámicos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j06-009",
+   "partidas": [
+    {
+     "codigo": "18RRR00030",
+     "resumen": "Absorción de agua en ladrillos y bloques cerámicos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j06-010",
+   "partidas": [
+    {
+     "codigo": "18RRR00040",
+     "resumen": "Absorción por capilaridad en ladrillos y bloques cerámicos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j06-011",
+   "partidas": [
+    {
+     "codigo": "18RRR00050",
+     "resumen": "Resistencia a compresión en ladrillos y bloques cerámicos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j06-012",
+   "partidas": [
+    {
+     "codigo": "18RRR00060",
+     "resumen": "Determinación de inclusiones calcáreas en ladrillos y bloques cerámicos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "citasVetadas": [
+    "18RRR00060: UNE 67039"
+   ],
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j06-013",
+   "partidas": [
+    {
+     "codigo": "18RRR00070",
+     "resumen": "Eflorescencias en ladrillos y bloques cerámicos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j06-014",
+   "partidas": [
+    {
+     "codigo": "18RRR00080",
+     "resumen": "Helacidad en ladrillos y bloques cerámicos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j06-016",
+   "partidas": [
+    {
+     "codigo": "18RRR00010",
+     "resumen": "Tolerancia dimensional en ladrillos y bloques cerámicos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j06-017",
+   "partidas": [
+    {
+     "codigo": "18RRR00070",
+     "resumen": "Eflorescencias en ladrillos y bloques cerámicos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j06-018",
+   "partidas": [
+    {
+     "codigo": "18RRR00050",
+     "resumen": "Resistencia a compresión en ladrillos y bloques cerámicos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j06-019",
+   "partidas": [
+    {
+     "codigo": "18RRR00080",
+     "resumen": "Helacidad en ladrillos y bloques cerámicos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j06-021",
+   "partidas": [
+    {
+     "codigo": "18RHH00010",
+     "resumen": "Características dimensionales en bloques de hormigón",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j06-022",
+   "partidas": [
+    {
+     "codigo": "18RHH00020",
+     "resumen": "Resistencia a compresión en bloques de hormigón",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j06-023",
+   "partidas": [
+    {
+     "codigo": "18RRH00030",
+     "resumen": "Densidad aparente seca en bloques de hormigón",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j06-024",
+   "partidas": [
+    {
+     "codigo": "18RRH00040",
+     "resumen": "Absorción de agua en bloques de hormigón",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j06-026",
+   "partidas": [
+    {
+     "codigo": "18ORR00010",
+     "resumen": "Resistencia a flexión y compresión de mortero endurecido",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j06-027",
+   "partidas": [
+    {
+     "codigo": "18ORR00060",
+     "resumen": "Consistencia del mortero",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j06-028",
+   "partidas": [
+    {
+     "codigo": "18ORR00070",
+     "resumen": "Contenido en aire del mortero",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j06-030",
+   "partidas": [
+    {
+     "codigo": "18BTY00010",
+     "resumen": "Dimensiones y tolerancias en placas de yeso laminado",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j06-031",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene la planitud de las placas de yeso laminado."
+  },
+  {
+   "ensayo": "j06-032",
+   "partidas": [
+    {
+     "codigo": "18BTY00030",
+     "resumen": "Resistencia mecánica a flexión y tolerancias en placas de yeso laminado",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j06-033",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene la densidad en seco de la placa de yeso laminado; 18BTY00020 es la masa por unidad de superficie (j06-036)."
+  },
+  {
+   "ensayo": "j06-034",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene la humedad de la placa de yeso laminado."
+  },
+  {
+   "ensayo": "j06-035",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene el pH de la placa de yeso laminado."
+  },
+  {
+   "ensayo": "j06-036",
+   "partidas": [
+    {
+     "codigo": "18BTY00020",
+     "resumen": "Masa por unidad de superfie y tolerancias en placas de yeso laminado",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j06-038",
+   "partidas": [
+    {
+     "codigo": "18BTA00010",
+     "resumen": "Control dimensional de perfilería",
+     "ud": ""
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j06-039",
+   "partidas": [
+    {
+     "codigo": "18BTA00020",
+     "resumen": "Espesor de capa de lacado en perfilería",
+     "ud": ""
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j06-041",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene ensayos de placas prefabricadas de fachada."
+  },
+  {
+   "ensayo": "j06-042",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene la adherencia de anclajes de fachada prefabricada; 18RPA00020 es la de anclajes de alicatados y aplacados."
+  },
+  {
+   "ensayo": "j07-006",
+   "partidas": [
+    {
+     "codigo": "18RTC00010",
+     "resumen": "Características geométricas en tejas cerámicas",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j07-007",
+   "partidas": [
+    {
+     "codigo": "18RTC00020",
+     "resumen": "Permeabilidad en tejas cerámicas",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j07-008",
+   "partidas": [
+    {
+     "codigo": "18RTC00030",
+     "resumen": "Resistencia a flexión en tejas cerámicas",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j07-009",
+   "partidas": [
+    {
+     "codigo": "18RTC00040",
+     "resumen": "Resistencia a la helada en tejas cerámicas",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j07-010",
+   "partidas": [
+    {
+     "codigo": "18RTC00050",
+     "resumen": "Inclusiones calcáreas en tejas cerámicas",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j07-012",
+   "partidas": [
+    {
+     "codigo": "18RTH00010",
+     "resumen": "Características geométricas en piezas o tejas de hormigón",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j07-013",
+   "partidas": [
+    {
+     "codigo": "18RTH00020",
+     "resumen": "Determinación de masa en piezas o tejas de hormigón",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j07-014",
+   "partidas": [
+    {
+     "codigo": "18RTH00030",
+     "resumen": "Impermeabilidad en piezas o tejas de hormigón",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j07-015",
+   "partidas": [
+    {
+     "codigo": "18RTH00040",
+     "resumen": "Resistencia a flexión transversal en piezas o tejas de hormigón",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j07-016",
+   "partidas": [
+    {
+     "codigo": "18RTH00050",
+     "resumen": "Soporte por el tacón en piezas o tejas de hormigón",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j07-017",
+   "partidas": [
+    {
+     "codigo": "18RTH00060",
+     "resumen": "Resistencia al hielo-deshielo en piezas o tejas de hormigón",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j07-019",
+   "partidas": [
+    {
+     "codigo": "18TGB00010",
+     "resumen": "Dimensiones y masa por unidad en láminas bituminosas",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j07-020",
+   "partidas": [
+    {
+     "codigo": "18TGB00020",
+     "resumen": "Resistencia al calor, pérdida por calentamiento y fluencia de láminas bituminosas",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "citasVetadas": [
+    "18TGB00020: UNE 104281"
+   ],
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j07-021",
+   "partidas": [
+    {
+     "codigo": "18TGB00030",
+     "resumen": "Resistencia a tracción y alargamiento de la rotura en láminas bituminosas",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j07-022",
+   "partidas": [
+    {
+     "codigo": "18TGB00040",
+     "resumen": "Estabilidad dimensional en láminas bituminosas",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j07-023",
+   "partidas": [
+    {
+     "codigo": "18TGB00050",
+     "resumen": "Composición cuantitativa en láminas bituminosas",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j07-024",
+   "partidas": [
+    {
+     "codigo": "18TGB00060",
+     "resumen": "Plegabilidad en láminas bituminosas",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j07-026",
+   "partidas": [
+    {
+     "codigo": "18TGP00010",
+     "resumen": "Espesor y masa por unidad de área en láminas plásticas o de caucho",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j07-027",
+   "partidas": [
+    {
+     "codigo": "18TGP00020",
+     "resumen": "Determinación de la anchura en láminas plásticas o de caucho",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j07-028",
+   "partidas": [
+    {
+     "codigo": "18TGP00030",
+     "resumen": "Resistencia a tración y alargamiento a la rotura en láminas plásticas o de caucho",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j07-030",
+   "partidas": [
+    {
+     "codigo": "18HHL00010",
+     "resumen": "Resistencia a compresión en hormigón endurecido",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "motivo": "Mismo ensayo (UNE-EN 12390-3) sobre hormigón celular."
+  },
+  {
+   "ensayo": "j07-031",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene la densidad del hormigón endurecido (UNE-EN 12390-7)."
+  },
+  {
+   "ensayo": "j08-008",
+   "partidas": [
+    {
+     "codigo": "18IAAA00010",
+     "resumen": "Prueba de funcionamiento de red enterrada de saneamiento exterior, inspección mediante cámara.",
+     "ud": "m"
+    }
+   ],
+   "unidad": "m",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-009",
+   "partidas": [
+    {
+     "codigo": "18IAAA00020",
+     "resumen": "Prueba de estanqueidad por tramos de saneamiento exterior",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "visita",
+   "citasVetadas": [
+    "18IAAA00020: MOPU"
+   ],
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-011",
+   "partidas": [
+    {
+     "codigo": "18IAAB00010",
+     "resumen": "Prueba de estanqueidad de redes enterradas de saneamiento interior.",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-012",
+   "partidas": [
+    {
+     "codigo": "18IAAB00020",
+     "resumen": "Prueba de estanqueidad de redes interiores (baños, aseos, cocina)",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-013",
+   "partidas": [
+    {
+     "codigo": "18IAAB00030",
+     "resumen": "Prueba de estanqueidad en bajantes de redes de evacuación común.",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-014",
+   "partidas": [
+    {
+     "codigo": "18IAAB00040",
+     "resumen": "Inspección de red enterrada de saneamiento interior",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-016",
+   "partidas": [
+    {
+     "codigo": "18IAAC00010",
+     "resumen": "Características geométricas en tubos de saneamiento.",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-017",
+   "partidas": [
+    {
+     "codigo": "18IAAC00020",
+     "resumen": "Densidad de plásticos no celulares",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-018",
+   "partidas": [
+    {
+     "codigo": "18IAAC00030",
+     "resumen": "Resistencia a la tracción y alargamiento de rotura de tubos de saneamiento de PVC",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-019",
+   "partidas": [
+    {
+     "codigo": "18IAAC00040",
+     "resumen": "Temperatura de reblandecimiento VICAT en tubos de saneamiento de PVC",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-020",
+   "partidas": [
+    {
+     "codigo": "18IAAC00050",
+     "resumen": "Rigidez angular en tubos de saneamiento de PVC",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-021",
+   "partidas": [
+    {
+     "codigo": "18IAAC00060",
+     "resumen": "Comportamiento al calor en tubos de saneamiento de PVC",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-024",
+   "partidas": [
+    {
+     "codigo": "18IABA00010",
+     "resumen": "Presión interior y estanqueidad",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "citasVetadas": [
+    "18IABA00010: MOPU"
+   ],
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-027",
+   "partidas": [
+    {
+     "codigo": "18IABBA00010",
+     "resumen": "Características geométricas de tubos de polietileno y polipropileno",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-028",
+   "partidas": [
+    {
+     "codigo": "18IABBA00020",
+     "resumen": "Temperatura de reblandecimiento VICAT en tubos de polietileno y polipropileno",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-029",
+   "partidas": [
+    {
+     "codigo": "18IABBA00030",
+     "resumen": "Comportamiento al calor en tubos de polietileno",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-031",
+   "partidas": [
+    {
+     "codigo": "18IABBA00010",
+     "resumen": "Características geométricas de tubos de polietileno y polipropileno",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-032",
+   "partidas": [
+    {
+     "codigo": "18IABBA00030",
+     "resumen": "Comportamiento al calor en tubos de polietileno",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "motivo": "La BCCA solo lo nombra para polietileno; es el mismo ensayo y norma (UNE-EN 13244-2) y el mismo precio."
+  },
+  {
+   "ensayo": "j08-033",
+   "partidas": [
+    {
+     "codigo": "18IABBA00040",
+     "resumen": "Prueba de tracción en tubos de polipropileno",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-035",
+   "partidas": [
+    {
+     "codigo": "18IABBC00010",
+     "resumen": "Dimensiones en tubos de fundición",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": false,
+   "motivo": "Mismo ensayo (dimensiones de tubos de fundición); la BCCA da 90 € y la hoja 50 €."
+  },
+  {
+   "ensayo": "j08-036",
+   "partidas": [
+    {
+     "codigo": "18IABBC00020",
+     "resumen": "Resistencia a tracción en tubos de fundición",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-037",
+   "partidas": [
+    {
+     "codigo": "18IABBC00030",
+     "resumen": "Dureza de Brinell en tubos de fundición",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-038",
+   "partidas": [
+    {
+     "codigo": "18IABBC00040",
+     "resumen": "Masa de recubrimiento de zinc en tubos de fundición",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-039",
+   "partidas": [
+    {
+     "codigo": "18IABBC00050",
+     "resumen": "Espesor de recubrimiento de pintura en tubos de fundición",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-041",
+   "partidas": [
+    {
+     "codigo": "18IABBD00010",
+     "resumen": "Características geométricas de piezas especiales",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-042",
+   "partidas": [
+    {
+     "codigo": "18IABBD00020",
+     "resumen": "Tracción en piezas especiales",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-043",
+   "partidas": [
+    {
+     "codigo": "18IABBD00030",
+     "resumen": "Dureza de Brinell en piezas especiales",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-046",
+   "partidas": [
+    {
+     "codigo": "18IACA00010",
+     "resumen": "Presión y estanqueidad de conducciones en red interior y montantes",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-047",
+   "partidas": [
+    {
+     "codigo": "18IACA00020",
+     "resumen": "Prueba de funcionamiento de redes interiores de suministro de agua",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-048",
+   "partidas": [
+    {
+     "codigo": "18IACA00030",
+     "resumen": "Prueba de funcionamiendo de grupo de presión",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-050",
+   "partidas": [
+    {
+     "codigo": "18IACB00010",
+     "resumen": "Características geoméricas tubos polietileno",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-051",
+   "partidas": [
+    {
+     "codigo": "18IAAC00020",
+     "resumen": "Densidad de plásticos no celulares",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-052",
+   "partidas": [
+    {
+     "codigo": "18IAAC00030",
+     "resumen": "Resistencia a la tracción y alargamiento de rotura de tubos de saneamiento de PVC",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "motivo": "Mismo ensayo y norma (UNE-EN ISO 527-1) y precio; la BCCA lo tiene en tubos de saneamiento de PVC, esta fila es de polietileno."
+  },
+  {
+   "ensayo": "j08-054",
+   "partidas": [
+    {
+     "codigo": "18IACC00010",
+     "resumen": "Características geométricas tubos de cobre",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-055",
+   "partidas": [
+    {
+     "codigo": "18IACC00020",
+     "resumen": "Ensayo de tracción en tubos de cobre",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-058",
+   "partidas": [
+    {
+     "codigo": "18IADA00010",
+     "resumen": "Resistividad del terreno puesta a tierra de redes de baja tensión",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-060",
+   "partidas": [
+    {
+     "codigo": "18IADB00010",
+     "resumen": "Prueba de funcionamiento instalaciones de baja tensión",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-061",
+   "partidas": [
+    {
+     "codigo": "18IADB00020",
+     "resumen": "Prueba de funcionamiento instalaciones de baja tensión en zonas comunes",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-062",
+   "partidas": [
+    {
+     "codigo": "18IADB00030",
+     "resumen": "Prueba de funcionamiento instalaciones de baja tensión en zonas comunes: iluminación",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-064",
+   "partidas": [
+    {
+     "codigo": "18IAAC00010",
+     "resumen": "Características geométricas en tubos de saneamiento.",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "motivo": "Tubos para cable: la BCCA no los tiene; mismo ensayo (geometría, UNE-EN ISO 3126) y precio que en los tubos de saneamiento."
+  },
+  {
+   "ensayo": "j08-065",
+   "partidas": [
+    {
+     "codigo": "18IAAC00020",
+     "resumen": "Densidad de plásticos no celulares",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-066",
+   "partidas": [
+    {
+     "codigo": "18IAAC00030",
+     "resumen": "Resistencia a la tracción y alargamiento de rotura de tubos de saneamiento de PVC",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "motivo": "Tubos para cable: mismo ensayo y norma (UNE-EN ISO 527-1) y precio que en los tubos de saneamiento."
+  },
+  {
+   "ensayo": "j08-067",
+   "partidas": [
+    {
+     "codigo": "18IAAC00040",
+     "resumen": "Temperatura de reblandecimiento VICAT en tubos de saneamiento de PVC",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "motivo": "Tubos para cable: mismo ensayo (VICAT) y precio que en los tubos de saneamiento."
+  },
+  {
+   "ensayo": "j08-069",
+   "partidas": [
+    {
+     "codigo": "18IEE00010",
+     "resumen": "Inspección general instalación de media tensión",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-071",
+   "partidas": [
+    {
+     "codigo": "18IAF00010",
+     "resumen": "Prueba hisdrostática de conducciones viviendas unifamiliares (ACS)",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-072",
+   "partidas": [
+    {
+     "codigo": "18IAF00020",
+     "resumen": "Prueba hidrostática en red de distribución de edificios (ACS)",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-073",
+   "partidas": [
+    {
+     "codigo": "18IAF00030",
+     "resumen": "Prueba funcionamiento en redes e distribución ACS",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-076",
+   "partidas": [
+    {
+     "codigo": "18IAGA00010",
+     "resumen": "Estanqueidad y resistencia mecánica de circuitos frigoríficos con equipos individuales",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-077",
+   "partidas": [
+    {
+     "codigo": "18IAGA00020",
+     "resumen": "Estanqueidad y resistencia mecánica de circuitos frigoríficos instalaciones centralizadas",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-079",
+   "partidas": [
+    {
+     "codigo": "18IAGB00010",
+     "resumen": "Prueba de equipos en edificio con instalación centralizada",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-080",
+   "partidas": [
+    {
+     "codigo": "18IAGB00020",
+     "resumen": "Prueba de funcionamiento de equipos individuales",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-081",
+   "partidas": [
+    {
+     "codigo": "18IAGB00030",
+     "resumen": "Prueba de funcionamiento de calderas centralizadas",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-082",
+   "partidas": [
+    {
+     "codigo": "18IAGB00040",
+     "resumen": "Prueba de funcionamiento de radiadores",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-083",
+   "partidas": [
+    {
+     "codigo": "18IAGB00050",
+     "resumen": "Prueba de funcionamiento de circuito de distribución de suelo radiante",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-085",
+   "partidas": [
+    {
+     "codigo": "18IAH00010",
+     "resumen": "Prueba de funcionamiento de redes comunes",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-087",
+   "partidas": [
+    {
+     "codigo": "18IAI00010",
+     "resumen": "Prueba de funcionamiento de redes comunes extracción de aire",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-088",
+   "partidas": [
+    {
+     "codigo": "18IAI00020",
+     "resumen": "Prueba de funcionamiento de equipos individuales de extracción de aire",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-089",
+   "partidas": [
+    {
+     "codigo": "18IAI00030",
+     "resumen": "Prueba de estanqueidad en zonas comunes",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-090",
+   "partidas": [
+    {
+     "codigo": "18IAI00040",
+     "resumen": "Prueba de estanqueidad en red extracción individual",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-092",
+   "partidas": [
+    {
+     "codigo": "18IAJ00010",
+     "resumen": "Prueba de servicio en inst. detección y alarma",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-093",
+   "partidas": [
+    {
+     "codigo": "18IAJ00020",
+     "resumen": "Prueba de funcionamiento de la red de extinción",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-094",
+   "partidas": [
+    {
+     "codigo": "18IAJ00030",
+     "resumen": "Prueba de estanqueidad y resistencia mecánica en redes de extinción",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-096",
+   "partidas": [
+    {
+     "codigo": "18IAL00010",
+     "resumen": "Prueba de presión y estanqueidad en red de riego",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-097",
+   "partidas": [
+    {
+     "codigo": "18IAL00020",
+     "resumen": "Prueba de funcionamiento de red de riego",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-099",
+   "partidas": [
+    {
+     "codigo": "18IAM00010",
+     "resumen": "Prueba de funcionamiento de piscinas",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-101",
+   "partidas": [
+    {
+     "codigo": "18HAM00010",
+     "resumen": "Prueba de servicio en instalación de CO en garaje",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-103",
+   "partidas": [
+    {
+     "codigo": "18HAN00010",
+     "resumen": "Prueba de funcionamiento de cuadro eléctrico y puesta a tierra en red de alumbrado exterior",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-104",
+   "partidas": [
+    {
+     "codigo": "18HAN00020",
+     "resumen": "Niveles de iluminación en red de alumbrado exterior",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-106",
+   "partidas": [
+    {
+     "codigo": "18IAP00010",
+     "resumen": "Prueba de puesta a tierra de pararrayos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-108",
+   "partidas": [
+    {
+     "codigo": "18IAQ00010",
+     "resumen": "Verificación de señal TV",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-109",
+   "partidas": [
+    {
+     "codigo": "18IAQ00020",
+     "resumen": "Certificación red voz datos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-111",
+   "partidas": [
+    {
+     "codigo": "18IAR00010",
+     "resumen": "Prueba de estanqueidad de red de distribución de gas",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-113",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA no tiene la prueba de ascensores."
+  },
+  {
+   "ensayo": "j08-115",
+   "partidas": [
+    {
+     "codigo": "18ITT00010",
+     "resumen": "Prueba de estanqueidad de red de distribución de gases medicinales",
+     "ud": ""
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-117",
+   "partidas": [
+    {
+     "codigo": "18IAU00010",
+     "resumen": "Verificación de video porteros",
+     "ud": "u"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-118",
+   "partidas": [
+    {
+     "codigo": "18IAU00020",
+     "resumen": "Prueba de funcionamiento Central de Megafonía",
+     "ud": "u"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-119",
+   "partidas": [
+    {
+     "codigo": "18IAU00030",
+     "resumen": "Prueba de funcionamiento de Central de Intercomunicación",
+     "ud": "u"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-120",
+   "partidas": [
+    {
+     "codigo": "18IAU00040",
+     "resumen": "Prueba de funcionamiento de Central de Circuito Cerrado de TV (CCTV)",
+     "ud": "u"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-123",
+   "partidas": [
+    {
+     "codigo": "18UAA00010",
+     "resumen": "Prueba nivel de emisión acústica al exterior de las instalaciones",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-124",
+   "partidas": [
+    {
+     "codigo": "18UAA00020",
+     "resumen": "Prueba de inmisión al interior de las instalaciones",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-125",
+   "partidas": [
+    {
+     "codigo": "18UAA00030",
+     "resumen": "Prueba de aislamiento acústico aéreo entre recinto de instalaciones y habitable o protegido",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-126",
+   "partidas": [
+    {
+     "codigo": "18UAA00040",
+     "resumen": "Prueba de aislamiento acústico aéreo entre recintos habitables o protegidos.",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-127",
+   "partidas": [
+    {
+     "codigo": "18UAA00050",
+     "resumen": "Prueba de aislamiento acústico a ruido de impacto entre recintos habitables o protegidos.",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-128",
+   "partidas": [
+    {
+     "codigo": "18UAA00060",
+     "resumen": "Prueba de aislamiento acústico a ruido aéreo en fachadas",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-130",
+   "partidas": [
+    {
+     "codigo": "18UBB00010",
+     "resumen": "Verificación de prueba de estanqueidad en cubierta plana",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-131",
+   "partidas": [
+    {
+     "codigo": "18UBB00020",
+     "resumen": "Verificación de prueba de estanqueidad en cubierta inclinada",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "cubre": {
+    "nota": "La BCCA mide la unidad por 50 m² de cubierta; la hoja dice que su precio está estimado para 150 m².",
+    "segun": "Texto de 18UBB00020"
+   }
+  },
+  {
+   "ensayo": "j08-132",
+   "partidas": [
+    {
+     "codigo": "18UBB00030",
+     "resumen": "Estanqueidad \"in situ\" al agua en fachadas ligeras",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-133",
+   "partidas": [
+    {
+     "codigo": "18UBB00040",
+     "resumen": "Estanqueidad \"in situ\" al agua de fachadas",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-134",
+   "partidas": [
+    {
+     "codigo": "18UBB00050",
+     "resumen": "Estanqueidad \"in situ\" al agua de ventanas y puertas.",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-136",
+   "partidas": [
+    {
+     "codigo": "18UCA00010",
+     "resumen": "Prueba de empuje en obra sobre barandillas",
+     "ud": ""
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-138",
+   "partidas": [
+    {
+     "codigo": "18UDA00010",
+     "resumen": "Prueba de estanqueidad al aire en edificios",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-139",
+   "partidas": [
+    {
+     "codigo": "18UDA00020",
+     "resumen": "Detección de irregularidades en cerramiento de edificios",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j08-140",
+   "partidas": [
+    {
+     "codigo": "18UDA00030",
+     "resumen": "Transmitancia en cerramientos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j09-006",
+   "partidas": [
+    {
+     "codigo": "18TAE00010",
+     "resumen": "Determinación del espesor de espuma de poliuretano proyectado",
+     "ud": "u"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j09-007",
+   "partidas": [
+    {
+     "codigo": "18TAE00020",
+     "resumen": "Determinación de la densidad de espuma de poliuretano proyectado",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j09-009",
+   "partidas": [
+    {
+     "codigo": "18TAA00010",
+     "resumen": "Espesor en placas de aislamiento",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j09-010",
+   "partidas": [
+    {
+     "codigo": "18TAA00020",
+     "resumen": "Densidad aparente en placas de aislamiento",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j09-012",
+   "partidas": [
+    {
+     "codigo": "18TAA00010",
+     "resumen": "Espesor en placas de aislamiento",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j09-013",
+   "partidas": [
+    {
+     "codigo": "18TAA00020",
+     "resumen": "Densidad aparente en placas de aislamiento",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j09-015",
+   "partidas": [
+    {
+     "codigo": "18TAA00020",
+     "resumen": "Densidad aparente en placas de aislamiento",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j09-016",
+   "partidas": [
+    {
+     "codigo": "18TAA00030",
+     "resumen": "Absorción de agua a largo plazo en placas de aislamiento",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j09-018",
+   "partidas": [
+    {
+     "codigo": "18TAA00010",
+     "resumen": "Espesor en placas de aislamiento",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j09-019",
+   "partidas": [
+    {
+     "codigo": "18TAA00020",
+     "resumen": "Densidad aparente en placas de aislamiento",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j09-020",
+   "partidas": [
+    {
+     "codigo": "18TAA00040",
+     "resumen": "Longitud y anchua en placas de aislamiento",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j09-021",
+   "partidas": [
+    {
+     "codigo": "18TAA00050",
+     "resumen": "Planeidad en placas de aislamiento",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j09-022",
+   "partidas": [
+    {
+     "codigo": "18TAA00060",
+     "resumen": "Resistencia a compresión en placas de aislamiento",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j09-024",
+   "partidas": [
+    {
+     "codigo": "18TAA00010",
+     "resumen": "Espesor en placas de aislamiento",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j09-025",
+   "partidas": [
+    {
+     "codigo": "18TAA00020",
+     "resumen": "Densidad aparente en placas de aislamiento",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j09-026",
+   "partidas": [
+    {
+     "codigo": "18TAA00040",
+     "resumen": "Longitud y anchua en placas de aislamiento",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j09-027",
+   "partidas": [
+    {
+     "codigo": "18TAA00050",
+     "resumen": "Planeidad en placas de aislamiento",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j09-028",
+   "partidas": [
+    {
+     "codigo": "18TAA00060",
+     "resumen": "Resistencia a compresión en placas de aislamiento",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-007",
+   "partidas": [
+    {
+     "codigo": "18BBC00010",
+     "resumen": "Determinación y aspecto superficial de baldosa cerámica",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-008",
+   "partidas": [
+    {
+     "codigo": "18BBC00020",
+     "resumen": "Absorción de agua en baldosa cerámica",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-009",
+   "partidas": [
+    {
+     "codigo": "18BBC00030",
+     "resumen": "Resistencia a flexión y fuerza de rotura en baldosa cerámica",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-010",
+   "partidas": [
+    {
+     "codigo": "18BBC00040",
+     "resumen": "Resistencia química en baldosa cerámica",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-011",
+   "partidas": [
+    {
+     "codigo": "18BBC00050",
+     "resumen": "Resistencia a manchas en baldosa cerámica",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-012",
+   "partidas": [
+    {
+     "codigo": "18BBC00060",
+     "resumen": "Resistencia al impacto en baldosa cerámica",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-013",
+   "partidas": [
+    {
+     "codigo": "18BBC00070",
+     "resumen": "Resistencia al deslizamiento/resbalamiento en baldosa cerámica (laboratorio)",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-014",
+   "partidas": [
+    {
+     "codigo": "18BBC00080",
+     "resumen": "Resistencia al deslizamiento/resbalamiento en baldosa cerámica (in situ)",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-016",
+   "partidas": [
+    {
+     "codigo": "18BBT00010",
+     "resumen": "Características dimensionales en baldosas de terrazo interior",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-017",
+   "partidas": [
+    {
+     "codigo": "18BBT00020",
+     "resumen": "Resistencia a flexión y carga de rotura en baldosa de terrazo interior",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-018",
+   "partidas": [
+    {
+     "codigo": "18BBT00030",
+     "resumen": "Resistencia al desgaste por abrasión en baldosa de terrazo interior",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-019",
+   "partidas": [
+    {
+     "codigo": "18BBT00040",
+     "resumen": "Absorción de agua en baldosa de terrazo interior",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-020",
+   "partidas": [
+    {
+     "codigo": "18BBT00050",
+     "resumen": "Resistencia al impacto de baldosa de terrazo interior",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-021",
+   "partidas": [
+    {
+     "codigo": "18BBT00060",
+     "resumen": "Resistencia al deslizamiento/resbalamiento en baldosa de terrazo interior (no tratadas)",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-022",
+   "partidas": [
+    {
+     "codigo": "18BBT00070",
+     "resumen": "Resistencia al deslizamiento/resbalamiento en baldosa de terrazo interior (tratadas)",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-024",
+   "partidas": [
+    {
+     "codigo": "18BBR00010",
+     "resumen": "Características dimensionales en baldosa de terrazo exterior",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-025",
+   "partidas": [
+    {
+     "codigo": "18BBR00020",
+     "resumen": "Resistencia a flexión y carga de rotura en baldosa de terrazo exterior",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-026",
+   "partidas": [
+    {
+     "codigo": "18BBR00030",
+     "resumen": "Resistencia al desgaste por abrasión en baldosa de terrazo exterior",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-027",
+   "partidas": [
+    {
+     "codigo": "18BBR00040",
+     "resumen": "Absorción de agua en baldosa de terrazo exterior",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-028",
+   "partidas": [
+    {
+     "codigo": "18BBR00050",
+     "resumen": "Resistencia al impacto de baldosa de terrazo de uso exterior",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-029",
+   "partidas": [
+    {
+     "codigo": "18BBR00060",
+     "resumen": "Resistencia al deslizamiento/resbalamiento de baldosa de terrazo de uso exterior (laboratorio)",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-030",
+   "partidas": [
+    {
+     "codigo": "18BBR00070",
+     "resumen": "Resistencia el deslizamiento/resbalamiento de baldosa de terrazo de uso exterior (in situ)",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-031",
+   "partidas": [
+    {
+     "codigo": "18BBR00080",
+     "resumen": "Resistencia climática en baldosa de terrazo de uso exterior",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-033",
+   "partidas": [
+    {
+     "codigo": "18BBE00010",
+     "resumen": "Características dimensionales en baldosa de piedra natural exterior",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-034",
+   "partidas": [
+    {
+     "codigo": "18BBE00020",
+     "resumen": "Absorción y peso específico en baldosa de piedra natural exterior",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-035",
+   "partidas": [
+    {
+     "codigo": "18BBE00030",
+     "resumen": "Densidad y porosidad abierta en baldosa de piedra natural exterior",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-036",
+   "partidas": [
+    {
+     "codigo": "18BBE00040",
+     "resumen": "Resistencia a la flexión en baldosa de piedra natural exterior",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-037",
+   "partidas": [
+    {
+     "codigo": "18BBE00050",
+     "resumen": "Resistencia a la abrasión en baldosa de piedra natural exterior",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-038",
+   "partidas": [
+    {
+     "codigo": "18BBE00060",
+     "resumen": "Resistencia al deslizamiento/resbalamiento en baldosa de piedra natural exterior (laboratorio)",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-039",
+   "partidas": [
+    {
+     "codigo": "18BBE00070",
+     "resumen": "Resistencia al deslizamiento/resbalamiento en baldosa tratada de piedra natural exterior",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-040",
+   "partidas": [
+    {
+     "codigo": "18BBE00080",
+     "resumen": "Resistencia al hielo-deshielo en baldosa de piedra natural exterior",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-042",
+   "partidas": [
+    {
+     "codigo": "18BBI00010",
+     "resumen": "Características dimensionales en baldosa de piedra natural uso interior",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-043",
+   "partidas": [
+    {
+     "codigo": "18BBI00020",
+     "resumen": "Absorción de agua por capilaridad en baldosa de piedra natural uso interior",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-044",
+   "partidas": [
+    {
+     "codigo": "18BBI00030",
+     "resumen": "Absorción de agua en baldosa de piedra natural uso interior",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-045",
+   "partidas": [
+    {
+     "codigo": "18BBI00040",
+     "resumen": "Densidad y porosidad abierta en baldosa de piedra natural uso interior",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-046",
+   "partidas": [
+    {
+     "codigo": "18BBI00050",
+     "resumen": "Resistencia a flexión en baldosa de piedra natural uso interior",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-047",
+   "partidas": [
+    {
+     "codigo": "18BBI00060",
+     "resumen": "Resistencia a la abrasión en baldosa de piedra natural uso interior",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-048",
+   "partidas": [
+    {
+     "codigo": "18BBI00070",
+     "resumen": "Resistencia al deslizamiento/resbalamiento en baldosa de piedra natural uso interior (sin tratar)",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-049",
+   "partidas": [
+    {
+     "codigo": "18BBI00080",
+     "resumen": "Resistencia al deslizamiento/resbalamiento en baldosa de piedra natural uso interior (tratada)",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-051",
+   "partidas": [
+    {
+     "codigo": "18BBH00010",
+     "resumen": "Características dimensionales de baldosa de hormigón",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-052",
+   "partidas": [
+    {
+     "codigo": "18BBH00020",
+     "resumen": "Resistencia a flexión y carga de rotura en baldosa de hormigón",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-053",
+   "partidas": [
+    {
+     "codigo": "18BBH00030",
+     "resumen": "Absorción de agua en baldosa de hormigón",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-054",
+   "partidas": [
+    {
+     "codigo": "18BBH00040",
+     "resumen": "Resistencia al desgaste por abrasión en baldosa de hormigón",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-055",
+   "partidas": [
+    {
+     "codigo": "18BBH00050",
+     "resumen": "Resistencia al deslizamiento/resbalamiento en baldosa de hormigón (sin tratar)",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-056",
+   "partidas": [
+    {
+     "codigo": "18BBH00060",
+     "resumen": "Resistencia al deslizamiento/resbalamiento en baldosa de hormigón (tratada)",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-057",
+   "partidas": [
+    {
+     "codigo": "18BBH00070",
+     "resumen": "Determinación de la helacidad",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-059",
+   "partidas": [
+    {
+     "codigo": "18BSM00010",
+     "resumen": "Contenido de humedad en pavimentos de madera",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-060",
+   "partidas": [
+    {
+     "codigo": "18BSM00020",
+     "resumen": "Características geométricas en pavimentos de madera",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-061",
+   "partidas": [
+    {
+     "codigo": "18BSM00030",
+     "resumen": "Determinación de la hinchazón en grosos en pavimentos de madera",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-062",
+   "partidas": [
+    {
+     "codigo": "18BSM00040",
+     "resumen": "Determinación de resistencia al impacto en pavimento de madera",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-064",
+   "partidas": [
+    {
+     "codigo": "18BSH00010",
+     "resumen": "Resistencia a compresión en pavimentos de hormigón continuos",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "motivo": "Pavimento de hormigón continuo: la BCCA lo tiene aparte (18BSH00010), mismo precio que 18HHL00010."
+  },
+  {
+   "ensayo": "j10-065",
+   "partidas": [
+    {
+     "codigo": "18BSH00020",
+     "resumen": "Ensayo de asentamiento",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "motivo": "Pavimento de hormigón continuo: la BCCA lo tiene aparte (18BSH00020)."
+  },
+  {
+   "ensayo": "j10-066",
+   "partidas": [
+    {
+     "codigo": "18BSH00030",
+     "resumen": "Resistencia al deslizamiento en pavimentos continuos de hormigón",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-067",
+   "partidas": [
+    {
+     "codigo": "18BSH00040",
+     "resumen": "Resistencia a flexión en pavimentos continuos de hormigón",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-068",
+   "partidas": [],
+   "unidad": "ensayo",
+   "como": "sinCodigo",
+   "motivo": "Sin código: la BCCA solo tiene la extracción de testigos con rotura a compresión (18HHI00040), no la extracción para medir espesores."
+  },
+  {
+   "ensayo": "j10-069",
+   "partidas": [
+    {
+     "codigo": "18HHI00040",
+     "resumen": "Extracción de testigos, examen y rotura a compresión",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-070",
+   "partidas": [
+    {
+     "codigo": "18BSH00050",
+     "resumen": "Desgaste por rozamiento",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "cubre": {
+    "porEnsayo": 1,
+    "nota": "La BCCA da 125 € por ensayo, uno cada 500 m³; la hoja da el mismo precio por punto, con un mínimo de 10.",
+    "segun": "Texto de 18BSH00050"
+   }
+  },
+  {
+   "ensayo": "j10-072",
+   "partidas": [
+    {
+     "codigo": "18BSV00010",
+     "resumen": "Resistencia al deslizamiento en pavimento vinílico (laboratorio)",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-073",
+   "partidas": [
+    {
+     "codigo": "18BSV00020",
+     "resumen": "Resistencia al deslizamiento en pavimento vinílico (in situ)",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-074",
+   "partidas": [
+    {
+     "codigo": "18BSV00030",
+     "resumen": "Adherencia al soporte en pavimento vinílico",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-077",
+   "partidas": [
+    {
+     "codigo": "18ORR00010",
+     "resumen": "Resistencia a flexión y compresión de mortero endurecido",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-078",
+   "partidas": [
+    {
+     "codigo": "18ORR00020",
+     "resumen": "Permeabilidad al vapor de agua de mortero endurecido",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-079",
+   "partidas": [
+    {
+     "codigo": "18ORR00030",
+     "resumen": "Absorción de agua por capilaridad de mortero endurecido",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-080",
+   "partidas": [
+    {
+     "codigo": "18ORR00040",
+     "resumen": "Adherencia al soporte en obra de mortero endurecido",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-081",
+   "partidas": [
+    {
+     "codigo": "18ORR00050",
+     "resumen": "Permeabilidad de mortero endurecido",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-083",
+   "partidas": [
+    {
+     "codigo": "18OGG00010",
+     "resumen": "Resistencias mecánicas en guarnecidos y enlucidos de yeso",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-084",
+   "partidas": [
+    {
+     "codigo": "18OGG00020",
+     "resumen": "Dureza superficial Shore en guarnecidos y enlucidos de yeso",
+     "ud": "u"
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-085",
+   "partidas": [
+    {
+     "codigo": "18OGG00030",
+     "resumen": "Adhrecencia a la base en obra",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-087",
+   "partidas": [
+    {
+     "codigo": "18OMM00010",
+     "resumen": "Adherencia incial de adhesivos para baldosas",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-088",
+   "partidas": [
+    {
+     "codigo": "18OMM00020",
+     "resumen": "Adherencia tras inmersión en agua de adhesivos para baldosas",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-089",
+   "partidas": [
+    {
+     "codigo": "18OMM00030",
+     "resumen": "Adherencia al calor de adhesivos para baldosas",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-090",
+   "partidas": [
+    {
+     "codigo": "18OMM00040",
+     "resumen": "Adherencia tras ciclos de hielo y deshielo de adhesivos para baldosas",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-092",
+   "partidas": [
+    {
+     "codigo": "18RPA00010",
+     "resumen": "Adherencia a la base en obra",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-093",
+   "partidas": [
+    {
+     "codigo": "18BBC00010",
+     "resumen": "Determinación y aspecto superficial de baldosa cerámica",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-094",
+   "partidas": [
+    {
+     "codigo": "18BBC00030",
+     "resumen": "Resistencia a flexión y fuerza de rotura en baldosa cerámica",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-095",
+   "partidas": [
+    {
+     "codigo": "18BBC00020",
+     "resumen": "Absorción de agua en baldosa cerámica",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-096",
+   "partidas": [
+    {
+     "codigo": "18BBC00040",
+     "resumen": "Resistencia química en baldosa cerámica",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-097",
+   "partidas": [
+    {
+     "codigo": "18BBC00050",
+     "resumen": "Resistencia a manchas en baldosa cerámica",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-098",
+   "partidas": [
+    {
+     "codigo": "18RPA00020",
+     "resumen": "Carga de rotura para anclajes en alicatados o aplacados cerámicos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-100",
+   "partidas": [
+    {
+     "codigo": "18BBE00010",
+     "resumen": "Características dimensionales en baldosa de piedra natural exterior",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-101",
+   "partidas": [
+    {
+     "codigo": "18BBE00040",
+     "resumen": "Resistencia a la flexión en baldosa de piedra natural exterior",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-102",
+   "partidas": [
+    {
+     "codigo": "18BBE00020",
+     "resumen": "Absorción y peso específico en baldosa de piedra natural exterior",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-103",
+   "partidas": [
+    {
+     "codigo": "18RPA00010",
+     "resumen": "Adherencia a la base en obra",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-104",
+   "partidas": [
+    {
+     "codigo": "18RPA00020",
+     "resumen": "Carga de rotura para anclajes en alicatados o aplacados cerámicos",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-107",
+   "partidas": [
+    {
+     "codigo": "18BTY00010",
+     "resumen": "Dimensiones y tolerancias en placas de yeso laminado",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-108",
+   "partidas": [
+    {
+     "codigo": "18BTY00020",
+     "resumen": "Masa por unidad de superfie y tolerancias en placas de yeso laminado",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-109",
+   "partidas": [
+    {
+     "codigo": "18BTY00030",
+     "resumen": "Resistencia mecánica a flexión y tolerancias en placas de yeso laminado",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-110",
+   "partidas": [
+    {
+     "codigo": "18BTY00040",
+     "resumen": "Resistencia al impato en placas de yeso laminado o escayola",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-112",
+   "partidas": [
+    {
+     "codigo": "18BTA00010",
+     "resumen": "Control dimensional de perfilería",
+     "ud": ""
+    }
+   ],
+   "unidad": "visita",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j10-113",
+   "partidas": [
+    {
+     "codigo": "18BTA00020",
+     "resumen": "Espesor de capa de lacado en perfilería",
+     "ud": ""
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j11-006",
+   "partidas": [
+    {
+     "codigo": "18KA00010",
+     "resumen": "Control dimensional en obra de ventanas y puertas peatonales",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j11-007",
+   "partidas": [
+    {
+     "codigo": "18KA00020",
+     "resumen": "Espesor de anodizado o lacado en carpintería metálica",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "cubre": {
+    "porEnsayo": 1,
+    "nota": "La BCCA da 48,25 € por control y tipo de carpintería; la hoja, por punto.",
+    "segun": "Texto de 18KA00020"
+   }
+  },
+  {
+   "ensayo": "j11-008",
+   "partidas": [
+    {
+     "codigo": "18KA00030",
+     "resumen": "Permeabilidad al aire en carpintería",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j11-009",
+   "partidas": [
+    {
+     "codigo": "18KA00040",
+     "resumen": "Estanqueidad al agua en carpintería",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j11-010",
+   "partidas": [
+    {
+     "codigo": "18KA00050",
+     "resumen": "Resistencia al viento en carpintería",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j11-011",
+   "partidas": [
+    {
+     "codigo": "18KA00060",
+     "resumen": "Sellado del anodizado en carpintería de aluminio",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j11-014",
+   "partidas": [
+    {
+     "codigo": "18KBA00010",
+     "resumen": "Dimensiones, planicidad y excuadría de hojas de puerta",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j11-015",
+   "partidas": [
+    {
+     "codigo": "18KBA00020",
+     "resumen": "Resistencia al impacto de cuerpo duro en hojas de puerta",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j11-016",
+   "partidas": [
+    {
+     "codigo": "18KBA00030",
+     "resumen": "Determinación de espesor de lacado",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j11-018",
+   "partidas": [
+    {
+     "codigo": "18KC00010",
+     "resumen": "Resistencia a flexión en vidrios",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j11-019",
+   "partidas": [
+    {
+     "codigo": "18KC00020",
+     "resumen": "Resistencia al impacto en vidrios",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j13-006",
+   "partidas": [
+    {
+     "codigo": "18PAP00010",
+     "resumen": "Tiempos de secado y endurecimiento en pinturas",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j13-007",
+   "partidas": [
+    {
+     "codigo": "18PAP00020",
+     "resumen": "Poder cubriende en pinturas y esmaltes",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j13-008",
+   "partidas": [
+    {
+     "codigo": "18PAP00030",
+     "resumen": "Densidad en pinturas y barnices",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j13-009",
+   "partidas": [
+    {
+     "codigo": "18PAP00040",
+     "resumen": "Contenido en materia no volátil en pinturas y barnices",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j13-010",
+   "partidas": [
+    {
+     "codigo": "18PAP00050",
+     "resumen": "Espesor de pélicula en pinturas y barnices",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j13-011",
+   "partidas": [
+    {
+     "codigo": "18PAP00060",
+     "resumen": "Adherencia al soporte de pinturas y barnices",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "cubre": {
+    "porEnsayo": 1,
+    "nota": "La BCCA mide la unidad por tipo de pintura; la hoja, por punto.",
+    "segun": "Texto de 18PAP00060"
+   }
+  },
+  {
+   "ensayo": "j13-012",
+   "partidas": [
+    {
+     "codigo": "18PAP00070",
+     "resumen": "Repintabilidad después del secado en pinturas y barnices",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j13-013",
+   "partidas": [
+    {
+     "codigo": "18PAP00080",
+     "resumen": "Resistencia al frote en húmedo",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j13-015",
+   "partidas": [
+    {
+     "codigo": "18PAP00010",
+     "resumen": "Tiempos de secado y endurecimiento en pinturas",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j13-016",
+   "partidas": [
+    {
+     "codigo": "18PAP00020",
+     "resumen": "Poder cubriende en pinturas y esmaltes",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j13-017",
+   "partidas": [
+    {
+     "codigo": "18PAP00030",
+     "resumen": "Densidad en pinturas y barnices",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j13-018",
+   "partidas": [
+    {
+     "codigo": "18PAP00040",
+     "resumen": "Contenido en materia no volátil en pinturas y barnices",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j13-019",
+   "partidas": [
+    {
+     "codigo": "18PAP00050",
+     "resumen": "Espesor de pélicula en pinturas y barnices",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j13-020",
+   "partidas": [
+    {
+     "codigo": "18PAP00060",
+     "resumen": "Adherencia al soporte de pinturas y barnices",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "cubre": {
+    "porEnsayo": 1,
+    "nota": "La BCCA mide la unidad por tipo de pintura; la hoja, por punto.",
+    "segun": "Texto de 18PAP00060"
+   }
+  },
+  {
+   "ensayo": "j13-021",
+   "partidas": [
+    {
+     "codigo": "18PAP00070",
+     "resumen": "Repintabilidad después del secado en pinturas y barnices",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j13-022",
+   "partidas": [
+    {
+     "codigo": "18PAP00080",
+     "resumen": "Resistencia al frote en húmedo",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j13-024",
+   "partidas": [
+    {
+     "codigo": "18PAP00010",
+     "resumen": "Tiempos de secado y endurecimiento en pinturas",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j13-025",
+   "partidas": [
+    {
+     "codigo": "18PAP00020",
+     "resumen": "Poder cubriende en pinturas y esmaltes",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j13-026",
+   "partidas": [
+    {
+     "codigo": "18PAP00030",
+     "resumen": "Densidad en pinturas y barnices",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j13-027",
+   "partidas": [
+    {
+     "codigo": "18PAP00040",
+     "resumen": "Contenido en materia no volátil en pinturas y barnices",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j13-028",
+   "partidas": [
+    {
+     "codigo": "18PAP00050",
+     "resumen": "Espesor de pélicula en pinturas y barnices",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j13-029",
+   "partidas": [
+    {
+     "codigo": "18PAP00060",
+     "resumen": "Adherencia al soporte de pinturas y barnices",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "cubre": {
+    "porEnsayo": 1,
+    "nota": "La BCCA mide la unidad por tipo de pintura; la hoja, por punto.",
+    "segun": "Texto de 18PAP00060"
+   }
+  },
+  {
+   "ensayo": "j13-030",
+   "partidas": [
+    {
+     "codigo": "18PAP00070",
+     "resumen": "Repintabilidad después del secado en pinturas y barnices",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j13-031",
+   "partidas": [
+    {
+     "codigo": "18PAP00080",
+     "resumen": "Resistencia al frote en húmedo",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j13-033",
+   "partidas": [
+    {
+     "codigo": "18PAP00010",
+     "resumen": "Tiempos de secado y endurecimiento en pinturas",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j13-034",
+   "partidas": [
+    {
+     "codigo": "18PAP00020",
+     "resumen": "Poder cubriende en pinturas y esmaltes",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j13-035",
+   "partidas": [
+    {
+     "codigo": "18PAP00030",
+     "resumen": "Densidad en pinturas y barnices",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j13-036",
+   "partidas": [
+    {
+     "codigo": "18PAP00040",
+     "resumen": "Contenido en materia no volátil en pinturas y barnices",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j13-037",
+   "partidas": [
+    {
+     "codigo": "18PAP00050",
+     "resumen": "Espesor de pélicula en pinturas y barnices",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j13-038",
+   "partidas": [
+    {
+     "codigo": "18PMC00020",
+     "resumen": "Ensayo de adherencia por tracción",
+     "ud": "u"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true,
+   "motivo": "Mismo ensayo y norma (adherencia por tracción, UNE-EN ISO 4624) y mismo precio (200,55 €); el de 50 € de las otras pinturas es 18PAP00060."
+  },
+  {
+   "ensayo": "j13-039",
+   "partidas": [
+    {
+     "codigo": "18PAP00070",
+     "resumen": "Repintabilidad después del secado en pinturas y barnices",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  },
+  {
+   "ensayo": "j13-040",
+   "partidas": [
+    {
+     "codigo": "18PAP00080",
+     "resumen": "Resistencia al frote en húmedo",
+     "ud": "ud"
+    }
+   ],
+   "unidad": "ensayo",
+   "como": "partida",
+   "precioComoLaHoja": true
+  }
+ ]
+}
