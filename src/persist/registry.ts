@@ -324,7 +324,7 @@ export function reconcile(): Promise<ObraIndex> {
     const activeId =
       idx.activeId && obras.some((m) => m.id === idx.activeId)
         ? idx.activeId
-        : (obras.find((m) => m.kind !== 'reference')?.id ?? null);
+        : (idsDeTrabajo(obras)[0] ?? null);
     const next: ObraIndex = { activeId, obras };
     // Sin cambios → devuelve el MISMO objeto para que updateIndex no reescriba.
     return JSON.stringify(next) === JSON.stringify(idx) ? idx : next;
@@ -456,8 +456,14 @@ export function setUltimaCopia(id: string, at: string | null): Promise<ObraIndex
   });
 }
 
+/** Los ids de las obras de trabajo, en orden: las únicas que pueden ser la obra
+ *  en pantalla. Una referencia solo se consulta desde el panel lateral. */
+export function idsDeTrabajo(obras: ObraMeta[]): string[] {
+  return obras.filter((m) => m.kind !== 'reference').map((m) => m.id);
+}
+
 /** Borra una obra: blob + entrada del índice. Si era la activa, salta a la
- *  primera restante (o null). NO aplica la política "no borrar la última" — eso
+ *  primera obra de trabajo restante (o null). NO aplica la política "no borrar la última" — eso
  *  es del store (crea una semilla nueva). Borra también sus claves v5 y su
  *  entrada del índice v5: si no, `reconcile` la volvería a traer «por migrar». */
 export async function deleteObra(id: string): Promise<ObraIndex> {
@@ -466,7 +472,7 @@ export async function deleteObra(id: string): Promise<ObraIndex> {
   await quitarDeV5Index(id);
   return updateIndex((idx) => {
     const obras = idx.obras.filter((m) => m.id !== id);
-    const activeId = idx.activeId === id ? (obras[0]?.id ?? null) : idx.activeId;
+    const activeId = idx.activeId === id ? (idsDeTrabajo(obras)[0] ?? null) : idx.activeId;
     return { activeId, obras };
   });
 }

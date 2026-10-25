@@ -44,6 +44,7 @@ import {
   createObra,
   deleteObra as registryDeleteObra,
   hayCambiosAntiguos,
+  idsDeTrabajo,
   limpiarCopiasV5,
   loadObraData,
   metaOf,
@@ -339,8 +340,10 @@ async function loadObraIntoStore(id: string): Promise<LoadObraResult> {
 }
 
 /* ---- hidratación ---------------------------------------------------------- */
+/** Las obras de trabajo, la activa primero. Las referencias no entran: nunca
+ *  son la obra en pantalla, ni siquiera de respaldo. */
 function orderActiveFirst(idx: ObraIndex): string[] {
-  const ids = idx.obras.map((m) => m.id);
+  const ids = idsDeTrabajo(idx.obras);
   if (idx.activeId && ids.includes(idx.activeId)) {
     return [idx.activeId, ...ids.filter((id) => id !== idx.activeId)];
   }
@@ -365,9 +368,10 @@ export async function hydrate(): Promise<void> {
     useSessionStore.getState().setObras(idx.obras);
     limpiarEnReposo();
 
-    // Instalación nueva (sin obras): demo en memoria, arma autosave. La 1ª
-    // edición creará el registro; la demo NO se fosiliza hasta entonces.
-    if (idx.obras.length === 0) {
+    // Instalación nueva (sin obras de trabajo, quizá con referencias): demo en
+    // memoria, arma autosave. La 1ª edición creará el registro; la demo NO se
+    // fosiliza hasta entonces.
+    if (idsDeTrabajo(idx.obras).length === 0) {
       useSessionStore.getState().setActiveId(null);
       armAutosave();
       return;
@@ -579,9 +583,10 @@ async function deleteObraByIdImpl(id: string): Promise<void> {
   useSessionStore.getState().setObras(idx.obras);
   if (usePersistStore.getState().masNueva?.id === id) usePersistStore.getState().setMasNueva(null);
   if (!wasActive) return;
-  // `idx.obras` excluye la borrada y su primer elemento es la nueva activeId
-  // (registry la promovió) → sin duplicar como hacía la lista anterior.
-  await activateFirstLoadable(idx.obras.map((m) => m.id));
+  // `idx.obras` excluye la borrada y su primera obra de trabajo es la nueva
+  // activeId (registry la promovió) → sin duplicar como hacía la lista anterior.
+  // Las referencias no entran: si solo quedan ellas, se crea una obra en blanco.
+  await activateFirstLoadable(idsDeTrabajo(idx.obras));
 }
 
 /**
@@ -615,7 +620,7 @@ async function discardRecoveryImpl(key: string): Promise<void> {
     // una obra sana ya cargada), no hay nada que reactivar — tocar la activa
     // recargaría de disco y descartaría la última edición en memoria.
     if (wasActive || activeId() == null)
-      await activateFirstLoadable(idx.obras.map((m) => m.id));
+      await activateFirstLoadable(idsDeTrabajo(idx.obras));
   } else {
     await clearObra(key); // legacy: solo blob (no hay entrada de registro)
     armAutosave();

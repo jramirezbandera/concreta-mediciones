@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto';
-import { clear } from 'idb-keyval';
+import { clear, set } from 'idb-keyval';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { ImportedObra } from '../core/bc3import';
 import { SCHEMA_VERSION, blankObraData, fromSerializable, useObraStore } from '../store';
@@ -9,10 +9,14 @@ import { usePersistStore } from './persistStore';
 import { useSessionStore } from './sessionStore';
 import {
   __resetSyncForTests,
+  deleteObraById,
+  discardRecovery,
   flushPending,
   getActiveObraId,
   hydrate,
   importObraAsReference,
+  newObra,
+  switchObra,
 } from './sync';
 
 const state = () => useObraStore.getState();
@@ -126,5 +130,73 @@ describe('importObraAsReference · marca y fuente oficial en los datos (R2, R8)'
     const copia = fromSerializable(JSON.parse(JSON.stringify(data.data)) as typeof data.data);
     expect(copia.obra.fuenteOficial).toEqual(fuente);
     expect(copia.obra.soloReferencia).toBe(true);
+  });
+});
+
+describe('una referencia nunca pasa a ser la obra en pantalla', () => {
+  const corromper = (id: string) => set(obraKey(id), { schemaVersion: 1, data: { roto: true } });
+  /** Vuelve a arrancar la app sobre lo que hay en disco. */
+  async function rearrancar(): Promise<void> {
+    state().reset();
+    __resetSyncForTests();
+    await hydrate();
+  }
+
+  it('borrar la única obra de trabajo crea una en blanco, no abre la referencia', async () => {
+    const aId = await bootWithDemoA();
+    const refId = await importObraAsReference(importedBase('BCCA'));
+    await deleteObraById(aId);
+
+    const activa = getActiveObraId();
+    expect(activa).not.toBe(refId);
+    expect(activa).not.toBeNull();
+    expect(state().chapters.length).toBe(0); // en blanco
+    const idx = await loadIndex();
+    expect(idx.activeId).toBe(activa);
+    expect(idx.obras.find((m) => m.id === refId)?.kind).toBe('reference'); // la referencia sigue
+  });
+
+  it('borrar la activa salta a la siguiente obra de trabajo, por encima de la referencia', async () => {
+    const aId = await bootWithDemoA();
+    const refId = await importObraAsReference(importedBase('BCCA')); // [A, R]
+    const bId = (await newObra('B'))!; // [A, R, B]
+    await switchObra(aId);
+    await deleteObraById(aId); // queda [R, B]
+
+    expect(getActiveObraId()).toBe(bId);
+    expect(getActiveObraId()).not.toBe(refId);
+    expect(state().obra.denominacion).toBe('B');
+  });
+
+  it('al arrancar con la activa dañada, no cae en la referencia: recuperación', async () => {
+    const aId = await bootWithDemoA();
+    const refId = await importObraAsReference(importedBase('BCCA'));
+    await corromper(aId);
+    await rearrancar();
+
+    expect(getActiveObraId()).not.toBe(refId);
+    expect(usePersistStore.getState().recoveryKey).toBe(obraKey(aId));
+  });
+
+  it('al arrancar con solo referencias, enseña la demo sin abrir ninguna', async () => {
+    const refId = await importObraAsReference(importedBase('BCCA'));
+    await rearrancar();
+
+    expect(getActiveObraId()).toBeNull();
+    expect(state().obra.denominacion).not.toBe('BCCA');
+    expect(useSessionStore.getState().obras.map((o) => o.id)).toEqual([refId]); // el panel la sigue viendo
+  });
+
+  it('descartar la obra dañada crea una en blanco, no abre la referencia', async () => {
+    const aId = await bootWithDemoA();
+    const refId = await importObraAsReference(importedBase('BCCA'));
+    await corromper(aId);
+    await rearrancar();
+    await discardRecovery(obraKey(aId));
+
+    const activa = getActiveObraId();
+    expect(activa).not.toBeNull();
+    expect(activa).not.toBe(refId);
+    expect(state().chapters.length).toBe(0);
   });
 });

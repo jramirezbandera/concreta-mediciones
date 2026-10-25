@@ -262,8 +262,9 @@ Lo que cambió respecto al diseño:
 - **Fuente mal formada (D6):** `isMeta` no rechaza la meta (eso vaciaría el índice); quien
   enseña la fuente la valida con `esFuenteOficial`.
 - **`reconcile` (D12):** si no hay obra activa válida, elige la primera obra de trabajo y no
-  una referencia. Borrar la obra activa (`deleteObra`) y `activateFirstLoadable` aún pueden
-  activar una referencia, como antes de este cambio.
+  una referencia. Lo mismo al borrar la obra activa, al descartar una obra dañada y en el
+  respaldo del arranque (`idsDeTrabajo`, 2026-10-25): si no queda ninguna obra de trabajo,
+  se crea una en blanco (o, al arrancar, la demo).
 - **Madrid:** su página antigua redirigía (301, lo encontró `comprobar.mjs`); el catálogo
   apunta a `https://www.comunidad.madrid/vivienda/base-datos-construccion`.
 - **E3 (D17):** en Extremadura las demoliciones son E01E, R01D, Q01D/Q01P y U01C, pero casi
