@@ -278,4 +278,34 @@ estos ya están calculados:
 
 ---
 
+## Aplazados de la revisión de ingeniería del plan de control de calidad (2026-10-25)
+
+Contexto común: `docs/plan-control-calidad.md`, «Revisión de ingeniería» y su
+«Decision ledger». Los dos salen de decisiones de calidad que tocarían residuos.
+
+### Volver a revisar un residuo confirmado si cambia la partida (P3)
+
+- **Qué:** al confirmar un residuo, guardar en `Partida.rcd` una huella de `code`,
+  `title`, `desc` y `ud`; si la partida cambia, el residuo pasa a «revisar» y no
+  suma hasta confirmarlo otra vez.
+- **Por qué:** hoy un residuo confirmado sigue contando aunque se cambie el título o
+  la unidad de la partida (`editPartidaField` no toca `rcd`, y `proponerEn` salta lo
+  ya asignado). En calidad se hace así por D20.
+- **Contexto:** cambia un comportamiento que ya se entrega: corregir una errata del
+  título pide volver a confirmar. Empezar por `estadoTrasConfirmar`
+  (`core/rcd/reglas.ts`) y `store/slices/rcdSlice.ts`.
+- **Depende de:** el helper de huella que escriba la E3 de calidad.
+
+### Una sola superficie construida para residuos y calidad (P3)
+
+- **Qué:** un dato de obra (ficha) con la superficie construida y las plantas, que
+  lean el estudio de residuos y el plan de calidad, con migración del dato de residuos.
+- **Por qué:** hoy residuos lo pide en `DatosRatios.superficieConstruida` y calidad
+  en `planCalidad` (D6): el mismo número se teclea dos veces y puede no coincidir.
+- **Contexto:** D6 lo dejó en `planCalidad` para no tocar `Obra`, la ficha ni las
+  cabeceras. Empezar por `Obra` (`core/types.ts`) y `DatosRatios`.
+- **Depende de:** la E3 de calidad.
+
+---
+
 _Backlog: 5 aplazados del plan de líneas de medición + mejoras de producto (recordatorio de copia, guardar en carpeta, obra en el móvil, medir sobre planos con 8 aplazados, documentos). El pase de diseño móvil y la navegación de teclado en certificaciones están hechos, y la pestaña de solo lectura ya no deja editar._
