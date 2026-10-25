@@ -1,7 +1,8 @@
 # Plan · Plan de control de calidad (CTE) desde el presupuesto
 
-> Estado: BORRADOR (2026-10-24), pendiente de `/plan-eng-review`. Cerradas el 2026-10-24 las
-> tres decisiones de la Etapa 0 (D1, D2 y D3, abajo); las demás van con su propuesta.
+> Estado: REVISADO (`/plan-eng-review`, 2026-10-25). Las decisiones de la revisión ya están en
+> el cuerpo (abajo, «Decisiones»; el detalle de cada una, en el «Decision ledger» del final). Queda
+> abierta D6 (vistas), para `/plan-design-review` antes de E3.
 > La verificación normativa está en [`docs/research/control-calidad/`](research/control-calidad/README.md)
 > (criterios K-PCC.1–72, 2026-10-24): el plan la cita y no la repite. Modelo de forma y de
 > código: el estudio de residuos ([`plan-estudio-residuos.md`](plan-estudio-residuos.md),
@@ -107,7 +108,14 @@ cambia el planteamiento»). Lo que pesa en el diseño:
   - prueba con obras reales fuera del repo (`rcd/rcdReales.node.test.ts`, se salta si no está
     la carpeta).
 - **Esquema** (`store/schema.ts`): `SCHEMA_VERSION = 7`, `DOMAIN_KEYS` con `estudioRcd`;
-  migraciones en cadena; una versión más nueva deja la pestaña en solo lectura.
+  migraciones en cadena; una versión más nueva deja la pestaña en solo lectura. La carga pasa
+  por `fromSerializable` (`store/schema.ts:249`) y lo ilegible se aparta con
+  `apartarRcdIlegibles` (`core/rcd/datos.ts:76`); no hay `isObraData`.
+- **Word:** `features/exportar/docxRender.ts` ya exporta `cabecera`, `tabla`, `firma`, `cell`,
+  `run` y los colores, y `docxRcd.ts` los usa; el de calidad importa de ahí.
+- **Bancos:** un banco es otra obra del índice (`kind: 'reference'`), se carga asíncrona con
+  `loadObraRefSource` y una base grande hidratada retiene unos 50 MB
+  (`features/referencia/obraSource.ts:10-13`).
 - **Modelo y mediciones:** `partidaCantidad(p)` (`core/medicion.ts`), `formaDeUd`
   (`core/medForma.ts`), totales y PEM (`core/totales.ts`).
 - **Referencia** (`core/refdata.ts`, `RefSource`, `RefPartida`): los bancos que el usuario ha
@@ -124,8 +132,20 @@ cambia el planteamiento»). Lo que pesa en el diseño:
 
 ```ts
 calcularPlanCalidad(entrada: EntradaPcc, tablas: TablasPcc = TABLAS_PCC): PlanCalidad
-// EntradaPcc = { chapters, partidas, rates, obra, plan: PlanCalidadDatos, bancos: PrecioBanco[] }
+
+interface EntradaPcc {
+  chapters: Chapter[];
+  partidas: PartidasMap;
+  banco: Banco;                              // recursos: la descomposición propone m³ y kg (§4, O3)
+  rates: Rates;                              // K y CI: coherencia y base del % (§8, §9)
+  obra: Obra;
+  plan: PlanCalidadDatos;                    // §6, con los precios copiados (§8)
+  hoy: string;                               // ISO: la fecha del plan si no tiene una
+}
 ```
+
+Sin bancos en la entrada: el cálculo no carga nada ni lee el reloj, y el mismo plan da siempre
+el mismo resultado (A1).
 
 ```ts
 interface PlanCalidad {
@@ -139,6 +159,9 @@ interface PlanCalidad {
   valoracion: FilaValoracion[];              // solo lo que paga la propiedad (laboratorio)
   aCargoDeOtros: FilaSinCoste[];             // instalador, constructor: listado, sin importe (D2)
   total: number;                             // Σ valoración
+  porcentaje: { valor: number; basePem: number } | null;  // base: §8 (O1b)
+  capitulo: CoherenciaCapitulo | null;       // §9: enlace, diferencias, aporte al PEM con K y CI
+  emitido: DiferenciaEmitido[];              // §12: lo que cambia frente al Word entregado (O5)
   pendientes: Pendiente[];
   avisos: Aviso[];
 }
@@ -149,19 +172,23 @@ interface FilaValoracion {
   unidad: UnidadEnsayo;                      // 'amasada' | 'probeta' | 'ensayo' | 'visita' | 'lote' | 'tramo' (K-PCC.60)
   cantidad: number;                          // entero, redondeado hacia arriba (K-PCC.57)
   regla: CuentaVisible;                      // de qué partidas, qué lote, qué cuenta (K-PCC.54)
-  precio: { valor: number | null; fuente: FuentePrecio };  // banco, hoja de la Junta, propio (K-PCC.67)
+  precio: { valor: number | null; fuente: FuentePrecio; cubre?: CoberturaPrecio };  // §8 (K-PCC.67)
+  precios: number;                           // nº de precios: cantidad ajustada a lo que cubre cada uno (O4)
   importe: number | null;
 }
 ```
 
-- Las partidas en estado `propuesta` no generan controles: salen en `pendientes` («6 partidas
-  sin revisar»), como en residuos.
+- Las partidas en estado `propuesta` o `revisar` no generan controles: salen en `pendientes`
+  («6 partidas sin revisar»), como en residuos.
 - Un dato que falta no se supone salvo que el plan diga su valor por defecto (§6): la fila sale
   con la cuenta parcial y el dato en `pendientes`.
 - Los números se calculan sin redondear y se redondean hacia arriba al final, en la cantidad de
   cada fila (lotes, amasadas, tomas, visitas): nunca un ensayo fraccionario (K-PCC.57).
 - El capítulo enlazado como control de calidad no genera controles (K-PCC.70), y tampoco los de
   gestión de residuos, seguridad y salud, implantación, transporte y alquileres.
+- **Partida que cambia tras confirmarla** (O6): al confirmar, `pcc.huella` guarda `code`,
+  `title`, `desc` y `ud`; si al calcular no casan, la partida cuenta como `revisar` (no entra en
+  el cálculo hasta confirmarla otra vez) y lo tecleado a mano se conserva, con aviso.
 
 ### 2. Tres capas y una valoración
 
@@ -187,8 +214,8 @@ CONFIRMAR», como en `rcd/tablas`.
 | `durabilidad` | Clases que piden penetración de agua y aire ocluido; profundidades de la tabla 57.5.7 | CodE 57.5.7 (K-PCC.30) | ídem |
 | `armaduras` | Series de diámetros, lotes de 30 t (barras, mallas) y 25 t (ferralla), tabla 59.2.4.3, 15 unidades | CodE arts. 58–59 (K-PCC.31–32; B A4) | ídem |
 | `ejecucion` | Tabla 63.1 (edificación), tabla 101.1 (acero), anejo 15 orientativo y su opción simplificada, anejo 17 (END por tipo de cordón) | CodE (K-PCC.33, K-PCC.35; B A5) | ídem |
-| `catalogo` | Ensayos: id, nombre, norma, nº por lote, tipo de lote (A–I de D §3.2), unidad, nivel 1/2/3 de la Junta, código DR, precio de referencia con fecha | Hoja de la Junta V04 (D1), **corregida** donde la norma la contradice (§3 bis) | `junta-PCC-V04-2023` |
-| `enlace-bcca` | Ensayo del catálogo → código BCCA 2023 cap. 18 (o «sin código») | Tabla curada a mano sobre el emparejamiento de D §4.2; sin los «solo precio» falsos | `bcca-2023-V02` |
+| `catalogo` | Ensayos: id, nombre, norma, nº por lote, tipo de lote (A–I de D §3.2), unidad, nivel 1/2/3 de la Junta, código DR, precio de referencia con fecha y lo que cubre (`{ probetas?, incluye? }`) | Hoja de la Junta V04 (D1), **corregida** donde la norma la contradice (§3 bis) | `junta-PCC-V04-2023` |
+| `enlace-bcca` | Ensayo del catálogo → código BCCA 2023 cap. 18 (o «sin código»), con lo que cubre ese precio (`{ probetas?, incluye?: ensayo[] }`, O4) | Tabla curada a mano sobre el emparejamiento de D §4.2; sin los «solo precio» falsos | `bcca-2023-V02` |
 | `enlace-cype` | Ensayo → código del Generador de precios de CYPE | SIN CONFIRMAR hasta tener un .bc3 de CYPE con el capítulo de control (E0.3); vacía mientras tanto | — |
 | `familias` | Familia → cómo reconocerla (prefijos BCCA, Centro, CYPE; texto; unidad) → recepción documental, ejecución, obra terminada, ensayos del catálogo, obligatoriedad R/P/C y quién lo hace | A «Para la app» (a) + D §5, cada fila con su cita | Con la app |
 | `citas-prohibidas` | Listas de K-PCC.50–51, A (d), B (d), C (d), con lo que las sustituye; y la lista de lo que **no** se veta | Verificación | Con la app |
@@ -206,9 +233,10 @@ la fila original y el motivo, para que se pueda auditar contra la hoja.
 repo (`ejemplos pdf/control calidad/`, no versionado) y escribe el JSON; las correcciones van
 en un fichero aparte que el script aplica, como `scripts/rcd/extraer_ecoeficiencia.py`.
 
-**Congelar lo usado:** el plan guarda la edición de cada tabla y el precio de cada fila con su
-fuente. Si cambia el banco o sale otra edición, la vista lo dice («con la BCCA cargada hoy, el
-total pasaría de A a B €») y no cambia sola.
+**Congelar lo usado:** los precios del banco se copian al plan con «Tomar precios de un banco»
+(§8) y no se leen en vivo. Al exportar el Word, el plan guarda lo emitido (§12): ediciones de
+tablas, versión del motor, filas y totales. Si el cálculo de hoy difiere de lo emitido, la vista
+lo dice con las filas que cambian y no cambia sola.
 
 ### 4. Familias: qué partida dispara qué control
 
@@ -218,17 +246,71 @@ viaja con ella al copiarla:
 ```ts
 interface ControlPartida {
   estado: 'propuesta' | 'confirmada' | 'sinControl' | 'capituloControl';
-  origen: { tipo: 'regla' | 'banco' | 'manual'; ref?: string; motivo: string };
-  familia: FamiliaId;                        // 'hormigon-estructural', 'acero-barras', 'cubierta-plana'…
-  hormigon?: DesignacionHormigon;            // leída del texto y validada (abajo)
-  grupoEstructura?: FilaLote;                // 'cim_superficial' | 'flexion' | 'pilares_muros'…
-  acero?: { kgPorUd?: number | null; procedencia?: 'taller' | 'obra' };
+  origen: { tipo: 'regla' | 'banco' | 'descomposicion' | 'manual'; ref?: string; motivo: string };
+  familia?: FamiliaId;                       // 'hormigon-estructural', 'ferralla', 'cubierta-plana'…
+  ensayo?: EnsayoId;                         // solo `capituloControl`: la fila de la valoración (A2)
+  huella?: { code: string; title: string; desc: string; ud: string };  // al confirmar (O6)
+  hormigon?: {
+    designacion: DesignacionHormigon;        // leída del texto y validada (abajo)
+    fila?: FilaLote;                         // 'cim_superficial' | 'cim_mayor_200' | 'flexion' | 'pilares_muros' | 'otros_compresion'
+    m3PorUd?: number | null;                 // partida no medida en m³ (forjado en m²): volumen por ud
+    elementoMayorM3?: number | null;         // cimentación: volumen del mayor elemento (> 200 → cim_mayor_200)
+    dosificacion?: string;                   // id que separa suministros; por defecto, la designación
+  };
+  acero?: {
+    tipo: 'barras' | 'mallas' | 'ferralla';
+    kgPorUd?: number | null;                 // partida no medida en kg (hormigón «incluso armadura»)
+    series?: Partial<Record<SerieDiametro, number>> | null;  // kg por ud y serie: fina, media, gruesa, muyGruesa
+    diametros?: number[];                    // Ø usados (geometría de ferralla: series fina y media)
+    procedencia?: 'taller' | 'obra';         // manda sobre la del plan (§6)
+  };
 }
 ```
 
+**Contrato de entradas del motor** (T1, O2). Cada dato que piden los algoritmos A2–A5 de B «Para
+la app» y B (b) tiene un sitio, quién lo propone y qué pasa si falta. Regla general: `undefined`
+= no se ha dicho y toma el valor por defecto si lo hay; `null` = se ha pedido y falta, y sale en
+«Antes de entregar».
+
+| Dato del algoritmo | Dónde se guarda | Lo propone | Si falta |
+|---|---|---|---|
+| Fila de la tabla 57.5.4.1 | `pcc.hormigon.fila` | Regla por texto («zapata», «forjado», «pilar», «muro») | Pendiente; la partida no entra en ningún grupo |
+| Tipo, fck, clases (designación) | `pcc.hormigon.designacion` | `hormigon.ts` sobre título y texto | Sin tipo o fck legibles: fuera del cálculo, con aviso (Q2) |
+| Dosificación (separa lotes y durabilidad) | `pcc.hormigon.dosificacion` | La designación normalizada | Nunca falta (abajo, T14) |
+| V del grupo (m³) | Medición × `m3PorUd` si la ud no es m³ | `m3PorUd` desde la descomposición (O3) | Pendiente (K-PCC.63) |
+| Volumen del mayor elemento de cimentación | `pcc.hormigon.elementoMayorM3` | Del texto si lo dice («losa de 400 m³») | Se supone < 200 m³, con aviso si la partida pasa de 200 m³ |
+| S (m² construidos) y P (plantas) del grupo | `planCalidad.grupos[g]` → `planCalidad.superficieConstruida` y `plantas` (D7) | — | Ese criterio no se aplica, con aviso |
+| T (semanas de hormigonado) del grupo | `planCalidad.grupos[g].semanas` | — | Dentro de plazo, con aviso (K-PCC.29) |
+| Distintivo del hormigón, dispersión certificada | `planCalidad.hormigon.distintivo` | — | Sin distintivo, con aviso (D3) |
+| Modalidad (estadístico o 100 %) | `planCalidad.hormigon.modalidad` | — | Estadístico; el indirecto no se ofrece (γc) |
+| Volumen de cuba | `planCalidad.hormigon.cubaM3` | — | Sin nota (*) ni tope de N |
+| Meses de suministro por dosificación | `planCalidad.dosificaciones[d].meses` | — | Pendiente si la clase pide durabilidad |
+| kg de acero | Medición en kg, o medición × `kgPorUd` | `kgPorUd` desde la descomposición (O3) | Pendiente |
+| kg por serie de diámetros | `pcc.acero.series` | Del texto si trae Ø («Ø8, Ø10») y la descomposición los separa | Con ferralla de taller no hace falta; en obra, pendiente |
+| Diámetros (geometría de ferralla) | `pcc.acero.diametros` | Del texto | Pendiente la geometría; el resto de la ferralla se calcula |
+| Procedencia, enderezado, soldadura | `planCalidad.acero` (y `pcc.acero.procedencia`) | — | Taller (art. 59.2), sin enderezado ni soldadura, con aviso (D3f) |
+| Distintivo de barras, mallas y ferralla | `planCalidad.acero.distintivos` | — | Sin distintivo, con aviso |
+| Ejecución: superficie y plantas por fila, nº de zapatas, m de muro | `planCalidad.grupos[g]` (`elementos`, `muroM`) | Nº de zapatas del nº de unidades si la partida se mide en ud | Ese criterio no se aplica, con aviso |
+| Nivel de control de ejecución, opción A o B, simplificada | `planCalidad.ejecucion` | — | Normal, opción A, sin simplificada (D3) |
+
+- **Grupos de hormigón** (`g`): por (fila, dosificación), nunca por partida. `planCalidad.grupos`
+  guarda por clave de grupo solo lo que el usuario cambia; lo demás lo toma de los datos de la
+  obra del plan (D7).
+- **Dosificación (T14, cerrado):** el lote es de «amasadas del mismo suministrador, con los
+  mismos materiales y la misma dosificación nominal», sin mezclar filas (CodE 57.5.4; B, línea
+  219). La clase de exposición no separa lotes por sí misma, pero suele cambiar la dosificación.
+  Por eso la dosificación por defecto es la designación entera normalizada (XC1 y XC2 en dos
+  grupos, lo más exigente) y el usuario la unifica dando el mismo id a dos partidas que son el
+  mismo hormigón.
+- **Elementos de más de 200 m³:** con `elementoMayorM3 > 200` la partida va a `cim_mayor_200` y
+  cuenta `⌈V / elementoMayorM3⌉` elementos con N por el mayor (lo más exigente; interpretación).
+  Si los elementos son muy distintos, una partida por elemento.
+- **Ida y vuelta:** la obra A se guarda en .json, se recarga y da el mismo plan (test de E3).
+
 - **Estados.** `propuesta` (la puso una regla; no cuenta), `confirmada`, `sinControl` (mano de
   obra, ayudas, transporte, hormigón de limpieza: K-PCC.70) y `capituloControl` (partida del
-  capítulo de control, para la coherencia del §9).
+  capítulo de control, con su `ensayo`, para la coherencia del §9). «Revisar» no es un estado
+  guardado: es una `confirmada` cuya huella ya no casa (§1, O6).
 - **Reglas** (`core/pcc/reglas.ts`), de la más concreta a la más general, como las de residuos:
   exclusiones (capítulos de control, residuos, seguridad y salud; implantación; alquileres) →
   prefijo de banco (BCCA por capítulo y letras: `03H`, `05H`, `03AC`, `05A`…; Precio Centro
@@ -238,12 +320,18 @@ interface ControlPartida {
 - **Designación de hormigón** (`core/pcc/hormigon.ts`): `HA-25/B/20/XC2` → tipo (HM, HA, HP),
   fck, consistencia, árido, clases de exposición, autocompactante. Se valida contra las clases
   del art. 27 (X0, XC1–4, XS1–3, XD1–3, XF1–4, XA1–3, XM1–3). Una clase no válida (`IIa`, `CX1`,
-  `XC2a`, `X0` en armado) deja la partida con aviso y no dispara durabilidad hasta que se corrija
-  (K-PCC.52). Un HM sin función estructural (limpieza, rellenos) va a `sinControl`.
+  `XC2a`, `X0` en armado) deja la partida con aviso y no dispara durabilidad hasta que se
+  corrija (K-PCC.52), pero **sí cuenta para los lotes** si el tipo y el fck se leen (Q2). Sin tipo
+  o fck legibles, la partida queda fuera del cálculo, con aviso. Un HM sin función estructural
+  (limpieza, rellenos) va a `sinControl`.
 - **Grupo de estructura.** La regla propone la fila de la tabla 57.5.4.1 por el texto
   («zapata», «losa de cimentación», «forjado», «pilar», «muro»); el usuario la confirma. Las
   cimentaciones de más de 200 m³ por elemento solo se proponen si la partida lo dice; si no, se
-  piden.
+  piden (`elementoMayorM3`).
+- **Desde la descomposición** (O3): en una partida con descomposición, el recurso MAT de
+  hormigón (por designación) propone `m3PorUd` y el de acero (B 500 S, mallas) `kgPorUd`, con
+  origen `descomposicion`, y se confirman como el resto. Si la obra tiene además partidas de
+  acero aparte, aviso de doble cómputo: el técnico dice cuál cuenta.
 - **Aplicar a homónimos y Deshacer**, igual que en residuos. Asignar familia no pasa por el
   copy-on-write de las partidas de base.
 
@@ -251,11 +339,11 @@ interface ControlPartida {
 
 Todo en `core/pcc/estructura.ts`, con los algoritmos de B «Para la app» A2–A5:
 
-1. **Grupos de hormigón:** por (fila de la tabla 57.5.4.1, tipo de hormigón): un HA-25 de
+1. **Grupos de hormigón:** por (fila de la tabla 57.5.4.1, dosificación) (§4, T14): un HA-25 de
    cimentación y un HA-30 de forjados nunca comparten lote. El volumen sale de las partidas
    confirmadas del grupo; la superficie construida, las plantas y las semanas, de los datos del
-   plan por grupo (§6). Una partida de forjado medida en m² necesita su espesor equivalente o el
-   volumen declarado: si no, pendiente (K-PCC.63).
+   plan por grupo o, si no, de los de la obra (§6). Una partida de forjado medida en m² necesita
+   su `m3PorUd`: si no, pendiente (K-PCC.63).
 2. **Lotes y amasadas:** `lotes = max(⌈V/Vmax⌉, ⌈S/Smax⌉, ⌈P/2⌉, ⌈T/Tmax⌉)` con los límites
    × 5 si hay distintivo; N = 3 sin distintivo, 1 con él, ≥ 6 si fck ≥ 50; mínimo 3 lotes en
    tamaño ampliado; cimentaciones > 200 m³ por elemento. Si no se dan las semanas, la app supone
@@ -264,8 +352,9 @@ Todo en `core/pcc/estructura.ts`, con los algoritmos de B «Para la app» A2–A
 3. **Lo que queda SIN CONFIRMAR no se aplica como norma** (README): el × 5 sobre plantas y
    semanas se aplica (es el literal, «los valores de la tabla»), pero el plan lo dice en una
    nota; la nota (*) de pilares (500 → 1000 m²) y el tope de N por amasadas reales solo con el
-   volumen de cuba declarado, y marcados como interpretación; el control indirecto no se ofrece
-   hasta confirmar γc = 1,5 del anejo 19.
+   volumen de cuba declarado, y marcados como interpretación (caso E5 de A6); el control
+   indirecto no se ofrece hasta confirmar γc = 1,5 del anejo 19 (el caso E11 comprueba que no se
+   ofrece).
 4. **Durabilidad:** por tipo de hormigón (dosificación) con clase que lo pida, sin distintivo:
    `1 + floor((meses − ε)/6)` penetraciones; aire ocluido con XF2 o XF4. Un tipo con dos clases
    se cuenta una vez (K-PCC.59).
@@ -301,19 +390,23 @@ Todo en `core/pcc/estructura.ts`, con los algoritmos de B «Para la app» A2–A
 | Fecha del plan | Ediciones de tablas | Hoy |
 | Uso y si es vivienda; unifamiliar aislada | Ley 5/2025, IT 5, n50 | Pendiente |
 | Número de viviendas o unidades de uso | Pruebas por porcentaje (K-PCC.64), IT 5 | 1 si es unifamiliar; si no, pendiente |
-| Superficie construida y plantas **por grupo de estructura** | Lotes de hormigón y de ejecución | Pendiente (no se calcula el lote por ese criterio y se avisa) |
-| Semanas de hormigonado por grupo | Criterio de tiempo de la tabla | Dentro de plazo, con aviso |
-| Meses de suministro por tipo de hormigón | Durabilidad | Pendiente si hay clases que la piden |
+| Superficie construida y plantas **de la obra**, tecleadas una vez (`superficieConstruida`, `plantas`; D7) | Prerrellenan cada grupo de estructura | Pendiente (no se calcula el lote por ese criterio y se avisa) |
+| Superficie, plantas, semanas, nº de zapatas y m de muro **por grupo** (`grupos[g]`) | Lotes de hormigón y de ejecución; el dato del grupo manda sobre el de la obra | Los de la obra; semanas, dentro de plazo con aviso |
+| Meses de suministro por dosificación (`dosificaciones[d].meses`) | Durabilidad | Pendiente si hay clases que la piden |
 | Distintivo del hormigón: sin / con / dispersión certificada | Lotes y durabilidad | **Sin distintivo** (lo más exigente), con aviso (D3) |
 | Distintivo del acero, de las mallas y de la ferralla | Armaduras | Sin distintivo, con aviso |
 | Procedencia de la ferralla: taller u obra; enderezado; soldadura | Art. 58 o 59.2 | **Taller**, con aviso (D3) |
 | Volumen de cuba (m³) | Nota (*) y tope de N (interpretación) | Sin aplicar |
+| Modalidad del control de resistencia: estadístico o 100 % | Lotes | Estadístico (el indirecto no se ofrece) |
 | Nivel de control de ejecución: normal o intenso; opción A o B del art. 17 | Pliego, ejecución | **Normal** (D3); opción A |
 | Clase de ejecución del acero estructural; soldadura en obra; tipos de cordón | §5.7 | Clase 2; el resto pendiente si hay acero |
 | Zona sísmica | Art. 58: cargas cíclicas | De la provincia, si hay tabla; si no, pendiente |
 | Pruebas a criterio del proyecto: cubierta plana, ventanas, blower door, acústica, barandillas | §7 | No propuestas, salvo las que activan una regla (cubierta plana → propuesta) |
 | A cargo de quién va cada prueba (laboratorio o instalador) | Valoración | Instalador (D2) |
+| Ensayos de nivel 2 y 3 marcados (D8) | Valoración | Ninguno |
 | Capítulo de control de la obra | §9 | Se propone por el título |
+| Precios copiados de un banco (`precios`, §8) | Valoración | Precio de la Junta, luego el tecleado, luego pendiente |
+| Lo emitido en el último Word (`emitido`, §12) | Aviso de diferencias | Sin aviso |
 | Técnico redactor | Firma | Pendiente (como en residuos) |
 | Comunidad autónoma | Textos y citas | De la provincia de la obra |
 
@@ -337,9 +430,14 @@ Todo en `core/pcc/estructura.ts`, con los algoritmos de B «Para la app» A2–A
 
 ### 8. Valoración y precios
 
+- **«Tomar precios de un banco»** (A1): acción explícita. El usuario elige una referencia, la
+  app la carga con `loadObraRefSource`, busca los códigos del enlace (`enlace-bcca`;
+  `enlace-cype` cuando exista) y guarda en `planCalidad.precios` por ensayo `{ ensayo, codigo,
+  precio, ud, banco, fecha, texto, cubre }` (`texto`: el `~T`, para «Crear capítulo»). Repetirla
+  enseña «con este banco el total pasaría de A a B €» y no aplica nada hasta aceptar. El banco
+  no se carga al abrir la vista.
 - **Orden de la fuente del precio** de cada fila:
-  1. el banco cargado en Referencia, por el código del enlace (`enlace-bcca`; `enlace-cype`
-     cuando exista);
+  1. la copia de `planCalidad.precios`, con banco y fecha;
   2. el precio de referencia del catálogo de la Junta, con «Junta, 2022» como fuente;
   3. el que teclee el usuario;
   4. si no hay ninguno, pendiente.
@@ -347,8 +445,17 @@ Todo en `core/pcc/estructura.ts`, con los algoritmos de B «Para la app» A2–A
 - **La unidad manda** (K-PCC.60): la fila guarda en qué se mide el ensayo y el precio; una
   compresión por amasada (BCCA, 2 probetas) y una por probeta (Centro) no se mezclan. Si no
   casan, la fila sale pendiente con el motivo.
+- **Lo que cubre cada precio** (O4): el enlace y el catálogo dicen `{ probetas?, incluye? }`.
+  Si un precio cubre menos probetas de las exigidas, la fila cuenta los precios que hacen falta
+  y lo dice (2 probetas por precio y 4 exigidas → 2 precios por amasada), o queda pendiente con
+  el motivo; un ensayo incluido en otro precio (la consistencia en la toma) no se valora aparte.
 - **Sin regla de porcentaje.** El total sale también como % del PEM, como dato; ninguna norma
-  fija un mínimo (K-PCC.5, K-PCC.42).
+  fija un mínimo (K-PCC.5, K-PCC.42). **Base** (Q1, O1b): `pem()` de los costes directos sin el
+  capítulo de control enlazado, con los mismos `rates`; el % no cambia al crear el capítulo y el
+  Word dice la base («sobre el PEM sin el capítulo de control»).
+- **Niveles de la Junta** (D8): los ensayos de nivel 1 de las familias presentes salen
+  propuestos; los de nivel 2 y 3, desmarcados y a casilla. Con PEM > 300.000 € un aviso cita la
+  recomendación de la hoja sin marcar nada.
 - **Aviso de plan pobre** (D §6.9): si el capítulo de control de la obra queda por debajo de lo
   que dan los ensayos de nivel 1 de las familias presentes (hormigón y acero como mínimo), aviso
   con las dos cifras. No se corrige solo.
@@ -361,14 +468,26 @@ Como el 7.º de residuos (`rcd/capitulo.ts`, `rcd/coherencia.ts`):
   de calidad», «ensayos» o venga de los capítulos de control de los bancos (BCCA 18, Precio
   Centro E29). El coste del plan es su importe y el Word lista sus partidas.
 - **Coherencia** (K-PCC.61): cada partida del capítulo se casa con su fila de la valoración por
-  código del enlace o por texto. Avisos: ensayo valorado sin partida; partida sin ensayo en el
-  plan; cantidades distintas. Unidades como en §8.
-- **«Crear capítulo de control de calidad»:** una partida por fila de la valoración, copiada del
-  banco cargado cuando el enlace tiene código (con su `~T` pasado por la lista negra, K-PCC.68;
-  si falla, el texto propio del ensayo) o partida propia con el precio de la fila. Cantidad = la
-  del plan. Cambia el PEM: va en un paso de Deshacer, con aviso.
-- Las partidas del capítulo quedan `capituloControl` y no generan control ni residuo (las reglas
-  de residuos ya excluyen el control de calidad).
+  `pcc.ensayo`; si no lo tiene, por el código del enlace; por texto, solo como propuesta que el
+  usuario confirma (nunca por importe: 210 € son dos ensayos distintos). Compara **cantidad y
+  precio unitario** (O1a). Avisos: ensayo valorado sin partida; partida sin ensayo en el plan;
+  cantidad o precio distintos. Unidades como en §8.
+- **K y CI** (O1a): la valoración son precios de laboratorio sin coeficiente K ni costes
+  indirectos. Con K ≠ 1 o CI > 0, la vista y el Word dan las dos cifras: el total de la
+  valoración y lo que el capítulo aporta al PEM.
+- **«Crear capítulo de control de calidad»** (A2), como `crearCapituloGestionRcd`
+  (`store/slices/rcdSlice.ts:143-171`): un capítulo nuevo con una partida propia por fila de la
+  valoración, `items: []`, cantidad = la del plan y precio de la fila. Código: el del banco si la
+  obra no lo usa ya; si no, `nextPartidaCode`. Texto: el `~T` guardado con el precio, pasado por
+  la lista negra (K-PCC.68); si falla, el texto propio del ensayo. Marca `pcc: { estado:
+  'capituloControl', ensayo }`. No carga el banco ni abre el diálogo de colisiones; quien quiera
+  la descomposición la copia luego desde Referencia. Cambia el PEM: va en un paso de Deshacer,
+  con aviso.
+- Las partidas del capítulo quedan `capituloControl` y no generan control. Tampoco residuo: las
+  reglas de residuos solo proponen con verbo o código de demolición o con excavación en m³
+  (`core/rcd/reglas.ts:246-285`), así que un ensayo no casa, pero un test lo comprueba con
+  partidas del capítulo 18 de la BCCA en vez de darlo por hecho.
+- **Aviso de plan pobre:** el del §8, contra el capítulo enlazado.
 
 ### 10. Andalucía (y otras comunidades)
 
@@ -396,9 +515,11 @@ comunidad: el texto estatal y «normativa autonómica: pendiente», como en resi
      en la propia fila y su cuenta en vivo; armaduras; lotes de ejecución.
   3. **Plan:** recepción, ejecución y obra terminada por familia; lo «a criterio» con su casilla;
      lo «a cargo del instalador» con su conmutador para pasarlo al capítulo.
-  4. **Valoración:** tabla con unidad, cantidad, precio con fuente, importe; el capítulo enlazado
-     y su coherencia; «Crear capítulo de control de calidad».
-  5. **Datos del plan** (§6) y «Antes de entregar».
+  4. **Valoración:** tabla con unidad, cantidad, precio con fuente y fecha, importe; «Tomar
+     precios de un banco»; el capítulo enlazado y su coherencia; «Crear capítulo de control de
+     calidad»; el aviso de lo emitido con «Recalcular».
+  5. **Datos del plan** (§6, con la superficie construida y las plantas de la obra) y «Antes de
+     entregar».
   Cabecera con «Exportar Word».
 - **En el presupuesto:** pestaña «Calidad» en el detalle de la partida, con el editor, y chip
   «PCC» en la fila (ámbar propuesta, verde confirmada), solo con plan activo. Sin columnas
@@ -409,10 +530,16 @@ comunidad: el texto estatal y «normativa autonómica: pendiente», como en resi
 ### 12. Documento Word
 
 `features/exportar/docxPcc.ts`, chunk diferido, desde `DocumentoPcc` (`core/pcc/documento.ts`).
-Los tipos de documento (`Trozo`, `Parrafo`, `TablaDoc`, `SeccionDoc`) y los helpers de página,
-cabecera, tablas y firma de `rcd/documento.ts` y `docxRcd.ts` se sacan a un módulo común
-(`core/documento/`, `features/exportar/docxComun.ts`) en E4, sin cambiar la salida del de
-residuos (su test lo asegura).
+Sin módulo común de Word (D1 de la revisión): `docxPcc.ts` importa de `docxRender.ts` (`cabecera`,
+`tabla`, `firma`, `cell`, `run`, colores), como `docxRcd.ts`. Solo se sacan a `core/documento/`
+los tipos (`Trozo`, `Parrafo`, `TablaDoc`, `SeccionDoc`, `BloqueDoc`) y un `bloques()` genérico
+sacado de `bloquesRcd`, en E4 y en dos commits: el golden del Word de residuos
+(`docxRcd.golden.test.ts`, ya subido) primero y el traslado después, sin regrabarlo (T1, D12).
+
+**Lo emitido** (O5): al exportar el Word, `planCalidad.emitido = { fecha, versiones de tablas y
+motor, filas de la valoración, totales }`. Al reabrir, si el cálculo de hoy difiere, la vista
+avisa con las filas que cambian y ofrece «Recalcular» (un paso de Deshacer), que sustituye lo
+emitido en la siguiente exportación.
 
 1. Objeto y alcance; agentes (promotor, constructor, DF, DEO, laboratorio y entidad de control
    «a designar» si no se conocen); marco normativo (CTE, Código Estructural, RC-16, Reglamentos
@@ -427,7 +554,8 @@ residuos (su test lo asegura).
 5. **Control de obra terminada:** pruebas a cargo del laboratorio, pruebas a cargo del
    instalador (sin coste, diciéndolo), pruebas a criterio incluidas.
 6. **Valoración económica:** tabla «Ensayo | Norma | Ud | Cantidad | Precio | Fuente | Importe»
-   y el total; o el capítulo enlazado; % del PEM como dato.
+   y el total; o el capítulo enlazado; % del PEM como dato, con su base; con K o CI, lo que el
+   capítulo aporta al PEM.
 7. Anejo: detalle de la asignación por partida (código, resumen, medición, familia, grupo).
 
 Pendientes en el color de aviso; firma del técnico redactor. PDF e impresión, fuera de esta
@@ -441,16 +569,23 @@ versión.
 - **Importar el pliego de CYPE** (`~L` con `PS` y `EN`, D §4.5) como propuesta: después (E6), si
   el estudio consigue un .bc3 exportado con pliego que lo traiga relleno.
 - **Referencia:** `RefPartida` lleva `pcc` al copiar desde otra obra (tal cual) y desde un banco
-  (como propuesta si llega a tenerlo).
+  (como propuesta si llega a tenerlo), por los mismos caminos que `rcd`: `copySlice.ts:148`,
+  `refdata.ts:420,454` y `bc3ToPartidas.ts:100`.
+- **Chunk principal** (P1): `pccSlice` y el chip solo importan `core/pcc/reglas.ts`,
+  `familias.json` y `datos.ts`. El catálogo, las tablas del Código, `calculo.ts`,
+  `estructura.ts` y `textos.ts` solo se importan desde la vista «Calidad» (lazy) y `docxPcc`. Un
+  test node tras `vite build` falla si el chunk principal contiene un id del catálogo o de
+  `lotes-hormigon`.
 
 ### 14. Esquema v8
 
 - `SCHEMA_VERSION = 8`: `ObraData.planCalidad?` (clave nueva en `DOMAIN_KEYS`) y `Partida.pcc?`.
   Migración v7 → v8: solo sube la versión. Se sube por la regla del esquema: una pestaña con la
   app anterior pasa a solo lectura en vez de borrar `pcc` al guardar.
-- `isObraData` valida la forma sin destruir; lo ilegible a `_ilegible`.
-- Ojo: hay trabajo sin commitear de cuadros de precios en `features/exportar/` y `features/print/`;
-  E3 y E4 se empiezan cuando esté subido.
+- La carga pasa por `fromSerializable`; `apartarPccIlegibles` (en `core/pcc/datos.ts`, junto a
+  `apartarRcdIlegibles`) valida la forma de `pcc` y `planCalidad` sin destruir y aparta lo
+  ilegible a `_ilegible`.
+- Los cuadros de precios ya están subidos (`cb09152`): E3 y E4 no esperan a nada.
 
 ## Casos de prueba
 
@@ -506,15 +641,21 @@ vuelve al plan lo que cambie el diseño.
      (`~L`), para `enlace-cype` y los prefijos CYPE sin confirmar (D §5).
   4. Los SIN CONFIRMAR que afectan al cálculo (γc del anejo 19; × 5 en plantas y semanas) se
      intentan cerrar leyendo el anejo 19 en imagen; si no se cierran, quedan como dice §5.3.
+  5. `enlace-bcca` y `catalogo` con lo que cubre cada precio (`{ probetas?, incluye? }`, O4).
+- **Antes de E1:** el contrato de entradas del §4 (T1, hecho) y la clave de los grupos (T14,
+  hecho: fila y dosificación).
 - **E1 · Motor de estructura** (`core/pcc/estructura.ts`, `hormigon.ts`, tablas de lotes,
   durabilidad, armaduras y ejecución): los 16 casos de A6 en verde. Sin UI ni esquema.
 - **E2 · Familias y plan completo** (`familias.json`, `reglas.ts`, `calculo.ts`): recepción,
   ejecución, obra terminada, valoración con precios del banco cargado, Andalucía. Fixtures A y B
   en verde; lista de citas prohibidas sobre `textoPlano`.
-- **E3 · App:** esquema v8, acciones del store (asignar, confirmar, homónimos, Deshacer), vista
-  «Calidad», pestaña en el detalle y chip. Hito: la obra A se asigna entera en pantalla.
-- **E4 · Word y capítulo:** módulo común de documento, `docxPcc`, enlace y coherencia del
-  capítulo, «Crear capítulo de control de calidad», aviso de plan pobre. Hito: la obra A sale en
+- **E3 · App** (antes, `/plan-design-review` para D6): esquema v8, `pccSlice` (asignar,
+  confirmar con huella, homónimos, «Tomar precios de un banco», Deshacer), vista «Calidad»,
+  pestaña en el detalle, chip en la fila y en la tarjeta, `ROOMY_W`; límite de imports y test del
+  chunk principal. Hito: la obra A se asigna entera en pantalla y sobrevive a la ida y vuelta.
+- **E4 · Word y capítulo:** tipos a `core/documento/` (golden intacto), `docxPcc`, lo emitido,
+  enlace y coherencia del capítulo, «Crear capítulo de control de calidad», aviso de plan pobre.
+  Hito: la obra A sale en
   Word, se abre en Word y pasa la lista de citas; la obra real de 2026, pasada por la app,
   explica la diferencia con lo que se entregó.
 - **E5 · Precios de CYPE** cuando E0.3 dé el .bc3: `enlace-cype` y prefijos.
@@ -526,24 +667,46 @@ Cada etapa en verde (`tsc -b`, `vitest run`, `eslint`, `vite build`) y subida a 
 
 - **Tablas:** filas de la tabla 57.5.4.1 iguales a B A1; Kₙ; series de diámetros; ninguna fila
   SIN CONFIRMAR; cada corrección de §3 bis con su fila original.
-- **Estructura:** los 16 casos de A6; grupos por (fila, tipo); redondeo hacia arriba; fila sin
-  tipo convencional/autocompactante cuenta como convencional con aviso (K-PCC.56).
+- **Estructura:** los 16 casos de A6 (E5 solo con volumen de cuba, como interpretación; E11
+  comprueba que el control indirecto no se ofrece); grupos por (fila, dosificación): XC1 y XC2
+  separados por defecto y juntos con la misma dosificación; redondeo hacia arriba; fila sin tipo
+  convencional/autocompactante cuenta como convencional con aviso (K-PCC.56); forjado en m² sin
+  `m3PorUd` → pendiente; obra A con superficie y plantas de la obra y sin datos por grupo da los
+  lotes del caso A, y un grupo con su dato manda; sin procedencia → art. 59.2 con aviso, con
+  «obra» → art. 58 por serie.
 - **Designaciones:** las clases válidas del art. 27; `IIa`, `CX1`, `XC2a`, `X0` en armado → aviso;
-  XS1 + XF2 → un tipo de durabilidad, no dos.
-- **Reglas:** prefijos BCCA y Centro contra los .bc3 de `docs/spike/samples/`; exclusiones de
-  K-PCC.70; la unidad que no casa no propone.
-- **Valoración:** fuente del precio por orden; unidades que no casan → pendiente; plan sin
-  presupuesto → sin cantidades y con avisos (K-PCC.66); total = Σ filas.
+  el «HA-25/B/20/IIa» del caso A suma sus 3 m³ a su grupo y no da penetración; sin tipo o fck
+  legibles → fuera con aviso; XS1 + XF2 → un tipo de durabilidad, no dos.
+- **Descomposición:** la zapata compuesta de `refdata` propone 1,05 m³ y 40 kg; con una partida de
+  acero aparte, aviso de doble cómputo.
+- **Huella:** confirmar HA-25, cambiar el título a HA-30 → «revisar» y fuera del cálculo; volver
+  a confirmar → HA-30.
+- **Reglas:** prefijos BCCA y Centro con un juego de códigos escrito a mano en la CI (como
+  `core/rcd/reglas.bancos.test.ts`) y el recorrido de los .bc3 de `docs/spike/samples/` con
+  `skipIf` en local (no están en git); exclusiones de K-PCC.70; la unidad que no casa no propone;
+  cubierta plana → prueba propuesta, sin cubierta plana no.
+- **Valoración:** fuente del precio por orden; el cálculo sin banco cargado da el mismo total;
+  «Tomar precios» con un banco sin el código deja la fila con la fuente siguiente; unidades que
+  no casan → pendiente; 2 probetas por precio y 4 exigidas → 2 precios por amasada; consistencia
+  incluida → sin fila aparte; nivel 2 solo si se marca; PEM de 299.999 € sin aviso y de
+  300.001 € con aviso; plan sin presupuesto → sin cantidades y con avisos (K-PCC.66); total = Σ
+  filas; el % no cambia al crear el capítulo, también con CI = 3 %.
 - **Instalaciones:** por defecto en `aCargoDeOtros` sin importe; al pasarlas al capítulo, en la
   valoración con precio.
-- **Capítulo:** coherencia en los tres sentidos; «Crear capítulo» y Deshacer; partidas
-  `capituloControl` sin control ni residuo.
+- **Capítulo:** coherencia en los tres sentidos; casa por `ensayo` aunque cambie el título; dos
+  ensayos con el mismo importe no se cruzan; precio cambiado a mano → diferencia de precio; K =
+  0,9 y CI = 3 % → aviso con las dos cifras; «Crear capítulo» y Deshacer; código ya usado →
+  código nuevo; partidas del capítulo 18 de la BCCA sin control ni residuo.
+- **Emitido:** exportar, cambiar el catálogo de prueba, reabrir → aviso con la diferencia; sin
+  cambios, sin aviso.
 - **Texto:** citas prohibidas (K-PCC.50–51, A, B y C (d)); el 305/2011 sí aparece; sin
   marcadores de plantilla (K-PCC.65); sin otra comunidad (K-PCC.71); texto ↔ valoración
   (K-PCC.61); tres partes siempre (K-PCC.69).
 - **Store y esquema:** migración v7 → v8; `_ilegible`; copiar partida lleva `pcc`; asignar en una
-  partida BASE no la convierte en copia.
-- **Word:** títulos con estilo; el de residuos sale igual tras sacar el módulo común.
+  partida BASE no la convierte en copia; ida y vuelta de la obra A por .json con el mismo plan.
+- **Build:** el chunk principal no contiene ids del catálogo ni de `lotes-hormigon`.
+- **Word:** títulos con estilo; el golden de residuos (`docxRcd.golden.test.ts`) sigue en verde
+  sin regrabarlo tras sacar los tipos a `core/documento/`.
 
 ## Fuera de alcance
 
@@ -561,16 +724,21 @@ Cada etapa en verde (`tsc -b`, `vitest run`, `eslint`, `vite build`) y subida a 
 
 ## Archivos (estimación)
 
-- **Nuevos:** `core/pcc/` (`tipos.ts`, `calculo.ts`, `estructura.ts`, `hormigon.ts`, `reglas.ts`,
-  `precios.ts`, `capitulo.ts`, `coherencia.ts`, `documento.ts`, `textos.ts`, `tablas/*.json`,
-  tests); `scripts/pcc/extraer_junta.py`; `src/test/fixtures/pcc/`; `features/calidad/`
-  (`CalidadView.tsx`, `ListaPartidas.tsx`, `EditorControl.tsx`, `Estructura.tsx`, `Plan.tsx`,
-  `Valoracion.tsx`, `DatosPlan.tsx`, `Calidad.module.css`); `features/exportar/docxPcc.ts`;
-  `core/documento/` y `features/exportar/docxComun.ts` (sacados de residuos).
-- **Editados:** `core/types.ts`, `store/schema.ts`, `store/obraStore.ts`, `core/refdata.ts`,
-  `core/rcd/documento.ts` y `features/exportar/docxRcd.ts` (al módulo común),
+- **Nuevos:** `core/pcc/` (`tipos.ts`, `datos.ts`, `calculo.ts`, `estructura.ts`, `hormigon.ts`,
+  `reglas.ts`, `precios.ts`, `capitulo.ts`, `coherencia.ts`, `documento.ts`, `textos.ts`,
+  `tablas/*.json`, tests); `store/slices/pccSlice.ts`; `scripts/pcc/extraer_junta.py`;
+  `src/test/fixtures/pcc/`; `features/calidad/` (`CalidadView.tsx`, `ListaPartidas.tsx`,
+  `EditorControl.tsx`, `Estructura.tsx`, `Plan.tsx`, `Valoracion.tsx`, `DatosPlan.tsx`,
+  `Calidad.module.css`); `features/exportar/docxPcc.ts`; `core/documento/` (solo tipos y
+  `bloques()`, sacados de residuos); test node del chunk principal.
+- **Editados:** `core/types.ts`, `store/schema.ts`, `store/obraStore.ts` (y su reinicio,
+  `:861`), `store/slices/copySlice.ts:148`, `store/medUiStore.ts:21` (`DetailTab` con
+  `'calidad'`), `core/refdata.ts:420,454`, `core/bc3ToPartidas.ts:100`, `core/rcd/documento.ts` y
+  `features/exportar/docxRcd.ts` (tipos a `core/documento/`),
   `features/presupuesto/DetailPanel.tsx`, `features/presupuesto/PartidaRow.tsx`,
-  `layout/types.ts`, `App.tsx`, `layout/ayudaContent.ts`, `persist/` (validación).
+  `features/presupuesto/PartidaCard.tsx:82` (chip en móvil), `layout/types.ts`,
+  `layout/TopBar.tsx:41` (`ROOMY_W`, medido con las pestañas), `App.tsx`,
+  `layout/ayudaContent.ts`.
 
 ## Decisiones
 
@@ -584,30 +752,34 @@ Cada etapa en verde (`tsc -b`, `vitest run`, `eslint`, `vite build`) y subida a 
   cita y sin coste, diciéndolo; se pueden pasar al capítulo de control de una en una (§7).
 - **D3 · Valores por defecto. Decidido:** hormigón sin distintivo (lo más exigente), con aviso;
   control de ejecución a nivel normal. Por la misma lógica, el acero, las mallas y la ferralla
-  sin distintivo; y la ferralla de taller, que es lo corriente en vivienda (propuesta: confirmar
-  en la revisión).
+  sin distintivo; y la ferralla de taller, que es lo corriente en vivienda (confirmada el
+  2026-10-25: art. 59.2 con aviso en «Antes de entregar»).
 
-**Abiertas, con propuesta:**
+**Cerradas en la revisión de ingeniería (2026-10-25;** detalle en el «Decision ledger»**):**
 
-- **D4 · Capítulo de control.** Propuesta: enlace por defecto, «Crear capítulo de control de
-  calidad» con partidas del banco cargado, coherencia y aviso de plan pobre (§9). Alternativa:
-  solo la tabla de valoración en el anejo, sin tocar el presupuesto (no cumple el «Incluirá» del
-  anejo I si la obra no tiene capítulo).
-- **D5 · Dónde vive la asignación.** Propuesta: en la partida (`Partida.pcc`), como `rcd`; los
-  datos del plan en `ObraData.planCalidad`. Alternativa: deducir la familia al vuelo, sin guardar
-  nada en la partida (menos esquema, pero el usuario no puede corregir una regla que se
-  equivoca).
-- **D6 · Vistas.** Propuesta: vista «Calidad» propia; a revisar en `/plan-design-review` si
-  «Residuos» y «Calidad» se agrupan en «Anejos».
-- **D7 · Datos por grupo de estructura.** Propuesta: superficie y plantas por grupo, prerrellenas
-  con la superficie construida y las plantas de la obra (un dato nuevo en la ficha) para que en
-  una unifamiliar se teclee una vez. Alternativa: solo por grupo.
-- **D8 · Niveles de la Junta.** Propuesta: los ensayos de nivel 1 de las familias presentes se
-  proponen; los de nivel 2 y 3, desmarcados, a criterio. La regla de la hoja (por encima de
-  300.000 € de PEM, también el nivel 2) se enseña como recomendación, no se aplica sola.
-- **D9 · Pruebas de obra terminada a criterio.** Propuesta: solo la de cubierta plana se propone
-  sola (hay partida que la reconoce); blower door, ventanas, barandillas y acústica estatal, a
-  casilla. En Andalucía, la acústica de la IT 5, siempre.
+- **D4 · Capítulo de control. Decidido:** enlace propuesto por el título, «Crear capítulo de
+  control de calidad» con partidas propias marcadas con su ensayo (A2), coherencia por ensayo,
+  cantidad y precio unitario, y aviso de plan pobre (§9).
+- **D5 · Dónde vive la asignación. Decidido:** en la partida (`Partida.pcc`), como `rcd`; los
+  datos del plan en `ObraData.planCalidad`.
+- **D7 · Datos por grupo de estructura. Decidido:** superficie construida y plantas tecleadas
+  una vez en `planCalidad`, que prerrellenan los grupos; el dato del grupo manda. La ficha de la
+  obra y residuos no se tocan (unificarlo, en `TODOS.md`).
+- **D8 · Niveles de la Junta. Decidido:** nivel 1 propuesto; 2 y 3 a casilla; la regla de
+  300.000 € como aviso.
+- **D9 · Pruebas de obra terminada a criterio. Decidido:** la de cubierta plana se propone sola;
+  el resto a casilla; en Andalucía, la acústica de la IT 5 siempre.
+- **De la revisión:** precios copiados al plan con una acción explícita (A1, §8); base del % =
+  `pem()` sin el capítulo de control (Q1, O1b); designación con clase no válida cuenta para los
+  lotes (Q2, §4); golden del Word de residuos antes de mover sus tipos (T1, §12); límite de
+  imports del chunk principal (P1, §13); K y CI en la coherencia (O1a, §9); contrato de entradas
+  (O2, §4); m³ y kg desde la descomposición (O3, §4); lo que cubre cada precio (O4, §8); lo
+  emitido (O5, §12); huella y «revisar» (O6, §1).
+
+**Abierta:**
+
+- **D6 · Vistas.** Propuesta: vista «Calidad» propia; a revisar en `/plan-design-review`, antes
+  de E3, si «Residuos» y «Calidad» se agrupan en «Anejos».
 
 ## Revisión de ingeniería (2026-10-25, `/plan-eng-review`)
 
@@ -1726,11 +1898,11 @@ commit de E4. Conflicto: ninguno entre carriles (B no toca `core/pcc/`).
 Synthesized from this review's findings. Each task derives from a specific
 finding above. Run with Claude Code or Codex; checkbox as you ship.
 
-- [ ] **T1 (P1, human: ~4 h / CC: ~20 min)** — plan — Escribir el contrato de entradas del motor en §4 y §6
+- [x] **T1 (P1, human: ~4 h / CC: ~20 min)** — plan — Escribir el contrato de entradas del motor en §4 y §6
   - Surfaced by: Voz externa — O2 (D16)
   - Files: `docs/plan-control-calidad.md`
   - Verify: cada dato de A2–A5 de B «Para la app» tiene campo y «si falta»
-- [ ] **T2 (P1, human: ~2 h / CC: ~10 min)** — exportar — Golden del Word de residuos antes de mover tipos
+- [x] **T2 (P1, human: ~2 h / CC: ~10 min)** — exportar — Golden del Word de residuos antes de mover tipos
   - Surfaced by: Test review — T1 (D12)
   - Files: `src/features/exportar/docxRcd.golden.test.ts`, `src/test/fixtures/rcd/obras.ts`
   - Verify: `npx vitest run src/features/exportar` en verde antes y después de mover
@@ -1770,7 +1942,7 @@ finding above. Run with Claude Code or Codex; checkbox as you ship.
   - Surfaced by: Performance — P1 (D13)
   - Files: `src/store/slices/pccSlice.ts`, `src/App.tsx`, test node del build
   - Verify: `vite build` y el test no encuentran ids del catálogo en el chunk principal
-- [ ] **T12 (P2, human: ~2 h / CC: ~10 min)** — plan — Pasar al cuerpo del plan las decisiones D1–D22 y las correcciones de hecho
+- [x] **T12 (P2, human: ~2 h / CC: ~10 min)** — plan — Pasar al cuerpo del plan las decisiones D1–D22 y las correcciones de hecho
   - Surfaced by: Scope Challenge y todas las secciones
   - Files: `docs/plan-control-calidad.md` (§1, §3, §4, §6, §8, §9, §12, §14, «Archivos», «Tests», «Decisiones»)
   - Verify: el cuerpo no contradice el ledger (§12 sin `docxComun.ts`, `EntradaPcc` sin `bancos` y con `hoy` y `recursos`)
@@ -1778,7 +1950,7 @@ finding above. Run with Claude Code or Codex; checkbox as you ship.
   - Surfaced by: Test review — mapa de cobertura (`[AÑADIDO]`)
   - Files: `src/features/calidad/Calidad.test.tsx`, `src/core/pcc/*.test.ts`
   - Verify: los 23 casos `[AÑADIDO]` del mapa en verde
-- [ ] **T14 (P3, human: ~30 min / CC: ~5 min)** — plan — Cerrar contra B A2 si la clase de exposición separa lotes
+- [x] **T14 (P3, human: ~30 min / CC: ~5 min)** — plan — Cerrar contra B A2 si la clase de exposición separa lotes
   - Surfaced by: Code quality — riesgo de confianza 5/10
   - Files: `docs/plan-control-calidad.md` §5.1
   - Verify: cita de B que lo decide, antes de escribir `estructura.ts`
@@ -1826,6 +1998,8 @@ Ninguno.
   cobertura de precios, lo emitido y la huella. Coinciden en un punto: la base del % (Q1) y O1b.
 - **VERDICT:** ninguna revisión CLEAR para este plan; eng review required (todas las issues tienen
   remedio aprobado, pero el estado es «issues_open» hasta que T1 y T12 pasen al cuerpo del plan).
+  Actualizado el 2026-10-25: T1, T2, T12 y T14 hechos; el cuerpo ya recoge el ledger. Queda D6
+  para el design review.
 
 **UNRESOLVED DECISIONS:**
 - D6 del plan (vistas «Calidad» o «Anejos»): para `/plan-design-review` antes de E3
