@@ -158,6 +158,22 @@ export function ExportModal({
         onXlsx={() => doXlsx({ kind: 'resumen' })}
         onDocx={() => doDocx({ kind: 'resumen' })}
       />
+      <Row
+        icon="hash"
+        title="Cuadro de precios nº 1"
+        sub="Precio de cada partida en cifra y en letra"
+        onPdf={() => doPdf({ kind: 'cuadro1' })}
+        onXlsx={() => doXlsx({ kind: 'cuadro1' })}
+        onDocx={() => doDocx({ kind: 'cuadro1' })}
+      />
+      <Row
+        icon="layers"
+        title="Cuadro de precios nº 2"
+        sub="Precio de cada partida descompuesto"
+        onPdf={() => doPdf({ kind: 'cuadro2' })}
+        onXlsx={() => doXlsx({ kind: 'cuadro2' })}
+        onDocx={() => doDocx({ kind: 'cuadro2' })}
+      />
       {certs.length > 0 && (
         <>
           <div className={`sec-head ${styles.secHead}`}>Certificaciones de obra</div>

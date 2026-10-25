@@ -6,24 +6,58 @@
 import { describe, expect, it } from 'vitest';
 import { unzipSync, strFromU8 } from 'fflate';
 import writeXlsxFile from 'write-excel-file/browser';
-import { buildCertListado, buildPresupuestoListado, buildResumen, obraMeta } from '../../core/listado';
+import {
+  buildCertListado,
+  buildPresupuestoListado,
+  buildResumen,
+  obraMeta,
+} from '../../core/listado';
 import { buildCertXlsx, buildPresupuestoXlsx, buildResumenXlsx } from './xlsxBuilders';
 import { printSetupFeature } from './xlsx';
 import type { Cert, Chapter, Partida, PartidasMap, Rates } from '../../core/types';
 
 const partida = (over: Partial<Partida>): Partida => ({
-  id: 'p', pos: '1.1', code: 'X', title: '', ud: 'ud', precio: 0, desc: '', med: [], items: [], ...over,
+  id: 'p',
+  pos: '1.1',
+  code: 'X',
+  title: '',
+  ud: 'ud',
+  precio: 0,
+  desc: '',
+  med: [],
+  items: [],
+  ...over,
 });
 const rates: Rates = { iva: 0.1, gg: 0.13, bi: 0.06, ci: 0, coefK: 1 };
 const chapters: Chapter[] = [
-  { id: '01', code: '1', title: 'Demoliciones', children: [{ id: '01.01', code: '1.1', title: 'Interiores' }] },
+  {
+    id: '01',
+    code: '1',
+    title: 'Demoliciones',
+    children: [{ id: '01.01', code: '1.1', title: 'Interiores' }],
+  },
   { id: '03', code: '3', title: 'Albañilería' },
 ];
 const partidas: PartidasMap = {
   '01': [
-    partida({ id: 'pa', pos: '1.1', code: 'A', title: 'Huérfana', desc: 'Texto.', precio: 10, cantidad: 2 }),
-    partida({ id: 'pb', sub: '01.01', pos: '1.1.1', code: 'B', title: 'Con medición', precio: 5,
-      med: [{ id: 'm1', comment: 'zona A', uds: 2, largo: 3, ancho: '', alto: '' }] }),
+    partida({
+      id: 'pa',
+      pos: '1.1',
+      code: 'A',
+      title: 'Huérfana',
+      desc: 'Texto.',
+      precio: 10,
+      cantidad: 2,
+    }),
+    partida({
+      id: 'pb',
+      sub: '01.01',
+      pos: '1.1.1',
+      code: 'B',
+      title: 'Con medición',
+      precio: 5,
+      med: [{ id: 'm1', comment: 'zona A', uds: 2, largo: 3, ancho: '', alto: '' }],
+    }),
   ],
   '03': [partida({ id: 'pc', pos: '3.1', code: 'C', title: 'Plana', precio: 7.77, cantidad: 3 })],
 };
@@ -64,7 +98,9 @@ describe('E2E: xlsx real generado con fórmulas + impresión', () => {
     expect(xml).toContain('<f>SUBTOTAL(9,G7:G11)</f>');
     expect(xml).toContain('<f>G12+G17</f>');
     expect(xml).toContain('<printOptions horizontalCentered="1"/>');
-    expect(xml).toContain('<pageSetup paperSize="9" orientation="portrait" fitToWidth="1" fitToHeight="0"/>');
+    expect(xml).toContain(
+      '<pageSetup paperSize="9" orientation="portrait" fitToWidth="1" fitToHeight="0"/>',
+    );
     expect(xml).toContain('P&#225;gina &amp;P de &amp;N');
     // orden del esquema: printOptions < pageMargins < pageSetup < headerFooter, tras sheetData
     const order = ['</sheetData>', '<printOptions', '<pageMargins', '<pageSetup', '<headerFooter'];
@@ -84,11 +120,29 @@ describe('E2E: xlsx real generado con fórmulas + impresión', () => {
   });
 
   it('cert: apaisada y fórmulas del resumen económico', async () => {
-    const certs: Cert[] = [{
-      id: 'c1', num: 1, period: 'Mayo', retencion: 0.05, data: { pa: 2 },
-      priceSnapshot: { pa: 10, pb: 5, pc: 7.77 }, coefK: 1, snapshotAt: '2026-06-11T08:00:00.000Z',
-      extras: [{ id: 'x1', chapterId: '03', pos: 'C1', title: 'Extra', ud: 'ud', cantidad: 2, precio: 25 }],
-    }];
+    const certs: Cert[] = [
+      {
+        id: 'c1',
+        num: 1,
+        period: 'Mayo',
+        retencion: 0.05,
+        data: { pa: 2 },
+        priceSnapshot: { pa: 10, pb: 5, pc: 7.77 },
+        coefK: 1,
+        snapshotAt: '2026-06-11T08:00:00.000Z',
+        extras: [
+          {
+            id: 'x1',
+            chapterId: '03',
+            pos: 'C1',
+            title: 'Extra',
+            ud: 'ud',
+            cantidad: 2,
+            precio: 25,
+          },
+        ],
+      },
+    ];
     const doc = buildCertXlsx(buildCertListado(chapters, partidas, certs, 0, rates)!, meta, firma);
     const xml = await sheetXmlOf(doc);
     expectWellFormed(xml);

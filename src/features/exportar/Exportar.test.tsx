@@ -26,6 +26,8 @@ describe('ExportModal (F7.1–F7.4) — "mostrar solo lo que funciona"', () => {
     expect(screen.getByText('Obra completa')).toBeInTheDocument();
     expect(screen.getByText('Presupuesto y mediciones')).toBeInTheDocument();
     expect(screen.getByText('Resumen de presupuesto')).toBeInTheDocument();
+    expect(screen.getByText('Cuadro de precios nº 1')).toBeInTheDocument();
+    expect(screen.getByText('Cuadro de precios nº 2')).toBeInTheDocument();
     expect(screen.getByText('Certificaciones de obra')).toBeInTheDocument();
     expect(screen.getByText('Certificación nº 1')).toBeInTheDocument();
     expect(screen.getByText('Certificación nº 3')).toBeInTheDocument();
@@ -33,10 +35,11 @@ describe('ExportModal (F7.1–F7.4) — "mostrar solo lo que funciona"', () => {
 
   it('chips PDF + Word + Excel por fila y UN chip BC3 de cabecera (F7.4)', () => {
     render(abierto());
-    // 2 docs + 3 certs del seed = 5 chips de cada formato por-listado.
-    expect(screen.getAllByRole('button', { name: /a PDF$/ })).toHaveLength(5);
-    expect(screen.getAllByRole('button', { name: /a Word$/ })).toHaveLength(5);
-    expect(screen.getAllByRole('button', { name: /a Excel$/ })).toHaveLength(5);
+    // 4 docs (presupuesto, resumen, cuadros nº 1 y nº 2) + 3 certs del seed = 7
+    // chips de cada formato por-listado.
+    expect(screen.getAllByRole('button', { name: /a PDF$/ })).toHaveLength(7);
+    expect(screen.getAllByRole('button', { name: /a Word$/ })).toHaveLength(7);
+    expect(screen.getAllByRole('button', { name: /a Excel$/ })).toHaveLength(7);
     expect(screen.getAllByRole('button', { name: /BC3/ })).toHaveLength(1);
   });
 
@@ -44,7 +47,9 @@ describe('ExportModal (F7.1–F7.4) — "mostrar solo lo que funciona"', () => {
     const onClose = vi.fn();
     const onExportBc3 = vi.fn();
     render(abierto({ onClose, onExportBc3 }));
-    fireEvent.click(screen.getByRole('button', { name: 'Exportar «Obra completa» a BC3 (FIEBDC-3)' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Exportar «Obra completa» a BC3 (FIEBDC-3)' }),
+    );
     expect(onExportBc3).toHaveBeenCalledTimes(1);
     expect(onClose).toHaveBeenCalled();
   });
@@ -53,7 +58,9 @@ describe('ExportModal (F7.1–F7.4) — "mostrar solo lo que funciona"', () => {
     const onClose = vi.fn();
     const onExportPdf = vi.fn();
     render(abierto({ onClose, onExportPdf }));
-    fireEvent.click(screen.getByRole('button', { name: 'Exportar «Resumen de presupuesto» a PDF' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Exportar «Resumen de presupuesto» a PDF' }),
+    );
     expect(onExportPdf).toHaveBeenCalledWith({ kind: 'resumen' });
     expect(onClose).toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Exportar «Certificación nº 2» a PDF' }));
@@ -77,7 +84,9 @@ describe('ExportModal (F7.1–F7.4) — "mostrar solo lo que funciona"', () => {
     const onClose = vi.fn();
     const onExportDocx = vi.fn();
     render(abierto({ onClose, onExportDocx }));
-    fireEvent.click(screen.getByRole('button', { name: 'Exportar «Resumen de presupuesto» a Word' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Exportar «Resumen de presupuesto» a Word' }),
+    );
     expect(onExportDocx).toHaveBeenCalledWith({ kind: 'resumen' });
     expect(onClose).toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Exportar «Certificación nº 3» a Word' }));

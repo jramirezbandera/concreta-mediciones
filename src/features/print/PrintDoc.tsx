@@ -8,9 +8,11 @@ import {
   obraMeta,
   type Firma,
 } from '../../core/listado';
+import { buildCuadrosPrecios } from '../../core/cuadrosPrecios';
 import { fmtNum } from '../../core/money';
 import { selectResumen, useObraStore } from '../../store';
 import { PrintCert } from './PrintCert';
+import { PrintCuadro1, PrintCuadro2 } from './PrintCuadros';
 import { PrintPresupuesto } from './PrintPresupuesto';
 import { PrintResumen } from './PrintResumen';
 import './print.css';
@@ -19,6 +21,8 @@ import './print.css';
 export type PrintTarget =
   | { kind: 'presupuesto' }
   | { kind: 'resumen' }
+  | { kind: 'cuadro1' }
+  | { kind: 'cuadro2' }
   | { kind: 'cert'; index: number };
 
 /** Fecha ISO → "11 de junio de 2026" ('' si falta). */
@@ -41,6 +45,7 @@ function fmtFecha(iso?: string): string {
 export function PrintDoc({ target, onDone }: { target: PrintTarget; onDone: () => void }) {
   const chapters = useObraStore((s) => s.chapters);
   const partidas = useObraStore((s) => s.partidas);
+  const recursos = useObraStore((s) => s.recursos);
   const certs = useObraStore((s) => s.certs);
   const rates = useObraStore((s) => s.rates);
   const bajas = useObraStore((s) => s.bajas);
@@ -88,6 +93,10 @@ export function PrintDoc({ target, onDone }: { target: PrintTarget; onDone: () =
   } else if (target.kind === 'resumen') {
     titulo = 'Resumen de presupuesto';
     body = <PrintResumen data={resumen} />;
+  } else if (target.kind === 'cuadro1' || target.kind === 'cuadro2') {
+    const cuadros = buildCuadrosPrecios(chapters, partidas, recursos, rates.coefK);
+    titulo = target.kind === 'cuadro1' ? 'Cuadro de precios nº 1' : 'Cuadro de precios nº 2';
+    body = target.kind === 'cuadro1' ? <PrintCuadro1 data={cuadros} /> : <PrintCuadro2 data={cuadros} />;
   } else {
     const cl = buildCertListado(chapters, partidas, certs, target.index, rates, bajas);
     titulo = cl ? `Certificación de obra nº ${cl.num}` : 'Certificación de obra';
@@ -121,7 +130,7 @@ export function PrintDoc({ target, onDone }: { target: PrintTarget; onDone: () =
   const firmaDoc: Firma =
     target.kind === 'cert'
       ? firmaFor('cert', obra, certs[target.index])
-      : firmaFor(target.kind, obra, undefined, new Date().toISOString());
+      : firmaFor(target.kind === 'resumen' ? 'resumen' : 'presupuesto', obra, undefined, new Date().toISOString());
   const firmaLF = firmaLugarFecha(firmaDoc);
 
   return createPortal(

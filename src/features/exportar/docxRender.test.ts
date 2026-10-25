@@ -3,6 +3,7 @@ import { strFromU8, unzipSync } from 'fflate';
 import { docxFor, type DocxState } from './docxRender';
 import type { PrintTarget } from '../print';
 import { CHAPTERS, DEFAULT_OBRA, DEFAULT_RATES, PARTIDAS, makeCertsInit } from '../../core/seed';
+import { buildRecursos, descompUnit } from '../../core/banco';
 import type { Cert, Chapter, Partida, PartidasMap } from '../../core/types';
 
 /** Blob → bytes vía FileReader (el Blob de jsdom no tiene `arrayBuffer()`). */
@@ -110,7 +111,17 @@ describe('docxFor — certificación', () => {
       priceSnapshot: { pa: 10 },
       coefK: 1,
       snapshotAt: '2026-06-11T08:00:00.000Z',
-      extras: [{ id: 'x1', chapterId: '01', pos: 'C1', title: 'Refuerzo', ud: 'ud', cantidad: 2, precio: 25 }],
+      extras: [
+        {
+          id: 'x1',
+          chapterId: '01',
+          pos: 'C1',
+          title: 'Refuerzo',
+          ud: 'ud',
+          cantidad: 2,
+          precio: 25,
+        },
+      ],
     },
   ];
   const state: DocxState = { ...seedState, chapters, partidas, certs };
@@ -139,5 +150,44 @@ describe('docxFor — certificación', () => {
   it('el nombre de archivo de cert es corto ("Certificación nº N")', async () => {
     const out = await docxFor({ kind: 'cert', index: 0 }, state);
     expect(out!.fileName).toBe('Certificación nº 1 - Reforma vivienda C Mayor 14.docx');
+  });
+});
+
+describe('docxFor — cuadros de precios', () => {
+  // En el seed todo precio con justificación está puesto a mano (sin
+  // descompuesto): aquí se cuadran con su justificación para que descompongan.
+  const recursos = buildRecursos(PARTIDAS);
+  const cuadrados: PartidasMap = Object.fromEntries(
+    Object.entries(PARTIDAS).map(([k, ps]) => [
+      k,
+      ps.map((p) =>
+        p.items.length
+          ? { ...p, precio: descompUnit(p.items, recursos), precioManual: undefined }
+          : p,
+      ),
+    ]),
+  );
+  const state: DocxState = { ...seedState, partidas: cuadrados, recursos };
+
+  it('nº 1: cada partida con su precio en cifra y en letra', async () => {
+    const xml = await xmlOf({ kind: 'cuadro1' }, state);
+    expect(xml).toContain('CUADRO DE PRECIOS Nº 1');
+    expect(xml).toContain('En letra (€)');
+    expect(xml).toContain('Excavación en zanjas a máquina');
+    expect(xml).toMatch(/[A-ZÁÉÍÓÚ ]+ EUROS con [A-ZÁÉÍÓÚ ]+ CÉNTIMOS/);
+  });
+
+  it('nº 2: la descomposición anidada cierra en «Total» y la celda acaba en párrafo', async () => {
+    const xml = await xmlOf({ kind: 'cuadro2' }, state);
+    expect(xml).toContain('CUADRO DE PRECIOS Nº 2');
+    expect(xml).toContain('Mano de obra');
+    expect(xml).toContain('>Total<');
+    // Word da el archivo por dañado si una celda termina en tabla.
+    expect(xml).not.toMatch(/<\/w:tbl><\/w:tc>/);
+  });
+
+  it('nombre de archivo con el título del cuadro', async () => {
+    const out = await docxFor({ kind: 'cuadro2' }, state);
+    expect(out!.fileName).toBe('Cuadro de precios nº 2 - Reforma vivienda C Mayor 14.docx');
   });
 });

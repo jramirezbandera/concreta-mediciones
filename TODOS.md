@@ -270,8 +270,9 @@ estos ya están calculados:
 
 - **Mediciones sin precios** para pedir ofertas, y **comparativo de ofertas** por
   partida: importar el .bc3 o el Excel de cada constructora y ver dónde se desvía.
-- **Cuadro de precios nº 1 (en letra) y nº 2 (descompuestos).** La letra ya existe
-  (`core/numeroALetras`).
+- ~~**Cuadro de precios nº 1 (en letra) y nº 2 (descompuestos).**~~ HECHO (2026-10-24):
+  `core/cuadrosPrecios`, en PDF, Word y Excel. Un precio puesto a mano (no sigue a su
+  justificación) sale «Sin descomposición» en el nº 2: no tiene descompuesto.
 - **Liquidación final:** presupuestado frente a ejecutado a origen, con exceso o
   defecto por partida. El exceso ya lo detecta `certPctState`.
 

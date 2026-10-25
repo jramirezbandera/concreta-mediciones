@@ -4,12 +4,21 @@ import {
   FMT_NUM,
   FMT_PCT,
   buildCertXlsx,
+  buildCuadro1Xlsx,
+  buildCuadro2Xlsx,
   buildPresupuestoXlsx,
   buildResumenXlsx,
   xlsxFileName,
 } from './xlsxBuilders';
-import { buildCertListado, buildPresupuestoListado, buildResumen, obraMeta } from '../../core/listado';
-import type { Cert, Chapter, Partida, PartidasMap, Rates } from '../../core/types';
+import {
+  buildCertListado,
+  buildPresupuestoListado,
+  buildResumen,
+  obraMeta,
+  type Firma,
+} from '../../core/listado';
+import { buildCuadrosPrecios } from '../../core/cuadrosPrecios';
+import type { Banco, Cert, Chapter, Partida, PartidasMap, Rates } from '../../core/types';
 
 const partida = (over: Partial<Partida>): Partida => ({
   id: 'p',
@@ -26,12 +35,25 @@ const partida = (over: Partial<Partida>): Partida => ({
 
 const rates: Rates = { iva: 0.1, gg: 0.13, bi: 0.06, ci: 0, coefK: 1 };
 const chapters: Chapter[] = [
-  { id: '01', code: '1', title: 'Demoliciones', children: [{ id: '01.01', code: '1.1', title: 'Interiores' }] },
+  {
+    id: '01',
+    code: '1',
+    title: 'Demoliciones',
+    children: [{ id: '01.01', code: '1.1', title: 'Interiores' }],
+  },
   { id: '03', code: '3', title: 'Albañilería' },
 ];
 const partidas: PartidasMap = {
   '01': [
-    partida({ id: 'pa', pos: '1.1', code: 'A', title: 'Huérfana', desc: 'Texto largo.', precio: 10, cantidad: 2 }),
+    partida({
+      id: 'pa',
+      pos: '1.1',
+      code: 'A',
+      title: 'Huérfana',
+      desc: 'Texto largo.',
+      precio: 10,
+      cantidad: 2,
+    }),
     partida({
       id: 'pb',
       sub: '01.01',
@@ -59,7 +81,11 @@ function formulas(rows: Row[]): string[] {
 }
 
 describe('política numérica XLSX (eng-review F7.2 + fórmulas F7.2b)', () => {
-  const doc = buildPresupuestoXlsx(buildPresupuestoListado(chapters, partidas), meta, { firmantes: [], lugar: '', fecha: '' });
+  const doc = buildPresupuestoXlsx(buildPresupuestoListado(chapters, partidas), meta, {
+    firmantes: [],
+    lugar: '',
+    fecha: '',
+  });
 
   it('cantidades/precios son celdas NUMÉRICAS con formato; los derivados, FÓRMULAS', () => {
     const conFormato = cells(doc.rows).filter((c) => c.format === FMT_NUM);
@@ -98,7 +124,11 @@ describe('política numérica XLSX (eng-review F7.2 + fórmulas F7.2b)', () => {
 });
 
 describe('buildPresupuestoXlsx', () => {
-  const doc = buildPresupuestoXlsx(buildPresupuestoListado(chapters, partidas), meta, { firmantes: [], lugar: '', fecha: '' });
+  const doc = buildPresupuestoXlsx(buildPresupuestoListado(chapters, partidas), meta, {
+    firmantes: [],
+    lugar: '',
+    fecha: '',
+  });
   // Layout del fixture: meta 1-4 · cap 1 en 5 (cabecera tabla 6, pa 7, desc 8,
   // sub 9, pb 10, med 11, total 12, blanco 13) · cap 3 en 14 (cabecera 15,
   // pc 16, total 17, blanco 18) · PEM 19.
@@ -111,7 +141,9 @@ describe('buildPresupuestoXlsx', () => {
   });
 
   it('lleva las mediciones embebidas (comentario — dims) con parcial numérico', () => {
-    const med = cells(doc.rows).find((c) => typeof c.value === 'string' && c.value.includes('zona A'));
+    const med = cells(doc.rows).find(
+      (c) => typeof c.value === 'string' && c.value.includes('zona A'),
+    );
     expect(med?.value).toBe('zona A — 2 × 3');
     const fila = doc.rows.find((r) => r.includes(med as CellObject))!;
     const parcial = cells([fila]).find((c) => typeof c.value === 'number')!;
@@ -247,7 +279,9 @@ describe('buildCertXlsx', () => {
       priceSnapshot: { pa: 10, pb: 5, pc: 7.77 },
       coefK: 1,
       snapshotAt: '2026-06-11T08:00:00.000Z',
-      extras: [{ id: 'x1', chapterId: '03', pos: 'C1', title: 'Extra', ud: 'ud', cantidad: 2, precio: 25 }],
+      extras: [
+        { id: 'x1', chapterId: '03', pos: 'C1', title: 'Extra', ud: 'ud', cantidad: 2, precio: 25 },
+      ],
     },
   ];
   // El precio vivo de pa cambió a 99: el XLSX debe valorar con el snapshot (10).
@@ -320,6 +354,57 @@ describe('buildCertXlsx', () => {
       .filter((c) => c.format === FMT_NUM && typeof c.value === 'number')
       .map((c) => c.value as number);
     expect(nums).toContain(4.17); // acumulado = retenido de la única cert (positivo, informativo)
+  });
+});
+
+describe('buildCuadro1Xlsx / buildCuadro2Xlsx', () => {
+  const banco: Banco = {
+    mo: { type: 'MO', desc: 'Oficial', ud: 'h', precio: 20 },
+    mt: { type: 'MAT', desc: 'Ladrillo', ud: 'ud', precio: 0.5 },
+  };
+  const conItems: PartidasMap = {
+    ...partidas,
+    '03': [
+      partida({
+        id: 'pc',
+        pos: '3.1',
+        code: 'C',
+        title: 'Tabique',
+        desc: 'Texto.',
+        precio: 30,
+        items: [
+          { code: 'mo', type: 'MO', cantidad: 1 },
+          { code: 'mt', type: 'MAT', cantidad: 20 },
+        ],
+      }),
+    ],
+  };
+  const cuadros = buildCuadrosPrecios(chapters, conItems, banco);
+  const firma: Firma = { firmantes: [], lugar: '', fecha: '' };
+
+  it('nº 1: precio numérico (dato) y la letra al lado', () => {
+    const doc = buildCuadro1Xlsx(cuadros, meta, firma);
+    const fila = doc.rows.find((r) => (r[0] as CellObject | null)?.value === '3.1')!;
+    expect(fila[4]).toMatchObject({ value: 30, type: Number, format: FMT_NUM });
+    expect((fila[5] as CellObject).value).toBe('TREINTA EUROS');
+    expect(formulas(doc.rows)).toEqual([]);
+    expect(doc.fileName).toBe('Cuadro de precios nº 1 - Reforma X.xlsx');
+  });
+
+  it('nº 2: «Total» suma sus líneas y el precio de la partida apunta al total', () => {
+    const doc = buildCuadro2Xlsx(cuadros, meta, firma);
+    const n = doc.rows.findIndex((r) => (r[0] as CellObject | null)?.value === '3.1') + 1;
+    // n: partida · n+1: descripción · n+2..n+3: líneas · n+4: Total
+    expect(doc.rows[n]![3]).toMatchObject({ value: 'Texto.' });
+    expect(doc.rows[n + 1]![3]).toMatchObject({ value: 'Mano de obra' });
+    expect(doc.rows[n + 1]![4]).toMatchObject({ value: 20, type: Number });
+    expect(doc.rows[n + 2]![3]).toMatchObject({ value: 'Materiales' });
+    expect(doc.rows[n + 3]![3]).toMatchObject({ value: 'Total' });
+    expect(doc.rows[n + 3]![4]).toMatchObject({
+      type: 'Formula',
+      value: `SUM(E${n + 2}:E${n + 3})`,
+    });
+    expect(doc.rows[n - 1]![5]).toMatchObject({ type: 'Formula', value: `E${n + 4}` });
   });
 });
 

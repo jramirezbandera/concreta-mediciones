@@ -31,6 +31,7 @@ import type {
   ResumenListado,
 } from '../../core/listado';
 import type { MedLineListado } from '../../core/listado';
+import type { CuadroPartidaRow, CuadrosPrecios } from '../../core/cuadrosPrecios';
 import { firmaLugarFecha } from '../../core/listado';
 import { cerradaLabel } from '../../core/certificacion';
 import { fmtNum, toEur, type Cents } from '../../core/money';
@@ -112,7 +113,14 @@ function metaRows(titulo: string, meta: ObraMeta, extra: [string, string][] = []
     [txt(titulo.toUpperCase(), { textColor: GRIS, fontSize: 9 })],
     [txt(meta.denominacion || 'Obra sin denominación', { fontWeight: 'bold', fontSize: 14 })],
     ...(dir ? [[txt(dir, { textColor: GRIS })]] : []),
-    ...pares.map((p): Row => [txt(p[0], { fontWeight: 'bold', fontSize: 9 }), txt(p[1], { columnSpan: 3 }), null, null]),
+    ...pares.map(
+      (p): Row => [
+        txt(p[0], { fontWeight: 'bold', fontSize: 9 }),
+        txt(p[1], { columnSpan: 3 }),
+        null,
+        null,
+      ],
+    ),
     [],
   ];
 }
@@ -152,7 +160,11 @@ function sangria(depth: number): string {
   return '   '.repeat(Math.max(0, depth - 1));
 }
 
-export function buildPresupuestoXlsx(data: PresupuestoListado, meta: ObraMeta, firma: Firma): XlsxDoc {
+export function buildPresupuestoXlsx(
+  data: PresupuestoListado,
+  meta: ObraMeta,
+  firma: Firma,
+): XlsxDoc {
   const rows: Row[] = metaRows('Presupuesto y mediciones', meta);
   const header: Row = [
     txt('Nº', { fontWeight: 'bold', backgroundColor: BANDA }),
@@ -215,7 +227,15 @@ export function buildPresupuestoXlsx(data: PresupuestoListado, meta: ObraMeta, f
           fx(`ROUND(E${fila}*F${fila},2)`),
         ]);
         if (r.desc) {
-          rows.push([null, null, txt(r.desc, { textColor: GRIS, fontSize: 9, wrap: true, columnSpan: 5 }), null, null, null, null]);
+          rows.push([
+            null,
+            null,
+            txt(r.desc, { textColor: GRIS, fontSize: 9, wrap: true, columnSpan: 5 }),
+            null,
+            null,
+            null,
+            null,
+          ]);
         }
         for (const l of r.med) {
           rows.push([
@@ -265,7 +285,15 @@ export function buildPresupuestoXlsx(data: PresupuestoListado, meta: ObraMeta, f
     fileName: xlsxFileName('Presupuesto y mediciones', meta.denominacion),
     sheet: 'Presupuesto',
     orientation: 'portrait',
-    columns: [{ width: 9 }, { width: 12 }, { width: 56 }, { width: 6 }, { width: 11 }, { width: 11 }, { width: 13 }],
+    columns: [
+      { width: 9 },
+      { width: 12 },
+      { width: 56 },
+      { width: 6 },
+      { width: 11 },
+      { width: 11 },
+      { width: 13 },
+    ],
     rows,
   };
 }
@@ -328,7 +356,9 @@ export function buildResumenXlsx(data: ResumenListado, meta: ObraMeta, firma: Fi
     rows.push(linea('Costes directos (suma de capítulos)', sumaCaps, { strong: true }));
     // El CI lee su % de la celda de al lado, como GG/BI: cambiarlo en la hoja
     // recalcula el PEM y toda la cadena.
-    rows.push(linea('Costes indirectos', fx(`ROUND(D${cdRow}*C${ciRow}/100,2)`), { rate: data.rates.ci }));
+    rows.push(
+      linea('Costes indirectos', fx(`ROUND(D${cdRow}*C${ciRow}/100,2)`), { rate: data.rates.ci }),
+    );
     rows.push(
       linea('Presupuesto de Ejecución Material (PEM)', fx(`D${cdRow}+D${ciRow}`), { strong: true }),
     );
@@ -337,8 +367,12 @@ export function buildResumenXlsx(data: ResumenListado, meta: ObraMeta, firma: Fi
   }
   // GG/BI/IVA leen su % de la celda de al lado (col C, expresado 0–100):
   // cambiarlo en la hoja recalcula la cadena entera.
-  rows.push(linea('Gastos generales', fx(`ROUND(D${pemRow}*C${ggRow}/100,2)`), { rate: data.rates.gg }));
-  rows.push(linea('Beneficio industrial', fx(`ROUND(D${pemRow}*C${biRow}/100,2)`), { rate: data.rates.bi }));
+  rows.push(
+    linea('Gastos generales', fx(`ROUND(D${pemRow}*C${ggRow}/100,2)`), { rate: data.rates.gg }),
+  );
+  rows.push(
+    linea('Beneficio industrial', fx(`ROUND(D${pemRow}*C${biRow}/100,2)`), { rate: data.rates.bi }),
+  );
   rows.push(
     linea('Presupuesto de Ejecución por Contrata (s/ IVA)', fx(`D${pemRow}+D${ggRow}+D${biRow}`), {
       strong: true,
@@ -372,6 +406,156 @@ export function buildResumenXlsx(data: ResumenListado, meta: ObraMeta, firma: Fi
     sheet: 'Resumen',
     orientation: 'portrait',
     columns: [{ width: 9 }, { width: 48 }, { width: 10 }, { width: 14 }],
+    rows,
+  };
+}
+
+/* ---- Cuadros de precios nº 1 y nº 2 ------------------------------------------ */
+
+/** Añade a `rows` los capítulos del cuadro: banda, cabecera de columnas (las
+ *  de `derecha` alineadas a la derecha), subcapítulos y las filas de cada
+ *  partida (`fila`, que recibe el nº de hoja de la primera fila que ocupa). */
+function cuadroRows(
+  rows: Row[],
+  data: CuadrosPrecios,
+  cabeceras: string[],
+  derecha: number[],
+  fila: (r: CuadroPartidaRow, n: number) => Row[],
+): void {
+  const span = cabeceras.length - 1;
+  const huecos = (k: number): null[] => Array<null>(k).fill(null);
+  const header: Row = cabeceras.map((h, i) =>
+    txt(h, {
+      fontWeight: 'bold',
+      backgroundColor: BANDA,
+      ...(derecha.includes(i) ? { align: 'right' } : {}),
+    }),
+  );
+  for (const c of data.capitulos) {
+    rows.push([
+      txt(c.code, { fontWeight: 'bold' }),
+      txt(c.title, { fontWeight: 'bold', columnSpan: span }),
+      ...huecos(span - 1),
+    ]);
+    rows.push(header);
+    for (const g of c.grupos) {
+      if (g.sub) {
+        rows.push([
+          txt(sangria(g.depth) + g.sub.code, { textColor: GRIS, fontWeight: 'bold' }),
+          txt(g.sub.title.toUpperCase(), { textColor: GRIS, fontWeight: 'bold', columnSpan: span }),
+          ...huecos(span - 1),
+        ]);
+      }
+      for (const r of g.rows) rows.push(...fila(r, rows.length + 1));
+    }
+    rows.push([]);
+  }
+}
+
+/** Fila de la descripción larga bajo la partida (si la hay), de D al final. */
+function descRow(r: CuadroPartidaRow, cols: number): Row[] {
+  if (!r.desc) return [];
+  return [
+    [
+      null,
+      null,
+      null,
+      txt(r.desc, { textColor: GRIS, fontSize: 9, wrap: true, columnSpan: cols - 3 }),
+      ...Array<null>(cols - 4).fill(null),
+    ],
+  ];
+}
+
+/** Cuadro nº 1: el precio es un DATO (el que rige el contrato), no una fórmula. */
+export function buildCuadro1Xlsx(data: CuadrosPrecios, meta: ObraMeta, firma: Firma): XlsxDoc {
+  const titulo = 'Cuadro de precios nº 1';
+  const rows: Row[] = metaRows(titulo, meta);
+  cuadroRows(
+    rows,
+    data,
+    ['Nº', 'Código', 'Ud.', 'Designación', 'En cifra (€)', 'En letra (€)'],
+    [4],
+    (r) => [
+      [
+        txt(r.pos),
+        txt(r.code),
+        txt(r.ud),
+        txt(r.title, { fontWeight: 'bold', wrap: true }),
+        bold(eur(r.precio)),
+        txt(r.letras, { wrap: true, fontSize: 9 }),
+      ],
+      ...descRow(r, 6),
+    ],
+  );
+  rows.push(...firmaRows(firma));
+  return {
+    fileName: xlsxFileName(titulo, meta.denominacion),
+    sheet: 'Cuadro nº 1',
+    orientation: 'portrait',
+    columns: [
+      { width: 9 },
+      { width: 12 },
+      { width: 6 },
+      { width: 46 },
+      { width: 12 },
+      { width: 34 },
+    ],
+    rows,
+  };
+}
+
+/** Cuadro nº 2: las líneas son datos; «Total» y el precio de la partida, fórmulas
+ *  (Σ de las líneas), para que la hoja recalcule si se retoca una. */
+export function buildCuadro2Xlsx(data: CuadrosPrecios, meta: ObraMeta, firma: Firma): XlsxDoc {
+  const titulo = 'Cuadro de precios nº 2';
+  const rows: Row[] = metaRows(titulo, meta);
+  cuadroRows(
+    rows,
+    data,
+    ['Nº', 'Código', 'Ud.', 'Designación y descomposición', 'Importe (€)', 'Precio (€)'],
+    [4, 5],
+    (r, n) => {
+      const desc = descRow(r, 6);
+      const ini = n + 1 + desc.length; // primera línea de la descomposición
+      const fin = ini + r.lineas.length - 1;
+      const total = fin + 1;
+      return [
+        [
+          txt(r.pos),
+          txt(r.code),
+          txt(r.ud),
+          txt(r.title, { fontWeight: 'bold', wrap: true }),
+          null,
+          bold(fx(`E${total}`)),
+        ],
+        ...desc,
+        ...r.lineas.map(
+          (l): Row => [null, null, null, txt(l.concepto, { indent: 1 }), eur(l.importe), null],
+        ),
+        [
+          null,
+          null,
+          null,
+          txt('Total', { fontWeight: 'bold', indent: 1 }),
+          bold(fx(`SUM(E${ini}:E${fin})`, { topBorderStyle: 'thin' })),
+          null,
+        ],
+      ];
+    },
+  );
+  rows.push(...firmaRows(firma));
+  return {
+    fileName: xlsxFileName(titulo, meta.denominacion),
+    sheet: 'Cuadro nº 2',
+    orientation: 'portrait',
+    columns: [
+      { width: 9 },
+      { width: 12 },
+      { width: 6 },
+      { width: 56 },
+      { width: 12 },
+      { width: 12 },
+    ],
     rows,
   };
 }
@@ -577,7 +761,10 @@ export function buildCertXlsx(data: CertListado, meta: ObraMeta, firma: Firma): 
     const n = t.nCerradas;
     rows.push(fila('Presupuesto de ejecución material', eur(t.budgetPEM)));
     rows.push(
-      fila(`Obra no ejecutada (${n} partida${n === 1 ? '' : 's'} cerrada${n === 1 ? '' : 's'})`, eur(-t.bajaPEM)),
+      fila(
+        `Obra no ejecutada (${n} partida${n === 1 ? '' : 's'} cerrada${n === 1 ? '' : 's'})`,
+        eur(-t.bajaPEM),
+      ),
     );
     rows.push(fila('Presupuesto de ejecución material vigente', eur(t.vigentePEM)));
   }

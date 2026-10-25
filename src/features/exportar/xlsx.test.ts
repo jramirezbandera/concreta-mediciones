@@ -42,21 +42,19 @@ describe('printSetupFeature (configuración de impresión, F7.2b)', () => {
   const worksheet = feature.files!.transform!['xl/worksheets/sheet{id}.xml']!;
 
   it('inyecta A4 + orientación + encaje a 1 página de ancho + pie con numeración', () => {
-    const xml = worksheet.insert!(
-      {} as never,
-      { sheetIndex: 0, sheetId: '1' },
-    )!;
-    expect(xml).toContain('<pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/>');
+    const xml = worksheet.insert!({} as never, { sheetIndex: 0, sheetId: '1' })!;
+    expect(xml).toContain(
+      '<pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/>',
+    );
     expect(xml).toContain('<pageMargins');
     expect(xml).toContain('<oddFooter>&amp;C&amp;8P&#225;gina &amp;P de &amp;N</oddFooter>');
   });
 
   it('habilita «ajustar a página» con un sheetPr al abrir el worksheet', () => {
-    const out = worksheet.transform!(
-      '<worksheet xmlns="x"><sheetData/></worksheet>',
-      {} as never,
-      { sheetIndex: 0, sheetId: '1' },
-    );
+    const out = worksheet.transform!('<worksheet xmlns="x"><sheetData/></worksheet>', {} as never, {
+      sheetIndex: 0,
+      sheetId: '1',
+    });
     expect(out).toBe(
       '<worksheet xmlns="x"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><sheetData/></worksheet>',
     );
@@ -76,7 +74,9 @@ describe('exportXlsx (import dinámico + descarga)', () => {
     expect(opts.sheet).toBe('Presupuesto');
     expect(opts.columns).toHaveLength(7);
     expect(extras.features).toHaveLength(1);
-    expect(toFile).toHaveBeenCalledWith('Presupuesto y mediciones - Reforma vivienda C Mayor 14.xlsx');
+    expect(toFile).toHaveBeenCalledWith(
+      'Presupuesto y mediciones - Reforma vivienda C Mayor 14.xlsx',
+    );
   });
 
   it('con target inválido no toca la librería', async () => {

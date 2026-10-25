@@ -15,7 +15,13 @@ function blobBytes(blob: Blob): Promise<Uint8Array> {
 async function xmlA(): Promise<{ xml: string; fileName: string }> {
   const { chapters, partidas } = obraA();
   const out = await docxRcdFor(
-    { chapters, partidas, rates: RATES, obra: { ...OBRA_A, promotor: { nombre: 'Promotora de prueba' } }, estudioRcd: estudio({ capituloGestion: 'g' }) },
+    {
+      chapters,
+      partidas,
+      rates: RATES,
+      obra: { ...OBRA_A, promotor: { nombre: 'Promotora de prueba' } },
+      estudioRcd: estudio({ capituloGestion: 'g' }),
+    },
     '2026-10-16',
   );
   expect(out).not.toBeNull();
@@ -27,7 +33,12 @@ describe('Word del estudio de residuos', () => {
   it('títulos con estilo de título de Word, para el índice de la memoria', async () => {
     const { xml } = await xmlA();
     expect(xml).toContain('<w:pStyle w:val="Heading1"/>');
-    for (const t of ['1.º Estimación de la cantidad de residuos', '2.º Medidas para la prevención', '7.º Valoración del coste', 'Inventario de residuos peligrosos'])
+    for (const t of [
+      '1.º Estimación de la cantidad de residuos',
+      '2.º Medidas para la prevención',
+      '7.º Valoración del coste',
+      'Inventario de residuos peligrosos',
+    ])
       expect(xml).toContain(t);
   });
 
@@ -50,6 +61,8 @@ describe('Word del estudio de residuos', () => {
 
   it('sin estudio no hay documento', async () => {
     const { chapters, partidas } = obraA();
-    expect(await docxRcdFor({ chapters, partidas, rates: RATES, obra: OBRA_A }, '2026-10-16')).toBeNull();
+    expect(
+      await docxRcdFor({ chapters, partidas, rates: RATES, obra: OBRA_A }, '2026-10-16'),
+    ).toBeNull();
   });
 });

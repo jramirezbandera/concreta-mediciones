@@ -39,9 +39,23 @@ import {
   type ResumenListado,
 } from '../../core/listado';
 import { cerradaLabel } from '../../core/certificacion';
-import { fmtCents, fmtNum, type Cents } from '../../core/money';
+import {
+  buildCuadrosPrecios,
+  type CuadroPartidaRow,
+  type CuadrosPrecios,
+} from '../../core/cuadrosPrecios';
+import { fmtCents, fmtNum, toEur, type Cents } from '../../core/money';
 import { asciendeLegal } from '../../core/numeroALetras';
-import type { Banco, Cert, Chapter, Firmante, Obra, PartidaBaja, PartidasMap, Rates } from '../../core/types';
+import type {
+  Banco,
+  Cert,
+  Chapter,
+  Firmante,
+  Obra,
+  PartidaBaja,
+  PartidasMap,
+  Rates,
+} from '../../core/types';
 import type { PrintTarget } from '../print';
 import { docFileName } from './fileName';
 
@@ -91,7 +105,7 @@ export function cell(text: string, o: CellOpts): TableCell {
   return cellPars([paraRuns([run(text, o)], o.right ? AlignmentType.RIGHT : undefined)], o);
 }
 
-export function cellPars(children: Paragraph[], o: CellOpts): TableCell {
+export function cellPars(children: (Paragraph | Table)[], o: CellOpts): TableCell {
   return new TableCell({
     // Las celdas con columnSpan (width 0) dejan que Word reparta el ancho.
     width: o.width > 0 ? { size: o.width, type: WidthType.DXA } : undefined,
@@ -136,7 +150,8 @@ function tablaDerecha(columnWidths: number[], rows: TableRow[]): Table {
   });
 }
 
-export const vacio = (spacing = 120) => new Paragraph({ spacing: { after: spacing }, children: [] });
+export const vacio = (spacing = 120) =>
+  new Paragraph({ spacing: { after: spacing }, children: [] });
 
 /** ISO → dd/mm/aaaa ('' si falta/inválida). */
 function fechaCorta(iso?: string): string {
@@ -147,7 +162,11 @@ function fechaCorta(iso?: string): string {
 
 /* ---- cabecera y firma compartidas (contrato de metadatos §4) -------------- */
 
-export function cabecera(titulo: string, meta: ObraMeta, extra: [string, string][] = []): Paragraph[] {
+export function cabecera(
+  titulo: string,
+  meta: ObraMeta,
+  extra: [string, string][] = [],
+): Paragraph[] {
   const pares: [string, string][] = [
     ['Expediente', meta.expediente],
     ['Promotor', meta.promotor],
@@ -167,7 +186,8 @@ export function cabecera(titulo: string, meta: ObraMeta, extra: [string, string]
       children: [run(meta.denominacion || 'Obra sin denominación', { bold: true, size: T_TITULO })],
     }),
   ];
-  if (dir) out.push(new Paragraph({ spacing: { after: 60 }, children: [run(dir, { color: GRIS })] }));
+  if (dir)
+    out.push(new Paragraph({ spacing: { after: 60 }, children: [run(dir, { color: GRIS })] }));
   const runs: TextRun[] = pares.flatMap((p, i) => [
     ...(i > 0 ? [run('   ·   ', { color: BORDE, size: T_SMALL })] : []),
     run(`${p[0]} `, { bold: true, size: T_SMALL }),
@@ -236,9 +256,10 @@ export function firma(f: Firma): (Paragraph | Table)[] {
   const widths = f.firmantes.map((_, i) => (i === n - 1 ? W - col * (n - 1) : col));
   return [
     cab,
-    tabla([...widths], [
-      new TableRow({ children: f.firmantes.map((fm, i) => firmaCelda(fm, widths[i]!)) }),
-    ]),
+    tabla(
+      [...widths],
+      [new TableRow({ children: f.firmantes.map((fm, i) => firmaCelda(fm, widths[i]!)) })],
+    ),
   ];
 }
 
@@ -278,16 +299,22 @@ function presupuestoBloques(data: PresupuestoListado): (Paragraph | Table)[] {
       new TableRow({
         tableHeader: true,
         cantSplit: true,
-        children: ['Nº · Código', 'Descripción y mediciones', 'Ud.', 'Cantidad', 'Precio', 'Importe'].map(
-          (h, i) =>
-            cell(h, {
-              width: W_PRES[i]!,
-              right: i >= 3,
-              bold: true,
-              color: GRIS,
-              size: T_TINY,
-              fill: BANDA,
-            }),
+        children: [
+          'Nº · Código',
+          'Descripción y mediciones',
+          'Ud.',
+          'Cantidad',
+          'Precio',
+          'Importe',
+        ].map((h, i) =>
+          cell(h, {
+            width: W_PRES[i]!,
+            right: i >= 3,
+            bold: true,
+            color: GRIS,
+            size: T_TINY,
+            fill: BANDA,
+          }),
         ),
       }),
     ];
@@ -297,9 +324,28 @@ function presupuestoBloques(data: PresupuestoListado): (Paragraph | Table)[] {
           new TableRow({
             cantSplit: true,
             children: [
-              cell(sangria(g.depth) + g.sub.code, { width: W_PRES[0]!, bold: true, color: GRIS, size: T_SMALL, fill: BANDA }),
-              cell(g.sub.title.toUpperCase(), { width: 0, span: 4, bold: true, color: GRIS, size: T_SMALL, fill: BANDA }),
-              cell(fmtNum(g.total / 100), { width: W_PRES[5]!, right: true, color: GRIS, size: T_SMALL, fill: BANDA }),
+              cell(sangria(g.depth) + g.sub.code, {
+                width: W_PRES[0]!,
+                bold: true,
+                color: GRIS,
+                size: T_SMALL,
+                fill: BANDA,
+              }),
+              cell(g.sub.title.toUpperCase(), {
+                width: 0,
+                span: 4,
+                bold: true,
+                color: GRIS,
+                size: T_SMALL,
+                fill: BANDA,
+              }),
+              cell(fmtNum(g.total / 100), {
+                width: W_PRES[5]!,
+                right: true,
+                color: GRIS,
+                size: T_SMALL,
+                fill: BANDA,
+              }),
             ],
           }),
         );
@@ -330,8 +376,18 @@ function presupuestoBloques(data: PresupuestoListado): (Paragraph | Table)[] {
       new TableRow({
         cantSplit: true,
         children: [
-          cell(`Total capítulo ${c.code} · ${c.title}`, { width: 0, span: 5, bold: true, topBorder: true }),
-          cell(fmtNum(c.total / 100), { width: W_PRES[5]!, right: true, bold: true, topBorder: true }),
+          cell(`Total capítulo ${c.code} · ${c.title}`, {
+            width: 0,
+            span: 5,
+            bold: true,
+            topBorder: true,
+          }),
+          cell(fmtNum(c.total / 100), {
+            width: W_PRES[5]!,
+            right: true,
+            bold: true,
+            topBorder: true,
+          }),
         ],
       }),
     );
@@ -342,8 +398,20 @@ function presupuestoBloques(data: PresupuestoListado): (Paragraph | Table)[] {
       new TableRow({
         cantSplit: true,
         children: [
-          cell('Presupuesto de Ejecución Material (PEM)', { width: 0, span: 5, bold: true, size: 22, topBorder: true }),
-          cell(fmtCents(data.pem), { width: W_PRES[5]!, right: true, bold: true, size: 22, topBorder: true }),
+          cell('Presupuesto de Ejecución Material (PEM)', {
+            width: 0,
+            span: 5,
+            bold: true,
+            size: 22,
+            topBorder: true,
+          }),
+          cell(fmtCents(data.pem), {
+            width: W_PRES[5]!,
+            right: true,
+            bold: true,
+            size: 22,
+            topBorder: true,
+          }),
         ],
       }),
     ]),
@@ -371,7 +439,14 @@ function resumenBloques(data: ResumenListado): (Paragraph | Table)[] {
       tableHeader: true,
       cantSplit: true,
       children: ['Nº', 'Capítulo', data.ci > 0 ? '% s/ C.D.' : '% s/ PEM', 'Importe'].map((h, i) =>
-        cell(h, { width: W_RES[i]!, right: i >= 2, bold: true, color: GRIS, size: T_TINY, fill: BANDA }),
+        cell(h, {
+          width: W_RES[i]!,
+          right: i >= 2,
+          bold: true,
+          color: GRIS,
+          size: T_TINY,
+          fill: BANDA,
+        }),
       ),
     }),
     ...data.rows.map(
@@ -381,7 +456,12 @@ function resumenBloques(data: ResumenListado): (Paragraph | Table)[] {
           children: [
             cell(r.code, { width: W_RES[0]!, color: GRIS }),
             cell(r.title, { width: W_RES[1]! }),
-            cell(`${fmtNum(r.pct, 1)}%`, { width: W_RES[2]!, right: true, color: GRIS, size: T_TINY }),
+            cell(`${fmtNum(r.pct, 1)}%`, {
+              width: W_RES[2]!,
+              right: true,
+              color: GRIS,
+              size: T_TINY,
+            }),
             cell(fmtNum(r.importe / 100), { width: W_RES[3]!, right: true }),
           ],
         }),
@@ -400,7 +480,10 @@ function resumenBloques(data: ResumenListado): (Paragraph | Table)[] {
           new TableRow({
             cantSplit: true,
             children: [
-              cell(`Costes indirectos (${fmtNum(data.rates.ci * 100, 1)} %)`, { width: 0, span: 3 }),
+              cell(`Costes indirectos (${fmtNum(data.rates.ci * 100, 1)} %)`, {
+                width: 0,
+                span: 3,
+              }),
               cell(fmtNum(data.ci / 100), { width: W_RES[3]!, right: true }),
             ],
           }),
@@ -409,8 +492,18 @@ function resumenBloques(data: ResumenListado): (Paragraph | Table)[] {
     new TableRow({
       cantSplit: true,
       children: [
-        cell('Presupuesto de Ejecución Material (PEM)', { width: 0, span: 3, bold: true, topBorder: true }),
-        cell(fmtNum(data.pem / 100), { width: W_RES[3]!, right: true, bold: true, topBorder: true }),
+        cell('Presupuesto de Ejecución Material (PEM)', {
+          width: 0,
+          span: 3,
+          bold: true,
+          topBorder: true,
+        }),
+        cell(fmtNum(data.pem / 100), {
+          width: W_RES[3]!,
+          right: true,
+          bold: true,
+          topBorder: true,
+        }),
       ],
     }),
   ];
@@ -419,7 +512,13 @@ function resumenBloques(data: ResumenListado): (Paragraph | Table)[] {
       cantSplit: true,
       children: [
         cell(label, { width: W_RES_ECO[0]!, bold: o.strong, size: o.size, topBorder: o.strong }),
-        cell(fmtCents(value), { width: W_RES_ECO[1]!, right: true, bold: o.strong, size: o.size, topBorder: o.strong }),
+        cell(fmtCents(value), {
+          width: W_RES_ECO[1]!,
+          right: true,
+          bold: o.strong,
+          size: o.size,
+          topBorder: o.strong,
+        }),
       ],
     });
   const pct = (r: number) => `${fmtNum(r * 100, 1)} %`;
@@ -429,7 +528,10 @@ function resumenBloques(data: ResumenListado): (Paragraph | Table)[] {
     tablaDerecha(W_RES_ECO, [
       // El CI solo imprime si la obra lo lleva aparte (ver `PrintResumen`).
       ...(data.ci > 0
-        ? [linea('Costes directos', data.cd), linea(`Costes indirectos (${pct(data.rates.ci)})`, data.ci)]
+        ? [
+            linea('Costes directos', data.cd),
+            linea(`Costes indirectos (${pct(data.rates.ci)})`, data.ci),
+          ]
         : []),
       linea('Ejecución material', data.pem),
       linea(`Gastos generales (${pct(data.rates.gg)})`, data.gg),
@@ -461,15 +563,36 @@ function certBloques(data: CertListado): (Paragraph | Table)[] {
         children: [
           cell(c.code, { width: W_CERT[0]!, bold: true, size: T_SMALL }),
           cell(c.title, { width: 0, span: 7, bold: true, size: T_SMALL }),
-          cell(fmtNum(c.aOrigen / 100), { width: W_CERT[8]!, right: true, bold: true, size: T_SMALL }),
+          cell(fmtNum(c.aOrigen / 100), {
+            width: W_CERT[8]!,
+            right: true,
+            bold: true,
+            size: T_SMALL,
+          }),
         ],
       }),
       new TableRow({
         tableHeader: true,
         cantSplit: true,
-        children: ['Nº · Código', 'Descripción', 'Ud.', 'Ofertada', 'Ejecutada', 'Precio', 'A origen', 'Anterior', 'Esta cert.'].map(
-          (h, i) =>
-            cell(h, { width: W_CERT[i]!, right: i >= 3, bold: true, color: GRIS, size: T_TINY, fill: BANDA }),
+        children: [
+          'Nº · Código',
+          'Descripción',
+          'Ud.',
+          'Ofertada',
+          'Ejecutada',
+          'Precio',
+          'A origen',
+          'Anterior',
+          'Esta cert.',
+        ].map((h, i) =>
+          cell(h, {
+            width: W_CERT[i]!,
+            right: i >= 3,
+            bold: true,
+            color: GRIS,
+            size: T_TINY,
+            fill: BANDA,
+          }),
         ),
       }),
     ];
@@ -479,8 +602,21 @@ function certBloques(data: CertListado): (Paragraph | Table)[] {
           new TableRow({
             cantSplit: true,
             children: [
-              cell(sangria(g.depth) + g.sub.code, { width: W_CERT[0]!, bold: true, color: GRIS, size: T_TINY, fill: BANDA }),
-              cell(g.sub.title.toUpperCase(), { width: 0, span: 8, bold: true, color: GRIS, size: T_TINY, fill: BANDA }),
+              cell(sangria(g.depth) + g.sub.code, {
+                width: W_CERT[0]!,
+                bold: true,
+                color: GRIS,
+                size: T_TINY,
+                fill: BANDA,
+              }),
+              cell(g.sub.title.toUpperCase(), {
+                width: 0,
+                span: 8,
+                bold: true,
+                color: GRIS,
+                size: T_TINY,
+                fill: BANDA,
+              }),
             ],
           }),
         );
@@ -502,7 +638,11 @@ function certBloques(data: CertListado): (Paragraph | Table)[] {
                   cellPars(
                     [
                       paraRuns([
-                        run(`${cerradaLabel(r.ejecutada).toUpperCase()}  `, { bold: true, color: GRIS, size: T_TINY }),
+                        run(`${cerradaLabel(r.ejecutada).toUpperCase()}  `, {
+                          bold: true,
+                          color: GRIS,
+                          size: T_TINY,
+                        }),
                         run(r.title, { size: T_SMALL }),
                       ]),
                       ...(r.bajaCant > 0
@@ -559,10 +699,34 @@ function certBloques(data: CertListado): (Paragraph | Table)[] {
       new TableRow({
         cantSplit: true,
         children: [
-          cell(`Total capítulo ${c.code}`, { width: 0, span: 6, bold: true, size: T_SMALL, topBorder: true }),
-          cell(fmtNum(c.aOrigen / 100), { width: W_CERT[6]!, right: true, bold: true, size: T_SMALL, topBorder: true }),
-          cell(fmtNum(c.anterior / 100), { width: W_CERT[7]!, right: true, bold: true, size: T_SMALL, topBorder: true }),
-          cell(fmtNum(c.estaCert / 100), { width: W_CERT[8]!, right: true, bold: true, size: T_SMALL, topBorder: true }),
+          cell(`Total capítulo ${c.code}`, {
+            width: 0,
+            span: 6,
+            bold: true,
+            size: T_SMALL,
+            topBorder: true,
+          }),
+          cell(fmtNum(c.aOrigen / 100), {
+            width: W_CERT[6]!,
+            right: true,
+            bold: true,
+            size: T_SMALL,
+            topBorder: true,
+          }),
+          cell(fmtNum(c.anterior / 100), {
+            width: W_CERT[7]!,
+            right: true,
+            bold: true,
+            size: T_SMALL,
+            topBorder: true,
+          }),
+          cell(fmtNum(c.estaCert / 100), {
+            width: W_CERT[8]!,
+            right: true,
+            bold: true,
+            size: T_SMALL,
+            topBorder: true,
+          }),
         ],
       }),
     );
@@ -622,6 +786,159 @@ function certBloques(data: CertListado): (Paragraph | Table)[] {
   return out;
 }
 
+/* ---- Cuadros de precios nº 1 y nº 2 ---------------------------------------- */
+
+// Nº·Código · Designación · En cifra · En letra = 10546 twips.
+const W_CP_NUM = 1100;
+const W_CP1 = [W_CP_NUM, 5300, 1146, 3000];
+// Nº·Código · Designación y descomposición · Precio = 10546 twips.
+const W_CP2 = [W_CP_NUM, 8246, 1200];
+// Descomposición anidada bajo la designación: concepto · importe.
+const W_CP2_LIN = [3400, 1100];
+
+/** Capítulos del cuadro: banda + cabecera de columnas (repetidas por página),
+ *  subcapítulos y una fila por partida (`fila`). */
+function cuadroBloques(
+  data: CuadrosPrecios,
+  widths: number[],
+  cabeceras: string[],
+  fila: (r: CuadroPartidaRow) => TableCell[],
+): (Paragraph | Table)[] {
+  const out: (Paragraph | Table)[] = [];
+  const n = widths.length;
+  for (const c of data.capitulos) {
+    const rows: TableRow[] = [
+      new TableRow({
+        tableHeader: true,
+        cantSplit: true,
+        children: [
+          cell(c.code, { width: widths[0]!, bold: true }),
+          cell(c.title, { width: 0, span: n - 1, bold: true }),
+        ],
+      }),
+      new TableRow({
+        tableHeader: true,
+        cantSplit: true,
+        children: cabeceras.map((h, i) =>
+          cell(h, {
+            width: widths[i]!,
+            right: i === 2,
+            bold: true,
+            color: GRIS,
+            size: T_TINY,
+            fill: BANDA,
+          }),
+        ),
+      }),
+    ];
+    for (const g of c.grupos) {
+      if (g.sub) {
+        rows.push(
+          new TableRow({
+            cantSplit: true,
+            children: [
+              cell(sangria(g.depth) + g.sub.code, {
+                width: widths[0]!,
+                bold: true,
+                color: GRIS,
+                size: T_SMALL,
+                fill: BANDA,
+              }),
+              cell(g.sub.title.toUpperCase(), {
+                width: 0,
+                span: n - 1,
+                bold: true,
+                color: GRIS,
+                size: T_SMALL,
+                fill: BANDA,
+              }),
+            ],
+          }),
+        );
+      }
+      for (const r of g.rows) rows.push(new TableRow({ cantSplit: true, children: fila(r) }));
+    }
+    out.push(tabla(widths, rows), vacio(160));
+  }
+  return out;
+}
+
+/** Nº·Código y designación (ud + título + texto) de una partida. */
+function designacion(r: CuadroPartidaRow): { num: TableCell; pars: Paragraph[] } {
+  const pars: Paragraph[] = [
+    paraRuns([run(`${r.ud}  `, { color: GRIS }), run(r.title, { bold: true })]),
+  ];
+  if (r.desc) pars.push(paraRuns([run(r.desc, { color: GRIS, size: T_SMALL })]));
+  return {
+    num: cellPars(
+      [paraRuns([run(r.pos)]), paraRuns([run(r.code, { color: GRIS, size: T_TINY })])],
+      { width: W_CP_NUM },
+    ),
+    pars,
+  };
+}
+
+function cuadro1Bloques(data: CuadrosPrecios): (Paragraph | Table)[] {
+  return cuadroBloques(
+    data,
+    W_CP1,
+    ['Nº · Código', 'Designación', 'En cifra (€)', 'En letra (€)'],
+    (r) => {
+      const d = designacion(r);
+      return [
+        d.num,
+        cellPars(d.pars, { width: W_CP1[1]! }),
+        cell(fmtNum(toEur(r.precio)), { width: W_CP1[2]!, right: true, bold: true }),
+        cell(r.letras, { width: W_CP1[3]!, size: T_SMALL }),
+      ];
+    },
+  );
+}
+
+function cuadro2Bloques(data: CuadrosPrecios): (Paragraph | Table)[] {
+  return cuadroBloques(
+    data,
+    W_CP2,
+    ['Nº · Código', 'Designación y descomposición', 'Precio (€)'],
+    (r) => {
+      const d = designacion(r);
+      const lineas = tabla(W_CP2_LIN, [
+        ...r.lineas.map(
+          (l) =>
+            new TableRow({
+              children: [
+                cell(l.concepto, { width: W_CP2_LIN[0]!, size: T_SMALL }),
+                cell(fmtNum(toEur(l.importe)), {
+                  width: W_CP2_LIN[1]!,
+                  right: true,
+                  size: T_SMALL,
+                }),
+              ],
+            }),
+        ),
+        new TableRow({
+          children: [
+            cell('Total', { width: W_CP2_LIN[0]!, size: T_SMALL, bold: true, topBorder: true }),
+            cell(fmtNum(toEur(r.precio)), {
+              width: W_CP2_LIN[1]!,
+              right: true,
+              size: T_SMALL,
+              bold: true,
+              topBorder: true,
+            }),
+          ],
+        }),
+      ]);
+      return [
+        d.num,
+        // Word exige que una celda acabe en párrafo: uno vacío tras la tabla anidada.
+        cellPars([...d.pars, lineas, new Paragraph({ children: [] })], { width: W_CP2[1]! }),
+        cell(fmtNum(toEur(r.precio)), { width: W_CP2[2]!, right: true, bold: true }),
+      ];
+    },
+  );
+}
+
 /* ---- documento + API -------------------------------------------------------- */
 
 function makeDoc(children: (Paragraph | Table)[]): Document {
@@ -663,6 +980,11 @@ export async function docxFor(target: PrintTarget, s: DocxState): Promise<DocxRe
     titulo = 'Resumen de presupuesto';
     bloques = resumenBloques(buildResumen(s.chapters, s.partidas, s.rates));
     firmaDoc = firmaFor('resumen', s.obra, undefined, new Date().toISOString());
+  } else if (target.kind === 'cuadro1' || target.kind === 'cuadro2') {
+    const cuadros = buildCuadrosPrecios(s.chapters, s.partidas, s.recursos, s.rates.coefK);
+    titulo = target.kind === 'cuadro1' ? 'Cuadro de precios nº 1' : 'Cuadro de precios nº 2';
+    bloques = target.kind === 'cuadro1' ? cuadro1Bloques(cuadros) : cuadro2Bloques(cuadros);
+    firmaDoc = firmaFor('presupuesto', s.obra, undefined, new Date().toISOString());
   } else {
     const cl = buildCertListado(s.chapters, s.partidas, s.certs, target.index, s.rates, s.bajas);
     if (!cl) return null;
@@ -681,6 +1003,10 @@ export async function docxFor(target: PrintTarget, s: DocxState): Promise<DocxRe
   const doc = makeDoc([...cabecera(titulo, meta, extra), ...bloques, ...firma(firmaDoc)]);
   return {
     blob: await Packer.toBlob(doc),
-    fileName: docFileName(titulo.replace('Certificación de obra', 'Certificación'), meta.denominacion, 'docx'),
+    fileName: docFileName(
+      titulo.replace('Certificación de obra', 'Certificación'),
+      meta.denominacion,
+      'docx',
+    ),
   };
 }
