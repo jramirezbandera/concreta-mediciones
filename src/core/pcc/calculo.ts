@@ -24,6 +24,7 @@ import { costesDirectos, pem } from '../totales';
 import { findNode, subtreeIds } from '../tree';
 import type { Banco, Chapter, Obra, Partida, PartidasMap, Rates } from '../types';
 import { coherenciaCapitulo } from './coherencia';
+import { diferenciasEmitido } from './emitido';
 import { calcularEstructura, type PartidaEstructura } from './estructura';
 import { leerDesignacion } from './hormigon';
 import { ENLACE_VERSION, cubreDelEnlace } from './precios';
@@ -550,8 +551,14 @@ export function calcularPlanCalidad(e: EntradaPcc): PlanCalidad {
   } else if (valoracion.length)
     pend({ id: 'capitulo', texto: 'El presupuesto no tiene capítulo de control de calidad enlazado: enlázalo o créalo desde la valoración (el presupuesto incluirá la valoración del control, CTE parte I, anejo I).' });
 
+  /* 7. Lo emitido en el último Word (O5) ------------------------------------------------ */
+  const version: PlanCalidad['version'] = { motor: 1, catalogo: catalogoJson.version, enlaceBcca: ENLACE_VERSION, familias: familiasJson.version, ...estructura.version };
+  const emitido = plan.emitido ? diferenciasEmitido({ version, valoracion, total }, plan.emitido) : [];
+  if (emitido.length)
+    avisa({ id: 'emitido', texto: `El plan ha cambiado desde el Word del ${plan.emitido!.fecha}: ${plural(emitido.length, 'diferencia', 'diferencias')} en la valoración. Míralas en «Valoración».` });
+
   return {
-    version: { motor: 1, catalogo: catalogoJson.version, enlaceBcca: ENLACE_VERSION, familias: familiasJson.version, ...estructura.version },
+    version,
     fecha,
     comunidad,
     marco: marcoDe(presentes, estructura, comunidad, plan),
@@ -565,6 +572,7 @@ export function calcularPlanCalidad(e: EntradaPcc): PlanCalidad {
     totalCompleto,
     porcentaje,
     capitulo,
+    emitido,
     sinRevisar,
     revisar,
     pendientes,

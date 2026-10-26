@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { EmptyAction, EmptyState, Icon } from '../../components';
 import { fmtCents, fmtNum } from '../../core/money';
 import { useObraStore, useToastStore } from '../../store';
+import { exportDocxPcc } from '../exportar';
+import { hoyIso } from '../residuos/formato';
 import { DatosPlan } from './DatosPlan';
 import { Estructura } from './Estructura';
 import { ListaControl } from './ListaControl';
@@ -106,6 +108,16 @@ export function CalidadView({ compact, onGoPresupuesto }: { compact: boolean; on
                 <span className={styles.totalLbl}>por revisar</span>
               </div>
             )}
+            <button
+              type="button"
+              className={`tcol ${styles.btnPrimary}`}
+              title={r.pendientes.length ? `Sale con ${r.pendientes.length} pendiente${r.pendientes.length === 1 ? '' : 's'} marcado${r.pendientes.length === 1 ? '' : 's'}` : undefined}
+              onClick={() => {
+                exportDocxPcc(hoyIso()).catch(() => useToastStore.getState().show('No se pudo generar el Word. Recarga la página.', undefined, { tone: 'error' }));
+              }}
+            >
+              <Icon name="download" size={14} /> Exportar Word
+            </button>
           </div>
         </div>
 

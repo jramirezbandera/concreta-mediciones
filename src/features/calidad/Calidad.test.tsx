@@ -117,6 +117,23 @@ describe('vista Calidad', () => {
     expect(screen.queryByText('Sin ensayo en el plan')).toBeNull();
   });
 
+  it('lo emitido: el Word del día X avisa de lo que cambia, y «Recalcular» lo da por bueno (O5)', () => {
+    const o = cargarObraA();
+    state().iniciarPlanCalidad();
+    state().confirmarControles(Object.entries(state().partidas).flatMap(([chapterId, ps]) => (ps ?? []).map((p) => ({ chapterId, partidaId: p.id }))));
+    state().setPlanCalidad({
+      ...o.plan,
+      emitido: { fecha: '2026-10-01', version: { motor: 1 } as never, filas: [{ ensayo: 'j03-008', descripcion: 'Resistencia a compresión', cantidad: 12, precio: 59.28, importe: 71136 }], total: 71136, porcentaje: null },
+    });
+    render(<CalidadView compact={false} onGoPresupuesto={() => undefined} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Valoración' }));
+    expect(screen.getByText('Ha cambiado desde el Word del 2026-10-01')).toBeInTheDocument();
+    expect(screen.getByText(/«Resistencia a compresión»: 12 → 15 amasada/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Recalcular/ }));
+    expect(state().planCalidad!.emitido!.fecha).not.toBe('2026-10-01');
+    expect(screen.queryByText(/Ha cambiado desde el Word/)).toBeNull();
+  });
+
   it('un ensayo de nivel 2 se marca con su casilla (D8)', () => {
     const o = cargarObraA();
     state().iniciarPlanCalidad();

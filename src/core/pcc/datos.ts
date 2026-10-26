@@ -37,6 +37,7 @@ export function controlLegible(x: unknown): x is ControlPartida {
 export function planLegible(x: unknown): x is PlanCalidadDatos {
   if (!isRecord(x) || x.version !== 1) return false;
   const mapas = ['familias', 'marcados', 'aCargo', 'precios', 'preciosManuales', 'grupos', 'dosificaciones'] as const;
+  if (!opcional(x.emitido, (v) => v === null || (isRecord(v) && Array.isArray(v.filas) && typeof v.total === 'number'))) return false;
   return mapas.every((k) => opcional(x[k], isRecord));
 }
 

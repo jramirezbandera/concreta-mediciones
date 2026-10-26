@@ -200,6 +200,37 @@ export interface PlanCalidadDatos {
     distintivos?: { barras?: boolean; mallas?: boolean; ferralla?: boolean };
   };
   ejecucion?: { nivel?: 'normal' | 'intenso'; opcion?: 'A' | 'B' };
+  /** Técnico redactor, que firma. */
+  redactor?: { nombre: string; titulacion: string; colegiado: string } | null;
+  /** Lo que salió en el último Word (O5): el plan reabierto avisa si el cálculo de hoy difiere. */
+  emitido?: PlanEmitido | null;
+}
+
+/** Una fila de la valoración tal como salió en el Word. */
+export interface FilaEmitida {
+  ensayo: string;
+  descripcion: string;
+  cantidad: number;
+  /** €. */
+  precio: number | null;
+  /** Céntimos. */
+  importe: number | null;
+}
+
+export interface PlanEmitido {
+  /** ISO, el día de la exportación. */
+  fecha: string;
+  version: PlanCalidad['version'];
+  filas: FilaEmitida[];
+  /** Céntimos. */
+  total: number;
+  porcentaje: number | null;
+}
+
+/** Lo que cambia frente al Word entregado. */
+export interface DiferenciaEmitido {
+  ensayo: string | null;
+  texto: string;
 }
 
 /* ---- resultado del plan ----------------------------------------------------- */
@@ -326,6 +357,8 @@ export interface PlanCalidad {
   porcentaje: { valor: number; basePem: number } | null;
   /** El capítulo de control enlazado y su coherencia con la valoración (§9). */
   capitulo: CoherenciaCapitulo | null;
+  /** Lo que cambia frente al último Word exportado (O5); vacío si no se exportó o no cambia. */
+  emitido: DiferenciaEmitido[];
   /** Partidas propuestas sin confirmar y confirmadas que hay que revisar (O6). */
   sinRevisar: number;
   revisar: string[];

@@ -3,6 +3,7 @@ import { Icon } from '../../components';
 import { fmtCents, fmtNum } from '../../core/money';
 import { calcularPlanCalidad } from '../../core/pcc/calculo';
 import { partidasControl } from '../../core/pcc/capitulo';
+import { emitidoDe } from '../../core/pcc/emitido';
 import { tomarPrecios } from '../../core/pcc/precios';
 import type { CoherenciaCapitulo, FilaValoracion, PlanCalidad, PlanCalidadDatos, PrecioCopiado, PropuestaCasar } from '../../core/pcc/tipos';
 import { flattenContainers } from '../../core/tree';
@@ -172,6 +173,36 @@ export function Valoracion({ r, datos }: { r: PlanCalidad; datos: PlanCalidadDat
 
   return (
     <>
+      {r.emitido.length > 0 && datos.emitido && (
+        <section className={styles.card}>
+          <div className={styles.cardHead}>
+            <div className={styles.cardTitle}>Ha cambiado desde el Word del {datos.emitido.fecha}</div>
+            <div className={styles.cita}>Lo entregado no cambia solo: estas son las diferencias con el cálculo de hoy</div>
+          </div>
+          <div className={styles.avisos}>
+            {r.emitido.map((x, i) => (
+              <div key={`${x.ensayo ?? ''}:${i}`} className={styles.aviso}>
+                <Icon name="alert" size={15} />
+                <span style={{ flex: 1 }}>{x.texto}</span>
+              </div>
+            ))}
+          </div>
+          <div className={styles.btnRow} style={{ marginTop: 12 }}>
+            <button
+              type="button"
+              className={`tcol ${styles.btn}`}
+              title="Da por buenas las diferencias: lo emitido pasa a ser el cálculo de hoy. Vuelve a exportar el Word para entregarlo."
+              onClick={() => {
+                set({ emitido: emitidoDe(r, hoyIso()) });
+                useToastStore.getState().show('Diferencias aceptadas: exporta el Word para entregar el plan de hoy', { label: 'Deshacer', run: () => undo() }, { rev: getDomainRevision() });
+              }}
+            >
+              <Icon name="check" size={14} /> Recalcular
+            </button>
+          </div>
+        </section>
+      )}
+
       <section className={styles.card}>
         <div className={styles.cardHead}>
           <div className={styles.cardTitle}>Valoración económica</div>

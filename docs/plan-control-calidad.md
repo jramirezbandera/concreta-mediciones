@@ -2,7 +2,8 @@
 
 > Estado: REVISADO (`/plan-eng-review`, 2026-10-25). Las decisiones de la revisión ya están en
 > el cuerpo (abajo, «Decisiones»; el detalle de cada una, en el «Decision ledger» del final). D6
-> (vistas) se decidió el 2026-10-26, antes de E3: «Anejos» con dos pestañas.
+> (vistas) se decidió el 2026-10-26, antes de E3: «Anejos» con dos pestañas. E0–E4 hechas el
+> 2026-10-26; quedan E5 y E6, que esperan a los .bc3 de CYPE (E0.3).
 > La verificación normativa está en [`docs/research/control-calidad/`](research/control-calidad/README.md)
 > (criterios K-PCC.1–72, 2026-10-24): el plan la cita y no la repite. Modelo de forma y de
 > código: el estudio de residuos ([`plan-estudio-residuos.md`](plan-estudio-residuos.md),
@@ -752,6 +753,27 @@ vuelve al plan lo que cambie el diseño.
   Hito: la obra A sale en
   Word, se abre en Word y pasa la lista de citas; la obra real de 2026, pasada por la app,
   explica la diferencia con lo que se entregó.
+  **Hecho (2026-10-26):** los tipos y `textoPlano` a `core/documento/tipos.ts`; el pintor de
+  bloques y el armado del .docx, a `features/exportar/docxBloques.ts` y no a `core/` (así `docx`
+  sigue fuera del núcleo); el golden de residuos pasa sin regrabarlo. `core/pcc/capitulo.ts`
+  (`partidasControl`), `coherencia.ts` (por `pcc.ensayo`, por código del banco y por texto solo
+  como propuesta con «Casar»; cantidad, precio sin K y unidad), y en el cálculo `capitulo` con el
+  aporte al PEM y el aviso de K y CI, el aviso de plan pobre frente al nivel 1 de las familias
+  presentes y el pendiente «capítulo» si no hay ninguno enlazado. `pccSlice.crearCapituloControl`.
+  `core/pcc/documento.ts` (objeto, agentes, normativa, recepción con aceptación y rechazo,
+  estructura con el criterio de K-PCC.28, ejecución, obra terminada, valoración, anejo y lo
+  pendiente), `docxPcc.ts`, `emitido.ts` (lo emitido y sus diferencias) y en la vista «Exportar
+  Word», el aviso de lo emitido con «Recalcular» y el técnico que firma (`planCalidad.redactor`,
+  que el plan pedía en §6 y no tenía campo). Decisiones al hacerlo: «Recalcular» da por buenas las
+  diferencias (lo emitido pasa a ser el cálculo de hoy, un paso de Deshacer) y la vista pide volver
+  a exportar; un título de partida que cita algo vetado («IIa») no se copia al anejo del Word, sale
+  pendiente de corregir en el presupuesto; el plan pobre cuenta los ensayos de nivel 1 aunque el
+  técnico los haya desmarcado, sin las alternativas ni el acero laminado. **Obra real:** la
+  memoria de 2026 solo está en PDF, sin .bc3, así que no se puede pasar por la app; el hito se
+  hace con `obra ejemplo.bc3` (vivienda unifamiliar, mismo patrón: 3 pruebas de servicio de
+  Precio Centro y ningún ensayo de hormigón) en `pccReales.node.test.ts`, fuera de git: el plan
+  cuenta las amasadas, ninguna partida del capítulo entregado casa con un ensayo, faltan los de
+  hormigón y salta el plan pobre. Abrirlo en Word queda como comprobación a mano.
 - **E5 · Precios de CYPE** cuando E0.3 dé el .bc3: `enlace-cype` y prefijos.
 - **E6 · Pliego de CYPE** (`~L`) como propuesta, si llega relleno.
 
@@ -2010,7 +2032,7 @@ finding above. Run with Claude Code or Codex; checkbox as you ship.
   - Surfaced by: Voz externa — O6 (D20)
   - Files: `src/core/pcc/reglas.ts`, `src/store/slices/pccSlice.ts`
   - Verify: HA-25 → HA-30 tras confirmar pasa a «revisar»
-- [ ] **T5 (P1, human: ~4 h / CC: ~20 min)** — core/pcc — Guardar el resultado emitido y avisar de diferencias
+- [x] **T5 (P1, human: ~4 h / CC: ~20 min)** — core/pcc — Guardar el resultado emitido y avisar de diferencias
   - Surfaced by: Voz externa — O5 (D19)
   - Files: `src/core/pcc/calculo.ts`, `src/features/exportar/docxPcc.ts`, `src/features/calidad/CalidadView.tsx`
   - Verify: exportar, cambiar el catálogo de prueba, reabrir → aviso
@@ -2022,11 +2044,11 @@ finding above. Run with Claude Code or Codex; checkbox as you ship.
   - Surfaced by: Voz externa — O3 (D17)
   - Files: `src/core/pcc/estructura.ts`, `src/core/pcc/reglas.ts`
   - Verify: la zapata compuesta de `refdata` propone 1,05 m³ y 40 kg; aviso de doble cómputo
-- [ ] **T8 (P2, human: ~4 h / CC: ~20 min)** — core/pcc + store — Crear capítulo con partidas propias y coherencia por ensayo
+- [x] **T8 (P2, human: ~4 h / CC: ~20 min)** — core/pcc + store — Crear capítulo con partidas propias y coherencia por ensayo
   - Surfaced by: Architecture — A2 (D4)
   - Files: `src/core/pcc/capitulo.ts`, `src/core/pcc/coherencia.ts`, `src/store/slices/pccSlice.ts`
   - Verify: crear y Deshacer; código ya usado; cambio de título; mismo importe
-- [ ] **T9 (P2, human: ~3 h / CC: ~15 min)** — core/pcc — Precio unitario en la coherencia y aviso de K y CI; base del % sin el capítulo (la base del %, hecha en E2; la coherencia con K y CI, en E4)
+- [x] **T9 (P2, human: ~3 h / CC: ~15 min)** — core/pcc — Precio unitario en la coherencia y aviso de K y CI; base del % sin el capítulo (la base del %, hecha en E2; la coherencia con K y CI, en E4)
   - Surfaced by: Voz externa — O1a (D14), O1b (D15); Code quality — Q1 (D10)
   - Files: `src/core/pcc/coherencia.ts`, `src/core/pcc/calculo.ts`
   - Verify: obras con K = 0,9 y CI = 3 %; el % no cambia al crear el capítulo

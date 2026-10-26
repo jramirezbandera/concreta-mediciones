@@ -1,7 +1,8 @@
 import { comunidadDeProvincia } from '../../core/rcd/calculo';
 import type { DatosFamilia, PlanCalidad, PlanCalidadDatos } from '../../core/pcc/tipos';
 import { useObraStore } from '../../store';
-import { CampoNum } from '../residuos/Campos';
+import type { Agente } from '../../core/types';
+import { CampoNum, CampoTexto } from '../residuos/Campos';
 import styles from '../residuos/Residuos.module.css';
 import c from './Calidad.module.css';
 
@@ -38,9 +39,12 @@ function unidadesPedidas(r: PlanCalidad, familia: string): string[] {
   return out;
 }
 
+const SIN_AGENTES: Agente[] = [];
+
 /** Datos del plan que el presupuesto no trae (§6). */
 export function DatosPlan({ r, datos }: { r: PlanCalidad; datos: PlanCalidadDatos }) {
   const set = useObraStore((s) => s.setPlanCalidad);
+  const agentes = useObraStore((s) => s.obra.direccionFacultativa ?? SIN_AGENTES);
   const provincia = useObraStore((s) => (typeof s.obra.provincia === 'string' ? s.obra.provincia : ''));
   const deduce = comunidadDeProvincia(provincia);
   const setFamilia = (id: string, patch: Partial<DatosFamilia>) =>
@@ -253,6 +257,45 @@ export function DatosPlan({ r, datos }: { r: PlanCalidad; datos: PlanCalidadDato
           })}
         </section>
       )}
+      <section className={styles.card}>
+        <div className={styles.cardHead}>
+          <div className={styles.cardTitle}>Técnico que redacta y firma</div>
+        </div>
+        <div className={styles.formGrid}>
+          <label className={styles.field}>
+            Nombre
+            <CampoTexto ariaLabel="Nombre del técnico" value={datos.redactor?.nombre} onCommit={(v) => set({ redactor: { titulacion: '', colegiado: '', ...datos.redactor, nombre: v } })} />
+          </label>
+          <label className={styles.field}>
+            Titulación
+            <CampoTexto ariaLabel="Titulación" placeholder="Arquitecto" value={datos.redactor?.titulacion} onCommit={(v) => set({ redactor: { nombre: '', colegiado: '', ...datos.redactor, titulacion: v } })} />
+          </label>
+          <label className={styles.field}>
+            Nº de colegiado
+            <CampoTexto ariaLabel="Número de colegiado" value={datos.redactor?.colegiado} onCommit={(v) => set({ redactor: { nombre: '', titulacion: '', ...datos.redactor, colegiado: v } })} />
+          </label>
+          {agentes.length > 0 && (
+            <label className={styles.field}>
+              Tomarlo de la dirección facultativa
+              <select
+                className={styles.select}
+                value=""
+                onChange={(e) => {
+                  const a = agentes.find((x) => x.id === e.target.value);
+                  if (a) set({ redactor: { nombre: a.nombre, titulacion: datos.redactor?.titulacion ?? '', colegiado: a.colegiado ?? '' } });
+                }}
+              >
+                <option value="">Elige…</option>
+                {agentes.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.rol}: {a.nombre}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+        </div>
+      </section>
     </>
   );
 }

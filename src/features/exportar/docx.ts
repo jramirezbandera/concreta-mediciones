@@ -21,3 +21,13 @@ export async function exportDocxRcd(hoy: string): Promise<void> {
   const out = await docxRcdFor(useObraStore.getState(), hoy);
   if (out) downloadBlob(out.blob, out.fileName);
 }
+
+/** Genera y DESCARGA el plan de control de calidad en Word, y guarda en el plan
+ *  lo emitido (O5) para avisar si el cálculo cambia después. */
+export async function exportDocxPcc(hoy: string): Promise<void> {
+  const { docxPccFor } = await import('./docxPcc');
+  const out = await docxPccFor(useObraStore.getState(), hoy);
+  if (!out) return;
+  downloadBlob(out.blob, out.fileName);
+  useObraStore.getState().setPlanCalidad({ emitido: out.emitido });
+}
