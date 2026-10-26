@@ -68,6 +68,8 @@ const PILARES_MUROS = /\b(pilar|soporte|muro|pantalla)/;
 const FLEXION = /\b(forjado|viga|jacena|losa|zuncho|escalera|rampa|solera|voladizo|brochal|zanca|meseta|dintel)/;
 /** HM con función estructural: cimientos, recalces, muros y pilares de hormigón en masa. */
 const HM_ESTRUCTURAL = /\b(cimentaci|zapata|cimiento|recalce|muro|pilar|encepado)/;
+/** Hormigón sin función estructural, aunque el texto nombre un elemento. */
+const SIN_FUNCION = /\b(limpieza|relleno|nivelacion|pendientes?|recrecido|solera)\b/;
 
 /** Tipo de elemento por el texto, de lo más concreto (cimentación) a lo más general. */
 export function filaDe(t: string): FilaLote | undefined {
@@ -181,6 +183,21 @@ export function proponerControl(p: PartidaRegla, ctx: ContextoRegla = {}): Contr
     c.origen.tipo = origen;
     return c;
   }
+
+  // Hormigón de la estructura sin designación legible («HX-2O», «HA» a secas): se propone sin
+  // datos de hormigón, para que no se pierda en silencio; no cuenta en los lotes hasta que se
+  // escriba la designación (Q2). Los forjados siguen su familia.
+  const forjado = FAMILIAS.find((f) => f.id === 'forjado-viguetas')!;
+  const hormigon = FAMILIAS.find((f) => f.id === 'hormigon-estructural')!;
+  if (
+    !forjado.codigo?.test(code) &&
+    !forjado.texto?.test(titulo) &&
+    (hormigon.codigo?.test(code) || (/^hormigon\b/.test(titulo) && !!filaDe(titulo))) &&
+    !SIN_FUNCION.test(titulo)
+  )
+    return propuesta('hormigon-estructural', 'Hormigón de la estructura sin designación legible: escríbela (HA-25/B/20/XC2) para contarlo en los lotes', {
+      familia: 'hormigon-estructural',
+    });
 
   return buscarFamilia(code, titulo, u, (f) => f.id !== 'hormigon-estructural', todo, p.code);
 }

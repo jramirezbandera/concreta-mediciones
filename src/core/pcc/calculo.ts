@@ -419,8 +419,8 @@ export function calcularPlanCalidad(e: EntradaPcc): PlanCalidad {
   if (aceroEnHormigon.length && aceroAparte.length)
     avisa({ id: 'dobleComputo', texto: `Hay acero dentro de partidas de hormigón (${aceroEnHormigon.map((p) => p.code).join(', ')}) y en partidas aparte (${aceroAparte.map((p) => p.code).join(', ')}): quita el que no cuente para no medirlo dos veces.` });
   for (const p of confirmadas)
-    if (p.control.familia === 'forjado-viguetas' && !p.control.hormigon)
-      pend({ id: `designacion:${p.id}`, partidaId: p.id, texto: `${p.code} «${corta(p.title)}»: falta la designación del hormigón del forjado para contarlo en los lotes.` });
+    if ((p.control.familia === 'forjado-viguetas' || p.control.familia === 'hormigon-estructural') && !p.control.hormigon)
+      pend({ id: `designacion:${p.id}`, partidaId: p.id, texto: `${p.code} «${corta(p.title)}»: falta la designación del hormigón (HA-25/B/20/XC2) para contarlo en los lotes.` });
 
   /* 2. Estructura ------------------------------------------------------------------ */
   const estructura = calcularEstructura({
@@ -503,7 +503,11 @@ export function calcularPlanCalidad(e: EntradaPcc): PlanCalidad {
     avisa({ id: 'niveles300k', texto: 'El PEM pasa de 300.000 €: la hoja de la Junta recomienda añadir los ensayos de nivel 2. Es una recomendación, no una norma: márcalos si los quieres.' });
   if (!confirmadas.length && !sinRevisar)
     pend({ id: 'sinPartidas', texto: 'Ninguna partida tiene control asignado: propón y confirma el control de las partidas.' });
-  if (estructura.grupos.length && !estructura.totales.amasadas && estructura.modalidad === 'estadistico')
+  // K-PCC.53: con hormigón de la estructura confirmado, ninguna amasada es un plan pobre (falte un dato o no).
+  const hayHormigon = confirmadas.some(
+    (p) => p.control.familia === 'hormigon-estructural' || p.control.familia === 'forjado-viguetas' || (p.control.hormigon && p.control.hormigon.designacion.tipo !== 'HM'),
+  );
+  if (hayHormigon && !estructura.totales.amasadas && estructura.modalidad === 'estadistico')
     avisa({ id: 'sinEnsayosHormigon', texto: 'La obra tiene hormigón estructural y el plan no cuenta ningún ensayo de hormigón (K-PCC.53).' });
 
   /* 6. Capítulo de control (§9) ------------------------------------------------------- */

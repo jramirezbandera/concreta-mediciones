@@ -171,6 +171,33 @@ describe('estados de la partida', () => {
     expect(r.pendientes.map((p) => p.id)).toContain('sinPartidas');
   });
 
+  it('hormigón sin tipo ni fck legibles: fuera de los lotes, con la designación pendiente (Q2)', () => {
+    const o = obraA();
+    o.partidas.est!.push(confirmar(partida('03HAZ00099', 'Hormigón HX-2O/B/20/XC2 en zapatas de cimentación', 'm3', 10, 100)));
+    const x = o.partidas.est!.at(-1)!;
+    expect(x.pcc).toMatchObject({ estado: 'confirmada', familia: 'hormigon-estructural' });
+    expect(x.pcc!.hormigon).toBeUndefined();
+    const r = calc(o);
+    expect(r.pendientes.find((p) => p.id === `designacion:${x.id}`)?.texto).toMatch(/falta la designación del hormigón/);
+    expect(r.estructura.grupos.flatMap((g) => g.partidas.map((p) => p.partidaId))).not.toContain(x.id);
+  });
+
+  it('hormigón de la estructura confirmado y ninguna amasada → aviso (K-PCC.53)', () => {
+    const o = obraA();
+    // solo hormigón sin designación legible, o un forjado en m² sin sus m³ por m²: nada que lotificar
+    o.partidas = {
+      est: [
+        confirmar(partida('X1', 'Hormigón para armar en pilares', 'm3', 10, 100)),
+        confirmar(partida('05HHL00010', 'Hormigón para armar HA-25/B/20/XC1 en forjados', 'm2', 100, 50), (c) => (c.hormigon!.m3PorUd = null)),
+      ],
+      res: [],
+    };
+    const r = calc(o);
+    expect(r.estructura.totales.amasadas).toBe(0);
+    expect(r.avisos.map((a) => a.id)).toContain('sinEnsayosHormigon');
+    expect(calc(obraA()).avisos.map((a) => a.id)).not.toContain('sinEnsayosHormigon');
+  });
+
   it('acero dentro del hormigón y acero aparte: aviso de doble cómputo (O3)', () => {
     const o = obraA();
     o.partidas.est![0]!.pcc!.acero = { tipo: 'barras', kgPorUd: 40 };

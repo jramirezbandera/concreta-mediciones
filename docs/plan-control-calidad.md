@@ -2064,10 +2064,15 @@ finding above. Run with Claude Code or Codex; checkbox as you ship.
   - Surfaced by: Scope Challenge y todas las secciones
   - Files: `docs/plan-control-calidad.md` (§1, §3, §4, §6, §8, §9, §12, §14, «Archivos», «Tests», «Decisiones»)
   - Verify: el cuerpo no contradice el ledger (§12 sin `docxComun.ts`, `EntradaPcc` sin `bancos` y con `hoy` y `recursos`)
-- [ ] **T13 (P2, human: ~3 h / CC: ~15 min)** — tests — Tests añadidos por la revisión
+- [x] **T13 (P2, human: ~3 h / CC: ~15 min)** — tests — Tests añadidos por la revisión
   - Surfaced by: Test review — mapa de cobertura (`[AÑADIDO]`)
   - Files: `src/features/calidad/Calidad.test.tsx`, `src/core/pcc/*.test.ts`
   - Verify: los 23 casos `[AÑADIDO]` del mapa en verde
+  - Hecho (2026-10-26): los 23 están; faltaban «Tomar precios» con «pasaría de A a B» sin aplicar y
+    «Empezar» en solo lectura (`features/calidad/Valoracion.test.tsx`), y dos que destaparon huecos
+    reales: un hormigón sin tipo ni fck legibles no se proponía (se perdía sin aviso; ahora se
+    propone sin datos de hormigón y su designación sale pendiente, Q2), y el aviso de K-PCC.53 solo
+    saltaba con grupos de hormigón (ahora, con hormigón de la estructura confirmado y 0 amasadas).
 - [x] **T14 (P3, human: ~30 min / CC: ~5 min)** — plan — Cerrar contra B A2 si la clase de exposición separa lotes
   - Surfaced by: Code quality — riesgo de confianza 5/10
   - Files: `docs/plan-control-calidad.md` §5.1

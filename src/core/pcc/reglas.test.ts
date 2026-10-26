@@ -142,6 +142,22 @@ describe('hormigón', () => {
     expect(r.hormigon?.designacion.texto).toBe('HA-25/B/20/XC2');
   });
 
+  it('sin designación legible se propone igual, sin datos de hormigón, para no perderla (Q2)', () => {
+    for (const [code, title] of [
+      ['03HAZ00099', 'Hormigón HX-2O/B/20/XC2 en zapatas de cimentación'],
+      ['X1', 'Hormigón para armar en pilares'],
+    ] as const) {
+      const c = proponerControl(p(code, title, 'm3'))!;
+      expect(c).toMatchObject({ estado: 'propuesta', familia: 'hormigon-estructural' });
+      expect(c.hormigon).toBeUndefined();
+      expect(c.origen.motivo).toMatch(/sin designación legible/);
+    }
+    // lo que no es hormigón de la estructura, no
+    expect(fam(proponerControl(p('X2', 'Encofrado de zapatas de hormigón', 'm2')))).not.toBe('hormigon-estructural');
+    expect(fam(proponerControl(p('X3', 'Hormigón de limpieza en zapatas', 'm3')))).not.toBe('hormigon-estructural');
+    expect(fam(proponerControl(p('X4', 'Hormigón en arqueta de registro', 'ud')))).not.toBe('hormigon-estructural');
+  });
+
   it('una clase EHE en la designación no impide proponer (el aviso lo da el cálculo)', () => {
     const r = proponerControl(p('E04CM040', 'HORMIGÓN PARA ARMAR EN CIMENTACIÓN HA-25/P/40/IIa VERTIDO BOMBA', 'm3'))!;
     expect(r.hormigon?.designacion).toMatchObject({ clases: [], clasesNoValidas: ['IIa'] });

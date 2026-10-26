@@ -34,9 +34,11 @@ describe('vista Anejos', () => {
   it('residuos y calidad, cada uno en su pestaña', async () => {
     cargarObraA();
     render(<AnejosView compact={false} onGoPresupuesto={() => undefined} />);
-    expect(await screen.findByText('Estudio de gestión de residuos')).toBeInTheDocument();
+    // Las dos vistas son `lazy`: con la suite entera en paralelo, el import puede pasar del segundo por defecto.
+    const espera = { timeout: 10_000 };
+    expect(await screen.findByText('Estudio de gestión de residuos', undefined, espera)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('tab', { name: /Control de calidad/ }));
-    expect(await screen.findByRole('button', { name: /Empezar el plan de control/ })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Empezar el plan de control/ }, espera)).toBeInTheDocument();
     expect(useAnejoStore.getState().anejo).toBe('calidad');
   });
 });
