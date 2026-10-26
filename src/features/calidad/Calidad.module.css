@@ -1,0 +1,74 @@
+/* Plan de control de calidad (docs/plan-control-calidad.md). La vista usa las
+   tarjetas, tablas y campos del estudio de residuos (Residuos.module.css) para
+   que los dos anejos se vean iguales; aquí solo lo propio. */
+
+.chipCapitulo {
+  background: color-mix(in srgb, var(--state-mq) 16%, transparent);
+  color: var(--state-mq);
+}
+
+/* fuente del precio: banco, Junta, tecleado o pendiente */
+.fuente {
+  display: block;
+  font-size: var(--fs-micro);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.pendiente {
+  color: var(--state-warn);
+}
+
+/* fila que no entra en el plan (nivel 2 y 3 sin marcar, prueba a criterio) */
+.apagada td {
+  color: var(--text-disabled);
+}
+.regla {
+  display: block;
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+.bloque {
+  padding: var(--sp-12) 0;
+  border-top: 1px solid var(--border-sub);
+}
+.bloque:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+.bloqueHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-12);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-6);
+}
+.bloqueTitle {
+  font-size: var(--fs-table);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.documental {
+  margin: 0 0 var(--sp-8);
+  padding-left: 18px;
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-12);
+  flex-wrap: wrap;
+  margin-top: var(--sp-10);
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: var(--fs-table);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+}
+.num {
+  width: 72px;
+}

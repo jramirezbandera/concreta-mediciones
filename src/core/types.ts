@@ -115,8 +115,8 @@ export interface Partida {
   rcd?: ResiduoPartida;
   /**
    * Control de calidad que dispara la partida (plan de control, `core/pcc`):
-   * familia, hormigón y acero. Como `rcd`, no pasa por el copy-on-write.
-   * El esquema sube a v8 cuando la app empiece a escribirlo (E3 del plan).
+   * familia, hormigón y acero (schema v8). Como `rcd`, no pasa por el
+   * copy-on-write. undefined = sin asignar.
    */
   pcc?: ControlPartida;
 }

@@ -9,6 +9,7 @@
    =========================================================================== */
 import type { Banco, Chapter, Item, Partida, PartidasMap, ResourceType } from './types';
 import type { ResiduoPartida } from './rcd/tipos';
+import type { ControlPartida } from './pcc/tipos';
 
 /** Partida de una fuente de referencia (subconjunto de `Partida`: sin `med`). La
  *  descripción larga viene de `REF_DESC` por código (bases estáticas) o de `desc`
@@ -35,6 +36,9 @@ export interface RefPartida {
   /** Residuo de la partida (estudio de residuos): del `~R` de un banco (como
    *  propuesta) o de otra obra propia (tal cual). */
   rcd?: ResiduoPartida;
+  /** Control de calidad de la partida (plan de control): de otra obra propia,
+   *  tal cual. */
+  pcc?: ControlPartida;
 }
 
 /** Fuente de referencia: base de precios o presupuesto ajeno. */
@@ -418,6 +422,7 @@ export function partidaToRefCopyItem(p: Partida, recursos: Banco, sourceName: st
       desc: p.desc,
       items: p.items.map((it) => hydrateItem(it, recursos)),
       ...(p.rcd ? { rcd: p.rcd } : {}),
+      ...(p.pcc ? { pcc: p.pcc } : {}),
     },
   };
 }
@@ -452,6 +457,7 @@ export function obraToRefSource(
       desc: p.desc,
       items: p.items.map((it) => hydrateItem(it, recursos)),
       ...(p.rcd ? { rcd: p.rcd } : {}),
+      ...(p.pcc ? { pcc: p.pcc } : {}),
     }));
   }
   return {

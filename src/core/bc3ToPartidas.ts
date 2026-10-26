@@ -98,6 +98,7 @@ export function refCopyItemsFromObra({ data, report }: Bc3ImportResult): Bc3Part
           items: rawItems.map((it) => hydrateItem(it, data.recursos)),
           // Residuos del banco (~R): llegan como propuesta (los marca bc3ToObra).
           ...(p.rcd ? { rcd: p.rcd } : {}),
+          ...(p.pcc ? { pcc: p.pcc } : {}),
         },
       });
     }

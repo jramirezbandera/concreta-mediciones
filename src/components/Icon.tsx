@@ -20,7 +20,9 @@ import {
   CornerUpRight,
   Crosshair,
   Download,
+  FileStack,
   FileText,
+  FlaskConical,
   Folder,
   GripVertical,
   Hand,
@@ -138,6 +140,9 @@ export const ICONS = {
   scan: Scan,
   // Estudio de gestión de residuos
   recycle: Recycle,
+  // Anejos de la memoria y plan de control de calidad
+  anejos: FileStack,
+  flask: FlaskConical,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICONS;

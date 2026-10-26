@@ -1,8 +1,8 @@
 # Plan · Plan de control de calidad (CTE) desde el presupuesto
 
 > Estado: REVISADO (`/plan-eng-review`, 2026-10-25). Las decisiones de la revisión ya están en
-> el cuerpo (abajo, «Decisiones»; el detalle de cada una, en el «Decision ledger» del final). Queda
-> abierta D6 (vistas), para `/plan-design-review` antes de E3.
+> el cuerpo (abajo, «Decisiones»; el detalle de cada una, en el «Decision ledger» del final). D6
+> (vistas) se decidió el 2026-10-26, antes de E3: «Anejos» con dos pestañas.
 > La verificación normativa está en [`docs/research/control-calidad/`](research/control-calidad/README.md)
 > (criterios K-PCC.1–72, 2026-10-24): el plan la cita y no la repite. Modelo de forma y de
 > código: el estudio de residuos ([`plan-estudio-residuos.md`](plan-estudio-residuos.md),
@@ -535,8 +535,9 @@ comunidad: el texto estatal y «normativa autonómica: pendiente», como en resi
 - **En el presupuesto:** pestaña «Calidad» en el detalle de la partida, con el editor, y chip
   «PCC» en la fila (ámbar propuesta, verde confirmada), solo con plan activo. Sin columnas
   nuevas.
-- Para no llenar la barra de vistas: «Residuos» y «Calidad» pueden ir juntas bajo un
-  «Anejos» con dos pestañas (D6). El detalle visual pasa por `/plan-design-review` antes de E3.
+- **«Anejos» con dos pestañas (D6, decidido el 2026-10-26):** «Residuos» y «Control de calidad»
+  van juntas bajo la vista «Anejos» de la barra; la barra sigue con cinco pestañas y `ROOMY_W`
+  no sube. El anejo abierto se recuerda al ir y volver (no se guarda con la obra).
 
 ### 12. Documento Word
 
@@ -729,6 +730,23 @@ vuelve al plan lo que cambie el diseño.
   confirmar con huella, homónimos, «Tomar precios de un banco», Deshacer), vista «Calidad»,
   pestaña en el detalle, chip en la fila y en la tarjeta, `ROOMY_W`; límite de imports y test del
   chunk principal. Hito: la obra A se asigna entera en pantalla y sobrevive a la ida y vuelta.
+  **Hecho (2026-10-26):** D6 decidida («Anejos» con «Residuos» y «Control de calidad»; la vista
+  `residuos` pasa a `anejos`, `ROOMY_W` no cambia). Esquema v8 (`planCalidad`, `Partida.pcc`,
+  migración que solo sube la versión, `apartarPccIlegibles` en `core/pcc/datos.ts`). `pccSlice`:
+  empezar (capítulo de control por el título y propuestas), confirmar con huella, volver a
+  confirmar lo que ha cambiado (las reglas lo releen; lo puesto a mano se conserva, O6),
+  homónimos (cada uno con su huella), «Tomar precios» y cada acción un paso de Deshacer.
+  `features/calidad/`: partidas con filtros y editor, estructura con los datos de cada grupo en
+  su fila, plan con las casillas de nivel 2 y 3, de las pruebas a criterio y del paso al
+  laboratorio, valoración con la fuente de cada precio y «Tomar precios de un banco» (enseña «el
+  total pasaría de A a B» y no aplica nada hasta «Aplicar»), datos y «Antes de entregar» con su
+  «Ir». Chip «PCC» en fila y tarjeta (ámbar también si la partida cambió tras confirmarla) y
+  pestaña «Calidad» en el detalle. `pcc` viaja al copiar, desde Referencia y al cargar un .bc3 en
+  obra en blanco. Chunk principal: entra `familias.json` (unos 48 kB) y la tabla de clases de
+  exposición por `hormigon.ts`, como admite P1; el catálogo, el enlace y los lotes no
+  (`chunkPrincipal.node.test.ts`). «Tomar precios» copia solo los ensayos del plan, marcados o
+  no, para no guardar el enlace entero en cada obra. El capítulo de control se elige en
+  «Valoración»; su coherencia y «Crear capítulo» siguen en E4.
 - **E4 · Word y capítulo:** tipos a `core/documento/` (golden intacto), `docxPcc`, lo emitido,
   enlace y coherencia del capítulo, «Crear capítulo de control de calidad», aviso de plan pobre.
   Hito: la obra A sale en
@@ -1984,11 +2002,11 @@ finding above. Run with Claude Code or Codex; checkbox as you ship.
   - Surfaced by: Test review — T1 (D12)
   - Files: `src/features/exportar/docxRcd.golden.test.ts`, `src/test/fixtures/rcd/obras.ts`
   - Verify: `npx vitest run src/features/exportar` en verde antes y después de mover
-- [ ] **T3 (P1, human: ~1 día / CC: ~30 min)** — core/pcc + calidad — Copia de precios del banco (núcleo hecho en E2: `precios.ts`; la acción y la vista, en E3)
+- [x] **T3 (P1, human: ~1 día / CC: ~30 min)** — core/pcc + calidad — Copia de precios del banco (núcleo en E2: `precios.ts`; la acción y la vista, en E3)
   - Surfaced by: Architecture — A1 (D2)
   - Files: `src/core/pcc/precios.ts`, `src/features/calidad/Valoracion.tsx`, `src/store/slices/pccSlice.ts`
   - Verify: test «sin bancos en la entrada, mismo total»; test de la acción con banco sin el código
-- [ ] **T4 (P1, human: ~3 h / CC: ~15 min)** — core/pcc + store — Huella al confirmar y «revisar» (núcleo hecho en E2: `reglas.ts` y `calculo.ts`; el slice, en E3)
+- [x] **T4 (P1, human: ~3 h / CC: ~15 min)** — core/pcc + store — Huella al confirmar y «revisar» (núcleo en E2: `reglas.ts` y `calculo.ts`; el slice, en E3)
   - Surfaced by: Voz externa — O6 (D20)
   - Files: `src/core/pcc/reglas.ts`, `src/store/slices/pccSlice.ts`
   - Verify: HA-25 → HA-30 tras confirmar pasa a «revisar»
@@ -2016,7 +2034,7 @@ finding above. Run with Claude Code or Codex; checkbox as you ship.
   - Surfaced by: Code quality — Q2 (D11)
   - Files: `src/core/pcc/hormigon.ts`
   - Verify: el «IIa» del caso A suma sus 3 m³ sin penetración
-- [ ] **T11 (P2, human: ~2 h / CC: ~15 min)** — build — Límite de imports y test del chunk principal
+- [x] **T11 (P2, human: ~2 h / CC: ~15 min)** — build — Límite de imports y test del chunk principal
   - Surfaced by: Performance — P1 (D13)
   - Files: `src/store/slices/pccSlice.ts`, `src/App.tsx`, test node del build
   - Verify: `vite build` y el test no encuentran ids del catálogo en el chunk principal
@@ -2035,9 +2053,8 @@ finding above. Run with Claude Code or Codex; checkbox as you ship.
 
 ### Decisiones sin resolver que pueden pesar después
 
-- **D6 del plan (vistas: «Calidad» propia o «Anejos» con dos pestañas):** no se ha preguntado en
-  esta revisión; el plan la manda a `/plan-design-review` antes de E3. Si no se decide, E3 no
-  sabe dónde va la pestaña ni cuánto subir `ROOMY_W`.
+- **D6 del plan (vistas: «Calidad» propia o «Anejos» con dos pestañas):** decidida el 2026-10-26
+  al empezar E3, sin `/plan-design-review`: «Anejos» con dos pestañas; `ROOMY_W` no sube.
 
 ### Resumen
 
@@ -2079,5 +2096,4 @@ Ninguno.
   Actualizado el 2026-10-25: T1, T2, T12 y T14 hechos; el cuerpo ya recoge el ledger. Queda D6
   para el design review.
 
-**UNRESOLVED DECISIONS:**
-- D6 del plan (vistas «Calidad» o «Anejos»): para `/plan-design-review` antes de E3
+**UNRESOLVED DECISIONS:** ninguna (D6 decidida el 2026-10-26: «Anejos» con dos pestañas).

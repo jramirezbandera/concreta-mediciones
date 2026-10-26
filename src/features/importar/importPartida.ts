@@ -203,7 +203,7 @@ const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno
 
 /** Carga el .bc3 como LA obra (en blanco): lo mismo que «Cargar al presupuesto»
  *  de la vista Importar, conservando lo que el .bc3 no trae y la obra en blanco
- *  ya puede tener (datos de la obra, planos subidos, estudio de residuos). */
+ *  ya puede tener (datos de la obra, planos subidos, estudio de residuos, plan de calidad). */
 function cargarEnObraEnBlanco(result: Bc3ImportResult, fileName: string): void {
   const st = useObraStore.getState();
   const data = {
@@ -211,6 +211,7 @@ function cargarEnObraEnBlanco(result: Bc3ImportResult, fileName: string): void {
     obra: fusionarDatosObra(st.obra, result.data.obra),
     planos: st.planos,
     estudioRcd: st.estudioRcd,
+    planCalidad: st.planCalidad,
   };
   st.loadObra(data); // salta a Presupuesto (y limpia el toast anterior)
 

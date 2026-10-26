@@ -34,8 +34,7 @@ describe('v6 → v7 (estudio de residuos)', () => {
     const v6 = { ...blankObraData(), schemaVersion: 6 } as ObraData;
     delete v6.estudioRcd;
     const d = fromSerializable(clon(v6));
-    expect(SCHEMA_VERSION).toBe(7);
-    expect(d).toEqual({ ...v6, schemaVersion: 7 });
+    expect(d).toEqual({ ...v6, schemaVersion: SCHEMA_VERSION });
     expect(d.estudioRcd).toBeUndefined();
   });
 
@@ -65,6 +64,43 @@ describe('v6 → v7 (estudio de residuos)', () => {
     delete v6.planos;
     expect(isObraData(v6)).toBe(false);
     expect(isObraData({ ...blankObraData(), planos: [null, 3] })).toBe(true); // un plano malo no la tumba
+  });
+});
+
+describe('v7 → v8 (plan de control de calidad)', () => {
+  it('solo sube la versión: sin plan ni control en las partidas', () => {
+    const v7 = { ...blankObraData(), schemaVersion: 7 } as ObraData;
+    delete v7.planCalidad;
+    const d = fromSerializable(clon(v7));
+    expect(SCHEMA_VERSION).toBe(8);
+    expect(d).toEqual({ ...v7, schemaVersion: 8 });
+    expect(d.planCalidad).toBeUndefined();
+  });
+
+  it('un `pcc` o un `planCalidad` ilegible se aparta a `_ilegible` sin romper la obra', () => {
+    const d0 = blankObraData();
+    d0.chapters = [{ id: 'c', code: '1', title: 'C' }];
+    d0.partidas = {
+      c: [
+        { id: 'p1', pos: '1', code: 'A', title: 'A', ud: 'm³', precio: 1, desc: '', med: [], items: [], pcc: { estado: 'otro' } as never },
+        { id: 'p2', pos: '2', code: 'B', title: 'B', ud: 'm³', precio: 1, desc: '', med: [], items: [],
+          pcc: { estado: 'propuesta', origen: { tipo: 'regla', motivo: 'x' }, familia: 'fabrica-ladrillo' } },
+        { id: 'p3', pos: '3', code: 'C', title: 'C', ud: 'm³', precio: 1, desc: '', med: [], items: [],
+          pcc: { estado: 'confirmada', origen: { tipo: 'regla', motivo: 'x' }, hormigon: { designacion: 'HA-25' } } as never },
+      ],
+    };
+    (d0 as { planCalidad?: unknown }).planCalidad = { version: 1, precios: [] };
+    const d = fromSerializable(clon(d0));
+    expect(d.partidas.c![0]!.pcc).toBeUndefined();
+    expect(d.partidas.c![1]!.pcc!.familia).toBe('fabrica-ladrillo');
+    expect(d.partidas.c![2]!.pcc).toBeUndefined();
+    expect(d.planCalidad).toBeUndefined();
+    expect(d._ilegible!.map((x) => x.donde)).toEqual(['partidas/c/p1/pcc', 'partidas/c/p3/pcc', 'planCalidad']);
+  });
+
+  it('toSerializable lleva `planCalidad` solo si hay plan', () => {
+    expect('planCalidad' in toSerializable(blankObraData())).toBe(false);
+    expect(toSerializable({ ...blankObraData(), planCalidad: { version: 1 } }).planCalidad).toEqual({ version: 1 });
   });
 });
 

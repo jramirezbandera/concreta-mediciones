@@ -37,7 +37,8 @@ export interface TopBarProps {
 }
 
 /** Ancho desde el que las acciones secundarias del escritorio llevan texto.
- *  Era 1400; la pestaña «Residuos» ocupa 82 px y a 1440 dejaba la obra en 0 px. */
+ *  Era 1400; la pestaña «Residuos» ocupaba 82 px y a 1440 dejaba la obra en 0 px.
+ *  «Anejos» (residuos y calidad, D6 del plan de control) es más corta: no sube. */
 export const ROOMY_W = 1500;
 
 /** Barra superior: lockup de marca Concreta, breadcrumb, tabs y acciones. */

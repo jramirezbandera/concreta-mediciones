@@ -23,8 +23,9 @@ import { PriceJustif } from './PriceJustif';
 import { PriceJustifCards } from './PriceJustifCards';
 import styles from './Presupuesto.module.css';
 
-/** El editor de residuos (con el motor y sus tablas) se carga al abrir la pestaña. */
+/** Los editores de residuos y de calidad (con sus motores y tablas) se cargan al abrir su pestaña. */
 const EditorResiduo = lazy(() => import('../residuos/EditorResiduo').then((m) => ({ default: m.EditorResiduo })));
+const EditorControl = lazy(() => import('../calidad/EditorControl').then((m) => ({ default: m.EditorControl })));
 
 /** Cantidad de la partida tal como la usa el importe: la Σ de la medición o,
  *  sin líneas, la cantidad FIJA (que antes el pie enseñaba como 0,00). */
@@ -178,6 +179,7 @@ export function DetailPanel({
 }) {
   const tab = useMedUiStore((s) => s.tab);
   const conEstudio = useObraStore((s) => !!s.estudioRcd);
+  const conPlan = useObraStore((s) => !!s.planCalidad);
   const setTab = useMedUiStore((s) => s.setTab);
   const hasSel = useMedUiStore((s) => s.partidaId === p.id && s.selected.length > 0);
   const announce = useMedUiStore((s) => s.announce);
@@ -248,6 +250,15 @@ export function DetailPanel({
               onClick={() => setTab('residuos')}
             >
               Residuos
+            </button>
+          )}
+          {conPlan && (
+            <button
+              type="button"
+              className={`tcol ${styles.segBtn} ${tab === 'calidad' ? styles.on : ''}`}
+              onClick={() => setTab('calidad')}
+            >
+              Calidad
             </button>
           )}
         </div>
@@ -394,6 +405,14 @@ export function DetailPanel({
         <div className={styles.descBox}>
           <Suspense fallback={<div style={{ color: 'var(--text-disabled)' }}>Cargando…</div>}>
             <EditorResiduo chapterId={chapterId} p={p} />
+          </Suspense>
+        </div>
+      )}
+
+      {tab === 'calidad' && conPlan && (
+        <div className={styles.descBox}>
+          <Suspense fallback={<div style={{ color: 'var(--text-disabled)' }}>Cargando…</div>}>
+            <EditorControl chapterId={chapterId} p={p} />
           </Suspense>
         </div>
       )}

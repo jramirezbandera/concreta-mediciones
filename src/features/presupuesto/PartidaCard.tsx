@@ -6,6 +6,8 @@ import { useJustRevealed } from '../../hooks/useJustRevealed';
 import { usePartidaRow } from '../../hooks/usePartidaRow';
 import { useObraStore } from '../../store';
 import { RcdChip } from '../residuos/RcdChip';
+import { PccChip } from '../calidad/PccChip';
+import { necesitaRevision } from '../../core/pcc/reglas';
 import { DetailPanel } from './DetailPanel';
 import { PartidaMenu } from './PartidaMenu';
 import { precioOrigenSignal } from './precioOrigen';
@@ -41,6 +43,7 @@ export const PartidaCard = memo(function PartidaCard({
   const sinMedicion = p.med.length === 0;
   const open = useObraStore((s) => s.openPartidaId === p.id);
   const conEstudio = useObraStore((s) => !!s.estudioRcd);
+  const conPlan = useObraStore((s) => !!s.planCalidad);
   const togglePartida = useObraStore((s) => s.togglePartida);
   const justRevealed = useJustRevealed(p.id);
 
@@ -80,6 +83,7 @@ export const PartidaCard = memo(function PartidaCard({
           {p.contradictorio && <ContraChip />}
           {p.ciPct != null && p.ciPct > 0 && <CiChip pct={p.ciPct} small />}
           {conEstudio && p.rcd && <RcdChip estado={p.rcd.estado} small />}
+          {conPlan && p.pcc && <PccChip estado={necesitaRevision(p.pcc, p) ? 'revisar' : p.pcc.estado} small />}
         </div>
         <span className={styles.pCardMenu} onClick={stop}>
           <PartidaMenu p={p} chapterId={chapterId} canUp={canUp} canDown={canDown} />

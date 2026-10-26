@@ -37,6 +37,8 @@ import { createEstructuraSlice } from './slices/estructuraSlice';
 import type { PartidaGestionRcd } from '../core/rcd/capitulo';
 import { createRcdSlice, type RefPartidaRcd } from './slices/rcdSlice';
 import type { EstudioRcdDatos, ResiduoPartida } from '../core/rcd/tipos';
+import { createPccSlice, type RefPartidaPcc } from './slices/pccSlice';
+import type { ControlPartida, PlanCalidadDatos, PrecioCopiado } from '../core/pcc/tipos';
 import {
   createPlanosSlice,
   type DestinoPlano,
@@ -681,6 +683,27 @@ export interface ObraState extends ObraData {
    *  cuántas partidas creó. */
   crearCapituloGestionRcd: (partidas: PartidaGestionRcd[]) => number;
 
+  /* ---- plan de control de calidad (v8, `slices/pccSlice`) ---- */
+  /** Empieza el plan: datos vacíos, capítulo de control propuesto por el título
+   *  y propuestas de las reglas en las partidas sin asignar. Devuelve cuántas
+   *  propuestas puso. UN paso de Deshacer. No-op si ya hay plan. */
+  iniciarPlanCalidad: () => number;
+  /** Cambia datos del plan (merge superficial). */
+  setPlanCalidad: (patch: Partial<PlanCalidadDatos>) => void;
+  /** Quita el plan de la obra (las asignaciones de las partidas se quedan). */
+  quitarPlanCalidad: () => void;
+  /** Pone (o quita, con `null`) el control de una partida. */
+  setControlPartida: (chapterId: string, partidaId: string, pcc: ControlPartida | null) => void;
+  /** Confirma propuestas (sin familia → «sin control») con su huella, y vuelve a
+   *  confirmar las que han cambiado desde entonces (O6). Devuelve cuántas. */
+  confirmarControles: (refs: RefPartidaPcc[]) => number;
+  /** Propone control en las partidas sin asignar. Devuelve cuántas. */
+  proponerControles: () => number;
+  /** Copia el control de una partida a las de su mismo código. Devuelve cuántas. */
+  aplicarControlAHomonimos: (chapterId: string, partidaId: string) => number;
+  /** Guarda en el plan los precios copiados de un banco (A1): no se leen en vivo. */
+  tomarPreciosPlan: (precios: Record<string, PrecioCopiado>) => void;
+
   /** Restaura el estado sembrado (datos + UI). Útil en tests y para "nueva obra". */
   reset: () => void;
 }
@@ -852,13 +875,14 @@ export const useObraStore = create<ObraState>()(
           set((s) => {
             // `bajas: {}` y `planos: []` por delante: un `ImportedObra` (.bc3) no
             // trae tombstones ni planos, y sin el default arrastraría los de la
-            // obra ANTERIOR (v3, v6). Lo apartado por ilegible y el estudio de
-            // residuos (v7) tampoco se heredan.
+            // obra ANTERIOR (v3, v6). Lo apartado por ilegible, el estudio de
+            // residuos (v7) y el plan de calidad (v8) tampoco se heredan.
             Object.assign(s, {
               schemaVersion: SCHEMA_VERSION,
               bajas: {},
               planos: [],
               estudioRcd: undefined,
+              planCalidad: undefined,
               _ilegible: undefined,
               ...data,
             });
@@ -938,6 +962,7 @@ export const useObraStore = create<ObraState>()(
       ...createEstructuraSlice(set, get, store),
       ...createPlanosSlice(set, get, store),
       ...createRcdSlice(set, get, store),
+      ...createPccSlice(set, get, store),
     };
   }),
   ),
