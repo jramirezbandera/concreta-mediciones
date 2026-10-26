@@ -19,6 +19,8 @@ const isRecord = (x: unknown): x is Record<string, unknown> => typeof x === 'obj
 export function residuoLegible(x: unknown): x is ResiduoPartida {
   if (!isRecord(x) || typeof x.estado !== 'string' || !ESTADOS.has(x.estado)) return false;
   if (!isRecord(x.origen) || !Array.isArray(x.componentes)) return false;
+  if (x.huella !== undefined && !(isRecord(x.huella) && typeof x.huella.code === 'string' && typeof x.huella.title === 'string' && typeof x.huella.ud === 'string'))
+    return false;
   return x.componentes.every(
     (c) =>
       isRecord(c) &&

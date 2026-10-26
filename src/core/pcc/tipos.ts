@@ -12,6 +12,7 @@
    E1 solo tiene la estructura (§5 del plan): la familia, las reglas, la
    valoración y el Word llegan en E2–E4.
    =========================================================================== */
+import type { Huella } from '../huella';
 
 /** Filas de edificación de la tabla 57.5.4.1. */
 export type FilaLote = 'cim_superficial' | 'cim_mayor_200' | 'flexion' | 'pilares_muros' | 'otros_compresion';
@@ -82,7 +83,7 @@ export interface ControlPartida {
   /** Solo `capituloControl`: la fila de la valoración (A2). */
   ensayo?: string;
   /** Al confirmar (O6). */
-  huella?: { code: string; title: string; desc: string; ud: string };
+  huella?: Huella;
   hormigon?: HormigonPartida;
   acero?: AceroPartida;
 }

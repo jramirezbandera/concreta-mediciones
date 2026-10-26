@@ -16,6 +16,7 @@
    queda `null` y la propuesta lo pide. Los bancos con `~R` (CYPE) no pasan
    por aquí: traen su residuo (`core/rcd/bc3`).
    =========================================================================== */
+import { huellaCambia, huellaDe } from '../huella';
 import type { Partida } from '../types';
 import { unidadRcd, type UnidadRcd } from './conversion';
 import { materialSeAe, pesoSuperficieSeAe, refSeAe } from './densidades';
@@ -288,3 +289,10 @@ export function proponerResiduo(p: Pick<Partida, 'code' | 'title' | 'desc' | 'ud
 export function estadoTrasConfirmar(r: ResiduoPartida): ResiduoPartida['estado'] {
   return r.componentes.length ? 'confirmada' : 'noGenera';
 }
+
+/** ¿La partida ha cambiado desde que se confirmó su residuo? Sin huella (residuos de antes), no. */
+export function necesitaRevision(r: ResiduoPartida, p: Pick<Partida, 'code' | 'title' | 'desc' | 'ud'>): boolean {
+  return r.estado === 'confirmada' && huellaCambia(r.huella, p);
+}
+
+export { huellaDe };

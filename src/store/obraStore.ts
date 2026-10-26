@@ -672,7 +672,9 @@ export interface ObraState extends ObraData {
   quitarEstudioRcd: () => void;
   /** Pone (o quita, con `null`) el residuo de una partida. */
   setResiduoPartida: (chapterId: string, partidaId: string, rcd: ResiduoPartida | null) => void;
-  /** Confirma propuestas (sin componentes → «no genera»). Devuelve cuántas. */
+  /** Confirma propuestas (sin componentes → «no genera») con la huella de la partida,
+   *  y vuelve a confirmar, tal como están, las que cambiaron desde entonces (TD1).
+   *  Devuelve cuántas. */
   confirmarResiduos: (refs: RefPartidaRcd[]) => number;
   /** Propone residuo en las partidas sin asignar. Devuelve cuántas. */
   proponerResiduos: () => number;

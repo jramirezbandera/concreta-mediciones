@@ -16,6 +16,8 @@
 
 /** Código de la lista europea de residuos normalizado: «17 01 02», sin asterisco
  *  (si es peligroso lo dice la tabla, `CodigoLerInfo.peligroso`). */
+import type { Huella } from '../huella';
+
 export type CodigoLer = string;
 
 /** Tipo de componente, los del registro `~R` de FIEBDC-3: 0 colocación (merma
@@ -96,6 +98,8 @@ export interface ResiduoPartida {
   transporte?: Transporte;
   /** Solo en estado `gestion`: qué gestiona, para la coherencia del 7.º. */
   gestiona?: { codigos?: CodigoLer[]; grupo?: GrupoRcd; capacidadContenedorM3?: number | null };
+  /** La partida al confirmarla: si cambia, el residuo vuelve a «revisar» y no suma (TD1). */
+  huella?: Huella;
 }
 
 /* ---- datos del estudio (los que no son de una partida) -------------------- */

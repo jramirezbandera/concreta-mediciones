@@ -1,8 +1,12 @@
 import type { EstadoResiduo } from '../../core/rcd';
 import styles from './Residuos.module.css';
 
-const TEXTO: Record<EstadoResiduo | 'sinAsignar', string> = {
+/** Estado que se ve: el de la asignación, o «revisar» si la partida cambió tras confirmarla (TD1). */
+export type EstadoVisibleRcd = EstadoResiduo | 'revisar';
+
+const TEXTO: Record<EstadoVisibleRcd | 'sinAsignar', string> = {
   propuesta: 'Por revisar',
+  revisar: 'Ha cambiado',
   confirmada: 'Confirmada',
   noGenera: 'No genera',
   gestion: 'Gestión',
@@ -10,7 +14,7 @@ const TEXTO: Record<EstadoResiduo | 'sinAsignar', string> = {
 };
 
 /** Estado de la asignación de residuo de una partida. */
-export function ChipEstado({ estado }: { estado: EstadoResiduo | null }) {
+export function ChipEstado({ estado }: { estado: EstadoVisibleRcd | null }) {
   const k = estado ?? 'sinAsignar';
-  return <span className={`${styles.chip} ${styles[`chip_${k}`]}`}>{TEXTO[k]}</span>;
+  return <span className={`${styles.chip} ${styles[`chip_${k === 'revisar' ? 'propuesta' : k}`]}`}>{TEXTO[k]}</span>;
 }

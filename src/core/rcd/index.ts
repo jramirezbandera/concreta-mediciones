@@ -9,4 +9,4 @@ export { estudioVacio, PLANO_POR_DEFECTO } from './datos';
 export { ECO_CITA_CORTA, ECO_FUENTE, GRUPOS_ECO, opcionesEco, opcionPorDefecto, plantasEco, OPCIONES_PLANTAS_BASICO } from './ecoeficiencia';
 export { destinoPorDefecto, fraccionDe, NOMBRE_FRACCION, operacion, OPERACIONES_CITA, todasLasOperaciones } from './fracciones';
 export { citaLer, lerConAsterisco, lerVigente, normalizarLer, type CodigoLerInfo } from './ler';
-export { estadoTrasConfirmar, proponerResiduo } from './reglas';
+export { estadoTrasConfirmar, huellaDe, necesitaRevision, proponerResiduo } from './reglas';

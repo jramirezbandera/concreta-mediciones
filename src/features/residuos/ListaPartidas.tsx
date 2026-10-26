@@ -2,11 +2,11 @@ import { useMemo, useState } from 'react';
 import { Icon } from '../../components';
 import { fmtNum } from '../../core/money';
 import { partidaCantidad } from '../../core/medicion';
-import { resultadoPartida, type EstadoResiduo } from '../../core/rcd';
+import { necesitaRevision, resultadoPartida } from '../../core/rcd';
 import type { Chapter, Partida } from '../../core/types';
 import { useObraStore, useToastStore } from '../../store';
 import { getDomainRevision, undo } from '../../store/temporal';
-import { ChipEstado } from './ChipEstado';
+import { ChipEstado, type EstadoVisibleRcd } from './ChipEstado';
 import { EditorResiduo } from './EditorResiduo';
 import styles from './Residuos.module.css';
 
@@ -20,10 +20,16 @@ const FILTROS: Array<[Filtro, string]> = [
   ['todas', 'Todas'],
 ];
 
-function casa(f: Filtro, e: EstadoResiduo | undefined): boolean {
+/** Estado que se ve: «revisar» si la partida cambió después de confirmarla (TD1). */
+function estadoDe(p: Partida): EstadoVisibleRcd | undefined {
+  if (!p.rcd) return undefined;
+  return necesitaRevision(p.rcd, p) ? 'revisar' : p.rcd.estado;
+}
+
+function casa(f: Filtro, e: EstadoVisibleRcd | undefined): boolean {
   switch (f) {
     case 'revisar':
-      return e === 'propuesta';
+      return e === 'propuesta' || e === 'revisar';
     case 'sinAsignar':
       return e === undefined;
     case 'confirmadas':
@@ -59,13 +65,13 @@ export function ListaPartidas({ abrir, onAbrir }: { abrir: string | null; onAbri
   const proponer = useObraStore((s) => s.proponerResiduos);
 
   const filas = useMemo(
-    () => chapters.flatMap((ch) => (partidas[ch.id] ?? []).map((p) => ({ ch, p }))),
+    () => chapters.flatMap((ch) => (partidas[ch.id] ?? []).map((p) => ({ ch, p, e: estadoDe(p) }))),
     [chapters, partidas],
   );
-  const cuenta = (f: Filtro) => filas.filter((x) => casa(f, x.p.rcd?.estado)).length;
-  const [filtro, setFiltro] = useState<Filtro>(() => (filas.some((x) => x.p.rcd?.estado === 'propuesta') ? 'revisar' : 'todas'));
-  const visibles = filas.filter((x) => casa(filtro, x.p.rcd?.estado) || x.p.id === abrir);
-  const propuestasVisibles = visibles.filter((x) => x.p.rcd?.estado === 'propuesta');
+  const cuenta = (f: Filtro) => filas.filter((x) => casa(f, x.e)).length;
+  const [filtro, setFiltro] = useState<Filtro>(() => (filas.some((x) => casa('revisar', x.e)) ? 'revisar' : 'todas'));
+  const visibles = filas.filter((x) => casa(filtro, x.e) || x.p.id === abrir);
+  const propuestasVisibles = visibles.filter((x) => casa('revisar', x.e));
 
   const porCapitulo = new Map<Chapter, Partida[]>();
   for (const { ch, p } of visibles) porCapitulo.set(ch, [...(porCapitulo.get(ch) ?? []), p]);
@@ -131,7 +137,7 @@ export function ListaPartidas({ abrir, onAbrir }: { abrir: string | null; onAbri
                   aria-expanded={abierta}
                   onClick={() => onAbrir(abierta ? null : p.id)}
                 >
-                  <ChipEstado estado={p.rcd?.estado ?? null} />
+                  <ChipEstado estado={estadoDe(p) ?? null} />
                   <span className={styles.rowTitle}>
                     <span className={`mono ${styles.rowCode}`}>{p.code}</span>
                     {p.title}

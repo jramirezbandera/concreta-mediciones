@@ -14,7 +14,7 @@ import { findNode, nextPartidaCode, subtreeIds } from '../../core/tree';
 import type { Partida } from '../../core/types';
 import { estudioVacio } from '../../core/rcd/datos';
 import { nextPartidaId } from '../base';
-import { estadoTrasConfirmar, proponerResiduo } from '../../core/rcd/reglas';
+import { estadoTrasConfirmar, huellaDe, necesitaRevision, proponerResiduo } from '../../core/rcd/reglas';
 import type { PartidaGestionRcd } from '../../core/rcd/capitulo';
 import type { EstudioRcdDatos, ResiduoPartida } from '../../core/rcd/tipos';
 import type { ObraSlice, ObraState } from '../obraStore';
@@ -121,8 +121,14 @@ export const createRcdSlice: ObraSlice<RcdActions> = (set, get) => ({
       set((s) => {
         for (const { chapterId, partidaId } of refs) {
           const p = s.partidas[chapterId]?.find((x) => x.id === partidaId);
-          if (!p?.rcd || p.rcd.estado !== 'propuesta') continue;
+          if (!p?.rcd) continue;
+          // Una propuesta, o una confirmada cuya partida cambió (TD1): se confirma tal como está,
+          // con la huella de hoy. Volver a leer las reglas es otra acción («Volver a proponer»),
+          // para no perder lo que el técnico corrigió en los componentes.
+          if (p.rcd.estado !== 'propuesta' && !necesitaRevision(p.rcd, p)) continue;
           p.rcd.estado = estadoTrasConfirmar(p.rcd);
+          if (p.rcd.estado === 'confirmada') p.rcd.huella = huellaDe(p);
+          else delete p.rcd.huella;
           n += 1;
         }
       }),
@@ -181,6 +187,8 @@ export const createRcdSlice: ObraSlice<RcdActions> = (set, get) => ({
           for (const p of ps ?? []) {
             if (p.id === partidaId || p.code !== origen.code) continue;
             p.rcd = structuredClone(rcd);
+            // La huella es de cada partida: la suya, no la de la de origen.
+            if (p.rcd.huella) p.rcd.huella = huellaDe(p);
             n += 1;
           }
       }),

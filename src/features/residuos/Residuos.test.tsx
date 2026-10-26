@@ -99,4 +99,20 @@ describe('vista Residuos', () => {
     fireEvent.keyDown(s, { key: 'Enter' });
     expect(state().estudioRcd!.ratios!.superficieConstruida).toBe(180);
   });
+
+  it('una partida confirmada que cambia sale «Ha cambiado» y se confirma otra vez (TD1)', () => {
+    state().iniciarEstudioRcd();
+    state().confirmarResiduos([{ chapterId: 'd', partidaId: 'p1' }]);
+    state().editPartidaField('d', 'p1', 'title', 'DEMOLICIÓN DE TABIQUE DE L/ HUECO DOBLE, C. MANUAL, T. VERT.');
+    render(<ResiduosView compact={false} onGoPresupuesto={() => undefined} />);
+    // el filtro «Por revisar» la cuenta y es el que se abre
+    expect(within(screen.getByRole('group', { name: 'Filtrar partidas' })).getByRole('button', { name: /Por revisar/ })).toHaveAttribute('aria-pressed', 'true');
+    const fila = screen.getByRole('button', { name: /HUECO DOBLE/ });
+    expect(within(fila).getByText('Ha cambiado')).toBeInTheDocument();
+    fireEvent.click(fila);
+    expect(screen.getByText(/ha cambiado desde que se confirmó su residuo/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Volver a proponer/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Confirmar otra vez/ }));
+    expect(state().partidas.d![0]!.rcd!.huella!.title).toMatch(/HUECO DOBLE/);
+  });
 });

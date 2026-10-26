@@ -16,6 +16,7 @@
    De la descomposición salen los m³ de hormigón por unidad de un forjado en
    m² y los kg de acero de un hormigón «incluso armadura» (O3).
    =========================================================================== */
+import { huellaCambia, huellaDe } from '../huella';
 import type { Banco, Item, Partida } from '../types';
 import { textoDe } from '../rcd/reglas';
 import { unidadPcc } from './unidades';
@@ -244,13 +245,9 @@ export function estadoTrasConfirmar(c: ControlPartida): ControlPartida['estado']
 }
 
 /** Huella de la partida al confirmar (O6). */
-export function huellaDe(p: Pick<Partida, 'code' | 'title' | 'desc' | 'ud'>): NonNullable<ControlPartida['huella']> {
-  return { code: p.code, title: p.title, desc: p.desc ?? '', ud: p.ud };
-}
+export { huellaDe };
 
 /** ¿La partida ha cambiado desde que se confirmó? Sin huella, no hay con qué comparar. */
 export function necesitaRevision(c: ControlPartida, p: Pick<Partida, 'code' | 'title' | 'desc' | 'ud'>): boolean {
-  if (c.estado !== 'confirmada' || !c.huella) return false;
-  const h = huellaDe(p);
-  return h.code !== c.huella.code || h.title !== c.huella.title || h.desc !== c.huella.desc || h.ud !== c.huella.ud;
+  return c.estado === 'confirmada' && huellaCambia(c.huella, p);
 }

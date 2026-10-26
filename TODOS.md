@@ -283,7 +283,13 @@ estos ya están calculados:
 Contexto común: `docs/plan-control-calidad.md`, «Revisión de ingeniería» y su
 «Decision ledger». Los dos salen de decisiones de calidad que tocarían residuos.
 
-### Volver a revisar un residuo confirmado si cambia la partida (P3)
+### ~~Volver a revisar un residuo confirmado si cambia la partida (P3)~~ — HECHO (2026-10-26)
+
+- **Hecho:** huella compartida con calidad (`core/huella.ts`); un residuo confirmado cuya
+  partida cambia sale «Ha cambiado», no suma y «Antes de entregar» lo pide. «Confirmar otra
+  vez» lo deja tal como está (los componentes corregidos se conservan) con la huella nueva;
+  «Volver a proponer» hace que las reglas lo relean. Los confirmados de antes, sin huella,
+  siguen contando.
 
 - **Qué:** al confirmar un residuo, guardar en `Partida.rcd` una huella de `code`,
   `title`, `desc` y `ud`; si la partida cambia, el residuo pasa a «revisar» y no

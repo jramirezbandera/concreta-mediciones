@@ -18,6 +18,7 @@ import { partidaCantidad, partidaImporte } from '../medicion';
 import { pem as pemDe, costesDirectos } from '../totales';
 import { findNode, subtreeIds } from '../tree';
 import type { Chapter, Obra, Partida, PartidasMap, Rates } from '../types';
+import { necesitaRevision } from './reglas';
 import { coherencia } from './coherencia';
 import { convertir } from './conversion';
 import { densidadAparente } from './aparente';
@@ -140,6 +141,12 @@ export function calcularEstudioRcd(e: EntradaRcd): EstudioRcd {
         continue;
       }
       if (r.estado !== 'confirmada') continue;
+      // Cambió el código, el título, la descripción o la unidad tras confirmarla: no suma (TD1).
+      if (necesitaRevision(r, p)) {
+        pend({ id: `revisar:${p.id}`, apartado: '1', partidaId: p.id,
+          texto: `La partida ${p.code} «${corta(p.title)}» ha cambiado desde que se confirmó su residuo: revísalo (no suma hasta entonces).` });
+        continue;
+      }
       const cantidad = partidaCantidad(p);
       const tiposPartida = new Set(r.componentes.map((c) => c.tipo));
       const pemP = pemDe(partidaImporte(p, rates.coefK), rates);

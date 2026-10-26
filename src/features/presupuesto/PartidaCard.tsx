@@ -5,6 +5,7 @@ import type { Partida } from '../../core/types';
 import { useJustRevealed } from '../../hooks/useJustRevealed';
 import { usePartidaRow } from '../../hooks/usePartidaRow';
 import { useObraStore } from '../../store';
+import { necesitaRevision as necesitaRevisionRcd } from '../../core/rcd/reglas';
 import { RcdChip } from '../residuos/RcdChip';
 import { PccChip } from '../calidad/PccChip';
 import { necesitaRevision } from '../../core/pcc/reglas';
@@ -82,7 +83,7 @@ export const PartidaCard = memo(function PartidaCard({
           {p.mainType && <Badge type={p.mainType} />}
           {p.contradictorio && <ContraChip />}
           {p.ciPct != null && p.ciPct > 0 && <CiChip pct={p.ciPct} small />}
-          {conEstudio && p.rcd && <RcdChip estado={p.rcd.estado} small />}
+          {conEstudio && p.rcd && <RcdChip estado={necesitaRevisionRcd(p.rcd, p) ? 'revisar' : p.rcd.estado} small />}
           {conPlan && p.pcc && <PccChip estado={necesitaRevision(p.pcc, p) ? 'revisar' : p.pcc.estado} small />}
         </div>
         <span className={styles.pCardMenu} onClick={stop}>

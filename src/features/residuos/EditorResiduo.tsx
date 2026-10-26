@@ -6,6 +6,7 @@ import {
   lerVigente,
   materialesSeAe,
   MODOS_POR_UNIDAD,
+  necesitaRevision,
   normalizarLer,
   pesosSuperficieSeAe,
   proponerResiduo,
@@ -131,13 +132,14 @@ export function EditorResiduo({ chapterId, p }: { chapterId: string; p: Partida 
     );
   }
 
+  const revisar = necesitaRevision(r, p);
   const patchComp = (i: number, patch: Partial<ComponenteRcd>) =>
     write({ ...r, componentes: r.componentes.map((c, j) => (j === i ? { ...c, ...patch } : c)) });
 
   return (
     <div className={styles.editor}>
       <div className={styles.editorHead}>
-        <ChipEstado estado={r.estado} />
+        <ChipEstado estado={revisar ? 'revisar' : r.estado} />
         <span>
           {r.origen.tipo === 'banco' ? 'Del banco' : r.origen.tipo === 'regla' ? 'Regla' : r.origen.tipo === 'ia' ? 'IA' : 'A mano'}:{' '}
           {r.origen.motivo}
@@ -158,6 +160,13 @@ export function EditorResiduo({ chapterId, p }: { chapterId: string; p: Partida 
         )}
       </div>
 
+      {revisar && r.huella && (
+        <p className={styles.nota} role="status">
+          La partida ha cambiado desde que se confirmó su residuo
+          {r.huella.title !== p.title ? ` (antes: «${r.huella.title}»)` : r.huella.ud !== p.ud ? ` (antes en ${r.huella.ud})` : ''}: no suma hasta que lo
+          confirmes otra vez. Revisa los residuos o vuelve a proponerlos.
+        </p>
+      )}
       {r.estado === 'gestion' && (
         <p className={styles.nota}>Partida del capítulo de gestión de residuos: es el coste del 7.º, no genera residuo.</p>
       )}
@@ -178,9 +187,23 @@ export function EditorResiduo({ chapterId, p }: { chapterId: string; p: Partida 
       ))}
 
       <div className={styles.btnRow}>
-        {r.estado === 'propuesta' && (
+        {(r.estado === 'propuesta' || revisar) && (
           <button type="button" className={`tcol ${styles.btnPrimary}`} onClick={() => confirmar([{ chapterId, partidaId: p.id }])}>
-            <Icon name="check" size={14} /> {r.componentes.length ? 'Confirmar' : 'Confirmar que no genera'}
+            <Icon name="check" size={14} /> {revisar ? 'Confirmar otra vez' : r.componentes.length ? 'Confirmar' : 'Confirmar que no genera'}
+          </button>
+        )}
+        {revisar && (
+          <button
+            type="button"
+            className={`tcol ${styles.btn}`}
+            title="Las reglas vuelven a leer la partida: lo que hubieras corregido en los residuos se pierde"
+            onClick={() => {
+              const prop = proponerResiduo(p, enGestion);
+              if (prop) write(prop);
+              else useToastStore.getState().show('Ninguna regla reconoce la partida tal como está ahora: corrige los residuos a mano.');
+            }}
+          >
+            <Icon name="target" size={14} /> Volver a proponer
           </button>
         )}
         {r.estado !== 'gestion' && (
