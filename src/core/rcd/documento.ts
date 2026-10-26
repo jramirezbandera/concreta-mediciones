@@ -12,36 +12,14 @@ import { fmtCents, fmtNum } from '../money';
 import { PLANO_POR_DEFECTO } from './datos';
 import { ECO_CITA_CORTA } from './ecoeficiencia';
 import { citaLer, lerConAsterisco } from './ler';
+import type { BloqueDoc, Documento, Parrafo, SeccionDoc, Trozo } from '../documento/tipos';
 import type { EstudioRcd, EstudioRcdDatos } from './tipos';
 
-export interface Trozo {
-  texto: string;
-  pendiente?: boolean;
-  negrita?: boolean;
-}
-export type Parrafo = Trozo[];
+export type { BloqueDoc, Parrafo, SeccionDoc, TablaDoc, Trozo } from '../documento/tipos';
+export { textoPlano } from '../documento/tipos';
 
-export interface TablaDoc {
-  columnas: Array<{ titulo: string; ancho: number; derecha?: boolean }>;
-  filas: Array<Array<string | Trozo>>;
-  pie?: Array<string | Trozo>;
-}
-
-export type BloqueDoc = { kind: 'p'; p: Parrafo } | { kind: 'lista'; items: Parrafo[] } | { kind: 'tabla'; t: TablaDoc };
-
-export interface SeccionDoc {
-  id: string;
-  titulo: string;
-  cita?: string;
-  bloques: BloqueDoc[];
-}
-
-export interface DocumentoRcd {
-  titulo: string;
-  secciones: SeccionDoc[];
-  /** Firmante (D14): el técnico redactor, o pendiente. */
-  firma: { nombre: string; sub: string } | null;
-}
+/** Con la firma del técnico redactor, o pendiente (D14). */
+export type DocumentoRcd = Documento;
 
 export interface MetaObraRcd {
   denominacion: string;
@@ -426,23 +404,4 @@ export function documentoRcd(r: EstudioRcd, d: EstudioRcdDatos, obra: MetaObraRc
       ? { nombre: red.nombre, sub: [red.titulacion, red.colegiado ? `Col. ${red.colegiado}` : ''].filter(Boolean).join(' · ') }
       : null,
   };
-}
-
-/** Todo el texto del documento, para buscar en él (test de citas prohibidas). */
-export function textoPlano(doc: DocumentoRcd): string {
-  const t = (x: string | Trozo) => (typeof x === 'string' ? x : x.texto);
-  const out: string[] = [doc.titulo];
-  for (const sec of doc.secciones) {
-    out.push(sec.titulo, sec.cita ?? '');
-    for (const b of sec.bloques) {
-      if (b.kind === 'p') out.push(b.p.map(t).join(''));
-      else if (b.kind === 'lista') for (const i of b.items) out.push(i.map(t).join(''));
-      else {
-        out.push(b.t.columnas.map((c) => c.titulo).join(' | '));
-        for (const f of b.t.filas) out.push(f.map(t).join(' | '));
-        if (b.t.pie) out.push(b.t.pie.map(t).join(' | '));
-      }
-    }
-  }
-  return out.join('\n');
 }
