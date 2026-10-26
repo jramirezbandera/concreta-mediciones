@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import catalogo from './tablas/catalogo.json';
 import enlaceBcca from './tablas/enlace-bcca.json';
+import armaduras from './tablas/armaduras.json';
+import durabilidad from './tablas/durabilidad.json';
+import ejecucion from './tablas/ejecucion.json';
+import lotesHormigon from './tablas/lotes-hormigon.json';
 
 /* Catálogo de ensayos de la hoja de la Junta (V04), generado por
    scripts/pcc/extraer_junta.py con scripts/pcc/correcciones_junta.json, y su enlace con el
@@ -207,5 +211,77 @@ describe('enlace del catálogo con la BCCA 2023', () => {
     expect(enlace.get('j03-029')?.citasVetadas).toEqual(['18HHL00030: clases generales']);
     expect(enlace.get('j03-150')?.citasVetadas?.[0]).toMatch(/^18SCA00010: m[íi]nimo 5 ensayos por desplazamiento/i);
     expect(enlace.get('j08-009')?.citasVetadas).toEqual(['18IAAA00020: MOPU']);
+  });
+});
+
+/** Todos los veredictos de una tabla, en cualquier nivel. */
+function veredictos(x: unknown, out: string[] = []): string[] {
+  if (Array.isArray(x)) for (const v of x) veredictos(v, out);
+  else if (x && typeof x === 'object')
+    for (const [k, v] of Object.entries(x)) {
+      if (k === 'veredicto' && typeof v === 'string') out.push(v);
+      else veredictos(v, out);
+    }
+  return out;
+}
+
+describe('tablas del Código Estructural', () => {
+  const tablas = { lotesHormigon, durabilidad, armaduras, ejecucion };
+
+  it('llevan cabecera con norma, edición, página, verificación y veredicto', () => {
+    for (const [nombre, t] of Object.entries(tablas)) {
+      for (const k of ['id', 'norma', 'edicion', 'tabla', 'pagina', 'verificacion', 'veredicto'] as const)
+        expect((t as Record<string, unknown>)[k], `${nombre}.${k}`).toBeTruthy();
+      expect(t.version, nombre).toBe('CodE-2021+CE-2024');
+    }
+  });
+
+  it('ninguna fila SIN CONFIRMAR: solo veredictos de la verificación', () => {
+    for (const [nombre, t] of Object.entries(tablas))
+      for (const v of veredictos(t)) expect(v, nombre).toMatch(/^(VERIFICADO \((texto|imagen)\)|CORREGIDO)$/);
+  });
+
+  it('las filas de edificación de la tabla 57.5.4.1 son las de B A1', () => {
+    const f = lotesHormigon.filas;
+    expect(Object.keys(f)).toEqual(['cim_mayor_200', 'cim_superficial', 'flexion', 'pilares_muros', 'otros_compresion']);
+    expect(f.cim_mayor_200).toMatchObject({ loteEsElemento: true, semanas: 1, nSin: { porVolumen: 35, min: 3 }, nDistintivo: { porVolumen: 105, min: 1 } });
+    expect(f.cim_superficial).toMatchObject({ vol: 100, semanas: 1, nSin: { min: 3 }, nDistintivo: { min: 1 } });
+    expect(f.flexion).toMatchObject({ vol: 100, semanas: 2, sup: 1000, plantas: 2 });
+    expect(f.pilares_muros).toMatchObject({ vol: 100, semanas: 2, sup: 500, plantas: 2, supSiPocasAmasadas: { maxAmasadas: 3, sup: 1000 } });
+    expect(f.otros_compresion).toMatchObject({ vol: 100, semanas: 2, sup: 500, plantas: 2 });
+    expect(lotesHormigon.ampliacion).toMatchObject({ distintivo: 5, dispersion: 2, minimoLotes: 3 });
+    expect(lotesHormigon.semanasMax).toBe(6);
+    expect(lotesHormigon.fckAlto).toEqual({ fck: 50, nMin: 6 });
+  });
+
+  it('Kₙ de la tabla 57.5.4.3.b', () => {
+    expect(lotesHormigon.kn).toEqual({ '3': 0.89, '4': 0.91, '5': 0.93, '6': 0.94, '7': 0.95, '8': 0.96, '9': 0.97, '10': 0.98, mas10: 1 });
+  });
+
+  it('γc = 1,5 del anejo 19 (tabla A19.2.1) y fcd ≤ 15 del control indirecto', () => {
+    expect(lotesHormigon.indirecto).toMatchObject({ fcdMax: 15, gammaC: 1.5, alphaCC: 1, fckMinArmado: 25, veredicto: 'VERIFICADO (texto)' });
+  });
+
+  it('clases de exposición de la tabla 27.1.a y las que piden durabilidad', () => {
+    expect(durabilidad.clases.validas).toHaveLength(21);
+    expect(durabilidad.clases.validas).not.toContain('IIa');
+    expect(durabilidad.penetracion).toMatchObject({ familias: ['XA', 'XS', 'XD', 'XF', 'XM'], cadaMeses: 6, probetas: 3 });
+    expect(durabilidad.aireOcluido.clases).toEqual(['XF2', 'XF4']);
+  });
+
+  it('series de diámetros y lotes de armaduras (arts. 58 y 59)', () => {
+    expect(armaduras.series).toMatchObject({ fina: { hasta: 10 }, media: { desde: 12, hasta: 20 }, gruesa: { desde: 25, hasta: 32 }, muyGruesa: { desde: 40 } });
+    expect(armaduras.barras.loteT).toBe(30);
+    expect(armaduras.mallas.loteT).toBe(30);
+    expect(armaduras.ferralla).toMatchObject({ loteT: 25, porLote: { traccion: 4, doblado: 4, geometriaPorDiametro: 2, dimensiones: 15 } });
+  });
+
+  it('lotes de ejecución de la tabla 63.1, sin los 50 m de muro de la fila de forjados', () => {
+    expect(ejecucion.lotes.filas).toEqual({
+      cimentacion: expect.objectContaining({ sup: 250, elementos: 10 }),
+      flexion: expect.objectContaining({ sup: 250, plantas: 2 }),
+      pilares_muros: expect.objectContaining({ sup: 250, plantas: 2, muroM: 50 }),
+    });
+    expect(ejecucion.lotes.filas.flexion).not.toHaveProperty('muroM');
   });
 });

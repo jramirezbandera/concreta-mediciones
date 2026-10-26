@@ -1,0 +1,81 @@
+{
+ "id": "lotes-hormigon",
+ "norma": "Código Estructural (RD 470/2021)",
+ "edicion": "BOE núm. 190, 10-08-2021, con la corrección de errores BOE-A-2024-1989",
+ "version": "CodE-2021+CE-2024",
+ "tabla": "57.5.4.1 y 57.5.4.3.b",
+ "pagina": "pp. 145-147 del consolidado; págs. 97842-97844 del diario",
+ "verificacion": "K-PCC.27-29; docs/research/control-calidad/B-codigo-estructural.md, «Para la app» A1 y A2",
+ "veredicto": "VERIFICADO (imagen)",
+ "cita": "Código Estructural, art. 57.5.4.1 y tabla 57.5.4.1",
+ "fueraDeAlcance": "Filas de obra civil (marcos, pilas, tableros, túneles): fuera de esta versión.",
+ "filas": {
+  "cim_mayor_200": {
+   "titulo": "Cimentaciones con elementos de volumen superior a 200 m³",
+   "loteEsElemento": true,
+   "semanas": 1,
+   "nSin": { "porVolumen": 35, "min": 3 },
+   "nDistintivo": { "porVolumen": 105, "min": 1 },
+   "veredicto": "VERIFICADO (imagen)"
+  },
+  "cim_superficial": {
+   "titulo": "Cimentaciones superficiales con elementos de volumen inferior a 200 m³",
+   "vol": 100,
+   "semanas": 1,
+   "nSin": { "min": 3 },
+   "nDistintivo": { "min": 1 },
+   "veredicto": "VERIFICADO (imagen)"
+  },
+  "flexion": {
+   "titulo": "Vigas, forjados, losas para pavimentos y otros elementos trabajando a flexión",
+   "vol": 100,
+   "semanas": 2,
+   "sup": 1000,
+   "plantas": 2,
+   "nSin": { "min": 3 },
+   "nDistintivo": { "min": 1 },
+   "veredicto": "VERIFICADO (imagen)"
+  },
+  "pilares_muros": {
+   "titulo": "Pilares y muros portantes de edificación",
+   "vol": 100,
+   "semanas": 2,
+   "sup": 500,
+   "supSiPocasAmasadas": { "maxAmasadas": 3, "sup": 1000 },
+   "plantas": 2,
+   "nSin": { "min": 3 },
+   "nDistintivo": { "min": 1 },
+   "veredicto": "VERIFICADO (imagen)"
+  },
+  "otros_compresion": {
+   "titulo": "Otros elementos o grupos de elementos que funcionan fundamentalmente a compresión",
+   "vol": 100,
+   "semanas": 2,
+   "sup": 500,
+   "plantas": 2,
+   "nSin": { "min": 3 },
+   "nDistintivo": { "min": 1 },
+   "veredicto": "VERIFICADO (imagen)"
+  }
+ },
+ "ampliacion": {
+  "distintivo": 5,
+  "dispersion": 2,
+  "minimoLotes": 3,
+  "veredicto": "VERIFICADO (texto)",
+  "alcance": "INTERPRETACIÓN: el × 5 (o × 2) se aplica a todos los valores de la fila (volumen, superficie, plantas y semanas), como dice el literal («los valores de la tabla»); que alcance a plantas y semanas no está escrito expresamente (B, «SIN CONFIRMAR»)."
+ },
+ "semanasMax": 6,
+ "fckAlto": { "fck": 50, "nMin": 6 },
+ "probetasPorAmasada": { "n": 4, "nota": "Dos para la rotura a 28 días y dos de reserva (57.5.4.1 y 57.7.3.2)" },
+ "anilloJaponesCada": 4,
+ "kn": { "3": 0.89, "4": 0.91, "5": 0.93, "6": 0.94, "7": 0.95, "8": 0.96, "9": 0.97, "10": 0.98, "mas10": 1.0 },
+ "indirecto": {
+  "fcdMax": 15,
+  "gammaC": 1.5,
+  "alphaCC": 1.0,
+  "fckMinArmado": 25,
+  "cita": "CodE 57.5.6 (pág. 97845) y art. 33.4 (pág. 97744); anejo 19, tabla A19.2.1 (pág. 98304) y ap. 3.1.6",
+  "veredicto": "VERIFICADO (texto)"
+ }
+}

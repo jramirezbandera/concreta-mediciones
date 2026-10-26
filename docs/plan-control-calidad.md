@@ -681,6 +681,22 @@ vuelve al plan lo que cambie el diseño.
   hecho: fila y dosificación).
 - **E1 · Motor de estructura** (`core/pcc/estructura.ts`, `hormigon.ts`, tablas de lotes,
   durabilidad, armaduras y ejecución): los 16 casos de A6 en verde. Sin UI ni esquema.
+  **Hecho (2026-10-26):** `tipos.ts` (con `ControlPartida` y la parte de estructura de
+  `PlanCalidadDatos`), `hormigon.ts` (T-R/C/TM/A del art. 33.6 contra la tabla 27.1.a, leída en
+  el diario original), `estructura.ts` y las tablas `lotes-hormigon`, `durabilidad`,
+  `armaduras` y `ejecucion`, con sus tests (`estructura.test.ts`, `hormigon.test.ts`,
+  `tablas.test.ts`). `calcularEstructura` recibe las partidas ya confirmadas con su medición;
+  leer `Partida.pcc`, la huella y los estados es de `calculo.ts` (E2). Interpretaciones que el
+  plan dirá en sus notas: con cuba declarada, N se topa con las amasadas del **mayor** lote
+  posible (así sale E5); el mínimo de 3 lotes con tamaño ampliado añade lotes al grupo con más
+  volumen por lote, nunca a `cim_mayor_200`; en ferralla sin enderezado ni soldadura se cuentan
+  las 4 tracciones y el plan dice que la DF puede eximirlas; la soldadura resistente cuenta como
+  la no resistente, con aviso si el control de ejecución no es intenso; en ejecución, la
+  superficie de la cimentación es la suya (no la construida de la obra) y, con varios grupos de
+  una fila, manda el mayor dato. **Pasan a E2**, con las familias del catálogo: acero
+  estructural (§5.7), cimentaciones profundas (§5.8), ensayos a criterio de la DF (§5.9), las
+  inspecciones del anejo 15 por lote (la tabla A15.2.1 ya está en `ejecucion.json`) y el paso a
+  ids del catálogo (`lote.calculo`).
 - **E2 · Familias y plan completo** (`familias.json`, `reglas.ts`, `calculo.ts`): recepción,
   ejecución, obra terminada, valoración con precios del banco cargado, Andalucía. Fixtures A y B
   en verde; lista de citas prohibidas sobre `textoPlano`.
@@ -704,8 +720,9 @@ Cada etapa en verde (`tsc -b`, `vitest run`, `eslint`, `vite build`) y subida a 
   SIN CONFIRMAR; cada corrección de §3 bis con su fila original.
 - **Estructura:** los 16 casos de A6 (E5 solo con volumen de cuba, como interpretación; E11
   comprueba que el control indirecto no se ofrece y que un HA-25 da fcd = 16,7 > 15); grupos
-  por (fila, dosificación): XC1 y XC2 separados por defecto y juntos con la misma dosificación; redondeo hacia arriba; fila sin tipo
-  convencional/autocompactante cuenta como convencional con aviso (K-PCC.56); forjado en m² sin
+  por (fila, dosificación): XC1 y XC2 separados por defecto y juntos con la misma dosificación;
+  redondeo hacia arriba; fila sin tipo convencional/autocompactante cuenta como convencional
+  con aviso (K-PCC.56); forjado en m² sin
   `m3PorUd` → pendiente; obra A con superficie y plantas de la obra y sin datos por grupo da los
   lotes del caso A, y un grupo con su dato manda; sin procedencia → art. 59.2 con aviso, con
   «obra» → art. 58 por serie.
@@ -1954,7 +1971,7 @@ finding above. Run with Claude Code or Codex; checkbox as you ship.
   - Surfaced by: Voz externa — O5 (D19)
   - Files: `src/core/pcc/calculo.ts`, `src/features/exportar/docxPcc.ts`, `src/features/calidad/CalidadView.tsx`
   - Verify: exportar, cambiar el catálogo de prueba, reabrir → aviso
-- [ ] **T6 (P2, human: ~4 h / CC: ~20 min)** — tablas — Cobertura de cada precio en el enlace
+- [x] **T6 (P2, human: ~4 h / CC: ~20 min)** — tablas — Cobertura de cada precio en el enlace (E0.5; el ajuste de la cantidad, en `precios.ts`, va con E2)
   - Surfaced by: Voz externa — O4 (D18)
   - Files: `src/core/pcc/tablas/enlace-bcca.json`, `src/core/pcc/tablas/catalogo.json`, `src/core/pcc/precios.ts`
   - Verify: 2 probetas frente a 4 → 2 precios por amasada
@@ -1970,7 +1987,7 @@ finding above. Run with Claude Code or Codex; checkbox as you ship.
   - Surfaced by: Voz externa — O1a (D14), O1b (D15); Code quality — Q1 (D10)
   - Files: `src/core/pcc/coherencia.ts`, `src/core/pcc/calculo.ts`
   - Verify: obras con K = 0,9 y CI = 3 %; el % no cambia al crear el capítulo
-- [ ] **T10 (P2, human: ~1 h / CC: ~5 min)** — core/pcc — Designación con clase no válida cuenta para lotes
+- [x] **T10 (P2, human: ~1 h / CC: ~5 min)** — core/pcc — Designación con clase no válida cuenta para lotes (E1)
   - Surfaced by: Code quality — Q2 (D11)
   - Files: `src/core/pcc/hormigon.ts`
   - Verify: el «IIa» del caso A suma sus 3 m³ sin penetración

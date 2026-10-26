@@ -1,0 +1,35 @@
+{
+ "id": "ejecucion",
+ "norma": "Código Estructural (RD 470/2021)",
+ "edicion": "BOE núm. 190, 10-08-2021, con la corrección de errores BOE-A-2024-1989",
+ "version": "CodE-2021+CE-2024",
+ "tabla": "63.1 (edificación) y A15.2.1",
+ "pagina": "Tabla 63.1, p. 174; anejo 15, pp. 491-495 del consolidado",
+ "verificacion": "K-PCC.35; B «Para la app» A5",
+ "veredicto": "VERIFICADO (imagen)",
+ "lotes": {
+  "cita": "Código Estructural, tabla 63.1",
+  "veredicto": "VERIFICADO (imagen)",
+  "filas": {
+   "cimentacion": { "titulo": "Cimentaciones en edificación", "sup": 250, "elementos": 10 },
+   "flexion": { "titulo": "Vigas, forjados y otros elementos trabajando a flexión en edificación", "sup": 250, "plantas": 2 },
+   "pilares_muros": { "titulo": "Pilares y muros portantes de edificación", "sup": 250, "plantas": 2, "muroM": 50 }
+  },
+  "fueraDeTabla": "Para elementos que no estén en la tabla, el pliego de prescripciones técnicas particulares fija el criterio (p. 174).",
+  "nota": "La fila de vigas y forjados se lee también con «50 m de muro de contención», que parece de otra fila (B, «SIN CONFIRMAR»): no se aplica."
+ },
+ "inspecciones": {
+  "cita": "Código Estructural, anejo 15, tabla A15.2.1 (orientativa)",
+  "veredicto": "VERIFICADO (imagen)",
+  "orientativa": true,
+  "procesos": [
+   { "id": "acopios", "nombre": "Gestión de acopios", "normal": { "control": "100 %", "contraste": "3" }, "intenso": { "control": "100 %", "contraste": "20 % (mín. 3)" } },
+   { "id": "replanteos", "nombre": "Replanteos", "normal": { "control": "2", "contraste": "1" }, "intenso": { "control": "100 %", "contraste": "20 %" } },
+   { "id": "cimbras", "nombre": "Cimbras", "normal": { "control": "1", "contraste": "1" }, "intenso": { "control": "100 %", "contraste": "50 %" } },
+   { "id": "despiece", "nombre": "Despiece", "normal": { "control": "1", "contraste": "1" }, "intenso": { "control": "1", "contraste": "1" } },
+   { "id": "armaduras", "nombre": "Elaboración de armaduras", "normal": { "control": "2", "contraste": "1" }, "intenso": { "control": "5", "contraste": "1" } },
+   { "id": "descimbrado", "nombre": "Descimbrado", "normal": { "control": "1", "contraste": "1" }, "intenso": { "control": "3", "contraste": "2" } },
+   { "id": "prefabricados", "nombre": "Uniones de prefabricados", "normal": { "control": "3", "contraste": "1" }, "intenso": { "control": "5", "contraste": "1" } }
+  ]
+ }
+}

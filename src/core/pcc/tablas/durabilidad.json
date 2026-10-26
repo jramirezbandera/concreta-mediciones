@@ -1,0 +1,39 @@
+{
+ "id": "durabilidad",
+ "norma": "Código Estructural (RD 470/2021)",
+ "edicion": "BOE núm. 190, 10-08-2021, con la corrección de errores BOE-A-2024-1989",
+ "version": "CodE-2021+CE-2024",
+ "tabla": "27.1.a y 57.5.7",
+ "pagina": "Tabla 27.1.a, págs. 97727-97729 del diario; 57.5.7, pp. 148-149 del consolidado",
+ "verificacion": "K-PCC.30; B «Para la app» A3; tabla 27.1.a leída en el diario original el 2026-10-26",
+ "veredicto": "VERIFICADO (texto)",
+ "clases": {
+  "cita": "Código Estructural, tabla 27.1.a",
+  "veredicto": "VERIFICADO (texto)",
+  "validas": ["X0", "XC1", "XC2", "XC3", "XC4", "XD1", "XD2", "XD3", "XS1", "XS2", "XS3", "XF1", "XF2", "XF3", "XF4", "XA1", "XA2", "XA3", "XM1", "XM2", "XM3"],
+  "x0Armado": "X0 en hormigón con armaduras solo «en un ambiente muy seco» (HR < 45 %): se avisa para que se compruebe."
+ },
+ "penetracion": {
+  "cita": "Código Estructural, art. 57.5.7",
+  "veredicto": "VERIFICADO (texto)",
+  "familias": ["XA", "XS", "XD", "XF", "XM"],
+  "cadaMeses": 6,
+  "probetas": 3,
+  "soloSinDistintivo": true
+ },
+ "aireOcluido": {
+  "cita": "Código Estructural, art. 57.5.7 (y 43.3.3, corregido en 2024: «XF2 o XF4»)",
+  "veredicto": "VERIFICADO (texto)",
+  "clases": ["XF2", "XF4"],
+  "cadaMeses": 6,
+  "soloSinDistintivo": true
+ },
+ "profundidades": {
+  "cita": "Código Estructural, tabla 57.5.7",
+  "veredicto": "VERIFICADO (imagen)",
+  "filas": [
+   { "clases": ["XS3", "XA3"], "xa2Pretensado": true, "maxima": "Zm ≤ 30 mm; Z3 ≤ 40 mm", "media": "Tm ≤ 20 mm; T3 ≤ 27 mm" },
+   { "clases": ["XS1", "XS2", "XD1", "XD2", "XD3", "XA1", "XA2", "XM1", "XM2", "XM3", "XF1", "XF2", "XF3", "XF4"], "maxima": "Zm ≤ 50 mm; Z3 ≤ 65 mm", "media": "Tm ≤ 30 mm; T3 ≤ 40 mm" }
+  ]
+ }
+}

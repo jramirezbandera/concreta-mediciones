@@ -1,0 +1,46 @@
+{
+ "id": "armaduras",
+ "norma": "Código Estructural (RD 470/2021)",
+ "edicion": "BOE núm. 190, 10-08-2021, con la corrección de errores BOE-A-2024-1989",
+ "version": "CodE-2021+CE-2024",
+ "tabla": "Arts. 58, 59.1.4.2 y 59.2; tabla 59.2.4.3",
+ "pagina": "pp. 153-163 del consolidado",
+ "verificacion": "K-PCC.31-32; B «Para la app» A4",
+ "veredicto": "VERIFICADO (texto)",
+ "series": {
+  "cita": "Código Estructural, art. 58",
+  "veredicto": "VERIFICADO (texto)",
+  "fina": { "hasta": 10 },
+  "media": { "desde": 12, "hasta": 20 },
+  "gruesa": { "desde": 25, "hasta": 32 },
+  "muyGruesa": { "desde": 40 }
+ },
+ "barras": {
+  "cita": "Código Estructural, art. 58",
+  "veredicto": "VERIFICADO (texto)",
+  "loteT": 30,
+  "porLote": { "traccion": 2, "doblado": 2, "masaMetro": 2, "geometria": 2 },
+  "quimica": { "siMasDeT": 300, "cadaLotes": 4, "min": 5 }
+ },
+ "mallas": {
+  "cita": "Código Estructural, art. 59.1.4.2",
+  "veredicto": "VERIFICADO (texto)",
+  "loteT": 30,
+  "porLote": { "traccion": 2, "doblado": 2, "masaMetro": 2, "geometria": 2, "despegue": 2, "dimensiones": 2 }
+ },
+ "ferralla": {
+  "cita": "Código Estructural, art. 59.2",
+  "veredicto": "VERIFICADO (texto)",
+  "loteT": 25,
+  "porLote": { "traccion": 4, "doblado": 4, "geometriaPorDiametro": 2, "dimensiones": 15 },
+  "conDistintivoDelAcero": 0.5,
+  "tabla": {
+   "cita": "Código Estructural, tabla 59.2.4.3",
+   "sinSoldadura": { "sinEnderezado": ["traccion"], "conEnderezado": ["traccion", "geometria"] },
+   "soldaduraNoResistente": { "sinEnderezado": ["traccion", "doblado"], "conEnderezado": ["traccion", "doblado", "geometria"] },
+   "eximible": "Sin soldadura ni enderezado, «la dirección facultativa podrá eximir los ensayos».",
+   "eximibleInterpretacion": "INTERPRETACIÓN: mientras la DF no los exima, se cuentan las cuatro tracciones del 59.2.4.3 y el plan dice que puede eximirlas; las 15 unidades dimensionales (59.2.4.4) se mantienen siempre."
+  },
+  "soldaduraResistente": "Solo con control de ejecución intenso (59.2.4.5)."
+ }
+}
