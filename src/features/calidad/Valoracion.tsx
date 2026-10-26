@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { Icon } from '../../components';
 import { fmtCents, fmtNum } from '../../core/money';
 import { calcularPlanCalidad } from '../../core/pcc/calculo';
+import { partidasControl } from '../../core/pcc/capitulo';
 import { tomarPrecios } from '../../core/pcc/precios';
-import type { FilaValoracion, PlanCalidad, PlanCalidadDatos, PrecioCopiado } from '../../core/pcc/tipos';
+import type { CoherenciaCapitulo, FilaValoracion, PlanCalidad, PlanCalidadDatos, PrecioCopiado, PropuestaCasar } from '../../core/pcc/tipos';
 import { flattenContainers } from '../../core/tree';
 import { useSessionStore } from '../../persist';
 import { useObraStore, useToastStore } from '../../store';
@@ -39,10 +40,97 @@ function Fuente({ f }: { f: FilaValoracion }) {
   return <span className={`${c.fuente} ${p.fuente === 'pendiente' ? c.pendiente : ''}`}>{txt}</span>;
 }
 
+/** El capítulo de control enlazado: sus partidas, con qué ensayo casa cada una, y sus diferencias (§9). */
+function Capitulo({ r, cap }: { r: PlanCalidad; cap: CoherenciaCapitulo }) {
+  const setControl = useObraStore((s) => s.setControlPartida);
+  const desc = new Map(r.valoracion.map((v) => [v.ensayo, v.descripcion]));
+  const avisos = r.avisos.filter((a) => /^(capitulo|planPobre)\b/.test(a.id));
+  const casar = (x: PropuestaCasar) => {
+    setControl(x.chapterId, x.partidaId, { estado: 'capituloControl', origen: { tipo: 'manual', motivo: 'Casada a mano con su ensayo' }, ensayo: x.ensayo });
+    useToastStore.getState().show('Partida casada con su ensayo', { label: 'Deshacer', run: () => undo() }, { rev: getDomainRevision() });
+  };
+  return (
+    <>
+      {cap.partidas.length === 0 ? (
+        <p className={styles.nota}>El capítulo «{cap.title}» no tiene partidas.</p>
+      ) : (
+        <div className={styles.tableWrap} style={{ marginTop: 12 }}>
+          <table className={`ctable ${styles.table}`}>
+            <thead>
+              <tr>
+                <th>Partida</th>
+                <th>Ensayo del plan</th>
+                <th className={styles.r}>Cantidad</th>
+                <th className={styles.r}>Precio</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cap.partidas.map((x) => {
+                const prop = cap.propuestas.find((y) => y.partidaId === x.partidaId);
+                return (
+                  <tr key={x.partidaId}>
+                    <td>
+                      <span className="mono">{x.code}</span> {x.title}
+                    </td>
+                    <td>
+                      {x.ensayo ? (
+                        <>
+                          {desc.get(x.ensayo) ?? x.ensayo}
+                          <span className={c.fuente}>{x.como === 'codigo' ? 'por el código del banco' : 'por su ensayo'}</span>
+                        </>
+                      ) : prop ? (
+                        <>
+                          <span className={c.pendiente}>¿{prop.descripcion}?</span>{' '}
+                          <button type="button" className={styles.link} onClick={() => casar(prop)}>
+                            Casar
+                          </button>
+                        </>
+                      ) : (
+                        <span className={c.pendiente}>Sin ensayo en el plan</span>
+                      )}
+                    </td>
+                    <td className={`mono ${styles.r}`}>
+                      {fmtNum(x.cantidad, 2)} {x.ud}
+                    </td>
+                    <td className={`mono ${styles.r}`}>{fmtNum(x.precio, 2)} €</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={3}>Importe del capítulo{cap.kci ? ' (con K)' : ''}</td>
+                <td className={`mono ${styles.r}`}>{fmtCents(cap.importe)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+      {cap.kci && (
+        <p className={styles.nota}>
+          Con el coeficiente K y los costes indirectos de la obra, el capítulo aporta {fmtCents(cap.aportePem)} al PEM; la valoración del plan ({fmtCents(r.total)}) son precios de
+          laboratorio sin K ni costes indirectos.
+        </p>
+      )}
+      {avisos.length > 0 && (
+        <div className={styles.avisos} style={{ marginTop: 12 }}>
+          {avisos.map((a) => (
+            <div key={a.id} className={styles.aviso}>
+              <Icon name="alert" size={15} />
+              <span style={{ flex: 1 }}>{a.texto}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
 /** Valoración económica del plan: lo que paga la propiedad, con la fuente de cada precio. */
 export function Valoracion({ r, datos }: { r: PlanCalidad; datos: PlanCalidadDatos }) {
   const set = useObraStore((s) => s.setPlanCalidad);
   const tomar = useObraStore((s) => s.tomarPreciosPlan);
+  const crearCapitulo = useObraStore((s) => s.crearCapituloControl);
   const chapters = useObraStore((s) => s.chapters);
   const obras = useSessionStore((s) => s.obras);
   const activa = useSessionStore((s) => s.activeId);
@@ -244,21 +332,42 @@ export function Valoracion({ r, datos }: { r: PlanCalidad; datos: PlanCalidadDat
           <div className={styles.cardTitle}>Capítulo de control del presupuesto</div>
           <div className={styles.cita}>Sus partidas no disparan control y no cuentan en la base del %</div>
         </div>
-        <label className={styles.field}>
-          Capítulo de control de calidad
-          <select
-            className={`${styles.select} ${styles.wide}`}
-            value={datos.capituloControl ?? ''}
-            onChange={(e) => set({ capituloControl: e.target.value || null })}
-          >
-            <option value="">Ninguno</option>
-            {contenedores.map((x) => (
-              <option key={x.id} value={x.id}>
-                {x.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className={styles.btnRow}>
+          <label className={styles.field}>
+            Capítulo de control de calidad
+            <select
+              className={`${styles.select} ${styles.wide}`}
+              value={datos.capituloControl ?? ''}
+              onChange={(e) => set({ capituloControl: e.target.value || null })}
+            >
+              <option value="">Ninguno</option>
+              {contenedores.map((x) => (
+                <option key={x.id} value={x.id}>
+                  {x.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {!datos.capituloControl && r.valoracion.length > 0 && (
+            <button
+              type="button"
+              className={`tcol ${styles.btn}`}
+              style={{ alignSelf: 'flex-end' }}
+              title="Una partida por ensayo de la valoración, con su cantidad y su precio, marcada con su ensayo. Cambia el PEM."
+              onClick={() => {
+                const { partidas, sinPrecio } = partidasControl(r.valoracion, datos);
+                const n = crearCapitulo(partidas);
+                const falta = sinPrecio.length ? `; ${sinPrecio.length} sin precio van a 0 €` : '';
+                useToastStore
+                  .getState()
+                  .show(`Capítulo «Control de calidad» creado con ${n} partida${n === 1 ? '' : 's'}: cambia el PEM${falta}`, { label: 'Deshacer', run: () => undo() }, { rev: getDomainRevision(), tone: 'warn' });
+              }}
+            >
+              <Icon name="plus" size={14} /> Crear capítulo de control de calidad
+            </button>
+          )}
+        </div>
+        {r.capitulo && <Capitulo r={r} cap={r.capitulo} />}
       </section>
     </>
   );

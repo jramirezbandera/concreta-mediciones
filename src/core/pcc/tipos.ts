@@ -324,11 +324,54 @@ export interface PlanCalidad {
   totalCompleto: boolean;
   /** % del PEM sin el capítulo de control, como dato (ninguna norma fija un mínimo). */
   porcentaje: { valor: number; basePem: number } | null;
+  /** El capítulo de control enlazado y su coherencia con la valoración (§9). */
+  capitulo: CoherenciaCapitulo | null;
   /** Partidas propuestas sin confirmar y confirmadas que hay que revisar (O6). */
   sinRevisar: number;
   revisar: string[];
   pendientes: Pendiente[];
   avisos: Aviso[];
+}
+
+/** Partida del capítulo de control, con el ensayo con que se casa (§9, A2). */
+export interface PartidaCapitulo {
+  partidaId: string;
+  chapterId: string;
+  code: string;
+  title: string;
+  ud: string;
+  cantidad: number;
+  /** € por unidad, sin K. */
+  precio: number;
+  /** Céntimos, con K. */
+  importe: number;
+  ensayo: string | null;
+  /** `ensayo`: por su `pcc.ensayo`; `codigo`: por el código del banco. */
+  como: 'ensayo' | 'codigo' | null;
+}
+
+/** Partida que parece un ensayo por su texto: no casa hasta que el usuario lo confirme. */
+export interface PropuestaCasar {
+  partidaId: string;
+  chapterId: string;
+  ensayo: string;
+  descripcion: string;
+}
+
+export interface CoherenciaCapitulo {
+  id: string;
+  code: string;
+  title: string;
+  partidas: PartidaCapitulo[];
+  propuestas: PropuestaCasar[];
+  /** Céntimos, con K: lo que suman sus partidas. */
+  importe: number;
+  /** Céntimos: lo que el capítulo añade al PEM, con sus costes indirectos (O1a). */
+  aportePem: number;
+  /** K ≠ 1 o CI > 0: la valoración (precios de laboratorio) y el aporte al PEM no son la misma cifra. */
+  kci: boolean;
+  /** Céntimos: los ensayos de nivel 1 de las familias presentes, a sus precios (aviso de plan pobre). */
+  minimoNivel1: number;
 }
 
 /* ---- resultado del cálculo de la estructura ------------------------------- */

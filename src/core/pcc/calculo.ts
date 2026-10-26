@@ -17,12 +17,13 @@
         (banco copiado, hoja de la Junta, tecleado); lo del instalador o del
         organismo de control, listado sin importe (D2).
    =========================================================================== */
-import { fmtNum } from '../money';
+import { fmtCents, fmtNum } from '../money';
 import { partidaCantidad } from '../medicion';
 import { comunidadDeProvincia } from '../rcd/calculo';
 import { costesDirectos, pem } from '../totales';
 import { findNode, subtreeIds } from '../tree';
 import type { Banco, Chapter, Obra, Partida, PartidasMap, Rates } from '../types';
+import { coherenciaCapitulo } from './coherencia';
 import { calcularEstructura, type PartidaEstructura } from './estructura';
 import { leerDesignacion } from './hormigon';
 import { ENLACE_VERSION, cubreDelEnlace } from './precios';
@@ -137,6 +138,7 @@ const enApartado = (e: Ensayo, prefijo: string): boolean =>
 const techo = (x: number): number => Math.ceil(x - 1e-9);
 const num = (n: number): string => (Number.isInteger(n) ? fmtNum(n, 0) : fmtNum(n, 2));
 const plural = (n: number, uno: string, varios: string): string => `${num(n)} ${n === 1 ? uno : varios}`;
+const eur = (cents: number): string => fmtCents(cents);
 const UD_TXT: Record<UnidadPcc, string> = { m3: 'm³', m2: 'm²', m: 'm', kg: 'kg', t: 't', ud: 'ud', otra: 'ud' };
 
 /** Unidad de lote de la hoja normalizada: «m³», «m2», «t», «Tubo», «Nº pilotes», «UD»… */
@@ -503,6 +505,51 @@ export function calcularPlanCalidad(e: EntradaPcc): PlanCalidad {
   if (estructura.grupos.length && !estructura.totales.amasadas && estructura.modalidad === 'estadistico')
     avisa({ id: 'sinEnsayosHormigon', texto: 'La obra tiene hormigón estructural y el plan no cuenta ningún ensayo de hormigón (K-PCC.53).' });
 
+  /* 6. Capítulo de control (§9) ------------------------------------------------------- */
+  let capitulo: PlanCalidad['capitulo'] = null;
+  const nodo = control ? findNode(chapters, plan.capituloControl!) : null;
+  if (control && nodo) {
+    const enCap: Array<{ chapterId: string; p: Partida }> = [];
+    for (const ch of chapters) for (const p of partidas[ch.id] ?? []) if (enControl(ch.id, p)) enCap.push({ chapterId: ch.id, p });
+    const co = coherenciaCapitulo({ partidas: enCap, valoracion, plan, rates });
+    for (const a of co.avisos) avisa(a);
+    const kci = rates.coefK !== 1 || rates.ci > 0;
+    const aportePem = pemObra - basePem;
+    // Plan pobre (D §6.9): lo que dan los ensayos de nivel 1 de las familias presentes, marcados o no.
+    const nivel1 = recepcion
+      .flatMap((b) => b.ensayos)
+      .filter(
+        (f) =>
+          f.quien === 'LAB' &&
+          f.cantidad > 0 &&
+          !POR_ID.get(f.ensayo)?.alternativaDe &&
+          ((f.estado === 'incluido' && f.nivel !== 2 && f.nivel !== 3) || (f.estado === 'noMarcado' && f.nivel === 1 && f.familia !== 'acero-laminado')),
+      );
+    const minimoNivel1 = valorar(nivel1, plan).reduce((s, v) => s + (v.importe ?? 0), 0);
+    if (enCap.length && kci)
+      avisa({
+        id: 'capitulo:kci',
+        texto: `El capítulo de control aporta ${eur(aportePem)} al PEM (con K = ${fmtNum(rates.coefK, 3)} y ${fmtNum(rates.ci * 100, 2)} % de costes indirectos) y la valoración del plan es de ${eur(total)}, a precios de laboratorio sin K ni costes indirectos.`,
+      });
+    if (minimoNivel1 > 0 && co.importeSinK < minimoNivel1)
+      avisa({
+        id: 'planPobre',
+        texto: `El capítulo de control (${eur(co.importeSinK)}) queda por debajo de lo que dan los ensayos de nivel 1 de las familias de la obra (${eur(minimoNivel1)}), a precios de laboratorio.`,
+      });
+    capitulo = {
+      id: nodo.node.id,
+      code: nodo.node.code,
+      title: nodo.node.title,
+      partidas: co.partidas,
+      propuestas: co.propuestas,
+      importe: co.importe,
+      aportePem,
+      kci,
+      minimoNivel1,
+    };
+  } else if (valoracion.length)
+    pend({ id: 'capitulo', texto: 'El presupuesto no tiene capítulo de control de calidad enlazado: enlázalo o créalo desde la valoración (el presupuesto incluirá la valoración del control, CTE parte I, anejo I).' });
+
   return {
     version: { motor: 1, catalogo: catalogoJson.version, enlaceBcca: ENLACE_VERSION, familias: familiasJson.version, ...estructura.version },
     fecha,
@@ -517,6 +564,7 @@ export function calcularPlanCalidad(e: EntradaPcc): PlanCalidad {
     total,
     totalCompleto,
     porcentaje,
+    capitulo,
     sinRevisar,
     revisar,
     pendientes,

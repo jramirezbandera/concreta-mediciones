@@ -13,10 +13,15 @@
    · Solo importa `core/pcc/reglas` y `core/pcc/datos` (P1): el cálculo, el
      catálogo y las tablas del Código van con la vista.
    =========================================================================== */
+import { rawUuid } from '../../core/id';
+import { nextPos } from '../../core/numbering';
+import type { PartidaControlPropuesta } from '../../core/pcc/capitulo';
 import { capituloControlPropuesto, enCapituloControl, planVacio } from '../../core/pcc/datos';
 import { estadoTrasConfirmar, huellaDe, necesitaRevision, proponerControl } from '../../core/pcc/reglas';
 import type { ControlPartida, PlanCalidadDatos, PrecioCopiado } from '../../core/pcc/tipos';
+import { nextPartidaCode } from '../../core/tree';
 import type { Partida } from '../../core/types';
+import { nextPartidaId } from '../base';
 import type { ObraSlice, ObraState } from '../obraStore';
 import { structural } from './estructuraSlice';
 
@@ -35,6 +40,7 @@ type PccActions = Pick<
   | 'proponerControles'
   | 'aplicarControlAHomonimos'
   | 'tomarPreciosPlan'
+  | 'crearCapituloControl'
 >;
 
 /** Propuesta de las reglas para una partida de la obra abierta. */
@@ -163,4 +169,39 @@ export const createPccSlice: ObraSlice<PccActions> = (set, get) => ({
         s.planCalidad.precios = { ...(s.planCalidad.precios ?? {}), ...structuredClone(precios) };
       }),
     ),
+
+  crearCapituloControl: (propuestas: PartidaControlPropuesta[]) => {
+    // Las partidas las propone la vista (`partidasControl`): así el store no carga el motor (P1).
+    if (!get().planCalidad || !propuestas.length) return 0;
+    structural(() =>
+      set((s) => {
+        const num = s.chapters.reduce((m, c) => Math.max(m, parseInt(c.code, 10) || 0), 0) + 1;
+        const chapter = { id: `ch-${rawUuid()}`, code: String(num), title: 'Control de calidad', children: [] };
+        s.chapters.push(chapter);
+        s.partidas[chapter.id] = [];
+        const usados = new Set(Object.values(s.partidas).flatMap((ps) => (ps ?? []).map((p) => p.code.trim().toUpperCase())));
+        propuestas.forEach((x, i) => {
+          // El código del banco si la obra no lo usa ya; si no, uno nuevo (A2).
+          const banco = x.codigoBanco?.trim();
+          const code = banco && !usados.has(banco.toUpperCase()) ? banco : nextPartidaCode(s.partidas);
+          usados.add(code.toUpperCase());
+          s.partidas[chapter.id]!.push({
+            id: nextPartidaId(),
+            pos: nextPos(chapter.code, i + 1),
+            code,
+            title: x.title,
+            ud: x.ud,
+            precio: x.precio,
+            cantidad: x.cantidad,
+            desc: x.desc,
+            med: [],
+            items: [],
+            pcc: { estado: 'capituloControl', origen: { tipo: 'manual', motivo: 'Creada desde la valoración del plan' }, ensayo: x.ensayo },
+          });
+        });
+        if (s.planCalidad) s.planCalidad.capituloControl = chapter.id;
+      }),
+    );
+    return propuestas.length;
+  },
 });

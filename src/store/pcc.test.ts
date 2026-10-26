@@ -155,3 +155,32 @@ describe('ida y vuelta por .json', () => {
     expect(despues.estructura.totales.amasadas).toBe(15);
   });
 });
+
+describe('«Crear capítulo de control de calidad» (A2)', () => {
+  const propuesta = (ensayo: string, codigoBanco: string | null) => ({ ensayo, codigoBanco, title: `Ensayo ${ensayo}`, ud: 'amasada', cantidad: 3, precio: 59.28, desc: 'Texto' });
+
+  it('crea el capítulo, lo enlaza y marca cada partida con su ensayo; Deshacer lo quita entero', () => {
+    state().iniciarPlanCalidad();
+    state().setPlanCalidad({ capituloControl: null });
+    const capitulos = state().chapters.length;
+    // 18HHC00010 ya lo usa la obra (c1): la nueva partida lleva un código nuevo.
+    const n = state().crearCapituloControl([propuesta('j03-008', '18HHL00010'), propuesta('j03-009', '18HHC00010'), propuesta('app-x', null)]);
+    expect(n).toBe(3);
+    const ch = state().chapters.at(-1)!;
+    expect(ch).toMatchObject({ code: '3', title: 'Control de calidad' });
+    expect(state().planCalidad!.capituloControl).toBe(ch.id);
+    const ps = state().partidas[ch.id]!;
+    expect(ps.map((x) => x.code)).toEqual(['18HHL00010', 'P001', 'P002']);
+    expect(ps[0]).toMatchObject({ cantidad: 3, precio: 59.28, ud: 'amasada', items: [], pcc: { estado: 'capituloControl', ensayo: 'j03-008' } });
+    undo();
+    expect(state().chapters).toHaveLength(capitulos);
+    expect(state().partidas[ch.id]).toBeUndefined();
+    expect(state().planCalidad!.capituloControl).toBeNull();
+  });
+
+  it('sin plan o sin partidas no hace nada', () => {
+    expect(state().crearCapituloControl([propuesta('j03-008', null)])).toBe(0);
+    state().iniciarPlanCalidad();
+    expect(state().crearCapituloControl([])).toBe(0);
+  });
+});

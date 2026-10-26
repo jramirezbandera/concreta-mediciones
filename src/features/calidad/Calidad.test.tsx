@@ -102,6 +102,21 @@ describe('vista Calidad', () => {
     expect(screen.getByText(/del PEM sin el capítulo de control/)).toBeInTheDocument();
   });
 
+  it('«Crear capítulo de control de calidad» lo crea, lo enlaza y cuadra con la valoración', () => {
+    const o = cargarObraA();
+    state().iniciarPlanCalidad();
+    state().confirmarControles(Object.entries(state().partidas).flatMap(([chapterId, ps]) => (ps ?? []).map((p) => ({ chapterId, partidaId: p.id }))));
+    state().setPlanCalidad({ ...o.plan, capituloControl: null });
+    render(<CalidadView compact={false} onGoPresupuesto={() => undefined} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Valoración' }));
+    fireEvent.click(screen.getByRole('button', { name: /Crear capítulo de control de calidad/ }));
+    const id = state().planCalidad!.capituloControl!;
+    expect(state().chapters.find((c) => c.id === id)?.title).toBe('Control de calidad');
+    expect(screen.queryByRole('button', { name: /Crear capítulo de control de calidad/ })).toBeNull();
+    expect(screen.getByText(/^Importe del capítulo/)).toBeInTheDocument();
+    expect(screen.queryByText('Sin ensayo en el plan')).toBeNull();
+  });
+
   it('un ensayo de nivel 2 se marca con su casilla (D8)', () => {
     const o = cargarObraA();
     state().iniciarPlanCalidad();

@@ -62,4 +62,9 @@ export function cubreDelEnlace(ensayo: string): CoberturaPrecio | undefined {
   return ENLACES.find((e) => e.ensayo === ensayo)?.cubre;
 }
 
+/** Códigos del banco que el enlace da al ensayo (varios si el precio es una suma). */
+export function codigosDelEnlace(ensayo: string): string[] {
+  return ENLACES.find((e) => e.ensayo === ensayo)?.partidas.map((x) => x.codigo) ?? [];
+}
+
 export const ENLACE_VERSION: string = enlaceBcca.version;

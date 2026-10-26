@@ -39,6 +39,7 @@ import { createRcdSlice, type RefPartidaRcd } from './slices/rcdSlice';
 import type { EstudioRcdDatos, ResiduoPartida } from '../core/rcd/tipos';
 import { createPccSlice, type RefPartidaPcc } from './slices/pccSlice';
 import type { ControlPartida, PlanCalidadDatos, PrecioCopiado } from '../core/pcc/tipos';
+import type { PartidaControlPropuesta } from '../core/pcc/capitulo';
 import {
   createPlanosSlice,
   type DestinoPlano,
@@ -703,6 +704,10 @@ export interface ObraState extends ObraData {
   aplicarControlAHomonimos: (chapterId: string, partidaId: string) => number;
   /** Guarda en el plan los precios copiados de un banco (A1): no se leen en vivo. */
   tomarPreciosPlan: (precios: Record<string, PrecioCopiado>) => void;
+  /** Crea el capítulo «Control de calidad» con una partida propia por fila de la
+   *  valoración (`partidasControl`, A2), marcada con su ensayo, y lo enlaza.
+   *  CAMBIA EL PEM: un paso de Deshacer. Devuelve cuántas partidas creó. */
+  crearCapituloControl: (partidas: PartidaControlPropuesta[]) => number;
 
   /** Restaura el estado sembrado (datos + UI). Útil en tests y para "nueva obra". */
   reset: () => void;

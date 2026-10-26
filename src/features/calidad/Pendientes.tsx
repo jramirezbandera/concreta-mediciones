@@ -9,6 +9,7 @@ const PARTIDAS = /^(sinRevisar|sinPartidas|revisar|designacion|dobleComputo|fila
 
 /** Dónde se arregla cada cosa. */
 function pestanaDe(x: Aviso): PestanaPcc {
+  if (/^(capitulo|planPobre|emitido)\b/.test(x.id)) return 'valoracion';
   if (x.partidaId || PARTIDAS.test(x.id)) return 'partidas';
   if (x.grupo || ESTRUCTURA.test(x.id)) return 'estructura';
   if (x.id.startsWith('precio:')) return 'valoracion';
