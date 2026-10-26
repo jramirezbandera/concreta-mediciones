@@ -1,0 +1,1644 @@
+{
+ "id": "familias",
+ "version": "pcc-familias-1",
+ "norma": "Redacción propia del plan con las citas de la verificación (K-PCC.1-49) y los patrones de D §5",
+ "edicion": "Con la app",
+ "tabla": "Familias de partida → recepción, ejecución, ensayos del catálogo y pruebas de obra terminada",
+ "pagina": "docs/research/control-calidad: A «Para la app» (a), B, C y D §5",
+ "verificacion": "K-PCC.3-4, K-PCC.12-18, K-PCC.24, K-PCC.31-37, K-PCC.47",
+ "veredicto": "VERIFICADO (texto)",
+ "nota": "Prefijos de la BCCA 2023 y de Precio Centro 2017 comprobados en sus .bc3; los de CYPE esperan a E0.3. Las frecuencias de ejecución son las que propone el plan: el CTE (parte I, art. 7.3) las deja al proyecto y al pliego.",
+ "recepcionComun": [
+  {
+   "texto": "En cada suministro: hoja de suministro y etiquetado, documentos de origen y garantía, y marcado CE con su declaración de prestaciones (o declaración de prestaciones y de conformidad para las familias ya sujetas al Reglamento (UE) 2024/3110).",
+   "cita": "CTE parte I, art. 7.2.1; Reglamento (UE) n.º 305/2011, arts. 4 y 8; Reglamento (UE) 2024/3110, arts. 15, 17 y 95"
+  },
+  {
+   "texto": "Distintivos de calidad y evaluaciones técnicas de idoneidad (DIT, DAU), si los tiene el producto: se comprueba que están vigentes y que cubren lo suministrado.",
+   "cita": "CTE parte I, arts. 5.2.3, 5.2.5 y 7.2.2"
+  }
+ ],
+ "familias": [
+  {
+   "id": "hormigon-estructural",
+   "nombre": "Hormigón estructural",
+   "grupo": "estructura",
+   "reconocer": {
+    "codigo": "^(03H[AR]|05H[HR]|E04[CELMRS][AM]|E05H[LSV])",
+    "texto": "\\bh[apr]a?\\s*-?\\s*\\d\\d\\s*/"
+   },
+   "estructura": "hormigon",
+   "recepcion": [
+    {
+     "texto": "Hoja de suministro de cada partida de hormigón con su designación, con el contenido mínimo del anejo 4; declaración del suministrador y, sin distintivo, los ensayos previos y característicos de la central con menos de seis meses; certificado final de suministro.",
+     "cita": "Código Estructural, arts. 57.4.1, 57.5.1 y 57.6"
+    },
+    {
+     "texto": "Hormigón con distintivo de calidad oficialmente reconocido: certificado vigente durante todo el suministro; cambia el tamaño de los lotes y el número de amasadas.",
+     "cita": "Código Estructural, arts. 18 y 57.5.4.1"
+    }
+   ],
+   "ejecucion": [
+    {
+     "id": "terreno",
+     "fase": "Cimentación",
+     "comprobacion": "Confirmación del estudio geotécnico y comprobación del terreno de apoyo antes de hormigonar",
+     "frecuencia": {
+      "tipo": "loteEjecucion",
+      "fila": "cimentacion"
+     },
+     "rechazo": "Terreno distinto del previsto en el proyecto: se para y decide la dirección facultativa",
+     "cita": "CTE DB SE-C, 4.6.2 a 4.6.4"
+    },
+    {
+     "id": "inspecciones",
+     "fase": "Estructura",
+     "comprobacion": "Inspecciones de ejecución por lote (replanteos, cimbras y encofrados, despiece, elaboración y montaje de armaduras, vertido, curado y descimbrado)",
+     "frecuencia": {
+      "tipo": "anejo15"
+     },
+     "rechazo": "Las tolerancias del proyecto y del anejo 14",
+     "cita": "Código Estructural, art. 63, tabla 63.1 y anejo 15 (orientativo)"
+    }
+   ],
+   "ensayos": []
+  },
+  {
+   "id": "forjado-viguetas",
+   "nombre": "Forjados de viguetas y bovedillas",
+   "grupo": "estructura",
+   "reconocer": {
+    "codigo": "^(05FU|05FB|E05HF|E05HZ|E05HR|E05PF)",
+    "texto": "\\b(viguetas? (autorresistente|semirresistente|pretensad|armad|de hormigon)|semivigueta|bovedilla|forjado (unidireccional|reticular)|forj\\b|placa alveolar)"
+   },
+   "estructura": "hormigon",
+   "recepcion": [
+    {
+     "texto": "Viguetas, placas alveolares y piezas de entrevigado con marcado CE y declaración de prestaciones; en piezas de entrevigado, resistencia a carga puntual y, en las cerámicas, expansión por humedad.",
+     "cita": "Código Estructural, arts. 38 y 62; UNE-EN 15037 y UNE-EN 1168"
+    }
+   ],
+   "ejecucion": [
+    {
+     "id": "colocacion",
+     "fase": "Forjado",
+     "comprobacion": "Colocación de viguetas y piezas de entrevigado, apoyos, macizados y capa de compresión",
+     "frecuencia": {
+      "tipo": "loteEjecucion",
+      "fila": "flexion"
+     },
+     "rechazo": "Lo que no cumpla los planos del proyecto",
+     "cita": "Código Estructural, art. 63 y tabla 63.1"
+    }
+   ],
+   "ensayos": [
+    "03.05"
+   ]
+  },
+  {
+   "id": "acero-armar",
+   "nombre": "Acero para armar (barras y ferralla)",
+   "grupo": "estructura",
+   "reconocer": {
+    "codigo": "^(03AC|05HA[^M]|E04AB)",
+    "texto": "\\b(acero (en barras )?corrugad|b ?[45]00 ?s|ferralla|armadura elaborada|armaduras? pasiva)",
+    "ud": [
+     "kg",
+     "t"
+    ]
+   },
+   "estructura": "acero",
+   "recepcion": [
+    {
+     "texto": "Acero con marcado CE o, en su defecto, con distintivo; certificado de adherencia; trazabilidad de la ferralla hasta el acero de origen. En zona sísmica, informe de ensayos de cargas cíclicas de menos de un año.",
+     "cita": "Código Estructural, arts. 58 y 59"
+    }
+   ],
+   "ejecucion": [
+    {
+     "id": "armado",
+     "fase": "Armado",
+     "comprobacion": "Despiece, montaje, separadores y recubrimientos antes de hormigonar (punto de parada)",
+     "frecuencia": {
+      "tipo": "loteEjecucion",
+      "fila": "cualquiera"
+     },
+     "rechazo": "Recubrimientos o diámetros distintos de los del proyecto",
+     "cita": "Código Estructural, art. 63 y anejo 15"
+    }
+   ],
+   "ensayos": [
+    "03.01.06"
+   ]
+  },
+  {
+   "id": "mallas",
+   "nombre": "Mallas electrosoldadas",
+   "grupo": "estructura",
+   "reconocer": {
+    "codigo": "^(03AM|05HAM|E04AM)",
+    "texto": "\\b(malla(zo)? electrosoldad|mallazo)"
+   },
+   "estructura": "acero",
+   "recepcion": [
+    {
+     "texto": "Mallas con marcado CE o distintivo; certificado del fabricante de armaduras con el tipo de acero y la serie de diámetros.",
+     "cita": "Código Estructural, art. 59.1"
+    }
+   ],
+   "ejecucion": [
+    {
+     "id": "solapes",
+     "fase": "Armado",
+     "comprobacion": "Solapes, calzos y recubrimientos de las mallas",
+     "frecuencia": {
+      "tipo": "medicion",
+      "cada": 500,
+      "ud": "m2"
+     },
+     "rechazo": "Solapes o recubrimientos menores que los del proyecto",
+     "cita": "CTE parte I, art. 7.3"
+    }
+   ],
+   "ensayos": [
+    "03.01.07"
+   ]
+  },
+  {
+   "id": "micropilotes",
+   "nombre": "Micropilotes",
+   "grupo": "cimentacion",
+   "reconocer": {
+    "codigo": "^(03CT|E04PM)",
+    "texto": "\\bmicropilote"
+   },
+   "recepcion": [
+    {
+     "texto": "Tubos de acero con certificado de inspección 3.1; cemento y lechada con su documentación; el pliego fija el control de la lechada.",
+     "cita": "CTE DB SE-C, 5"
+    }
+   ],
+   "ejecucion": [
+    {
+     "id": "perforacion",
+     "fase": "Ejecución",
+     "comprobacion": "Replanteo, perforación, colocación del tubo e inyección de cada micropilote",
+     "frecuencia": {
+      "tipo": "unidad"
+     },
+     "rechazo": "Longitud o presión de inyección menores que las del proyecto",
+     "cita": "CTE DB SE-C, 5"
+    }
+   ],
+   "ensayos": [
+    "03.01.04"
+   ],
+   "datos": [
+    "dias"
+   ]
+  },
+  {
+   "id": "pilotes",
+   "nombre": "Pilotes",
+   "grupo": "cimentacion",
+   "reconocer": {
+    "codigo": "^(03CP|E04P[IP])",
+    "texto": "\\bpilote",
+    "no": "micropilote|cabeza de pilote|demolicion"
+   },
+   "recepcion": [
+    {
+     "texto": "Hormigón y armaduras como en la estructura; pilotes prefabricados con marcado CE.",
+     "cita": "CTE DB SE-C, 5.4; Código Estructural, arts. 57 a 59"
+    }
+   ],
+   "ejecucion": [
+    {
+     "id": "pilote",
+     "fase": "Ejecución",
+     "comprobacion": "Replanteo, perforación o hinca, armado y hormigonado de cada pilote",
+     "frecuencia": {
+      "tipo": "unidad"
+     },
+     "rechazo": "Lo que no cumpla el proyecto y la UNE-EN 1536",
+     "cita": "CTE DB SE-C, 5.4.2"
+    }
+   ],
+   "ensayos": [
+    "03.01.05.01",
+    "03.01.05.02"
+   ],
+   "datos": [
+    "pilotes",
+    "diametroPilote"
+   ]
+  },
+  {
+   "id": "pantallas",
+   "nombre": "Muros pantalla",
+   "grupo": "cimentacion",
+   "reconocer": {
+    "codigo": "^(03CM[^W]|E04PS)",
+    "texto": "\\b(muros? pantalla|pantalla continua)"
+   },
+   "recepcion": [
+    {
+     "texto": "Hormigón y armaduras como en la estructura; lodos bentoníticos o suspensiones poliméricas con su ficha.",
+     "cita": "CTE DB SE-C, 6.4; Código Estructural, arts. 57 a 59"
+    }
+   ],
+   "ejecucion": [
+    {
+     "id": "panel",
+     "fase": "Ejecución",
+     "comprobacion": "Excavación, lodos, armado y hormigonado de cada panel",
+     "frecuencia": {
+      "tipo": "datos",
+      "dato": "paneles"
+     },
+     "rechazo": "Lo que no cumpla el proyecto y la UNE-EN 1538",
+     "cita": "CTE DB SE-C, 6.4"
+    }
+   ],
+   "ensayos": [
+    "03.01.05.04",
+    "03.01.05.05"
+   ],
+   "datos": [
+    "dias",
+    "paneles"
+   ]
+  },
+  {
+   "id": "anclajes",
+   "nombre": "Anclajes al terreno",
+   "grupo": "cimentacion",
+   "reconocer": {
+    "codigo": "^(03CW|E04PT)",
+    "texto": "\\banclajes? (al terreno|de inyeccion|permanente|provisional)"
+   },
+   "recepcion": [
+    {
+     "texto": "Anclajes conforme a la UNE-EN 1537: tirantes, cabezas y lechada con su documentación.",
+     "cita": "CTE DB SE-C, 9.4"
+    }
+   ],
+   "ejecucion": [],
+   "ensayos": [
+    "03.01.08.05"
+   ]
+  },
+  {
+   "id": "acero-laminado",
+   "nombre": "Estructura de acero",
+   "grupo": "estructura",
+   "reconocer": {
+    "codigo": "^(05A[CFW]|05WE|E05A[ACFSZ]|E05C[CDEFG])",
+    "texto": "\\b(acero laminado|perfil(es)? (laminad|de acero)|\\bs ?(235|275|355) ?j|\\b(ipe|ipn|heb|hea|upn)\\b|estructura metalica)"
+   },
+   "recepcion": [
+    {
+     "texto": "Productos con marcado CE y declaración de prestaciones; componentes con marcado CE según la UNE-EN 1090-1; certificados de inspección del material; cualificación de soldadores e inspectores.",
+     "cita": "Código Estructural, arts. 97 y 100"
+    },
+    {
+     "texto": "Tornillos sin marcado CE ni distintivo: un lote por grado y clase, con al menos diez muestras. Protección sin distintivo: un lote por sistema y tipo de acero; en galvanizado, el certificado del galvanizador.",
+     "cita": "Código Estructural, arts. 98.1 y 99.2"
+    }
+   ],
+   "ejecucion": [
+    {
+     "id": "soldaduras",
+     "fase": "Montaje",
+     "comprobacion": "Inspección visual de toda la longitud de los cordones (UNE-EN ISO 17637) y ensayos no destructivos con los porcentajes orientativos de la tabla A17.2.2.b para la clase de ejecución",
+     "frecuencia": {
+      "tipo": "unica"
+     },
+     "rechazo": "Los niveles de calidad de la clase de ejecución",
+     "cita": "Código Estructural, art. 103.2.2.6 y anejo 17"
+    },
+    {
+     "id": "apriete",
+     "fase": "Montaje",
+     "comprobacion": "Apriete de las uniones atornilladas",
+     "frecuencia": {
+      "tipo": "unica"
+     },
+     "rechazo": "Par o tensado distinto del especificado",
+     "cita": "Código Estructural, art. 103.2.2.8"
+    }
+   ],
+   "ensayos": [
+    "03.02"
+   ],
+   "datos": [
+    "claseEjecucion",
+    "soldaduraObra"
+   ]
+  },
+  {
+   "id": "madera-estructural",
+   "nombre": "Estructura de madera",
+   "grupo": "estructura",
+   "reconocer": {
+    "codigo": "^(05M|E05M)",
+    "texto": "\\b(madera laminada|gl-?\\d\\d|madera aserrada (estructural|para estructura)|estructura de madera|viga de madera|soporte de madera|cercha de madera)"
+   },
+   "recepcion": [
+    {
+     "texto": "Identificación del suministro, especie y clase resistente, tolerancias y contenido de humedad ≤ 20 % medido con xilohigrómetro (UNE-EN 13183-2); en madera tratada, el certificado del tratamiento.",
+     "cita": "CTE DB SE-M, 13.1"
+    }
+   ],
+   "ejecucion": [
+    {
+     "id": "uniones",
+     "fase": "Montaje",
+     "comprobacion": "Uniones, herrajes y protección de la madera",
+     "frecuencia": {
+      "tipo": "unica"
+     },
+     "rechazo": "Lo que no cumpla el DB SE-M y el proyecto",
+     "cita": "CTE DB SE-M, 13"
+    }
+   ],
+   "ensayos": [
+    "03.03"
+   ]
+  },
+  {
+   "id": "fabrica-resistente",
+   "nombre": "Fábrica resistente",
+   "grupo": "estructura",
+   "reconocer": {
+    "texto": "\\b(muro de carga|fabrica (resistente|portante)|muro portante de (ladrillo|bloque))"
+   },
+   "recepcion": [
+    {
+     "texto": "Declaración del suministrador sobre la resistencia de las piezas y su categoría de fabricación; si no hay valor declarado, ensayo de compresión UNE-EN 772-1.",
+     "cita": "CTE DB SE-F, 8.1.1"
+    }
+   ],
+   "ejecucion": [
+    {
+     "id": "inspeccion",
+     "fase": "Ejecución",
+     "comprobacion": "Inspección de la fábrica ejecutada según la categoría de ejecución (diaria en las categorías A y B)",
+     "frecuencia": {
+      "tipo": "planta"
+     },
+     "rechazo": "Lo que no cumpla el DB SE-F y el proyecto",
+     "cita": "CTE DB SE-F, 8.2.1"
+    }
+   ],
+   "ensayos": [
+    "03.04"
+   ],
+   "datos": [
+    "categoriaEjecucion"
+   ]
+  },
+  {
+   "id": "fabrica-ladrillo",
+   "nombre": "Fábrica de ladrillo",
+   "grupo": "albanileria",
+   "reconocer": {
+    "codigo": "^(06L|06A|06D[ST]|E07L|E07N)",
+    "texto": "\\b(ladrillo|citara|tabicon|tabique de l|fabrica de l|\\blh[ds]\\b)",
+    "no": "apertura de hueco|ayudas?"
+   },
+   "recepcion": [
+    {
+     "texto": "Piezas con marcado CE y declaración de prestaciones (categoría I o II, succión en fachada); mortero con su designación.",
+     "cita": "CTE parte I, art. 7.2; CTE DB HS 1, 4.2"
+    }
+   ],
+   "ejecucion": [
+    {
+     "id": "replanteo",
+     "fase": "Ejecución",
+     "comprobacion": "Replanteo, aparejo, juntas, plomos y encuentros",
+     "frecuencia": {
+      "tipo": "planta"
+     },
+     "rechazo": "Desplomes o juntas fuera de las tolerancias del pliego",
+     "cita": "CTE parte I, art. 7.3; CTE DB HS 1, 5.2"
+    }
+   ],
+   "ensayos": [
+    "6.1.1",
+    "6.1.4"
+   ]
+  },
+  {
+   "id": "fabrica-bloque",
+   "nombre": "Fábrica de bloque",
+   "grupo": "albanileria",
+   "reconocer": {
+    "codigo": "^(06B|E07B|E07A)",
+    "texto": "\\bbloques?\\b"
+   },
+   "recepcion": [
+    {
+     "texto": "Bloques con marcado CE y declaración de prestaciones; mortero con su designación.",
+     "cita": "CTE parte I, art. 7.2"
+    }
+   ],
+   "ejecucion": [
+    {
+     "id": "replanteo",
+     "fase": "Ejecución",
+     "comprobacion": "Replanteo, aparejo, juntas, plomos y encuentros",
+     "frecuencia": {
+      "tipo": "planta"
+     },
+     "rechazo": "Desplomes o juntas fuera de las tolerancias del pliego",
+     "cita": "CTE parte I, art. 7.3"
+    }
+   ],
+   "ensayos": [],
+   "ensayosPorTexto": [
+    {
+     "texto": "\\b(ceramic|arcilla|termoarcilla)",
+     "apartados": [
+      "6.1.2",
+      "6.1.4"
+     ]
+    },
+    {
+     "texto": "\\bhormigon\\b",
+     "apartados": [
+      "6.1.3",
+      "6.1.4"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "placa-yeso",
+   "nombre": "Tabiques y trasdosados de placa de yeso laminado",
+   "grupo": "albanileria",
+   "reconocer": {
+    "codigo": "^(06D[IP]|E07[TEY])",
+    "texto": "\\b(yeso laminado|placa de yeso|pladur|trasdosado autoport|tabique (multiple|simple) pl)"
+   },
+   "recepcion": [
+    {
+     "texto": "Placas, perfiles y accesorios con marcado CE y declaración de prestaciones.",
+     "cita": "CTE parte I, art. 7.2"
+    }
+   ],
+   "ejecucion": [
+    {
+     "id": "perfileria",
+     "fase": "Ejecución",
+     "comprobacion": "Separación de montantes, anclajes, juntas y encuentros",
+     "frecuencia": {
+      "tipo": "medicion",
+      "cada": 200,
+      "ud": "m2"
+     },
+     "rechazo": "Separaciones mayores que las del sistema",
+     "cita": "CTE parte I, art. 7.3"
+    }
+   ],
+   "ensayos": [
+    "6.1.5",
+    "6.1.6"
+   ]
+  },
+  {
+   "id": "cubierta-plana",
+   "nombre": "Cubierta plana",
+   "grupo": "cubiertas",
+   "reconocer": {
+    "codigo": "^(07H|E09[ABCD])",
+    "texto": "\\b(cubierta (plana|invertida|transitable|no transitable)|azotea)"
+   },
+   "recepcion": [
+    {
+     "texto": "Láminas, aislamientos y capas de protección con marcado CE y declaración de prestaciones, según el pliego.",
+     "cita": "CTE DB HS 1, 4.2"
+    }
+   ],
+   "ejecucion": [
+    {
+     "id": "pendientes",
+     "fase": "Ejecución",
+     "comprobacion": "Pendientes, solapes, encuentros con paramentos y desagües, juntas",
+     "frecuencia": {
+      "tipo": "medicion",
+      "cada": 100,
+      "ud": "m2"
+     },
+     "rechazo": "Pendientes o solapes menores que los del proyecto",
+     "cita": "CTE DB HS 1, 5.2"
+    }
+   ],
+   "ensayos": [],
+   "ensayosPorTexto": [
+    {
+     "texto": "\\b(bitumin|asfaltic|betun|app|sbs)",
+     "apartados": [
+      "7.3"
+     ]
+    },
+    {
+     "texto": "\\b(pvc|epdm|tpo|caucho|lamina plastica)",
+     "apartados": [
+      "7.4"
+     ]
+    }
+   ],
+   "pruebas": [
+    {
+     "id": "estanqueidad-cubierta",
+     "nombre": "Prueba de estanqueidad de la cubierta plana (inundación o riego)",
+     "ensayos": [
+      "j08-130"
+     ],
+     "oblig": "P",
+     "propuesta": true,
+     "quien": "LAB",
+     "cita": "CTE parte I, art. 7.4: a criterio del proyecto; el DB HS 1 (5.3) no prescribe pruebas finales"
+    }
+   ]
+  },
+  {
+   "id": "cubierta-inclinada",
+   "nombre": "Cubierta inclinada",
+   "grupo": "cubiertas",
+   "reconocer": {
+    "codigo": "^(07I|E09[EFGJ])",
+    "texto": "\\b(teja|cubierta inclinada|faldon)"
+   },
+   "recepcion": [
+    {
+     "texto": "Tejas, placas y piezas de cumbrera con marcado CE y declaración de prestaciones.",
+     "cita": "CTE DB HS 1, 4.2"
+    }
+   ],
+   "ejecucion": [
+    {
+     "id": "fijacion",
+     "fase": "Ejecución",
+     "comprobacion": "Solapes, fijaciones, aleros y encuentros",
+     "frecuencia": {
+      "tipo": "medicion",
+      "cada": 100,
+      "ud": "m2"
+     },
+     "rechazo": "Solapes o fijaciones menores que los del fabricante",
+     "cita": "CTE DB HS 1, 5.2"
+    }
+   ],
+   "ensayos": [],
+   "ensayosPorTexto": [
+    {
+     "texto": "\\bteja\\b.*\\b(ceramica|curva|mixta|arcilla)|\\b(ceramica|curva|mixta)\\b.*\\bteja",
+     "apartados": [
+      "7.1"
+     ]
+    },
+    {
+     "texto": "\\bteja\\b.*\\bhormigon|\\bhormigon\\b.*\\bteja",
+     "apartados": [
+      "7.2"
+     ]
+    }
+   ],
+   "pruebas": [
+    {
+     "id": "estanqueidad-inclinada",
+     "nombre": "Prueba de estanqueidad de la cubierta inclinada (aspersión)",
+     "ensayos": [
+      "j08-131"
+     ],
+     "oblig": "P",
+     "quien": "LAB",
+     "cita": "CTE parte I, art. 7.4: a criterio del proyecto"
+    }
+   ]
+  },
+  {
+   "id": "impermeabilizacion",
+   "nombre": "Impermeabilizaciones",
+   "grupo": "cubiertas",
+   "reconocer": {
+    "codigo": "^(09I|E10I)",
+    "texto": "\\b(impermeabiliz|lamina (bituminosa|asfaltica|de betun|impermeab)|tela asfaltica|barrera (de vapor|humedad))"
+   },
+   "recepcion": [
+    {
+     "texto": "Láminas y sistemas con marcado CE y declaración de prestaciones, según el pliego.",
+     "cita": "CTE DB HS 1, 4.2"
+    }
+   ],
+   "ejecucion": [
+    {
+     "id": "solapes",
+     "fase": "Ejecución",
+     "comprobacion": "Soporte, solapes, encuentros y protección de la lámina",
+     "frecuencia": {
+      "tipo": "medicion",
+      "cada": 100,
+      "ud": "m2"
+     },
+     "rechazo": "Solapes menores que los del sistema",
+     "cita": "CTE DB HS 1, 5.2"
+    }
+   ],
+   "ensayos": [],
+   "ensayosPorTexto": [
+    {
+     "texto": "\\b(bitumin|asfaltic|betun|app|sbs)",
+     "apartados": [
+      "7.3"
+     ]
+    },
+    {
+     "texto": "\\b(pvc|epdm|tpo|caucho|polietileno)",
+     "apartados": [
+      "7.4"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "aislamiento",
+   "nombre": "Aislamiento térmico y acústico",
+   "grupo": "envolvente",
+   "reconocer": {
+    "codigo": "^(09[TA]|E10A|E07S)",
+    "texto": "\\b(aislamiento|aislante|lana (mineral|de roca|de vidrio)|\\bsate\\b|poliuretano proyectado|espuma de poliuretano|plancha(s)? (rigidas? )?de poliestireno|poliestireno (extruido|expandido|extrusionado)|\\b(xps|eps)\\b)",
+    "no": "calorifug|coquilla|tapon|ventana|puerta|mampara"
+   },
+   "recepcion": [
+    {
+     "texto": "Productos con marcado CE y declaración de prestaciones: conductividad térmica, espesor, reacción al fuego y, en los acústicos, rigidez dinámica o absorción.",
+     "cita": "CTE DB HE 1, 5.4; CTE DB HR"
+    }
+   ],
+   "ejecucion": [
+    {
+     "id": "continuidad",
+     "fase": "Ejecución",
+     "comprobacion": "Continuidad, espesor y fijación del aislamiento; puentes térmicos",
+     "frecuencia": {
+      "tipo": "medicion",
+      "cada": 200,
+      "ud": "m2"
+     },
+     "rechazo": "Espesor menor o discontinuidades",
+     "cita": "CTE DB HE 1, 5.5 y 5.6"
+    }
+   ],
+   "ensayos": [],
+   "ensayosPorTexto": [
+    {
+     "texto": "\\bpoliuretano proyectado|\\bespuma de poliuretano",
+     "apartados": [
+      "9.1"
+     ]
+    },
+    {
+     "texto": "\\b(placa|panel|plancha) (rigida )?de (espuma (rigida )?de )?poliuretano|\\bpir\\b",
+     "apartados": [
+      "9.2"
+     ]
+    },
+    {
+     "texto": "\\blana (mineral|de roca|de vidrio)|\\bfibra de vidrio",
+     "apartados": [
+      "9.3"
+     ]
+    },
+    {
+     "texto": "\\blana de polipropileno",
+     "apartados": [
+      "9.4"
+     ]
+    },
+    {
+     "texto": "\\b(xps|poliestireno extruido)",
+     "apartados": [
+      "9.5"
+     ]
+    },
+    {
+     "texto": "\\b(eps|poliestireno expandido)",
+     "apartados": [
+      "9.6"
+     ]
+    }
+   ],
+   "pruebas": [
+    {
+     "id": "blower-door",
+     "nombre": "Ensayo de estanqueidad al aire del edificio (n50, UNE-EN ISO 9972)",
+     "ensayos": [
+      "j08-138"
+     ],
+     "oblig": "P",
+     "quien": "LAB",
+     "cita": "CTE DB HE 1, 3.1.3.4 y anejo H: opción frente a los valores de referencia, en vivienda nueva de más de 120 m² útiles"
+    }
+   ]
+  },
+  {
+   "id": "revestimiento-continuo",
+   "nombre": "Revestimientos continuos",
+   "grupo": "acabados",
+   "reconocer": {
+    "codigo": "^(10C|E08P)",
+    "texto": "\\b(enfoscado|guarnecido|enlucido|revoco|monocapa|yeso proyectado)"
+   },
+   "recepcion": [
+    {
+     "texto": "Morteros y yesos con marcado CE y su designación.",
+     "cita": "CTE parte I, art. 7.2"
+    }
+   ],
+   "ejecucion": [
+    {
+     "id": "planeidad",
+     "fase": "Ejecución",
+     "comprobacion": "Espesor, planeidad y adherencia al soporte",
+     "frecuencia": {
+      "tipo": "medicion",
+      "cada": 100,
+      "ud": "m2"
+     },
+     "rechazo": "Fuera de las tolerancias del pliego",
+     "cita": "CTE parte I, art. 7.3"
+    }
+   ],
+   "ensayos": [],
+   "ensayosPorTexto": [
+    {
+     "texto": "\\b(enfoscado|revoco|monocapa|mortero)",
+     "apartados": [
+      "10.2.1"
+     ]
+    },
+    {
+     "texto": "\\b(guarnecido|enlucido|yeso)",
+     "apartados": [
+      "10.2.2"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "alicatado-aplacado",
+   "nombre": "Alicatados y aplacados",
+   "grupo": "acabados",
+   "reconocer": {
+    "codigo": "^(10A|E12)",
+    "texto": "\\b(alicatado|aplacado|chapado (de |con )?(piedra|marmol|granito|caliza|pizarra|ceramic|gres|baldosa))"
+   },
+   "recepcion": [
+    {
+     "texto": "Baldosas, piezas y adhesivos con marcado CE y declaración de prestaciones.",
+     "cita": "CTE parte I, art. 7.2"
+    }
+   ],
+   "ejecucion": [
+    {
+     "id": "planeidad",
+     "fase": "Ejecución",
+     "comprobacion": "Planeidad, juntas y adherencia",
+     "frecuencia": {
+      "tipo": "medicion",
+      "cada": 100,
+      "ud": "m2"
+     },
+     "rechazo": "Piezas huecas o fuera de plano",
+     "cita": "CTE parte I, art. 7.3"
+    }
+   ],
+   "ensayos": [],
+   "ensayosPorTexto": [
+    {
+     "texto": "\\b(ceramic|azulejo|gres)",
+     "apartados": [
+      "10.2.3",
+      "10.2.4"
+     ]
+    },
+    {
+     "texto": "\\b(piedra|marmol|granito|caliza|arenisca)",
+     "apartados": [
+      "10.2.5"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "solado",
+   "nombre": "Solados y pavimentos",
+   "grupo": "acabados",
+   "reconocer": {
+    "codigo": "^(10[SP]|E11)",
+    "texto": "\\b(solado|pavimento|solera de terrazo|baldosa|gres|terrazo|parquet|tarima|peldano|rodapie)",
+    "no": "solera de hormigon|levantado"
+   },
+   "recepcion": [
+    {
+     "texto": "Baldosas y piezas con marcado CE y declaración de prestaciones; clase de resbaladicidad según su localización.",
+     "cita": "CTE DB SUA 1, tablas 1.1 y 1.2"
+    }
+   ],
+   "ejecucion": [
+    {
+     "id": "planeidad",
+     "fase": "Ejecución",
+     "comprobacion": "Planeidad, juntas, pendientes y adherencia",
+     "frecuencia": {
+      "tipo": "medicion",
+      "cada": 100,
+      "ud": "m2"
+     },
+     "rechazo": "Cejas, piezas huecas o fuera de plano",
+     "cita": "CTE parte I, art. 7.3"
+    }
+   ],
+   "ensayos": [],
+   "ensayosPorTexto": [
+    {
+     "texto": "\\b(ceramic|gres|barro)",
+     "apartados": [
+      "10.1.1"
+     ]
+    },
+    {
+     "texto": "\\bterrazo\\b.*\\b(exterior|terraza)",
+     "apartados": [
+      "10.1.3"
+     ]
+    },
+    {
+     "texto": "\\bterrazo",
+     "apartados": [
+      "10.1.2"
+     ]
+    },
+    {
+     "texto": "\\b(piedra|marmol|granito|caliza|arenisca)\\b.*\\bexterior",
+     "apartados": [
+      "10.1.4"
+     ]
+    },
+    {
+     "texto": "\\b(piedra|marmol|granito|caliza|arenisca)",
+     "apartados": [
+      "10.1.5"
+     ]
+    },
+    {
+     "texto": "\\bbaldosa (hidraulica|de hormigon)",
+     "apartados": [
+      "10.1.6"
+     ]
+    },
+    {
+     "texto": "\\b(parquet|tarima|madera)",
+     "apartados": [
+      "10.1.7"
+     ]
+    },
+    {
+     "texto": "\\b(pavimento continuo|hormigon (impreso|pulido|continuo))",
+     "apartados": [
+      "10.1.8"
+     ]
+    },
+    {
+     "texto": "\\bvinilic",
+     "apartados": [
+      "10.1.9"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "falso-techo",
+   "nombre": "Falsos techos",
+   "grupo": "acabados",
+   "reconocer": {
+    "codigo": "^(10T|E08[CRTW])",
+    "texto": "\\b(falso techo|techo (de placas|registrable)|escayola)"
+   },
+   "recepcion": [
+    {
+     "texto": "Placas, perfiles y cuelgues con marcado CE y declaración de prestaciones.",
+     "cita": "CTE parte I, art. 7.2"
+    }
+   ],
+   "ejecucion": [
+    {
+     "id": "nivelacion",
+     "fase": "Ejecución",
+     "comprobacion": "Cuelgues, perfilería y nivelación",
+     "frecuencia": {
+      "tipo": "medicion",
+      "cada": 200,
+      "ud": "m2"
+     },
+     "rechazo": "Fuera de nivel o con cuelgues de más separación",
+     "cita": "CTE parte I, art. 7.3"
+    }
+   ],
+   "ensayos": [
+    "10.3"
+   ]
+  },
+  {
+   "id": "carpinteria-exterior",
+   "nombre": "Carpintería exterior",
+   "grupo": "carpinteria",
+   "reconocer": {
+    "codigo": "^(11[ALMP]V|E14)",
+    "texto": "\\b(ventana|balconera|carpinteria (exterior|de aluminio|de pvc)|puerta (de entrada|exterior|de acceso))"
+   },
+   "recepcion": [
+    {
+     "texto": "Ventanas y puertas exteriores con marcado CE y declaración de prestaciones: permeabilidad al aire, estanqueidad al agua, resistencia al viento y transmitancia.",
+     "cita": "CTE DB HE 1, 5.4"
+    }
+   ],
+   "ejecucion": [
+    {
+     "id": "aplomado",
+     "fase": "Ejecución",
+     "comprobacion": "Aplomado, fijación y sellado perimetral",
+     "frecuencia": {
+      "tipo": "medicion",
+      "cada": 25,
+      "ud": "ud"
+     },
+     "rechazo": "Holguras o sellado discontinuo",
+     "cita": "CTE parte I, art. 7.3"
+    }
+   ],
+   "ensayos": [
+    "11.1"
+   ],
+   "pruebas": [
+    {
+     "id": "estanqueidad-ventanas",
+     "nombre": "Estanqueidad al agua de ventanas in situ",
+     "ensayos": [
+      "j08-134"
+     ],
+     "oblig": "P",
+     "quien": "LAB",
+     "cita": "CTE parte I, art. 7.4: a criterio del proyecto"
+    }
+   ]
+  },
+  {
+   "id": "carpinteria-interior",
+   "nombre": "Carpintería interior",
+   "grupo": "carpinteria",
+   "reconocer": {
+    "codigo": "^(11M[AP]|E13)",
+    "texto": "\\b(puerta de paso|puerta interior|carpinteria interior|block de puerta)"
+   },
+   "recepcion": [
+    {
+     "texto": "Puertas con su documentación y, en las de sectorización, su clasificación de resistencia al fuego.",
+     "cita": "CTE DB SI"
+    }
+   ],
+   "ejecucion": [
+    {
+     "id": "aplomado",
+     "fase": "Ejecución",
+     "comprobacion": "Aplomado, holguras y herrajes",
+     "frecuencia": {
+      "tipo": "medicion",
+      "cada": 25,
+      "ud": "ud"
+     },
+     "rechazo": "Holguras fuera de tolerancia",
+     "cita": "CTE parte I, art. 7.3"
+    }
+   ],
+   "ensayos": [
+    "11.2"
+   ]
+  },
+  {
+   "id": "vidrios",
+   "nombre": "Vidrios",
+   "grupo": "carpinteria",
+   "reconocer": {
+    "codigo": "^(12[ALNVW]|E16)",
+    "texto": "\\b(acristalamiento|acrist\\b|vidrio (laminado|laminar|templado|impreso|armado|float|doble|incoloro|de seguridad|aislante)|luna (pulida|incolora|templada)|climalit)",
+    "no": "fibra de vidrio"
+   },
+   "recepcion": [
+    {
+     "texto": "Vidrios con marcado CE y declaración de prestaciones (transmitancia, factor solar y, en los de seguridad, su clase).",
+     "cita": "CTE DB HE 1, 5.4; CTE DB SUA 2"
+    }
+   ],
+   "ejecucion": [],
+   "ensayos": [
+    "11.3"
+   ]
+  },
+  {
+   "id": "barandillas",
+   "nombre": "Barandillas",
+   "grupo": "carpinteria",
+   "reconocer": {
+    "codigo": "^(11SB|E15B|E13S)",
+    "texto": "\\b(barandilla|antepecho)",
+    "no": "proteccion|seguridad y salud"
+   },
+   "recepcion": [
+    {
+     "texto": "Barandillas con la documentación del fabricante; altura y huecos según su localización.",
+     "cita": "CTE DB SUA 1"
+    }
+   ],
+   "ejecucion": [
+    {
+     "id": "fijacion",
+     "fase": "Ejecución",
+     "comprobacion": "Altura, huecos y fijación",
+     "frecuencia": {
+      "tipo": "medicion",
+      "cada": 50,
+      "ud": "m"
+     },
+     "rechazo": "Altura o huecos fuera del DB SUA 1",
+     "cita": "CTE DB SUA 1"
+    }
+   ],
+   "ensayos": [],
+   "pruebas": [
+    {
+     "id": "empuje-barandillas",
+     "nombre": "Prueba de empuje sobre barandillas",
+     "ensayos": [
+      "j08-136"
+     ],
+     "oblig": "P",
+     "quien": "LAB",
+     "cita": "CTE parte I, art. 7.4: a criterio del proyecto"
+    }
+   ]
+  },
+  {
+   "id": "pintura",
+   "nombre": "Pinturas",
+   "grupo": "acabados",
+   "reconocer": {
+    "codigo": "^(13|E27)",
+    "texto": "\\b(pintura|barnizado|esmaltado|lacado de)"
+   },
+   "recepcion": [
+    {
+     "texto": "Pinturas con su ficha técnica y de seguridad.",
+     "cita": "CTE parte I, art. 7.2"
+    }
+   ],
+   "ejecucion": [
+    {
+     "id": "manos",
+     "fase": "Ejecución",
+     "comprobacion": "Preparación del soporte, número de manos y acabado",
+     "frecuencia": {
+      "tipo": "medicion",
+      "cada": 500,
+      "ud": "m2"
+     },
+     "rechazo": "Descolgados o soporte sin preparar",
+     "cita": "CTE parte I, art. 7.3"
+    }
+   ],
+   "ensayos": [],
+   "ensayosPorTexto": [
+    {
+     "texto": "\\b(petrea|petreo)",
+     "apartados": [
+      "13.1"
+     ]
+    },
+    {
+     "texto": "\\besmalte",
+     "apartados": [
+      "13.2"
+     ]
+    },
+    {
+     "texto": "\\bplastic",
+     "apartados": [
+      "13.3"
+     ]
+    },
+    {
+     "texto": "\\bsilicato",
+     "apartados": [
+      "13.4"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "saneamiento",
+   "nombre": "Saneamiento",
+   "grupo": "instalaciones",
+   "reconocer": {
+    "codigo": "^(04[CEVW]|E03)",
+    "texto": "\\b(saneamiento|colector|arqueta|bajante|sumidero|alcantarillado)"
+   },
+   "recepcion": [
+    {
+     "texto": "Tubos, piezas y arquetas con marcado CE y declaración de prestaciones.",
+     "cita": "CTE parte I, art. 7.2"
+    }
+   ],
+   "ejecucion": [
+    {
+     "id": "pendientes",
+     "fase": "Ejecución",
+     "comprobacion": "Pendientes, uniones, registros y sujeciones",
+     "frecuencia": {
+      "tipo": "medicion",
+      "cada": 50,
+      "ud": "m"
+     },
+     "rechazo": "Pendientes menores que las del proyecto",
+     "cita": "CTE DB HS 5, 5"
+    }
+   ],
+   "ensayos": [
+    "8.1.1.3"
+   ],
+   "pruebas": [
+    {
+     "id": "hs5-parcial",
+     "nombre": "Pruebas de estanqueidad parcial: aparatos, red horizontal por tramos a 0,3–0,6 bar durante 10 minutos, arquetas y pozos llenos, el 100 % de las uniones",
+     "ensayos": [
+      "j08-011",
+      "j08-012"
+     ],
+     "oblig": "R",
+     "quien": "INST",
+     "cita": "CTE DB HS 5, 5.6.1"
+    },
+    {
+     "id": "hs5-total",
+     "nombre": "Prueba de estanqueidad total del sistema (con agua, aire o humo)",
+     "ensayos": [
+      "j08-013"
+     ],
+     "oblig": "R",
+     "quien": "INST",
+     "cita": "CTE DB HS 5, 5.6.2 a 5.6.5"
+    }
+   ]
+  },
+  {
+   "id": "fontaneria",
+   "nombre": "Fontanería y agua caliente sanitaria",
+   "grupo": "instalaciones",
+   "reconocer": {
+    "codigo": "^(08F|08MB|E2[01])",
+    "texto": "\\b(fontaneria|agua fria|agua caliente|\\bacs\\b|montante|grupo (de )?presion|griferia|aparatos sanitarios|calentador)"
+   },
+   "recepcion": [
+    {
+     "texto": "Tubos, accesorios, griferías y equipos con marcado CE y declaración de prestaciones.",
+     "cita": "CTE parte I, art. 7.2"
+    }
+   ],
+   "ejecucion": [
+    {
+     "id": "trazado",
+     "fase": "Ejecución",
+     "comprobacion": "Trazado, fijaciones, pasos y aislamiento de las tuberías",
+     "frecuencia": {
+      "tipo": "vivienda"
+     },
+     "rechazo": "Lo que no cumpla el DB HS 4",
+     "cita": "CTE DB HS 4, 5"
+    }
+   ],
+   "ensayos": [
+    "8.1.3.2",
+    "8.1.3.3"
+   ],
+   "pruebas": [
+    {
+     "id": "hs4-presion",
+     "nombre": "Prueba de resistencia mecánica y estanquidad de toda la red, repetida con la grifería conectada",
+     "ensayos": [
+      "j08-046"
+     ],
+     "oblig": "R",
+     "quien": "INST",
+     "cita": "CTE DB HS 4, 5.2.1.1"
+    },
+    {
+     "id": "hs4-acs",
+     "nombre": "Pruebas de funcionamiento de la red y del agua caliente sanitaria (caudales, temperaturas, tiempos)",
+     "ensayos": [
+      "j08-047"
+     ],
+     "oblig": "R",
+     "quien": "INST",
+     "cita": "CTE DB HS 4, 5.2.1.2"
+    },
+    {
+     "id": "grupo-presion",
+     "nombre": "Prueba de funcionamiento del grupo de presión",
+     "ensayos": [
+      "j08-048"
+     ],
+     "oblig": "R",
+     "quien": "INST",
+     "condicion": "\\bgrupo (de )?presion",
+     "cita": "CTE DB HS 4, 5.2"
+    }
+   ]
+  },
+  {
+   "id": "electricidad",
+   "nombre": "Electricidad en baja tensión",
+   "grupo": "instalaciones",
+   "reconocer": {
+    "codigo": "^(08E|E1[78])",
+    "texto": "\\b(instalacion electrica|electricidad|cuadro (general|de mando|electrico)|circuito|derivacion individual|toma de (tierra|corriente)|puesta a tierra|punto de luz|linea general de alimentacion|mecanismo)"
+   },
+   "recepcion": [
+    {
+     "texto": "Materiales con su marcado y documentación; certificado de la instalación de la empresa instaladora.",
+     "cita": "REBT, ITC-BT-04"
+    }
+   ],
+   "ejecucion": [
+    {
+     "id": "trazado",
+     "fase": "Ejecución",
+     "comprobacion": "Trazado, secciones, protecciones y puesta a tierra",
+     "frecuencia": {
+      "tipo": "vivienda"
+     },
+     "rechazo": "Lo que no cumpla el REBT y el proyecto",
+     "cita": "REBT, ITC-BT-04, 5.2"
+    }
+   ],
+   "ensayos": [
+    "8.1.4.3"
+   ],
+   "pruebas": [
+    {
+     "id": "rebt-verificaciones",
+     "nombre": "Verificaciones previas a la puesta en servicio: cuadros, protecciones, aislamiento y puesta a tierra",
+     "ensayos": [
+      "j08-060"
+     ],
+     "oblig": "R",
+     "quien": "INST",
+     "cita": "REBT, ITC-BT-05, 2.1 y 3"
+    },
+    {
+     "id": "rebt-comunes",
+     "nombre": "Verificación de las zonas comunes del edificio",
+     "ensayos": [
+      "j08-061"
+     ],
+     "oblig": "R",
+     "quien": "INST",
+     "soloPlurifamiliar": true,
+     "cita": "REBT, ITC-BT-05, 3"
+    },
+    {
+     "id": "rebt-oc",
+     "nombre": "Inspección inicial por organismo de control (garaje de 25 plazas o más, piscina de más de 10 kW, local mojado de más de 25 kW o recarga de vehículo eléctrico con proyecto)",
+     "ensayos": [],
+     "oblig": "C",
+     "quien": "OC",
+     "dato": "inspeccionInicial",
+     "cita": "REBT, ITC-BT-05, 4.1"
+    }
+   ]
+  },
+  {
+   "id": "solar-termica",
+   "nombre": "Energía solar térmica",
+   "grupo": "instalaciones",
+   "reconocer": {
+    "codigo": "^(08N|E22M)",
+    "texto": "\\b(solar termic|captador solar|colector solar|termosifon)"
+   },
+   "recepcion": [
+    {
+     "texto": "Captadores y equipos con marcado CE y documentación; certificado de la empresa instaladora.",
+     "cita": "RITE, art. 20"
+    }
+   ],
+   "ejecucion": [],
+   "ensayos": [],
+   "pruebas": [
+    {
+     "id": "rite-solar",
+     "nombre": "Prueba hidrostática del circuito primario (1,5 veces la presión de trabajo, mínimo 3 bar) y de funcionamiento",
+     "ensayos": [
+      "j08-071",
+      "j08-073"
+     ],
+     "oblig": "R",
+     "quien": "INST",
+     "cita": "RITE, art. 22 e IT 2.2.2.4"
+    }
+   ]
+  },
+  {
+   "id": "climatizacion",
+   "nombre": "Climatización, calefacción y ventilación",
+   "grupo": "instalaciones",
+   "reconocer": {
+    "codigo": "^(08C|E2[23])",
+    "texto": "\\b(climatiz|calefaccion|caldera|radiador|suelo radiante|aerotermi|bomba de calor|\\bsplit\\b|fancoil|ventilacion mecanica|extraccion|recuperador de calor)"
+   },
+   "recepcion": [
+    {
+     "texto": "Equipos y materiales con su documentación, marcado CE y etiquetado energético cuando proceda.",
+     "cita": "RITE, art. 20"
+    }
+   ],
+   "ejecucion": [],
+   "ensayos": [],
+   "pruebas": [
+    {
+     "id": "rite-estanquidad",
+     "nombre": "Pruebas de estanquidad de las redes de fluidos y de los circuitos frigoríficos",
+     "ensayos": [
+      "j08-076"
+     ],
+     "oblig": "R",
+     "quien": "INST",
+     "cita": "RITE, art. 22 e IT 2.2.2 y 2.2.3"
+    },
+    {
+     "id": "rite-funcionamiento",
+     "nombre": "Pruebas finales de los equipos (UNE-EN 12599)",
+     "ensayos": [
+      "j08-080"
+     ],
+     "oblig": "R",
+     "quien": "INST",
+     "cita": "RITE, IT 2.2.7"
+    },
+    {
+     "id": "ventilacion-comunes",
+     "nombre": "Prueba de funcionamiento de las redes comunes de ventilación y extracción",
+     "ensayos": [
+      "j08-085",
+      "j08-087"
+     ],
+     "oblig": "R",
+     "quien": "INST",
+     "soloPlurifamiliar": true,
+     "cita": "RITE, IT 2.2.5"
+    }
+   ]
+  },
+  {
+   "id": "pci",
+   "nombre": "Protección contra incendios",
+   "grupo": "instalaciones",
+   "reconocer": {
+    "codigo": "^(08P|E26)",
+    "texto": "\\b(extintor|\\bbie\\b|deteccion (de incendios|y alarma)|contra ?incendios|rociador|columna seca|hidrante)"
+   },
+   "recepcion": [
+    {
+     "texto": "Equipos con marcado CE y su documentación; certificado de la empresa instaladora y contrato de mantenimiento para la puesta en servicio.",
+     "cita": "RIPCI, arts. 19 y 20"
+    }
+   ],
+   "ejecucion": [],
+   "ensayos": [],
+   "pruebas": [
+    {
+     "id": "ripci-red",
+     "nombre": "Prueba de estanquidad y resistencia mecánica de BIE (≥ 980 kPa) y columna seca (≥ 1.470 kPa hasta 30 m, ≥ 2.450 kPa por encima) durante 2 horas",
+     "ensayos": [
+      "j08-094"
+     ],
+     "oblig": "R",
+     "quien": "INST",
+     "condicion": "\\b(bie|columna seca|red de extincion)",
+     "cita": "RIPCI, anexo I, sección 1.ª, 5.5 y 6.4"
+    },
+    {
+     "id": "ripci-deteccion",
+     "nombre": "Prueba de servicio de la instalación de detección y alarma",
+     "ensayos": [
+      "j08-092"
+     ],
+     "oblig": "R",
+     "quien": "INST",
+     "condicion": "\\bdeteccion",
+     "cita": "RIPCI, art. 20"
+    }
+   ]
+  },
+  {
+   "id": "telecomunicaciones",
+   "nombre": "Telecomunicaciones",
+   "grupo": "instalaciones",
+   "reconocer": {
+    "codigo": "^(08K|E19)",
+    "texto": "\\b(telecomunicac|\\bict\\b|portero|videoportero|antena|telefonia)"
+   },
+   "recepcion": [
+    {
+     "texto": "Boletín de la instalación y protocolo de pruebas de la empresa instaladora; certificado de fin de obra si hay director de obra.",
+     "cita": "Orden ITC/1644/2011, art. 6.4"
+    }
+   ],
+   "ejecucion": [],
+   "ensayos": [],
+   "pruebas": [
+    {
+     "id": "ict-protocolo",
+     "nombre": "Protocolo de pruebas de la ICT (anexo V)",
+     "ensayos": [
+      "j08-108"
+     ],
+     "oblig": "R",
+     "quien": "INST",
+     "soloPlurifamiliar": true,
+     "cita": "Orden ITC/1644/2011, art. 6.4"
+    }
+   ]
+  },
+  {
+   "id": "gas",
+   "nombre": "Gas",
+   "grupo": "instalaciones",
+   "reconocer": {
+    "codigo": "^(08L|E24)",
+    "texto": "\\b(gas natural|gas butano|gas propano|instalacion de gas|acometida de gas)"
+   },
+   "recepcion": [
+    {
+     "texto": "Certificado de la instalación de la empresa instaladora.",
+     "cita": "RD 919/2006, ITC-ICG 07"
+    }
+   ],
+   "ejecucion": [],
+   "ensayos": [],
+   "pruebas": [
+    {
+     "id": "gas-estanquidad",
+     "nombre": "Prueba de estanquidad de la instalación receptora (UNE 60670-8 o UNE 60620)",
+     "ensayos": [
+      "j08-111"
+     ],
+     "oblig": "R",
+     "quien": "INST",
+     "cita": "RD 919/2006, ITC-ICG 07, 3.3"
+    }
+   ]
+  },
+  {
+   "id": "ascensor",
+   "nombre": "Ascensores",
+   "grupo": "instalaciones",
+   "reconocer": {
+    "codigo": "^(08MA|E25)",
+    "texto": "\\b(ascensor|elevador)"
+   },
+   "recepcion": [
+    {
+     "texto": "Marcado CE y declaración de conformidad del ascensor; la puesta en servicio la rige su reglamento.",
+     "cita": "CTE parte I, art. 7.2"
+    }
+   ],
+   "ejecucion": [],
+   "ensayos": []
+  },
+  {
+   "id": "excavacion",
+   "nombre": "Excavaciones",
+   "grupo": "terreno",
+   "reconocer": {
+    "codigo": "^(02[APZ]|E02[BCEMPQZ])",
+    "texto": "\\b(excavacion|exc\\b|desmonte de tierras|vaciado (de|en) (tierras|solar|sotano))",
+    "no": "transporte|carga"
+   },
+   "recepcion": [],
+   "ejecucion": [
+    {
+     "id": "fondo",
+     "fase": "Excavación",
+     "comprobacion": "Cota y terreno del fondo de la excavación frente al estudio geotécnico",
+     "frecuencia": {
+      "tipo": "unica"
+     },
+     "rechazo": "Terreno distinto del previsto: se para y decide la dirección facultativa",
+     "cita": "CTE DB SE-C, 4.6.2"
+    }
+   ],
+   "ensayos": []
+  },
+  {
+   "id": "relleno",
+   "nombre": "Rellenos y compactaciones",
+   "grupo": "terreno",
+   "reconocer": {
+    "codigo": "^(02R|E02[SW])",
+    "texto": "\\b(relleno|terraplen|compactacion|zahorra|encachado)",
+    "no": "grava (gruesa )?limpia|aislamiento|camara"
+   },
+   "recepcion": [
+    {
+     "texto": "Procedencia del material y, en áridos y zahorras, marcado CE y declaración de prestaciones.",
+     "cita": "CTE parte I, art. 7.2"
+    }
+   ],
+   "ejecucion": [
+    {
+     "id": "tongadas",
+     "fase": "Ejecución",
+     "comprobacion": "Espesor de tongadas, humedad y compactación",
+     "frecuencia": {
+      "tipo": "medicion",
+      "cada": 500,
+      "ud": "m3"
+     },
+     "rechazo": "Densidad menor que la del proyecto",
+     "cita": "CTE parte I, art. 7.3"
+    }
+   ],
+   "ensayos": [],
+   "ensayosPorTexto": [
+    {
+     "texto": "\\bzahorra",
+     "apartados": [
+      "2.7.1",
+      "2.7.3"
+     ]
+    },
+    {
+     "texto": "\\b(relleno|terraplen)",
+     "apartados": [
+      "2.2.1",
+      "2.2.3"
+     ]
+    },
+    {
+     "texto": "\\bcompactacion",
+     "apartados": [
+      "2.1.2"
+     ]
+    }
+   ]
+  }
+ ],
+ "excluir": [
+  {
+   "id": "demolicion",
+   "codigo": "^(01[A-Z]|E01)",
+   "texto": "\\b(demolicion|demol\\b|derribo|levantad[oa]|desmontaje|desmontad[oa]|picado)\\b",
+   "motivo": "Demolición o trabajo previo: sin control de recepción"
+  },
+  {
+   "id": "residuos",
+   "codigo": "^(17[A-Z]|U20)",
+   "texto": "\\b(gestion de residuos|canon de (vertido|gestion)|clasificacion de residuos|contenedor)",
+   "motivo": "Gestión de residuos: no genera control (K-PCC.70)"
+  },
+  {
+   "id": "seguridad",
+   "codigo": "^(19[A-Z]|E28)",
+   "texto": "\\b(seguridad y salud|proteccion colectiva|proteccion individual|caseta|senalizacion de obra|vallado de obra)",
+   "motivo": "Seguridad y salud o implantación de obra: no genera control (K-PCC.70)"
+  },
+  {
+   "id": "control",
+   "codigo": "^(18[A-Za-z]|E29|U19)",
+   "texto": "\\b(ensayo|analisis|control de calidad|prueba de (estanqueidad|carga|servicio|funcionamiento))",
+   "motivo": "Parece una partida del capítulo de control de calidad: enlázalo como capítulo de control"
+  },
+  {
+   "id": "auxiliares",
+   "texto": "\\b(transporte de (tierras|escombros|residuos)|alquiler|andamio|medios auxiliares|ayudas? (de|a la) albanileria|limpieza (final|de obra)|mano de obra)",
+   "motivo": "Transporte, alquiler, medios auxiliares o ayudas: no genera control (K-PCC.70)"
+  },
+  {
+   "id": "limpieza",
+   "texto": "\\bhormigon\\b.*\\b(limpieza|nivelacion)\\b|\\b(limpieza|nivelacion)\\b.*\\bhormigon\\b|\\bcapa de limpieza",
+   "motivo": "Hormigón de limpieza o nivelación, sin función estructural: sin control (K-PCC.70)"
+  }
+ ]
+}
