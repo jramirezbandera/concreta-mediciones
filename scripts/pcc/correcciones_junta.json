@@ -1,5 +1,5 @@
 {
- "veto": "\\bEHE\\b|EHE-0?8|EHE-98|EFHE|\\bEAE\\b|RC-0[38]|1630/1992|89/106|\\bDITE\\b|Sello INCE|\\bNBE\\b|RL-88|RB-90|RY-85|clases? generales|MOPU|UNE[- ]EN 13829|UNE 833(00|01|03|04|09|13)|UNE 7474|UNE 7262|UNE 70[0-9]{2}:19|UNE 36068|UNE 36088|UNE 36096|UNE 36462|UNE 670(2[6-9]|3[0-9])|UNE 104281|UNE 104242|UNE 53112|UNE 53020|art[íi]culo 37",
+ "veto": "\\bEHE\\b|EHE-0?8|EHE-98|EFHE|\\bEAE\\b|RC-0[38]|1630/1992|89/106|\\bDITE\\b|Sello INCE|\\bNBE\\b|RL-88|RB-90|RY-85|clases? generales|MOPU|UNE[- ]EN 13829|UNE 833(00|01|03|04|09|13)|UNE 7474|UNE 7262|UNE 70[0-9]{2}:19|UNE 36068|UNE 36088|UNE 36096|UNE 36462|UNE 670(2[6-9]|3[0-9])|UNE 104281|UNE 104242|UNE 53112|UNE 53020|art[íi]culo 37|6/2012|……",
  "anotaciones": [
   {
    "fuente": "Hoja auxiliar «03_C_y_E_AUX_CALC AMASADAS» y fórmulas del cap. 03 (D-ejemplos.md §3.3): la cantidad la calcula la app con el Código Estructural.",
@@ -32,6 +32,24 @@
   }
  ],
  "filas": [
+  {
+   "ids": ["j08-123"],
+   "cambia": {"norma": "Decreto 50/2025, art. 27.3 e IT 5"},
+   "motivo": "El Decreto 6/2012 (que además no es real decreto) lo derogó el Decreto 50/2025.",
+   "cita": "K-PCC.47; C-andalucia.md (d)"
+  },
+  {
+   "ids": ["j02-066", "j02-081", "j02-087"],
+   "cambia": {"norma": "UNE 103502:1995; UNE-EN 13286-51:2006"},
+   "motivo": "La hoja deja un hueco de plantilla («I.T. n.º: ……») entre las dos normas.",
+   "cita": "K-PCC.65; D-ejemplos.md §2.1 (1)"
+  },
+  {
+   "ids": ["j08-130", "j08-131", "j08-133"],
+   "cambia": {"norma": "Procedimiento de referencia: Documento Reconocido DRC 06/09 de la Generalitat Valenciana"},
+   "motivo": "Un documento reconocido de otra comunidad se puede citar como procedimiento, no como norma aplicable.",
+   "cita": "K-PCC.71; D-ejemplos.md §2.1 (8)"
+  },
   {
    "ids": ["j03-008", "j03-023"],
    "cambia": {"obs": "Tomas y amasadas por lote según la tabla 57.5.4.1 del Código Estructural, con volumen, superficie, plantas y tiempo, con y sin distintivo. Las calcula la app."},

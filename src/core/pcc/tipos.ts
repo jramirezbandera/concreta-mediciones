@@ -103,8 +103,85 @@ export interface DatosGrupo {
   muroM?: number | null;
 }
 
+/** Lo que cubre un precio (O4): solo lo que la fuente dice (`segun`). */
+export interface CoberturaPrecio {
+  por?: string;
+  /** Precios que hacen falta por ensayo («precio por testigo, la norma pide 10» → 10). */
+  porEnsayo?: number;
+  probetas?: number;
+  determinaciones?: number;
+  puntos?: number;
+  incluye?: string[];
+  nota?: string;
+  segun?: string;
+}
+
+/** Precio copiado de un banco con «Tomar precios de un banco» (A1): no se lee en vivo. */
+export interface PrecioCopiado {
+  ensayo: string;
+  /** Código o códigos del banco (varios si el precio es una suma). */
+  codigo: string;
+  precio: number;
+  ud: string;
+  banco: string;
+  /** ISO, el día en que se copió. */
+  fecha: string;
+  /** El `~T` del banco, para «Crear capítulo» (pasa por la lista de citas vetadas). */
+  texto?: string;
+  cubre?: CoberturaPrecio;
+}
+
+/** Datos de una familia que el presupuesto no trae. */
+export interface DatosFamilia {
+  /** Nº de tipos de producto distintos (lotes «por tipo»). Por defecto, uno, con aviso. */
+  tipos?: number | null;
+  /** Nº de procedencias (suelos, áridos). Por defecto, una. */
+  procedencias?: number | null;
+  /** Días de trabajo (lechadas, lodos). */
+  dias?: number | null;
+  /** Nº de pilotes o micropilotes, si la partida no va en ud. */
+  pilotes?: number | null;
+  paneles?: number | null;
+  /** m³ de hormigón de los pilotes o las pantallas. */
+  m3?: number | null;
+  /** Diámetro de los pilotes (mm) y si están aislados (DB SE-C 5.4.2.1.9). */
+  diametro?: number | null;
+  aislados?: boolean | null;
+  /** Recuento de unidades de lote que no salen del presupuesto: tramos, bajantes, montantes… */
+  unidades?: Record<string, number | null>;
+  /** Acero estructural (§5.7): soldadura en obra, tipos de cordón y conectores. */
+  soldaduraObra?: boolean | null;
+  cordones?: Array<'angulo' | 'tope'>;
+  conectores?: boolean | null;
+}
+
 export interface PlanCalidadDatos {
   version: 1;
+  /** Fecha del plan (ISO); si falta, hoy. */
+  fecha?: string | null;
+  /** De la provincia de la obra si no se dice. */
+  comunidad?: 'andalucia' | 'otra' | null;
+  uso?: 'vivienda' | 'otro' | null;
+  /** Una sola vivienda; con `aislada`, la IT 5 andaluza solo pide fachada. */
+  unifamiliar?: boolean | null;
+  aislada?: boolean | null;
+  /** Nº de viviendas o unidades de uso (pruebas por porcentaje, K-PCC.64). */
+  viviendas?: number | null;
+  /** REBT: inspección inicial por organismo de control (garaje de 25 plazas o más…). */
+  inspeccionInicial?: boolean | null;
+  zonaSismica?: boolean | null;
+  /** IT 5: recintos de actividad e instalaciones colindantes con habitables, instalaciones comunes. */
+  recintosIT5?: { actividad?: number | null; instalaciones?: number | null; comunes?: number | null };
+  familias?: Record<string, DatosFamilia>;
+  /** Ensayo del catálogo o prueba de obra terminada: `true` lo incluye, `false` quita uno propuesto (D8, D9). */
+  marcados?: Record<string, boolean>;
+  /** Prueba de instalaciones que pasa al laboratorio y a la valoración (D2). */
+  aCargo?: Record<string, 'laboratorio' | 'instalador'>;
+  /** Id del capítulo o subcapítulo de control de calidad del presupuesto (§9). */
+  capituloControl?: string | null;
+  precios?: Record<string, PrecioCopiado>;
+  /** Precio tecleado por ensayo (€). */
+  preciosManuales?: Record<string, number>;
   /** De la obra, tecleadas una vez: prerrellenan los grupos (D7). */
   superficieConstruida?: number | null;
   plantas?: number | null;
@@ -123,6 +200,135 @@ export interface PlanCalidadDatos {
     distintivos?: { barras?: boolean; mallas?: boolean; ferralla?: boolean };
   };
   ejecucion?: { nivel?: 'normal' | 'intenso'; opcion?: 'A' | 'B' };
+}
+
+/* ---- resultado del plan ----------------------------------------------------- */
+
+/** LAB laboratorio; INST empresa instaladora; OC organismo de control; DF a criterio de la dirección facultativa. */
+export type Quien = 'LAB' | 'INST' | 'OC' | 'DF';
+export type FuentePrecio = 'banco' | 'junta' | 'manual' | 'pendiente';
+
+/** Un ensayo o prueba del plan, con su cuenta. */
+export interface FilaControl {
+  /** Id del catálogo, «app-…» para los propios de la app, o el de la prueba si no tiene ensayo. */
+  ensayo: string;
+  familia: string;
+  capa: 'recepcion' | 'obraTerminada';
+  prueba?: string;
+  descripcion: string;
+  norma: string | null;
+  nivel: 1 | 2 | 3 | null;
+  unidad: string;
+  /** Entero, redondeado hacia arriba (K-PCC.57). 0 si falta un dato o es a criterio de la DF. */
+  cantidad: number;
+  /** De qué sale el número (K-PCC.54). */
+  regla: string;
+  /** incluido: va al plan; aCriterio: cantidad 0, a juicio de la DF; noMarcado: nivel 2/3 o prueba sin marcar. */
+  estado: 'incluido' | 'aCriterio' | 'noMarcado' | 'aCargoDeOtros';
+  quien: Quien;
+  cita?: string;
+}
+
+export interface PrecioFila {
+  valor: number | null;
+  fuente: FuentePrecio;
+  banco?: string;
+  fecha?: string;
+  codigo?: string;
+  cubre?: CoberturaPrecio;
+}
+
+export interface FilaValoracion {
+  ensayo: string;
+  descripcion: string;
+  norma: string | null;
+  unidad: string;
+  cantidad: number;
+  regla: string;
+  precio: PrecioFila;
+  /** Nº de precios: la cantidad ajustada a lo que cubre cada uno (O4). */
+  precios: number;
+  /** Céntimos; `null` si falta el precio. */
+  importe: number | null;
+}
+
+/** Lo que paga otro agente (instalador, organismo de control): se lista sin importe (D2). */
+export interface FilaSinCoste {
+  ensayo: string;
+  prueba?: string;
+  descripcion: string;
+  quien: Quien;
+  cantidad: number;
+  unidad: string;
+  regla: string;
+  cita?: string;
+}
+
+export interface DocumentoExigido {
+  texto: string;
+  cita: string;
+}
+
+export interface BloqueRecepcion {
+  familia: string;
+  nombre: string;
+  partidas: Array<{ partidaId: string; code: string; title: string; cantidad: number; ud: string }>;
+  documental: DocumentoExigido[];
+  ensayos: FilaControl[];
+}
+
+export interface InspeccionEjecucion {
+  id: string;
+  fase: string;
+  comprobacion: string;
+  /** Nº de inspecciones; `null` si falta el dato (la cuenta lo dice). */
+  cantidad: number | null;
+  cuenta: string;
+  rechazo: string;
+  cita: string;
+}
+
+export interface BloqueEjecucion {
+  familia: string;
+  nombre: string;
+  inspecciones: InspeccionEjecucion[];
+}
+
+export interface PruebaObraTerminada {
+  id: string;
+  familia: string;
+  nombre: string;
+  cita: string;
+  /** R reglamento; P a criterio del proyecto; C condicionada a un dato. */
+  oblig: 'R' | 'P' | 'C';
+  quien: Quien;
+  incluida: boolean;
+  filas: FilaControl[];
+}
+
+export interface PlanCalidad {
+  version: { motor: 1; catalogo: string; enlaceBcca: string; familias: string } & ResultadoEstructura['version'];
+  fecha: string;
+  comunidad: 'andalucia' | 'otra' | null;
+  /** Normas que cita el plan, de las familias presentes y la comunidad. */
+  marco: string[];
+  recepcion: BloqueRecepcion[];
+  ejecucion: BloqueEjecucion[];
+  obraTerminada: PruebaObraTerminada[];
+  estructura: ResultadoEstructura;
+  valoracion: FilaValoracion[];
+  aCargoDeOtros: FilaSinCoste[];
+  /** Céntimos: Σ importes conocidos. */
+  total: number;
+  /** Todas las filas tienen precio. */
+  totalCompleto: boolean;
+  /** % del PEM sin el capítulo de control, como dato (ninguna norma fija un mínimo). */
+  porcentaje: { valor: number; basePem: number } | null;
+  /** Partidas propuestas sin confirmar y confirmadas que hay que revisar (O6). */
+  sinRevisar: number;
+  revisar: string[];
+  pendientes: Pendiente[];
+  avisos: Aviso[];
 }
 
 /* ---- resultado del cálculo de la estructura ------------------------------- */

@@ -4689,6 +4689,9 @@
     }
    ],
    "unidad": "ensayo",
+   "citasVetadas": [
+    "18UAA00010: 6/2012"
+   ],
    "como": "partida",
    "precioComoLaHoja": true
   },

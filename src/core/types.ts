@@ -5,6 +5,7 @@
    céntimos enteros en `core/money` (acumulación exacta, §0 decisión 2).
    =========================================================================== */
 
+import type { ControlPartida } from './pcc/tipos';
 import type { ResiduoPartida } from './rcd/tipos';
 
 export type ResourceType = 'MO' | 'MQ' | 'MAT' | '%CI';
@@ -112,6 +113,12 @@ export interface Partida {
    * undefined = sin asignar.
    */
   rcd?: ResiduoPartida;
+  /**
+   * Control de calidad que dispara la partida (plan de control, `core/pcc`):
+   * familia, hormigón y acero. Como `rcd`, no pasa por el copy-on-write.
+   * El esquema sube a v8 cuando la app empiece a escribirlo (E3 del plan).
+   */
+  pcc?: ControlPartida;
 }
 
 /**

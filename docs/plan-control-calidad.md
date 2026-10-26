@@ -656,7 +656,8 @@ vuelve al plan lo que cambie el diseño.
      478 ensayos con una partida, 4 compuestos (madera aserrada y laminada, exudación y volumen
      de la lechada) y 58 sin código, con su motivo (acero para armar y activo, aire ocluido,
      bovedillas, geotextiles, anclajes, química del acero…). 11 casan con otro precio y lo dicen.
-     El enlace guarda código, resumen y unidad del banco, no el precio (A1). 11 partidas llevan
+     El enlace guarda código, resumen y unidad del banco, no el precio (A1). 12 partidas llevan
+     (11 al principio; la 12.ª, 18UAA00010 con el «D 6/2012 JJAA», al ampliar el veto en E2)
      en su texto citas vetadas (`citasVetadas`: «clases generales», MOPU, UNE de 1950, «mínimo 5
      ensayos por desplazamiento»). Fuera del enlace quedan, por falsas, las parejas solo por
      importe (210 €, 95 €, 500 €) y 18SPP00100 (inspección previa a soldaduras, a 0 € en la BCCA).
@@ -700,6 +701,30 @@ vuelve al plan lo que cambie el diseño.
 - **E2 · Familias y plan completo** (`familias.json`, `reglas.ts`, `calculo.ts`): recepción,
   ejecución, obra terminada, valoración con precios del banco cargado, Andalucía. Fixtures A y B
   en verde; lista de citas prohibidas sobre `textoPlano`.
+  **Hecho (2026-10-26):** `familias.json` (38 familias con su recepción, ejecución, apartados del
+  catálogo y pruebas de obra terminada, cada una con su cita; los ensayos propios de la app que
+  pide el Código y no tiene la hoja, como la masa por metro o las 15 unidades de ferralla; la
+  IT 5 andaluza), `reglas.ts` (propuesta por código de banco antes que por título; prefijos de la
+  BCCA y Precio Centro comprobados en sus .bc3; las cimentaciones profundas no se lotifican por
+  la tabla 57.5.4.1; m³ y kg desde la descomposición, O3; huella, O6), `calculo.ts`
+  (`calcularPlanCalidad` y `textoPlano`), `precios.ts` (`tomarPrecios`, T3 en el núcleo),
+  `citas.ts` y `citas-prohibidas.json`; `Partida.pcc` solo como tipo (el esquema sube en E3).
+  Fixtures en `src/test/fixtures/pcc/obras.ts`: la obra A da 15 amasadas (las 9 de D §3.3, el
+  muro y la escalera con «IIa») y la IT 5; la B, 45 (12 + 15 + 18, como D §3.3), 5 pruebas en 1
+  visita con 23 viviendas y la inspección inicial del REBT. El test de citas encontró tres
+  textos de la hoja que el plan no podía imprimir y se corrigieron en `correcciones_junta.json`
+  con su original: el «RD 6/2012 JJAA» (j08-123), un hueco de plantilla «I.T. n.º: ……» (j02-066,
+  j02-081, j02-087) y el DRC 06/09 valenciano como norma (j08-130, j08-131, j08-133, que pasa a
+  «procedimiento de referencia», K-PCC.71). Interpretaciones: con varias familias, un mismo
+  ensayo del catálogo suma sus cantidades; los lotes «por tipo» suponen un tipo, con aviso;
+  pilotes in situ y pantallas cuentan con la regla de la hoja (UNE-EN 1536 y 1538) y la
+  integridad con el DB SE-C; en acero estructural no entra el taller (lo controla el fabricante
+  con su marcado CE), y los ensayos de soldadura solo con soldadura en obra y por tipo de cordón;
+  la designación con clase no válida se imprime sin ella («clase de exposición por corregir»).
+  El orden de la fuente del precio es el de §8 al pie de la letra: el tecleado solo cuenta si no
+  hay copia del banco ni precio de la Junta. **Pasan a E3/E4:** la acción «Tomar precios» y el
+  aviso «el total pasaría de A a B» (E3), la coherencia con el capítulo, «Crear capítulo» y el
+  aviso de plan pobre (§9, E4), lo emitido (O5, E4) y el aporte al PEM con K y CI (O1a, E4).
 - **E3 · App** (antes, `/plan-design-review` para D6): esquema v8, `pccSlice` (asignar,
   confirmar con huella, homónimos, «Tomar precios de un banco», Deshacer), vista «Calidad»,
   pestaña en el detalle, chip en la fila y en la tarjeta, `ROOMY_W`; límite de imports y test del
@@ -1959,11 +1984,11 @@ finding above. Run with Claude Code or Codex; checkbox as you ship.
   - Surfaced by: Test review — T1 (D12)
   - Files: `src/features/exportar/docxRcd.golden.test.ts`, `src/test/fixtures/rcd/obras.ts`
   - Verify: `npx vitest run src/features/exportar` en verde antes y después de mover
-- [ ] **T3 (P1, human: ~1 día / CC: ~30 min)** — core/pcc + calidad — Copia de precios del banco
+- [ ] **T3 (P1, human: ~1 día / CC: ~30 min)** — core/pcc + calidad — Copia de precios del banco (núcleo hecho en E2: `precios.ts`; la acción y la vista, en E3)
   - Surfaced by: Architecture — A1 (D2)
   - Files: `src/core/pcc/precios.ts`, `src/features/calidad/Valoracion.tsx`, `src/store/slices/pccSlice.ts`
   - Verify: test «sin bancos en la entrada, mismo total»; test de la acción con banco sin el código
-- [ ] **T4 (P1, human: ~3 h / CC: ~15 min)** — core/pcc + store — Huella al confirmar y «revisar»
+- [ ] **T4 (P1, human: ~3 h / CC: ~15 min)** — core/pcc + store — Huella al confirmar y «revisar» (núcleo hecho en E2: `reglas.ts` y `calculo.ts`; el slice, en E3)
   - Surfaced by: Voz externa — O6 (D20)
   - Files: `src/core/pcc/reglas.ts`, `src/store/slices/pccSlice.ts`
   - Verify: HA-25 → HA-30 tras confirmar pasa a «revisar»
@@ -1975,7 +2000,7 @@ finding above. Run with Claude Code or Codex; checkbox as you ship.
   - Surfaced by: Voz externa — O4 (D18)
   - Files: `src/core/pcc/tablas/enlace-bcca.json`, `src/core/pcc/tablas/catalogo.json`, `src/core/pcc/precios.ts`
   - Verify: 2 probetas frente a 4 → 2 precios por amasada
-- [ ] **T7 (P2, human: ~1 día / CC: ~30 min)** — core/pcc — m³ y kg desde la descomposición
+- [x] **T7 (P2, human: ~1 día / CC: ~30 min)** — core/pcc — m³ y kg desde la descomposición (E2)
   - Surfaced by: Voz externa — O3 (D17)
   - Files: `src/core/pcc/estructura.ts`, `src/core/pcc/reglas.ts`
   - Verify: la zapata compuesta de `refdata` propone 1,05 m³ y 40 kg; aviso de doble cómputo
@@ -1983,7 +2008,7 @@ finding above. Run with Claude Code or Codex; checkbox as you ship.
   - Surfaced by: Architecture — A2 (D4)
   - Files: `src/core/pcc/capitulo.ts`, `src/core/pcc/coherencia.ts`, `src/store/slices/pccSlice.ts`
   - Verify: crear y Deshacer; código ya usado; cambio de título; mismo importe
-- [ ] **T9 (P2, human: ~3 h / CC: ~15 min)** — core/pcc — Precio unitario en la coherencia y aviso de K y CI; base del % sin el capítulo
+- [ ] **T9 (P2, human: ~3 h / CC: ~15 min)** — core/pcc — Precio unitario en la coherencia y aviso de K y CI; base del % sin el capítulo (la base del %, hecha en E2; la coherencia con K y CI, en E4)
   - Surfaced by: Voz externa — O1a (D14), O1b (D15); Code quality — Q1 (D10)
   - Files: `src/core/pcc/coherencia.ts`, `src/core/pcc/calculo.ts`
   - Verify: obras con K = 0,9 y CI = 3 %; el % no cambia al crear el capítulo

@@ -73,6 +73,18 @@ export function leerDesignacion(texto: string): LecturaDesignacion | null {
   return { designacion, avisos: avisosDesignacion(designacion) };
 }
 
+/**
+ * La designación para el plan: sin las clases que no son de la tabla 27.1.a, que el
+ * plan no puede imprimir (K-PCC.52), y diciendo que hay que corregirla.
+ */
+export function designacionImprimible(d: DesignacionHormigon): string {
+  if (!d.clasesNoValidas.length) return d.texto;
+  const partes = d.texto.split('/');
+  partes.pop();
+  if (d.clases.length) partes.push(d.clases.join('+'));
+  return `${partes.join('/')} (clase de exposición por corregir)`;
+}
+
 /** Avisos de una designación ya leída (también de una guardada en la partida). */
 export function avisosDesignacion(d: DesignacionHormigon): string[] {
   const avisos: string[] = [];

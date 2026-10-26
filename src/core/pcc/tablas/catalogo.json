@@ -897,7 +897,7 @@
    "nivel": 1,
    "dr": "OLA034 OLA032",
    "ensayo": "Determinación del Índice C.B.R., a 1, 4 y 7 días",
-   "norma": "UNE 103502:1995 + I.T. n.º:……………………. UNE-EN 13286-51:2006",
+   "norma": "UNE 103502:1995; UNE-EN 13286-51:2006",
    "lote": {
     "tipo": "A",
     "n": 1.0,
@@ -906,7 +906,16 @@
    },
    "precio": 161.0,
    "unidad": "ensayo",
-   "obs": "Las probetas se fabricarán según el procedimiento descrito en la UNE-EN 13286-51"
+   "obs": "Las probetas se fabricarán según el procedimiento descrito en la UNE-EN 13286-51",
+   "correcciones": [
+    {
+     "original": {
+      "norma": "UNE 103502:1995 + I.T. n.º:……………………. UNE-EN 13286-51:2006"
+     },
+     "motivo": "La hoja deja un hueco de plantilla («I.T. n.º: ……») entre las dos normas.",
+     "cita": "K-PCC.65; D-ejemplos.md §2.1 (1)"
+    }
+   ]
   },
   {
    "id": "j02-068",
@@ -1093,14 +1102,23 @@
    "nivel": 1,
    "dr": "OLA034 OLA032",
    "ensayo": "Determinación del Índice C.B.R., a 1, 4 y 7 días",
-   "norma": "UNE 103502:1995 + I.T. n.º:……………………. UNE-EN 13286-51:2006",
+   "norma": "UNE 103502:1995; UNE-EN 13286-51:2006",
    "lote": {
     "tipo": "E",
     "n": 3.0
    },
    "precio": 161.0,
    "unidad": "ensayo",
-   "obs": "*1 ensayo por cada tipo de suelo con al menos 3 porcentajes de cemento. ** Para suelos estabilizados tipos S-EST1 y S-EST2"
+   "obs": "*1 ensayo por cada tipo de suelo con al menos 3 porcentajes de cemento. ** Para suelos estabilizados tipos S-EST1 y S-EST2",
+   "correcciones": [
+    {
+     "original": {
+      "norma": "UNE 103502:1995 + I.T. n.º:……………………. UNE-EN 13286-51:2006"
+     },
+     "motivo": "La hoja deja un hueco de plantilla («I.T. n.º: ……») entre las dos normas.",
+     "cita": "K-PCC.65; D-ejemplos.md §2.1 (1)"
+    }
+   ]
   },
   {
    "id": "j02-082",
@@ -1173,7 +1191,7 @@
    "nivel": 1,
    "dr": "OLA034 OLA032",
    "ensayo": "Determinación del Índice C.B.R., a 1, 4 y 7 días",
-   "norma": "UNE 103502:1995 + I.T. n.º:……………………. UNE-EN 13286-51:2006",
+   "norma": "UNE 103502:1995; UNE-EN 13286-51:2006",
    "lote": {
     "tipo": "A",
     "n": 1.0,
@@ -1182,7 +1200,16 @@
    },
    "precio": 161.0,
    "unidad": "ensayo",
-   "obs": "Para suelos tipo S-EST1 y S-EST2. Las probetas se fabricarán según el procedimiento descrito en la UNE-EN 13286-51 y con la densidad exigida en obra"
+   "obs": "Para suelos tipo S-EST1 y S-EST2. Las probetas se fabricarán según el procedimiento descrito en la UNE-EN 13286-51 y con la densidad exigida en obra",
+   "correcciones": [
+    {
+     "original": {
+      "norma": "UNE 103502:1995 + I.T. n.º:……………………. UNE-EN 13286-51:2006"
+     },
+     "motivo": "La hoja deja un hueco de plantilla («I.T. n.º: ……») entre las dos normas.",
+     "cita": "K-PCC.65; D-ejemplos.md §2.1 (1)"
+    }
+   ]
   },
   {
    "id": "j02-088",
@@ -7068,7 +7095,7 @@
    "nivel": 1,
    "dr": null,
    "ensayo": "Ud. de medición de nivel de emisión al exterior de las instalaciones",
-   "norma": "RD 6/2012 JJAA",
+   "norma": "Decreto 50/2025, art. 27.3 e IT 5",
    "lote": {
     "tipo": "C",
     "n": 1.0,
@@ -7077,7 +7104,16 @@
    },
    "precio": 250.0,
    "unidad": "ensayo",
-   "obs": "* Revisar ordenanzas municipales y autonómicas para adaptar los ensayos necesarios."
+   "obs": "* Revisar ordenanzas municipales y autonómicas para adaptar los ensayos necesarios.",
+   "correcciones": [
+    {
+     "original": {
+      "norma": "RD 6/2012 JJAA"
+     },
+     "motivo": "El Decreto 6/2012 (que además no es real decreto) lo derogó el Decreto 50/2025.",
+     "cita": "K-PCC.47; C-andalucia.md (d)"
+    }
+   ]
   },
   {
    "id": "j08-124",
@@ -7176,7 +7212,7 @@
    "nivel": 1,
    "dr": "PS04",
    "ensayo": "Verificación de la prueba de estanqueidad de una cubierta plana terminada mediante inundación",
-   "norma": "Doc. Reconocido DRC 06/09 de la Generalitat Valenciana",
+   "norma": "Procedimiento de referencia: Documento Reconocido DRC 06/09 de la Generalitat Valenciana",
    "lote": {
     "tipo": "C",
     "n": 1.0,
@@ -7185,7 +7221,16 @@
    },
    "precio": 210.0,
    "unidad": "ensayo",
-   "obs": null
+   "obs": null,
+   "correcciones": [
+    {
+     "original": {
+      "norma": "Doc. Reconocido DRC 06/09 de la Generalitat Valenciana"
+     },
+     "motivo": "Un documento reconocido de otra comunidad se puede citar como procedimiento, no como norma aplicable.",
+     "cita": "K-PCC.71; D-ejemplos.md §2.1 (8)"
+    }
+   ]
   },
   {
    "id": "j08-131",
@@ -7194,7 +7239,7 @@
    "nivel": 1,
    "dr": "PS04",
    "ensayo": "Prueba de estanqueidad de una cubierta inclinada terminada mediante aspersión",
-   "norma": "Doc. Reconocido DRC 06/09 de la Generalitat Valenciana",
+   "norma": "Procedimiento de referencia: Documento Reconocido DRC 06/09 de la Generalitat Valenciana",
    "lote": {
     "tipo": "A",
     "n": 1.0,
@@ -7204,6 +7249,15 @@
    "precio": 360.0,
    "unidad": "ensayo",
    "obs": "* Criterio de lote aproximado, influyen caudal, presión de agua, tipología de cubierta, accesibilidad, etc, ajustar al caso concreto Precio estimado para 150 m2 de cubierta. El agua debe ser aportada por peticionario",
+   "correcciones": [
+    {
+     "original": {
+      "norma": "Doc. Reconocido DRC 06/09 de la Generalitat Valenciana"
+     },
+     "motivo": "Un documento reconocido de otra comunidad se puede citar como procedimiento, no como norma aplicable.",
+     "cita": "K-PCC.71; D-ejemplos.md §2.1 (8)"
+    }
+   ],
    "cubre": {
     "nota": "La hoja da el lote por 50 m² y dice que el precio está estimado para 150 m² de cubierta; el agua la aporta el peticionario.",
     "segun": "Observación de la hoja"
@@ -7232,14 +7286,23 @@
    "nivel": 2,
    "dr": "PS03",
    "ensayo": "Estanqueidad in situ de fachadas",
-   "norma": "Doc. Reconocido DRC 06/09 de la Generalitat Valenciana",
+   "norma": "Procedimiento de referencia: Documento Reconocido DRC 06/09 de la Generalitat Valenciana",
    "lote": {
     "tipo": "D",
     "n": 1.0
    },
    "precio": 210.0,
    "unidad": "ensayo",
-   "obs": null
+   "obs": null,
+   "correcciones": [
+    {
+     "original": {
+      "norma": "Doc. Reconocido DRC 06/09 de la Generalitat Valenciana"
+     },
+     "motivo": "Un documento reconocido de otra comunidad se puede citar como procedimiento, no como norma aplicable.",
+     "cita": "K-PCC.71; D-ejemplos.md §2.1 (8)"
+    }
+   ]
   },
   {
    "id": "j08-134",

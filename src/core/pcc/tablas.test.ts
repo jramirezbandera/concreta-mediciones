@@ -35,7 +35,7 @@ const porId = new Map(ensayos.map((e) => [e.id, e]));
 const VETADAS = [
   /\bEHE\b/, /EHE-0?8/, /EFHE/, /\bEAE\b/, /RC-0[38]/, /1630\/1992/, /89\/106/, /\bDITE\b/, /\bNBE\b/,
   /clases? generales/i, /MOPU/, /UNE[- ]EN 13829/, /UNE 833\d\d/, /UNE 70\d\d:19/, /UNE 670[23]\d/,
-  /UNE 104281/, /art[íi]culo 37/i, /m[íi]nimo 5 ensayos por desplazamiento/i,
+  /UNE 104281/, /art[íi]culo 37/i, /m[íi]nimo 5 ensayos por desplazamiento/i, /6\/2012/, /……/,
 ];
 
 describe('catálogo de ensayos de la Junta', () => {

@@ -1605,6 +1605,33 @@
    ]
   }
  ],
+ "propios": [
+  { "id": "app-masa-metro", "ensayo": "Determinación de la masa por metro del acero para armar", "norma": "UNE-EN ISO 15630-1", "unidad": "ensayo", "cita": "Código Estructural, arts. 58 y 59.1.4.2" },
+  { "id": "app-quimica-acero", "ensayo": "Composición química del acero para armar (suministros de más de 300 t)", "norma": null, "unidad": "ensayo", "cita": "Código Estructural, art. 58" },
+  { "id": "app-dimensiones-ferralla", "ensayo": "Comprobación dimensional de unidades de ferralla", "norma": null, "unidad": "ensayo", "cita": "Código Estructural, art. 59.2.4.4" },
+  { "id": "app-doblado-mallas", "ensayo": "Doblado o doblado-desdoblado de mallas electrosoldadas", "norma": null, "unidad": "ensayo", "cita": "Código Estructural, art. 59.1.4.2" },
+  { "id": "app-dimensiones-mallas", "ensayo": "Dimensiones y número de elementos de mallas electrosoldadas", "norma": null, "unidad": "ensayo", "cita": "Código Estructural, art. 59.1.4.2" }
+ ],
+ "pruebasGenerales": [
+  { "id": "acustica-in-situ", "nombre": "Mediciones de aislamiento acústico in situ (UNE-EN ISO 16283)", "ensayos": ["j08-126", "j08-127", "j08-128"], "oblig": "P", "quien": "LAB", "cita": "CTE DB HR, 5.3: a criterio del proyecto" }
+ ],
+ "andalucia": {
+  "it5": {
+   "id": "it5-acustica",
+   "nombre": "Ensayos acústicos in situ para la licencia de primera ocupación",
+   "cita": "Decreto 50/2025, art. 27.3 e IT 5",
+   "ensayos": ["j08-126", "j08-127", "j08-128"],
+   "aislada": ["j08-128"],
+   "recintos": { "actividad": "j08-125", "instalaciones": "j08-125", "comunes": "j08-124" },
+   "quien": "laboratorio o entidad competente según el art. 27.3 del Decreto 50/2025",
+   "nota": "El cumplimiento en los casos muestreados no exime del cumplimiento en los no muestreados (IT 5, ap. 9)."
+  },
+  "marco": [
+   "Decreto 67/2011, de 5 de abril, de control de calidad de la construcción y obra pública (BOJA núm. 77, de 19-04-2011), arts. 1.2, 3 y 4"
+  ],
+  "vivienda": "Ley 5/2025, de 16 de diciembre, de Vivienda de Andalucía, arts. 27 y 29",
+  "acustica": "Decreto 50/2025, de 24 de febrero, Reglamento para la preservación de la calidad acústica en Andalucía, art. 27.3 e IT 5"
+ },
  "excluir": [
   {
    "id": "demolicion",

@@ -21,7 +21,7 @@ import armaduras from './tablas/armaduras.json';
 import durabilidad from './tablas/durabilidad.json';
 import ejecucion from './tablas/ejecucion.json';
 import lotesHormigon from './tablas/lotes-hormigon.json';
-import { avisosDesignacion, pideAireOcluido, pidePenetracion } from './hormigon';
+import { avisosDesignacion, designacionImprimible, pideAireOcluido, pidePenetracion } from './hormigon';
 import { unidadPcc } from './unidades';
 import type {
   AporteHormigon,
@@ -103,7 +103,7 @@ export function motivoSinIndirecto(designaciones: DesignacionHormigon[]): string
   if (armado)
     return (
       `El control indirecto de la resistencia (art. 57.5.6) exige fcd ≤ ${fcdMax} N/mm²; con γc = ${fmtNum(gammaC, 1)} y ` +
-      `αcc = ${fmtNum(alphaCC, 2)}, el ${armado.texto} da fcd = ${fmtNum(fcd(armado.fck), 1)} N/mm² > ${fcdMax}: no lo admite.`
+      `αcc = ${fmtNum(alphaCC, 2)}, el ${designacionImprimible(armado)} da fcd = ${fmtNum(fcd(armado.fck), 1)} N/mm² > ${fcdMax}: no lo admite.`
     );
   return 'El control indirecto de la resistencia (art. 57.5.6) no se ofrece en esta versión del plan.';
 }
@@ -277,7 +277,7 @@ export function calcularEstructura(e: EntradaEstructura): ResultadoEstructura {
     const superficie = valor(datos.superficie, plan.superficieConstruida);
     const plantas = valor(datos.plantas, plan.plantas);
     const semanas = datos.semanas ?? null;
-    const etiqueta = `${ETIQUETA_FILA[g.fila]} ${g.designacion.texto}`;
+    const etiqueta = `${ETIQUETA_FILA[g.fila]} ${designacionImprimible(g.designacion)}`;
     const notas: string[] = [];
     const ac = g.designacion.consistencia === 'AC';
 
@@ -436,7 +436,7 @@ export function calcularEstructura(e: EntradaEstructura): ResultadoEstructura {
       if (meses == null)
         pend({
           id: `meses:${dosificacion}`,
-          texto: `${dosificacion}: faltan los meses de suministro; la durabilidad se cuenta solo con el ensayo inicial (57.5.7).`,
+          texto: `${designacionImprimible(ds[0]!)}: faltan los meses de suministro; la durabilidad se cuenta solo con el ensayo inicial (57.5.7).`,
           grupo: dosificacion,
         });
       const que = [pen ? `${veces} penetración${veces > 1 ? 'es' : ''} de agua (${durabilidad.penetracion.probetas} probetas cada una)` : null, aire ? `${veces} de aire ocluido` : null]
@@ -444,12 +444,12 @@ export function calcularEstructura(e: EntradaEstructura): ResultadoEstructura {
         .join(' y ');
       durab.push({
         dosificacion,
-        designacion: ds[0]!.texto,
+        designacion: designacionImprimible(ds[0]!),
         clases,
         meses,
         penetracion: pen ? veces : 0,
         aireOcluido: aire ? veces : 0,
-        cuenta: `${ds[0]!.texto} (${clases.join(', ')}): al inicio y cada ${durabilidad.penetracion.cadaMeses} meses${meses != null ? ` de ${plural(meses, 'mes', 'meses')} de suministro` : ''} → ${que} (57.5.7)`,
+        cuenta: `${designacionImprimible(ds[0]!)} (${clases.join(', ')}): al inicio y cada ${durabilidad.penetracion.cadaMeses} meses${meses != null ? ` de ${plural(meses, 'mes', 'meses')} de suministro` : ''} → ${que} (57.5.7)`,
       });
     }
   }
