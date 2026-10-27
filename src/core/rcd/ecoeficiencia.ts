@@ -157,6 +157,13 @@ interface FilaBasica {
 
 export const OPCIONES_PLANTAS_BASICO: readonly string[] = tabla.basico.coefPlantas.opciones;
 
+/** Nº de plantas sobre rasante → opción de plantas del nivel básico. */
+export function plantasEcoBasico(n: number): string {
+  if (n <= 1) return '1';
+  if (n <= 4) return '2-4';
+  return '>4';
+}
+
 export interface ExtrasEcoBasico {
   /** Solo en obra nueva: limpieza y excavación salen del solar. */
   superficieSolar?: number | null;

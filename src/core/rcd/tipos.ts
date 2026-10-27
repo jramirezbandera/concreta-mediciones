@@ -150,13 +150,13 @@ export interface DatosRatios {
   nivel?: 'detallado' | 'basico';
   /** Solo nivel básico: uso de la obra nueva. */
   tipoBasico?: TipoObraEcoBasico;
-  superficieConstruida: number | null;
+  /* La superficie construida y las plantas son de la obra (`core/edificio`, TD2). */
   superficieSolar?: number | null;
   superficieOcupacion?: number | null;
-  plantasBajoRasante?: number;
-  /** Id de la opción elegida en cada grupo. */
+  /** Id de la opción elegida en cada grupo. La de «plantas» solo cuenta si la
+   *  ficha no dice las plantas sobre rasante. */
   opciones?: Partial<Record<GrupoOpcionEco, string>>;
-  /** Para el nivel básico: '1' | '2-4' | '>4'. */
+  /** Para el nivel básico: '1' | '2-4' | '>4', si la ficha no dice las plantas. */
   plantasBasico?: string;
   superficies?: Partial<Record<SuperficieEco, number>>;
   /** Las tierras de la obra: de los ratios o de las partidas de excavación. */

@@ -97,7 +97,22 @@ describe('vista Residuos', () => {
     const s = screen.getByLabelText('Superficie construida');
     fireEvent.change(s, { target: { value: '180' } });
     fireEvent.keyDown(s, { key: 'Enter' });
-    expect(state().estudioRcd!.ratios!.superficieConstruida).toBe(180);
+    expect(state().obra.superficieConstruida).toBe(180);
+    expect(state().estudioRcd!.ratios).not.toHaveProperty('superficieConstruida');
+  });
+
+  it('TD2: las plantas de la ficha deciden el tramo; sin ellas se elige el tramo', () => {
+    state().iniciarEstudioRcd();
+    state().setEstudioRcd({ tipos: ['nueva'], ratios: { metodo: 'ecoeficiencia', nivel: 'detallado', incluirTierras: true } });
+    render(<ResiduosView compact={false} onGoPresupuesto={() => undefined} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Datos' }));
+    expect(screen.getByRole('combobox', { name: 'Tramo de plantas' })).toBeTruthy();
+    const n = screen.getByLabelText('Plantas sobre rasante');
+    fireEvent.change(n, { target: { value: '5' } });
+    fireEvent.keyDown(n, { key: 'Enter' });
+    expect(state().obra.plantasSobreRasante).toBe(5);
+    expect(screen.queryByRole('combobox', { name: 'Tramo de plantas' })).toBeNull();
+    expect(screen.getByText('tramo 4-5')).toBeTruthy();
   });
 
   it('una partida confirmada que cambia sale «Ha cambiado» y se confirma otra vez (TD1)', () => {

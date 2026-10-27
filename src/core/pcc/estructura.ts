@@ -56,6 +56,8 @@ export interface PartidaEstructura {
 export interface EntradaEstructura {
   partidas: PartidaEstructura[];
   plan: PlanCalidadDatos;
+  /** Superficie construida y plantas (sobre y bajo rasante) de la ficha: prerrellenan los grupos (D7, TD2). */
+  obra?: { superficie: number | null; plantas: number | null };
 }
 
 /* ---- utilidades ----------------------------------------------------------- */
@@ -274,8 +276,8 @@ export function calcularEstructura(e: EntradaEstructura): ResultadoEstructura {
       obra: number | null | undefined,
     ): { valor: number | null; origen: OrigenDato } =>
       propio != null ? { valor: propio, origen: 'grupo' } : deObra && obra != null ? { valor: obra, origen: 'obra' } : { valor: null, origen: null };
-    const superficie = valor(datos.superficie, plan.superficieConstruida);
-    const plantas = valor(datos.plantas, plan.plantas);
+    const superficie = valor(datos.superficie, e.obra?.superficie);
+    const plantas = valor(datos.plantas, e.obra?.plantas);
     const semanas = datos.semanas ?? null;
     const etiqueta = `${ETIQUETA_FILA[g.fila]} ${designacionImprimible(g.designacion)}`;
     const notas: string[] = [];

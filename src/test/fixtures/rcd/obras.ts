@@ -107,13 +107,13 @@ export function obraB(extra: Partida[] = []): { chapters: Chapter[]; partidas: P
   const estructura = partida('EHS01', 'Pilar de hormigón armado', 'm³', 20, 300);
   return { chapters: [{ id: 'c', code: '1', title: 'Obra' }], partidas: { c: [vaciado, estructura, ...extra] } };
 }
-export const OBRA_B: Obra = { denominacion: 'Unifamiliar B', direccion: '', localidad: '', provincia: 'Málaga' };
+export const OBRA_B: Obra = { denominacion: 'Unifamiliar B', direccion: '', localidad: '', provincia: 'Málaga', superficieConstruida: 180 };
 export function estudioB(over: Partial<EstudioRcdDatos> = {}): EstudioRcdDatos {
   return estudio({
     tipos: ['nueva'],
     amianto: null,
     tierrasReutilizadas: { m3: 30, destino: 'Relleno del trasdós de muros de la propia obra' },
-    ratios: { metodo: 'ecoeficiencia', nivel: 'detallado', superficieConstruida: 180, superficieSolar: 400, superficieOcupacion: 110, opciones: OPCIONES_B, incluirTierras: true },
+    ratios: { metodo: 'ecoeficiencia', nivel: 'detallado', superficieSolar: 400, superficieOcupacion: 110, opciones: OPCIONES_B, incluirTierras: true },
     ...over,
   });
 }

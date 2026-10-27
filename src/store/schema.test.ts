@@ -9,6 +9,7 @@ import a0 from '../test/fixtures/planos/obra-v6-a0.json';
 import a1 from '../test/fixtures/planos/obra-v6-a1.json';
 import { SCHEMA_VERSION, blankObraData, fromSerializable, toSerializable, type ObraData } from './schema';
 import { useObraStore } from './obraStore';
+import { estudioVacio } from '../core/rcd/datos';
 
 const A0 = a0 as unknown as ObraData;
 const A1 = a1 as unknown as ObraData;
@@ -72,8 +73,7 @@ describe('v7 → v8 (plan de control de calidad)', () => {
     const v7 = { ...blankObraData(), schemaVersion: 7 } as ObraData;
     delete v7.planCalidad;
     const d = fromSerializable(clon(v7));
-    expect(SCHEMA_VERSION).toBe(8);
-    expect(d).toEqual({ ...v7, schemaVersion: 8 });
+    expect(d).toEqual({ ...v7, schemaVersion: SCHEMA_VERSION });
     expect(d.planCalidad).toBeUndefined();
   });
 
@@ -101,6 +101,69 @@ describe('v7 → v8 (plan de control de calidad)', () => {
   it('toSerializable lleva `planCalidad` solo si hay plan', () => {
     expect('planCalidad' in toSerializable(blankObraData())).toBe(false);
     expect(toSerializable({ ...blankObraData(), planCalidad: { version: 1 } }).planCalidad).toEqual({ version: 1 });
+  });
+});
+
+describe('v8 → v9 (TD2: superficie y plantas en la ficha)', () => {
+  /** Una v8 con los datos de los anejos como se guardaban entonces. */
+  function v8(ratios: Record<string, unknown> | null, plan: Record<string, unknown> | null): ObraData {
+    const d = { ...blankObraData(), schemaVersion: 8 } as ObraData;
+    const raw = d as unknown as Record<string, unknown>;
+    if (ratios) raw.estudioRcd = { ...estudioVacio(), tipos: ['nueva'], ratios: { metodo: 'ecoeficiencia', nivel: 'detallado', incluirTierras: true, ...ratios } };
+    if (plan) raw.planCalidad = { version: 1, ...plan };
+    return d;
+  }
+  const ED = ['superficieConstruida', 'plantasSobreRasante', 'plantasBajoRasante'];
+  const edificio = (d: ObraData) => Object.fromEntries(ED.filter((k) => k in d.obra).map((k) => [k, d.obra[k]]));
+
+  it('sin anejos solo sube la versión', () => {
+    const d0 = v8(null, null);
+    expect(fromSerializable(clon(d0))).toEqual({ ...d0, schemaVersion: SCHEMA_VERSION });
+  });
+
+  it('los dos coinciden: pasan a la ficha y salen de los anejos; las plantas del plan eran todas', () => {
+    const d = fromSerializable(
+      v8({ superficieConstruida: 300, plantasBajoRasante: 1, opciones: { plantas: '2-3', tipologia: 'unifamiliarExento' } }, { superficieConstruida: 300, plantas: 3, viviendas: 1 }),
+    );
+    expect(d.schemaVersion).toBe(SCHEMA_VERSION);
+    expect(edificio(d)).toEqual({ superficieConstruida: 300, plantasSobreRasante: 2, plantasBajoRasante: 1 });
+    expect(d.estudioRcd!.ratios).toEqual({ metodo: 'ecoeficiencia', nivel: 'detallado', incluirTierras: true, opciones: { plantas: '2-3', tipologia: 'unifamiliarExento' } });
+    expect(d.planCalidad).toEqual({ version: 1, viviendas: 1 });
+  });
+
+  it('superficies distintas: manda la de residuos', () => {
+    expect(edificio(fromSerializable(v8({ superficieConstruida: 180 }, { superficieConstruida: 200 })))).toEqual({ superficieConstruida: 180 });
+  });
+
+  it('solo calidad: su superficie y sus plantas', () => {
+    expect(edificio(fromSerializable(v8(null, { superficieConstruida: 300, plantas: 2 })))).toEqual({ superficieConstruida: 300, plantasSobreRasante: 2 });
+  });
+
+  it('las plantas del plan caen en otro tramo que el de residuos: la ficha se queda sin ellas y residuos con su tramo', () => {
+    const d = fromSerializable(v8({ superficieConstruida: 300, opciones: { plantas: '4-5' } }, { plantas: 2 }));
+    expect(edificio(d)).toEqual({ superficieConstruida: 300 });
+    expect(d.estudioRcd!.ratios!.opciones).toEqual({ plantas: '4-5' });
+    expect(d.planCalidad).toEqual({ version: 1 });
+    // sin tramo elegido, residuos usaba el primero («1»)
+    expect(edificio(fromSerializable(v8({}, { plantas: 2 })))).toEqual({});
+    expect(edificio(fromSerializable(v8({}, { plantas: 1 })))).toEqual({ plantasSobreRasante: 1 });
+  });
+
+  it('nivel básico: se compara con su tramo', () => {
+    expect(edificio(fromSerializable(v8({ nivel: 'basico', plantasBasico: '2-4' }, { plantas: 3 })))).toEqual({ plantasSobreRasante: 3 });
+    expect(edificio(fromSerializable(v8({ nivel: 'basico', plantasBasico: '>4' }, { plantas: 3 })))).toEqual({});
+  });
+
+  it('ratios tecleados: no hay tramo con el que chocar', () => {
+    expect(edificio(fromSerializable(v8({ metodo: 'manual', superficieConstruida: 120 }, { plantas: 4 })))).toEqual({ superficieConstruida: 120, plantasSobreRasante: 4 });
+  });
+
+  it('las plantas bajo rasante no dejan ninguna sobre rasante: no se inventan', () => {
+    expect(edificio(fromSerializable(v8({ plantasBajoRasante: 1, metodo: 'manual' }, { plantas: 1 })))).toEqual({ plantasBajoRasante: 1 });
+  });
+
+  it('un número ilegible no pasa a la ficha', () => {
+    expect(edificio(fromSerializable(v8({ superficieConstruida: '300' }, { superficieConstruida: -5, plantas: Number.NaN })))).toEqual({});
   });
 });
 

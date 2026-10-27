@@ -1,6 +1,7 @@
 import { comunidadDeProvincia } from '../../core/rcd/calculo';
 import type { DatosFamilia, PlanCalidad, PlanCalidadDatos } from '../../core/pcc/tipos';
 import { useObraStore } from '../../store';
+import { edificioDe } from '../../core/edificio';
 import type { Agente } from '../../core/types';
 import { CampoNum, CampoTexto } from '../residuos/Campos';
 import styles from '../residuos/Residuos.module.css';
@@ -46,6 +47,8 @@ export function DatosPlan({ r, datos }: { r: PlanCalidad; datos: PlanCalidadDato
   const set = useObraStore((s) => s.setPlanCalidad);
   const agentes = useObraStore((s) => s.obra.direccionFacultativa ?? SIN_AGENTES);
   const provincia = useObraStore((s) => (typeof s.obra.provincia === 'string' ? s.obra.provincia : ''));
+  const edificio = edificioDe(useObraStore((s) => s.obra));
+  const setEdificio = useObraStore((s) => s.setEdificio);
   const deduce = comunidadDeProvincia(provincia);
   const setFamilia = (id: string, patch: Partial<DatosFamilia>) =>
     set({ familias: { ...(datos.familias ?? {}), [id]: { ...(datos.familias?.[id] ?? {}), ...patch } } });
@@ -116,11 +119,34 @@ export function DatosPlan({ r, datos }: { r: PlanCalidad; datos: PlanCalidadDato
           </label>
           <label className={styles.field}>
             Superficie construida
-            <CampoNum ariaLabel="Superficie construida" unidad="m²" value={datos.superficieConstruida} min={0} onCommit={(v) => set({ superficieConstruida: v })} />
+            <CampoNum
+              ariaLabel="Superficie construida"
+              unidad="m²"
+              value={edificio.superficieConstruida}
+              min={0}
+              onCommit={(v) => setEdificio({ superficieConstruida: v })}
+            />
           </label>
           <label className={styles.field}>
-            Plantas
-            <CampoNum ariaLabel="Plantas" value={datos.plantas} min={1} dec={0} onCommit={(v) => set({ plantas: v })} />
+            Plantas sobre rasante
+            <CampoNum
+              ariaLabel="Plantas sobre rasante"
+              value={edificio.plantasSobreRasante}
+              min={1}
+              dec={0}
+              onCommit={(v) => setEdificio({ plantasSobreRasante: v })}
+            />
+          </label>
+          <label className={styles.field}>
+            Plantas bajo rasante
+            <CampoNum
+              ariaLabel="Plantas bajo rasante"
+              value={edificio.plantasBajoRasante}
+              min={0}
+              dec={0}
+              placeholder="0"
+              onCommit={(v) => setEdificio({ plantasBajoRasante: v })}
+            />
           </label>
           <label className={styles.field}>
             Zona sísmica
@@ -139,7 +165,10 @@ export function DatosPlan({ r, datos }: { r: PlanCalidad; datos: PlanCalidadDato
             </select>
           </label>
         </div>
-        <p className={styles.nota}>Superficie y plantas de la obra se usan en los grupos de hormigón que no dicen las suyas (pestaña «Estructura»).</p>
+        <p className={styles.nota}>
+          Superficie y plantas son de la obra: las comparte el estudio de residuos y están también en «Datos de la obra». Se usan en los grupos de
+          hormigón que no dicen las suyas (pestaña «Estructura»), con las plantas sobre y bajo rasante sumadas.
+        </p>
       </section>
 
       {andalucia && plurifamiliar && (

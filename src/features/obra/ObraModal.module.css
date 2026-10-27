@@ -143,3 +143,9 @@
   border-color: var(--accent);
   background: var(--accent-soft);
 }
+
+.nota {
+  margin: var(--sp-8) 0 0;
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+}

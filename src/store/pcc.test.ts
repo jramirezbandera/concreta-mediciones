@@ -6,7 +6,7 @@ import type { Partida } from '../core/types';
 import { obraA, RATES } from '../test/fixtures/pcc/obras';
 import { parseObraJson, buildExportText } from '../persist/transfer';
 import { blankObraData, fromSerializable, useObraStore } from './index';
-import { __resetHistoryForTests, initHistory, undo } from './temporal';
+import { __resetHistoryForTests, __setThrottleMsForTests, initHistory, undo } from './temporal';
 
 const state = () => useObraStore.getState();
 
@@ -90,12 +90,30 @@ describe('plan de control de calidad en el store', () => {
     expect(necesitaRevision(p('e', 'p1').pcc!, p('e', 'p1'))).toBe(false);
   });
 
+  it('TD2: superficie y plantas de la ficha llegan a los lotes, sobre y bajo rasante sumadas; un paso de Deshacer', () => {
+    __setThrottleMsForTests(0);
+    state().iniciarPlanCalidad();
+    state().confirmarControles([{ chapterId: 'e', partidaId: 'p1' }]);
+    state().setEdificio({ superficieConstruida: 300, plantasSobreRasante: 2, plantasBajoRasante: 1 });
+    expect(state().obra).toMatchObject({ superficieConstruida: 300, plantasSobreRasante: 2, plantasBajoRasante: 1 });
+    const s = state();
+    const r = calcularPlanCalidad({ chapters: s.chapters, partidas: s.partidas, banco: s.recursos, rates: RATES, obra: s.obra, plan: s.planCalidad!, hoy: '2026-10-27' });
+    expect(r.estructura.grupos[0]).toMatchObject({ superficie: { valor: 300, origen: 'obra' }, plantas: { valor: 3, origen: 'obra' } });
+    state().setEdificio({ plantasBajoRasante: null, superficieConstruida: Number.NaN });
+    expect(state().obra).not.toHaveProperty('plantasBajoRasante');
+    expect(state().obra).not.toHaveProperty('superficieConstruida');
+    undo();
+    expect(state().obra).toMatchObject({ superficieConstruida: 300, plantasBajoRasante: 1 });
+    undo();
+    expect(state().obra).not.toHaveProperty('plantasSobreRasante');
+  });
+
   it('cada acción es un paso de Deshacer', () => {
     state().iniciarPlanCalidad();
     state().confirmarControles([{ chapterId: 'e', partidaId: 'p1' }]);
-    state().setPlanCalidad({ plantas: 2 });
+    state().setPlanCalidad({ viviendas: 2 });
     undo();
-    expect(state().planCalidad!.plantas).toBeUndefined();
+    expect(state().planCalidad!.viviendas).toBeUndefined();
     undo();
     expect(p('e', 'p1').pcc!.estado).toBe('propuesta');
     undo();

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { Partida } from '../types';
+import type { Obra, Partida } from '../types';
 import { calcularEstudioRcd, comunidadDeProvincia, type EntradaRcd } from './calculo';
 import { estimarEcoDetallado } from './ecoeficiencia';
 import type { EstudioRcdDatos } from './tipos';
-import { OBRA_A, RATES, estudio, obraA, partida } from '../../test/fixtures/rcd/obras';
+import { OBRA_A, OBRA_B, RATES, estudio, estudioB, obraA, partida } from '../../test/fixtures/rcd/obras';
 
 function calculaA(over: Partial<EstudioRcdDatos> = {}) {
   const { chapters, partidas } = obraA();
@@ -142,7 +142,7 @@ describe('B · obra nueva unifamiliar por ratios', () => {
     fachada: 'ceramicaRevestida',
     pavimento: 'baldosaCeramica',
   };
-  function calculaB(extra: Partida[] = [], over: Partial<EstudioRcdDatos> = {}) {
+  function calculaB(extra: Partida[] = [], over: Partial<EstudioRcdDatos> = {}, obra: Partial<Obra> = {}) {
     const vaciado = partida('ADE01', 'Vaciado hasta 2 m con medios mecánicos', 'm³', 95, 12, {
       estado: 'confirmada',
       origen: { tipo: 'manual', motivo: 'test' },
@@ -153,12 +153,12 @@ describe('B · obra nueva unifamiliar por ratios', () => {
       chapters: [{ id: 'c', code: '1', title: 'Obra' }],
       partidas: { c: [vaciado, estructura, ...extra] },
       rates: RATES,
-      obra: { denominacion: 'Unifamiliar B', direccion: '', localidad: '', provincia: 'Málaga' },
+      obra: { denominacion: 'Unifamiliar B', direccion: '', localidad: '', provincia: 'Málaga', superficieConstruida: 180, ...obra },
       estudio: estudio({
         tipos: ['nueva'],
         amianto: null,
         tierrasReutilizadas: { m3: 30, destino: 'Relleno del trasdós de muros de la propia obra' },
-        ratios: { metodo: 'ecoeficiencia', nivel: 'detallado', superficieConstruida: 180, superficieSolar: 400, superficieOcupacion: 110, opciones, incluirTierras: true },
+        ratios: { metodo: 'ecoeficiencia', nivel: 'detallado', superficieSolar: 400, superficieOcupacion: 110, opciones, incluirTierras: true },
         ...over,
       }),
       hoy: '2026-10-16',
@@ -213,9 +213,37 @@ describe('B · obra nueva unifamiliar por ratios', () => {
     expect(r.avisos.some((a) => a.id === 'fuera-rcd:10 13 99')).toBe(true);
   });
 
-  it('sin superficie construida no aplica ratios y lo pide', () => {
-    const s = calculaB([], { ratios: { metodo: 'ecoeficiencia', nivel: 'detallado', superficieConstruida: null, incluirTierras: true } });
+  it('sin superficie construida en la ficha no aplica ratios y lo pide', () => {
+    const s = calculaB([], {}, { superficieConstruida: null });
     expect(s.pendientes.some((p) => p.id === 'superficie')).toBe(true);
+    expect(s.version.ratios).toBeNull();
+  });
+
+  it('TD2: con las plantas en la ficha, el tramo sale de ellas; sin ellas, el elegido en residuos', () => {
+    const t = (x: ReturnType<typeof calculaB>) => x.porCodigo.find((f) => f.ler === '15 01 03')!.t;
+    const cinco = estimarEcoDetallado({ superficieConstruida: 180, opciones: { ...opciones, plantas: '4-5' }, incluirTierras: false });
+    expect(t(calculaB([], {}, { plantasSobreRasante: 5 }))).toBeCloseTo(cinco.find((f) => f.ler === '15 01 03')!.t, 3);
+    expect(t(calculaB([], {}, { plantasSobreRasante: 3 }))).toBeCloseTo(t(r), 9);
+    expect(t(calculaB([], {}, { plantasSobreRasante: 5 }))).not.toBeCloseTo(t(r), 3);
+  });
+
+  it('TD2: la superficie y las plantas bajo rasante salen de la ficha', () => {
+    const t = (x: ReturnType<typeof calculaB>) => x.porCodigo.find((f) => f.ler === '15 01 03')!.t;
+    expect(t(calculaB([], {}, { superficieConstruida: 360 }))).toBeCloseTo(2 * t(r), 6);
+    // Sin partida de excavación, las tierras del vaciado del sótano salen de la ocupación y las plantas bajo rasante.
+    const tierras = (obra: Partial<Obra>) =>
+      calcularEstudioRcd({ chapters: [{ id: 'c', code: '1', title: 'Obra' }], partidas: { c: [] }, rates: RATES, obra: { ...OBRA_B, ...obra }, estudio: estudioB(), hoy: '2026-10-16' })
+        .porCodigo.find((f) => f.ler === '17 05 04')!.t;
+    expect(tierras({ plantasBajoRasante: 1 })).toBeGreaterThan(tierras({}));
+  });
+
+  it('TD2: nivel básico, el tramo de la hoja sale de las plantas de la ficha', () => {
+    const basico = (plantasBasico: string, obra: Partial<Obra> = {}) =>
+      calculaB([], { ratios: { metodo: 'ecoeficiencia', nivel: 'basico', tipoBasico: 'nuevaResidencial', plantasBasico, incluirTierras: true } }, obra)
+        .porCodigo.find((f) => f.ler === '15 01 03')!.t;
+    expect(basico('1', { plantasSobreRasante: 6 })).toBeCloseTo(basico('>4'), 9);
+    expect(basico('>4', { plantasSobreRasante: 1 })).toBeCloseTo(basico('1'), 9);
+    expect(basico('1')).not.toBeCloseTo(basico('>4'), 6);
   });
 });
 

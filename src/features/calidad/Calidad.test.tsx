@@ -53,11 +53,12 @@ describe('vista Calidad', () => {
     const todas = Object.values(state().partidas).flat();
     expect(todas.every((p) => p.pcc && p.pcc.estado !== 'propuesta')).toBe(true);
 
-    // los datos de la obra, tecleados una vez
+    // los datos de la obra, tecleados una vez: van a la ficha (TD2)
     fireEvent.click(screen.getByRole('tab', { name: 'Datos' }));
     teclear(screen.getByLabelText('Superficie construida'), '300');
-    teclear(screen.getByLabelText('Plantas'), '2');
-    expect(state().planCalidad).toMatchObject({ superficieConstruida: 300, plantas: 2 });
+    teclear(screen.getByLabelText('Plantas sobre rasante'), '2');
+    expect(state().obra).toMatchObject({ superficieConstruida: 300, plantasSobreRasante: 2 });
+    expect(state().planCalidad).not.toHaveProperty('superficieConstruida');
 
     // lo demás, como en la obra A del plan
     state().setPlanCalidad(o.plan);

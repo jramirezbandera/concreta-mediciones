@@ -14,6 +14,7 @@
        colocación o embalaje por partidas no recibe ratio, y las tierras del
        ratio no se suman si hay partidas de excavación.
    =========================================================================== */
+import { edificioDe } from '../edificio';
 import { partidaCantidad, partidaImporte } from '../medicion';
 import { pem as pemDe, costesDirectos } from '../totales';
 import { findNode, subtreeIds } from '../tree';
@@ -23,7 +24,7 @@ import { coherencia } from './coherencia';
 import { convertir } from './conversion';
 import { densidadAparente } from './aparente';
 import { SE_AE_ID } from './densidades';
-import { ECO_CITA_CORTA, ECO_ID, estimarEcoBasico, estimarEcoDetallado, type FilaEco } from './ecoeficiencia';
+import { ECO_CITA_CORTA, ECO_ID, estimarEcoBasico, estimarEcoDetallado, plantasEco, plantasEcoBasico, type FilaEco } from './ecoeficiencia';
 import {
   destinoPorDefecto,
   esVertedero,
@@ -205,13 +206,17 @@ export function calcularEstudioRcd(e: EntradaRcd): EstudioRcd {
   /* ---- 2. ratios de obra nueva ------------------------------------------ */
   let ratiosId: string | null = null;
   const rat = estudio.ratios;
+  const edificio = edificioDe(obra);
+  const S = edificio.superficieConstruida;
+  /** Con las plantas en la ficha, el tramo de la hoja sale de ellas; sin ellas, el elegido aquí (TD2). */
+  const sobre = edificio.plantasSobreRasante;
   if (estudio.tipos.includes('nueva')) {
     if (!rat) {
       const conConstruccion = [...acc.values()].some((a) => a.tipos.has('colocacion') || a.tipos.has('embalaje'));
       if (!conConstruccion)
         pend({ id: 'ratios', apartado: '1', texto: 'Obra nueva sin estimación de los residuos de construcción: elige los ratios por m² o importa el presupuesto con sus residuos (~R).' });
-    } else if (!(rat.superficieConstruida && rat.superficieConstruida > 0)) {
-      pend({ id: 'superficie', apartado: '1', texto: 'Falta la superficie construida de la obra nueva para aplicar los ratios.' });
+    } else if (!(S && S > 0)) {
+      pend({ id: 'superficie', apartado: '1', texto: 'Falta la superficie construida de la obra (ficha de la obra) para aplicar los ratios.' });
     } else {
       const hayExcavacion = [...acc.values()].some((a) => a.tipos.has('excavacion'));
       const incluirTierras = rat.incluirTierras && !hayExcavacion;
@@ -224,22 +229,21 @@ export function calcularEstudioRcd(e: EntradaRcd): EstudioRcd {
         fuente = ECO_CITA_CORTA;
         filas =
           rat.nivel === 'basico'
-            ? estimarEcoBasico(rat.tipoBasico ?? 'nuevaNoResidencial', rat.superficieConstruida, rat.plantasBasico ?? '1', false, {
+            ? estimarEcoBasico(rat.tipoBasico ?? 'nuevaNoResidencial', S, sobre != null ? plantasEcoBasico(sobre) : (rat.plantasBasico ?? '1'), false, {
                 superficieSolar: rat.superficieSolar,
                 incluirTierras,
               })
             : estimarEcoDetallado({
-                superficieConstruida: rat.superficieConstruida,
-                opciones: rat.opciones,
+                superficieConstruida: S,
+                opciones: sobre != null ? { ...rat.opciones, plantas: plantasEco(sobre) } : rat.opciones,
                 superficies: rat.superficies,
                 superficieSolar: rat.superficieSolar,
                 superficieOcupacion: rat.superficieOcupacion,
-                plantasBajoRasante: rat.plantasBajoRasante,
+                plantasBajoRasante: edificio.plantasBajoRasante ?? undefined,
                 incluirTierras,
               });
       } else {
         ratiosId = 'manual';
-        const S = rat.superficieConstruida;
         const validos = (rat.manual ?? []).filter((m) => {
           if (ler.has(m.ler)) return true;
           pend({ id: `ratio-ler:${m.ler}`, apartado: '1', texto: `Un ratio tecleado tiene un código que no está en la lista vigente («${m.ler || 'vacío'}»).` });

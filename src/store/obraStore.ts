@@ -22,6 +22,7 @@ import { create, type StateCreator } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import type { Agente, Cert, Escala, MedForma, MedLine, Partida, PlanoMeta, Rates, ResourceType } from '../core/types';
+import { CAMPOS_EDIFICIO, numeroEdificio, type Edificio } from '../core/edificio';
 import { composeCertFirmantes, firmaCertDefinitiva } from '../core/listado';
 import { ancestorIds, findNode } from '../core/tree';
 import { rawUuid } from '../core/id';
@@ -589,6 +590,9 @@ export interface ObraState extends ObraData {
    * Solo escribe strings (los campos del modal son inputs de texto).
    */
   setObraPath: (path: string, value: string) => void;
+  /** Superficie construida y plantas de la obra, las que leen residuos y calidad
+   *  (TD2). `null` borra el dato. */
+  setEdificio: (patch: Partial<Edificio>) => void;
 
   /* ---- dirección facultativa (pies de firma por rol) ---- */
   /** Añade un agente en blanco (rol «Director de obra») a la dirección facultativa. */
@@ -913,6 +917,16 @@ export const useObraStore = create<ObraState>()(
             obj = obj[k] as Record<string, unknown>;
           }
           obj[keys[keys.length - 1]!] = value;
+        }),
+
+      setEdificio: (patch) =>
+        set((s) => {
+          for (const k of CAMPOS_EDIFICIO) {
+            if (!(k in patch)) continue;
+            const v = numeroEdificio(patch[k]);
+            if (v == null) delete s.obra[k];
+            else s.obra[k] = v;
+          }
         }),
 
       addAgenteDF: () =>

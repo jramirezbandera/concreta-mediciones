@@ -302,15 +302,15 @@ Contexto común: `docs/plan-control-calidad.md`, «Revisión de ingeniería» y 
   (`core/rcd/reglas.ts`) y `store/slices/rcdSlice.ts`.
 - **Depende de:** el helper de huella que escriba la E3 de calidad.
 
-### Una sola superficie construida para residuos y calidad (P3)
+### ~~Una sola superficie construida para residuos y calidad~~ — HECHO (2026-10-27)
 
-- **Qué:** un dato de obra (ficha) con la superficie construida y las plantas, que
-  lean el estudio de residuos y el plan de calidad, con migración del dato de residuos.
-- **Por qué:** hoy residuos lo pide en `DatosRatios.superficieConstruida` y calidad
-  en `planCalidad` (D6): el mismo número se teclea dos veces y puede no coincidir.
-- **Contexto:** D6 lo dejó en `planCalidad` para no tocar `Obra`, la ficha ni las
-  cabeceras. Empezar por `Obra` (`core/types.ts`) y `DatosRatios`.
-- **Depende de:** la E3 de calidad.
+La superficie construida y las plantas sobre y bajo rasante viven en la ficha
+(`obra.superficieConstruida`, `plantasSobreRasante`, `plantasBajoRasante`;
+`core/edificio.ts`) y se editan en «Datos de la obra», en los datos del estudio de
+residuos y en los del plan de calidad: los tres escriben el mismo dato. Residuos saca el
+tramo de plantas de ECO-eficiencia del número (sin número, sigue con el tramo elegido);
+calidad suma sobre y bajo rasante para los lotes. Schema v9: la migración pasa los datos
+de los anejos a la ficha y, si no coinciden, manda residuos.
 
 ---
 

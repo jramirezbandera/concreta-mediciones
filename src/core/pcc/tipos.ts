@@ -183,9 +183,6 @@ export interface PlanCalidadDatos {
   precios?: Record<string, PrecioCopiado>;
   /** Precio tecleado por ensayo (€). */
   preciosManuales?: Record<string, number>;
-  /** De la obra, tecleadas una vez: prerrellenan los grupos (D7). */
-  superficieConstruida?: number | null;
-  plantas?: number | null;
   grupos?: Record<string, DatosGrupo>;
   hormigon?: {
     distintivo?: Distintivo;

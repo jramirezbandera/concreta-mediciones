@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calcularEstructura, fcd, serieDe, type PartidaEstructura } from './estructura';
+import { calcularEstructura, fcd, serieDe, type EntradaEstructura, type PartidaEstructura } from './estructura';
 import { leerDesignacion } from './hormigon';
 import type { AceroPartida, DatosGrupo, FilaLote, HormigonPartida, PlanCalidadDatos } from './tipos';
 
@@ -46,7 +46,10 @@ const clave = (p: PartidaEstructura) =>
 function plan(grupos: Array<[PartidaEstructura, DatosGrupo]>, resto: Partial<PlanCalidadDatos> = {}): PlanCalidadDatos {
   return { version: 1, grupos: Object.fromEntries(grupos.map(([p, g]) => [clave(p), g])), ...resto };
 }
-const calc = (partidas: PartidaEstructura[], p: PlanCalidadDatos = { version: 1 }) => calcularEstructura({ partidas, plan: p });
+const calc = (partidas: PartidaEstructura[], p: PlanCalidadDatos = { version: 1 }, obra?: EntradaEstructura['obra']) =>
+  calcularEstructura({ partidas, plan: p, obra });
+/** Obra A: 300 m² construidos y 2 plantas (de la ficha, TD2). */
+const OBRA_300_2 = { superficie: 300, plantas: 2 };
 const DCOR: Partial<PlanCalidadDatos> = { hormigon: { distintivo: 'con' } };
 
 describe('A6: lotes y amasadas (tabla 57.5.4.1)', () => {
@@ -177,7 +180,8 @@ describe('A6: lotes de ejecución (tabla 63.1)', () => {
     const p = hormigon('pilares_muros', 10);
     const r = calc(
       [z, f, p],
-      plan([[z, { superficie: 150, elementos: 12 }]], { superficieConstruida: 450, plantas: 3 }),
+      plan([[z, { superficie: 150, elementos: 12 }]]),
+      { superficie: 450, plantas: 3 },
     );
     expect(r.ejecucion.lotes.map((l) => [l.fila, l.lotes])).toEqual([
       ['cimentacion', 2],
@@ -294,13 +298,12 @@ describe('grupos, datos y pendientes', () => {
   it('los datos de la obra prerrellenan los grupos y el del grupo manda (D7)', () => {
     const f = hormigon('flexion', 45);
     const p = hormigon('pilares_muros', 5);
-    const obra = { superficieConstruida: 300, plantas: 2 };
-    const r = calc([f, p], { version: 1, ...obra });
+    const r = calc([f, p], { version: 1 }, OBRA_300_2);
     expect(r.grupos.map((g) => [g.lotes, g.superficie, g.plantas])).toEqual([
       [1, { valor: 300, origen: 'obra' }, { valor: 2, origen: 'obra' }],
       [1, { valor: 300, origen: 'obra' }, { valor: 2, origen: 'obra' }],
     ]);
-    const r2 = calc([f, p], plan([[f, { plantas: 3 }]], obra));
+    const r2 = calc([f, p], plan([[f, { plantas: 3 }]]), OBRA_300_2);
     expect(r2.grupos[0]).toMatchObject({ lotes: 2, plantas: { valor: 3, origen: 'grupo' } });
     expect(r2.grupos[1]!.lotes).toBe(1);
   });
@@ -326,12 +329,7 @@ describe('grupos, datos y pendientes', () => {
     const forjado = hormigon('flexion', 45, 'HA-25/B/20/XC1');
     const pilares = hormigon('pilares_muros', 5, 'HA-25/B/20/XC1');
     const muro = hormigon('pilares_muros', 18, 'HA-30/B/20/XS1');
-    const r = calc([zapatas, forjado, pilares, muro], {
-      version: 1,
-      superficieConstruida: 300,
-      plantas: 2,
-      dosificaciones: { 'HA-30/B/20/XS1': { meses: 4 } },
-    });
+    const r = calc([zapatas, forjado, pilares, muro], { version: 1, dosificaciones: { 'HA-30/B/20/XS1': { meses: 4 } } }, OBRA_300_2);
     expect(r.grupos.map((g) => [g.clave, g.lotes, g.amasadas])).toEqual([
       ['cim_superficial|HA-25/B/20/XC2', 1, 3],
       ['flexion|HA-25/B/20/XC1', 1, 3],
@@ -341,14 +339,14 @@ describe('grupos, datos y pendientes', () => {
     expect(r.totales.amasadas).toBe(12);
     expect(r.durabilidad.map((d) => [d.dosificacion, d.penetracion])).toEqual([['HA-30/B/20/XS1', 1]]);
     // con distintivo: el mínimo de 3 lotes y N = 1
-    const con = calc([zapatas, forjado, pilares, muro], { version: 1, superficieConstruida: 300, plantas: 2, ...DCOR });
+    const con = calc([zapatas, forjado, pilares, muro], { version: 1, ...DCOR }, OBRA_300_2);
     expect(con.totales).toMatchObject({ lotes: 4, amasadas: 4 });
   });
 
   it('con distintivo y menos de tres grupos, se sube a tres lotes', () => {
     const f = hormigon('flexion', 60);
     const p = hormigon('pilares_muros', 10);
-    const r = calc([f, p], { version: 1, superficieConstruida: 300, plantas: 2, ...DCOR });
+    const r = calc([f, p], { version: 1, ...DCOR }, OBRA_300_2);
     expect(r.totales.lotes).toBe(3);
     expect(r.grupos[0]).toMatchObject({ lotes: 2, amasadas: 2 });
     expect(r.grupos[0]!.cuenta).toMatch(/= 2 lotes \(tabla 57\.5\.4\.1, × 5\) × 1 amasada = 2 tomas$/);

@@ -1,9 +1,12 @@
+import { Fragment, type ReactNode } from 'react';
 import {
   comunidadDeProvincia,
   ECO_CITA_CORTA,
   GRUPOS_ECO,
   OPCIONES_PLANTAS_BASICO,
   opcionesEco,
+  plantasEco,
+  plantasEcoBasico,
   PLANO_POR_DEFECTO,
   type DatosRatios,
   type EstudioRcdDatos,
@@ -11,6 +14,7 @@ import {
   type SuperficieEco,
   type TipoObraRcd,
 } from '../../core/rcd';
+import { edificioDe } from '../../core/edificio';
 import type { Agente } from '../../core/types';
 import { useObraStore } from '../../store';
 import { CampoNum, CampoTexto } from './Campos';
@@ -49,10 +53,32 @@ export function DatosEstudio({ datos }: { datos: EstudioRcdDatos }) {
   const set = useObraStore((s) => s.setEstudioRcd);
   const provincia = useObraStore((s) => (typeof s.obra.provincia === 'string' ? s.obra.provincia : ''));
   const agentes = useObraStore((s) => s.obra.direccionFacultativa ?? SIN_AGENTES);
+  const obra = useObraStore((s) => s.obra);
+  const setEdificio = useObraStore((s) => s.setEdificio);
+  const edificio = edificioDe(obra);
+  const sobre = edificio.plantasSobreRasante;
   const deduce = comunidadDeProvincia(provincia);
   const rat = datos.ratios;
   const setRat = (patch: Partial<DatosRatios>) =>
-    set({ ratios: { ...(rat ?? { metodo: 'ecoeficiencia', nivel: 'detallado', superficieConstruida: null, incluirTierras: true }), ...patch } });
+    set({ ratios: { ...(rat ?? { metodo: 'ecoeficiencia', nivel: 'detallado', incluirTierras: true }), ...patch } });
+  /** Plantas sobre rasante (de la obra); sin el número, el tramo de la hoja se elige aquí (obras de antes de TD2). */
+  const campoPlantas = (tramo: (n: number) => string, select: ReactNode) => (
+    <>
+      <label className={styles.field}>
+        Plantas sobre rasante
+        <CampoNum
+          ariaLabel="Plantas sobre rasante"
+          min={1}
+          dec={0}
+          placeholder="—"
+          unidad={sobre != null ? `tramo ${tramo(sobre)}` : undefined}
+          value={sobre}
+          onCommit={(v) => setEdificio({ plantasSobreRasante: v })}
+        />
+      </label>
+      {sobre == null && select}
+    </>
+  );
 
   return (
     <>
@@ -247,7 +273,13 @@ export function DatosEstudio({ datos }: { datos: EstudioRcdDatos }) {
               <>
                 <label className={styles.field}>
                   Superficie construida
-                  <CampoNum ariaLabel="Superficie construida" unidad="m²" min={0} value={rat.superficieConstruida} onCommit={(v) => setRat({ superficieConstruida: v })} />
+                  <CampoNum
+                    ariaLabel="Superficie construida"
+                    unidad="m²"
+                    min={0}
+                    value={edificio.superficieConstruida}
+                    onCommit={(v) => setEdificio({ superficieConstruida: v })}
+                  />
                 </label>
                 <label className={styles.field}>
                   Superficie del solar
@@ -261,24 +293,34 @@ export function DatosEstudio({ datos }: { datos: EstudioRcdDatos }) {
                     </label>
                     <label className={styles.field}>
                       Plantas bajo rasante
-                      <CampoNum ariaLabel="Plantas bajo rasante" min={0} dec={0} placeholder="0" value={rat.plantasBajoRasante ?? null} onCommit={(v) => setRat({ plantasBajoRasante: v ?? 0 })} />
+                      <CampoNum
+                        ariaLabel="Plantas bajo rasante"
+                        min={0}
+                        dec={0}
+                        placeholder="0"
+                        value={edificio.plantasBajoRasante}
+                        onCommit={(v) => setEdificio({ plantasBajoRasante: v })}
+                      />
                     </label>
-                    {GRUPOS_ECO.map((g) => (
-                      <label key={g} className={styles.field}>
-                        {GRUPO_TXT[g]}
-                        <select
-                          className={styles.select}
-                          value={rat.opciones?.[g] ?? opcionesEco(g)[0]!.id}
-                          onChange={(e) => setRat({ opciones: { ...rat.opciones, [g]: e.target.value } })}
-                        >
-                          {opcionesEco(g).map((o) => (
-                            <option key={o.id} value={o.id}>
-                              {o.hoja}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    ))}
+                    {GRUPOS_ECO.map((g) => {
+                      const select = (
+                        <label key={g} className={styles.field}>
+                          {g === 'plantas' ? 'Tramo de plantas' : GRUPO_TXT[g]}
+                          <select
+                            className={styles.select}
+                            value={rat.opciones?.[g] ?? opcionesEco(g)[0]!.id}
+                            onChange={(e) => setRat({ opciones: { ...rat.opciones, [g]: e.target.value } })}
+                          >
+                            {opcionesEco(g).map((o) => (
+                              <option key={o.id} value={o.id}>
+                                {o.hoja}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      );
+                      return g === 'plantas' ? <Fragment key={g}>{campoPlantas(plantasEco, select)}</Fragment> : select;
+                    })}
                     {(Object.keys(SUP_TXT) as SuperficieEco[]).map((k) => (
                       <label key={k} className={styles.field}>
                         {SUP_TXT[k]}
@@ -308,16 +350,19 @@ export function DatosEstudio({ datos }: { datos: EstudioRcdDatos }) {
                         <option value="nuevaResidencial">Residencial</option>
                       </select>
                     </label>
-                    <label className={styles.field}>
-                      Plantas
-                      <select className={styles.select} value={rat.plantasBasico ?? '1'} onChange={(e) => setRat({ plantasBasico: e.target.value })}>
-                        {OPCIONES_PLANTAS_BASICO.map((o) => (
-                          <option key={o} value={o}>
-                            {o}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                    {campoPlantas(
+                      plantasEcoBasico,
+                      <label className={styles.field}>
+                        Tramo de plantas
+                        <select className={styles.select} value={rat.plantasBasico ?? '1'} onChange={(e) => setRat({ plantasBasico: e.target.value })}>
+                          {OPCIONES_PLANTAS_BASICO.map((o) => (
+                            <option key={o} value={o}>
+                              {o}
+                            </option>
+                          ))}
+                        </select>
+                      </label>,
+                    )}
                   </>
                 )}
                 <label className={styles.check}>
@@ -328,6 +373,7 @@ export function DatosEstudio({ datos }: { datos: EstudioRcdDatos }) {
             )}
           </div>
           {rat?.metodo === 'manual' && <RatiosManuales rat={rat} onChange={setRat} />}
+          {rat && <p className={styles.nota}>La superficie construida y las plantas son de la obra: las comparte el plan de calidad y están también en «Datos de la obra».</p>}
           <p className={styles.nota}>
             Los ratios solo cubren lo que las partidas no traen: un código con residuos de colocación o embalaje del banco (`~R`) no recibe ratio, y
             las tierras salen de las partidas de excavación si las hay.

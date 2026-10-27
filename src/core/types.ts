@@ -313,6 +313,11 @@ export interface Obra {
    *  `kind` de la meta dentro de los datos: si el índice se pierde, `reconcile`
    *  la recupera como referencia y no como obra de trabajo. */
   soloReferencia?: true;
+  /** Del edificio, tecleados una vez en la ficha: los leen el estudio de
+   *  residuos y el plan de calidad (TD2, schema v9). Ver `core/edificio`. */
+  superficieConstruida?: number | null;
+  plantasSobreRasante?: number | null;
+  plantasBajoRasante?: number | null;
   [k: string]: unknown; // promotor/constructor… se completan en F6
 }
 

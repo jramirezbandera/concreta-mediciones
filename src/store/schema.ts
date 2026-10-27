@@ -9,7 +9,9 @@
    =========================================================================== */
 import type { Banco, Cert, Chapter, Ilegible, Obra, PartidaBaja, PartidasMap, PlanoMeta, Rates } from '../core/types';
 import { apartarIlegibles } from '../core/planoDatos';
+import { numeroEdificio } from '../core/edificio';
 import { apartarRcdIlegibles } from '../core/rcd/datos';
+import { opcionPorDefecto, plantasEco, plantasEcoBasico } from '../core/rcd/ecoeficiencia';
 import type { EstudioRcdDatos } from '../core/rcd/tipos';
 import { apartarPccIlegibles } from '../core/pcc/datos';
 import type { PlanCalidadDatos } from '../core/pcc/tipos';
@@ -62,8 +64,15 @@ import { nextAgenteId } from './base';
  *   plan) y `Partida.pcc` (control de cada partida), los dos opcionales
  *   (docs/plan-control-calidad.md §14). Migración: solo sube la versión, por la
  *   misma regla que v7. Mismo espacio de claves `concreta6.*`.
+ *
+ *   v8 → v9 (2026-10-27, TD2): la superficie construida y las plantas pasan a
+ *   la ficha (`obra.superficieConstruida`, `plantasSobreRasante`,
+ *   `plantasBajoRasante`) y las leen los dos anejos. Migración: `migrarEdificio`;
+ *   si residuos y calidad no coinciden, manda residuos (calidad avisa al
+ *   reabrir el plan si su Word ya salió con otro número; residuos no guarda lo
+ *   emitido). Mismo espacio de claves `concreta6.*`.
  */
-export const SCHEMA_VERSION = 8;
+export const SCHEMA_VERSION = 9;
 
 /** Estado de dominio de la obra (lo que persistiría en F6). Serializable. */
 export interface ObraData {
@@ -253,7 +262,61 @@ const MIGRATIONS: Record<number, (d: ObraData) => ObraData> = {
   6: (d) => ({ ...d, schemaVersion: 7 }),
   // v7 → v8 (plan de control de calidad): `planCalidad` y `Partida.pcc` son opcionales.
   7: (d) => ({ ...d, schemaVersion: 8 }),
+  // v8 → v9 (TD2): superficie construida y plantas, de los anejos a la ficha.
+  8: (d) => ({ ...migrarEdificio(d), schemaVersion: 9 }),
 };
+
+/**
+ * v8 → v9: la superficie construida y las plantas de los anejos pasan a la
+ * ficha de la obra. Ningún anejo cambia su cálculo salvo que no coincidan, y
+ * entonces manda residuos:
+ *   · superficie: la de los ratios de residuos; si no hay, la del plan.
+ *   · bajo rasante: la de residuos (calidad no la tenía).
+ *   · sobre rasante: las plantas del plan menos las de bajo rasante (el plan
+ *     contaba todas las de la estructura), solo si caen en el tramo de
+ *     ECO-eficiencia que ya tenía residuos; si no, queda vacía y residuos
+ *     sigue con su tramo.
+ * Lee los anejos como datos sin tipar: son de la versión anterior.
+ */
+function migrarEdificio(d: ObraData): ObraData {
+  const rec = (x: unknown): Record<string, unknown> | null =>
+    x && typeof x === 'object' && !Array.isArray(x) ? (x as Record<string, unknown>) : null;
+  const estudio = rec(d.estudioRcd);
+  const ratios = rec(estudio?.ratios);
+  const plan = rec(d.planCalidad);
+  if (!ratios && !plan) return d;
+
+  const superficie = numeroEdificio(ratios?.superficieConstruida) ?? numeroEdificio(plan?.superficieConstruida);
+  const bajo = numeroEdificio(ratios?.plantasBajoRasante);
+  const totales = numeroEdificio(plan?.plantas);
+  let sobre = totales != null ? totales - (bajo ?? 0) : null;
+  if (sobre != null && sobre < 1) sobre = null;
+  if (sobre != null && ratios?.metodo === 'ecoeficiencia') {
+    const tenia =
+      ratios.nivel === 'basico' ? (ratios.plantasBasico ?? '1') : (rec(ratios.opciones)?.plantas ?? opcionPorDefecto('plantas'));
+    const sale = ratios.nivel === 'basico' ? plantasEcoBasico(sobre) : plantasEco(sobre);
+    if (tenia !== sale) sobre = null;
+  }
+
+  const obra: Obra = { ...d.obra };
+  if (superficie != null) obra.superficieConstruida = superficie;
+  if (sobre != null) obra.plantasSobreRasante = sobre;
+  if (bajo != null) obra.plantasBajoRasante = bajo;
+  const out: ObraData = { ...d, obra };
+  if (estudio && ratios) {
+    const r = { ...ratios };
+    delete r.superficieConstruida;
+    delete r.plantasBajoRasante;
+    out.estudioRcd = { ...estudio, ratios: r } as unknown as EstudioRcdDatos;
+  }
+  if (plan) {
+    const p = { ...plan };
+    delete p.superficieConstruida;
+    delete p.plantas;
+    out.planCalidad = p as unknown as PlanCalidadDatos;
+  }
+  return out;
+}
 
 /**
  * Valida/migra un `ObraData` cargado (hydrate de IndexedDB e import .json).

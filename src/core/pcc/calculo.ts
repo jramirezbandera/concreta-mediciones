@@ -17,6 +17,7 @@
         (banco copiado, hoja de la Junta, tecleado); lo del instalador o del
         organismo de control, listado sin importe (D2).
    =========================================================================== */
+import { edificioDe, plantasTotales } from '../edificio';
 import { fmtCents, fmtNum } from '../money';
 import { partidaCantidad } from '../medicion';
 import { comunidadDeProvincia } from '../rcd/calculo';
@@ -165,6 +166,8 @@ interface PartidaPlan {
 
 interface Ctx {
   plan: PlanCalidadDatos;
+  /** Plantas de la obra, sobre y bajo rasante (ficha). */
+  plantas: number | null;
   estructura: ResultadoEstructura;
   viviendas: number | null;
   plurifamiliar: boolean;
@@ -386,6 +389,8 @@ export function calcularPlanCalidad(e: EntradaPcc): PlanCalidad {
   const comunidad = plan.comunidad ?? comunidadDeProvincia(typeof obra.provincia === 'string' ? obra.provincia : undefined);
   const viviendas = plan.viviendas ?? (plan.unifamiliar ? 1 : null);
   const plurifamiliar = viviendas != null ? viviendas > 1 : plan.unifamiliar === false;
+  const edificio = edificioDe(obra);
+  const plantas = plantasTotales(edificio);
 
   /* 1. Partidas -------------------------------------------------------------------- */
   const control = contenedores(chapters, plan.capituloControl ?? null);
@@ -426,11 +431,12 @@ export function calcularPlanCalidad(e: EntradaPcc): PlanCalidad {
   const estructura = calcularEstructura({
     partidas: confirmadas.filter((p) => p.control.hormigon || p.control.acero).map((p): PartidaEstructura => ({ id: p.id, code: p.code, title: p.title, ud: p.ud, cantidad: p.cantidad, control: p.control })),
     plan,
+    obra: { superficie: edificio.superficieConstruida, plantas },
   });
   for (const x of estructura.pendientes) pend(x);
   for (const x of estructura.avisos) avisa(x);
   const prefabricados = confirmadas.some((p) => /\b(alveolar|prefabricad)/.test(p.titulo));
-  const ctx: Ctx = { plan, estructura, viviendas, plurifamiliar, prefabricados, pend, avisa };
+  const ctx: Ctx = { plan, plantas, estructura, viviendas, plurifamiliar, prefabricados, pend, avisa };
 
   /* 3. Familias presentes ---------------------------------------------------------- */
   const porFamilia = new Map<string, PartidaPlan[]>();
@@ -736,7 +742,7 @@ function inspecciones(familia: Familia, ps: PartidaPlan[], ctx: Ctx): Inspeccion
         break;
       }
       case 'planta': {
-        const P = ctx.plan.plantas ?? null;
+        const P = ctx.plantas;
         if (P == null) cuenta = 'una por planta; faltan las plantas de la obra';
         else {
           cantidad = P;
