@@ -46,6 +46,12 @@ describe('estudio de residuos en el store', () => {
     expect(state().iniciarEstudioRcd()).toBe(0);
   });
 
+  it('empezar sin partidas fuera de la gestión: básico de obra nueva con ECO-eficiencia', () => {
+    state().loadObra({ ...blankObraData('Vivienda'), chapters: [{ id: 'g', code: '1', title: 'Gestión de residuos' }], partidas: { g: [] } });
+    state().iniciarEstudioRcd();
+    expect(state().estudioRcd).toMatchObject({ fase: 'basico', tipos: ['nueva'], ratios: { metodo: 'ecoeficiencia', nivel: 'detallado' } });
+  });
+
   it('asignar residuo no quita la marca BASE (no es una edición de precio)', () => {
     state().iniciarEstudioRcd();
     state().confirmarResiduos([{ chapterId: 'd', partidaId: 'p1' }]);

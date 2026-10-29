@@ -84,6 +84,15 @@ export const createRcdSlice: ObraSlice<RcdActions> = (set, get) => ({
       set((s) => {
         if (s.estudioRcd) return;
         s.estudioRcd = estudioVacio({ capituloGestion: capituloGestionPropuesto(s) });
+        // Sin partidas fuera de la gestión (básico con solo los m²): la estimación
+        // sale de los ratios de ECO-eficiencia, ya elegidos.
+        const soloGestion = s.chapters.every((ch) => (s.partidas[ch.id] ?? []).every((p) => enCapituloGestion(s, ch.id, p)));
+        if (soloGestion)
+          Object.assign(s.estudioRcd, {
+            fase: 'basico',
+            tipos: ['nueva'],
+            ratios: { metodo: 'ecoeficiencia', tabla: 'ecoeficiencia-2013', nivel: 'detallado', incluirTierras: true },
+          } satisfies Partial<EstudioRcdDatos>);
         n = proponerEn(s);
       }),
     );

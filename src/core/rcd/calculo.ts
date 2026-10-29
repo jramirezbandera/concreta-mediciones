@@ -414,12 +414,29 @@ export function calcularEstudioRcd(e: EntradaRcd): EstudioRcd {
   }
 
   /* ---- 9. coste (7.º) ----------------------------------------------------- */
-  const pemObra = pemDe(costesDirectos(partidas, rates.coefK), rates);
+  // El PEM es el de TODA la obra. Si el presupuesto solo trae la gestión (proyecto
+  // básico sin mediciones), su PEM no vale: el % saldría 100 % y la fianza mínima,
+  // el 1 % de la propia gestión. Entonces se pide el PEM de la obra.
+  const pemPresupuesto = pemDe(costesDirectos(partidas, rates.coefK), rates);
+  let pemGestion = 0;
+  for (const ch of chapters) for (const p of partidas[ch.id] ?? []) if (enGestion(ch.id, p)) pemGestion += pemDe(partidaImporte(p, rates.coefK), rates);
+  const pemDeclarado = estudio.pemObra != null && estudio.pemObra > 0 ? Math.round(estudio.pemObra * 100) : null;
+  const pemObra = pemDeclarado ?? (pemPresupuesto - pemGestion > 0 ? pemPresupuesto : null);
+  if (pemObra == null)
+    pend({ id: 'pem-obra', apartado: 'fianza',
+      texto: 'El presupuesto no tiene más que la gestión de residuos: indica el PEM de toda la obra (en «Fianza») para el % del coste y la fianza mínima.' });
   const coste = costeDe(e, gestion, porCodigo, pemObra, pend);
 
   /* ---- 10. fianza ---------------------------------------------------------- */
-  const fianza: FianzaRcd = { baseEstudio: coste.importe, minimoAndalucia: null, declarada: estudio.fianza };
-  if (andalucia) {
+  const fianza: FianzaRcd = {
+    baseEstudio: coste.importe,
+    minimoAndalucia: null,
+    declarada: estudio.fianza,
+    pemObra,
+    pemDeclarado: pemDeclarado != null,
+    pemPresupuesto,
+  };
+  if (andalucia && pemObra != null) {
     const nueva = estudio.tipos.includes('nueva') ? Math.max(0, pemObra - pemPorTipo.derribo - pemPorTipo.excavacion) : 0;
     const reparto = [
       { supuesto: 'derribo' as const, base: pemPorTipo.derribo, pct: 2 },
@@ -429,8 +446,8 @@ export function calcularEstudioRcd(e: EntradaRcd): EstudioRcd {
     fianza.minimoAndalucia = { importe: reparto.reduce((s, x) => s + Math.round((x.base * x.pct) / 100), 0), reparto };
     if (!estudio.repartoFianza?.confirmado && reparto.length)
       pend({ id: 'fianza-reparto', apartado: 'fianza', texto: 'Confirma el reparto de la fianza mínima por supuestos (Decreto 73/2012, art. 81.1).' });
-    if (!estudio.ordenanza) pend({ id: 'ordenanza', apartado: 'fianza', texto: 'Indica la ordenanza municipal de residuos y su artículo de fianza.' });
   }
+  if (andalucia && !estudio.ordenanza) pend({ id: 'ordenanza', apartado: 'fianza', texto: 'Indica la ordenanza municipal de residuos y su artículo de fianza.' });
   if (!estudio.fianza || estudio.fianza.importe == null)
     pend({ id: 'fianza', apartado: 'fianza', texto: 'Falta el importe de la fianza y su criterio (lo fija la ordenanza municipal).' });
 
@@ -509,11 +526,11 @@ function costeDe(
   e: EntradaRcd,
   gestion: ReturnType<typeof contenedoresGestion>,
   porCodigo: FilaCodigo[],
-  pemObra: number,
+  pemObra: number | null,
   pend: (p: Pendiente) => void,
 ): CosteRcd {
   const { chapters, partidas, rates, estudio } = e;
-  const pct = (c: number) => (pemObra > 0 ? Math.round((c / pemObra) * 1e5) / 1e3 : null);
+  const pct = (c: number) => (pemObra != null && pemObra > 0 ? Math.round((c / pemObra) * 1e5) / 1e3 : null);
   if (gestion) {
     const f = findNode(chapters, estudio.capituloGestion!)!;
     const ps = (partidas[gestion.chapterId] ?? []).filter((p) => gestion.todo || gestion.ids.has(p.sub ?? gestion.chapterId));

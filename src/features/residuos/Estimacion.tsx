@@ -383,6 +383,26 @@ export function Estimacion({ r, datos }: { r: EstudioRcd; datos: EstudioRcdDatos
             Base del estudio (art. 6.3)
             <span className="mono">{r.fianza.baseEstudio != null ? fmtCents(r.fianza.baseEstudio) : '—'}</span>
           </div>
+          <label className={styles.field}>
+            PEM de toda la obra
+            {/* Vacío = el del presupuesto; en un básico sin mediciones el presupuesto solo trae la gestión. */}
+            <CampoNum
+              ariaLabel="PEM de toda la obra"
+              unidad="€"
+              dec={2}
+              min={0}
+              placeholder={r.fianza.pemObra != null ? fmtNum(r.fianza.pemPresupuesto / 100, 2) : 'falta'}
+              value={datos.pemObra ?? null}
+              onCommit={(v) => setEstudio({ pemObra: v })}
+            />
+            <span className={styles.sub}>
+              {r.fianza.pemDeclarado
+                ? `Declarado. El presupuesto suma ${fmtCents(r.fianza.pemPresupuesto)}.`
+                : r.fianza.pemObra != null
+                  ? 'El del presupuesto. Escríbelo si el presupuesto no tiene toda la obra.'
+                  : 'El presupuesto solo tiene la gestión: escribe el PEM de la obra (p. ej. el del proyecto básico).'}
+            </span>
+          </label>
           {r.fianza.minimoAndalucia && (
             <div className={styles.field}>
               Mínimo en Andalucía (art. 81.1)

@@ -102,6 +102,29 @@ describe('A · reforma pequeña por partidas', () => {
     expect(r.pendientes.map((p) => p.id)).toEqual(expect.arrayContaining(['fianza', 'fianza-reparto', 'ordenanza']));
   });
 
+  it('el PEM de la obra declarado manda en el % del coste y en la fianza mínima', () => {
+    const d = calculaA({ pemObra: 100000 });
+    expect(d.fianza.pemDeclarado).toBe(true);
+    expect(d.fianza.pemObra).toBe(10000000);
+    expect(d.coste.pctPem).toBeCloseTo((47600 / 10000000) * 100, 3);
+  });
+
+  it('presupuesto con solo la gestión: no es el PEM de la obra, se pide', () => {
+    const { chapters, partidas } = obraA();
+    const s = calcularEstudioRcd({
+      chapters: chapters.filter((c) => c.id === 'g'),
+      partidas: { g: partidas.g! },
+      rates: RATES,
+      obra: OBRA_A,
+      estudio: estudio({ capituloGestion: 'g', tipos: ['nueva'] }),
+      hoy: '2026-10-16',
+    });
+    expect(s.coste.pctPem).toBeNull();
+    expect(s.fianza.pemObra).toBeNull();
+    expect(s.fianza.minimoAndalucia).toBeNull();
+    expect(s.pendientes.some((p) => p.id === 'pem-obra')).toBe(true);
+  });
+
   it('proyecto básico: sin 5.º ni 6.º, con inventario', () => {
     const b = calculaA({ fase: 'basico' });
     expect(b.alcance.apartados).toEqual(['1', '2', '3', '4', '7']);

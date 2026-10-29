@@ -41,7 +41,7 @@ export function ResiduosView({ compact, onGoPresupuesto }: { compact: boolean; o
         text={
           hayPartidas
             ? 'Saca del presupuesto las toneladas y los m³ de cada residuo, con su código, y el estudio del RD 105/2008. Las demoliciones reciben una propuesta que revisas una a una.'
-            : 'El estudio sale de las partidas del presupuesto: importa un .bc3 o crea las partidas primero.'
+            : 'El estudio sale de las partidas del presupuesto. Sin mediciones (proyecto básico), estímalo con los m² construidos y los ratios de ECO-eficiencia.'
         }
       >
         {hayPartidas ? (
@@ -55,9 +55,21 @@ export function ResiduosView({ compact, onGoPresupuesto }: { compact: boolean; o
             <Icon name="recycle" size={15} /> Empezar el estudio
           </EmptyAction>
         ) : (
-          <EmptyAction primary onClick={onGoPresupuesto}>
-            <Icon name="list" size={15} /> Ir al presupuesto
-          </EmptyAction>
+          <>
+            <EmptyAction
+              primary
+              onClick={() => {
+                iniciar();
+                setPestana('datos');
+                useToastStore.getState().show('Estudio empezado con ECO-eficiencia: pon la superficie construida');
+              }}
+            >
+              <Icon name="recycle" size={15} /> Estimar con los m²
+            </EmptyAction>
+            <EmptyAction onClick={onGoPresupuesto}>
+              <Icon name="list" size={15} /> Ir al presupuesto
+            </EmptyAction>
+          </>
         )}
       </EmptyState>
     );

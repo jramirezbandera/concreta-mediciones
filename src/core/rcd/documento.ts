@@ -362,7 +362,9 @@ export function documentoRcd(r: EstudioRcd, d: EstudioRcdDatos, obra: MetaObraRc
         f.declarada?.importe != null
           ? `${fmtCents(Math.round(f.declarada.importe * 100))}${f.declarada.criterio ? ` (${f.declarada.criterio})` : ''}.`
           : pend('importe de la fianza según la ordenanza municipal.'),
-        ...(f.minimoAndalucia ? [` Mínimo del art. 81.1: ${fmtCents(f.minimoAndalucia.importe)}.`] : []),
+        ...(f.minimoAndalucia
+          ? [` Mínimo del art. 81.1: ${fmtCents(f.minimoAndalucia.importe)}${f.pemDeclarado && f.pemObra != null ? `, sobre un PEM de la obra de ${fmtCents(f.pemObra)}` : ''}.`]
+          : []),
       ),
     ],
   });

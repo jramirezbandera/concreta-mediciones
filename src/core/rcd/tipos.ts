@@ -192,6 +192,9 @@ export interface EstudioRcdDatos {
   /** Id del capítulo o subcapítulo de gestión de residuos (7.º). */
   capituloGestion: string | null;
   fianza: { importe: number | null; criterio: string } | null;
+  /** PEM de toda la obra (€), cuando el presupuesto no la mide entera (proyecto
+   *  básico): base del % del coste y de la fianza mínima. Ausente = el del presupuesto. */
+  pemObra?: number | null;
   ordenanza: { nombre: string; articuloFianza: string } | null;
   /** Remisión del 5.º: «Plano nº … ». */
   plano: string | null;
@@ -298,6 +301,13 @@ export interface FianzaRcd {
   /** Andalucía, Decreto 73/2012 art. 81.1, mínimo sobre el PEM según el reparto. */
   minimoAndalucia: { importe: number; reparto: Array<{ supuesto: 'derribo' | 'nueva' | 'excavacion'; base: number; pct: number }> } | null;
   declarada: { importe: number | null; criterio: string } | null;
+  /** PEM de la obra usado (céntimos): el declarado o el del presupuesto; `null`
+   *  si el presupuesto solo tiene la gestión y no se ha declarado. */
+  pemObra: number | null;
+  /** El PEM de la obra lo tecleó el técnico (`EstudioRcdDatos.pemObra`). */
+  pemDeclarado: boolean;
+  /** PEM del presupuesto (céntimos), para enseñarlo junto al declarado. */
+  pemPresupuesto: number;
 }
 
 export type Apartado = '1' | '2' | '3' | '4' | '5' | '6' | '7';
