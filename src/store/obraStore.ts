@@ -258,6 +258,15 @@ export interface ObraState extends ObraData {
    * certificación" arranca en 0 sobre lo ya certificado (eng-review F4 / Codex #6/#7).
    */
   addCert: () => void;
+  /**
+   * Emite la cert nº `index` (T-2): congela los precios que aún leía en vivo y
+   * la firma, y desde entonces no cambia. En orden: antes tienen que estar
+   * emitidas las anteriores. UN paso de Deshacer. Devuelve si la emitió.
+   */
+  emitirCert: (index: number) => boolean;
+  /** Reabre la cert nº `index` si es la ÚLTIMA emitida, dejando rastro en su
+   *  historial. Devuelve si la reabrió. */
+  reabrirCert: (index: number) => boolean;
   /** Edita el periodo (texto) o la retención (0..1, se clampa) de la cert en curso. */
   setCertField: (field: 'period' | 'retencion', value: string | number) => void;
   /**
@@ -987,7 +996,7 @@ export const useObraStore = create<ObraState>()(
       freezeCertFirmantes: (index, nowIso) =>
         set((s) => {
           const cert = s.certs[index];
-          if (!cert) return;
+          if (!cert || cert.emitidaAt) return; // emitida: su firma ya se congeló al emitir
           // Snapshot DEFINITIVO (ya incluye la DF) → doc firmado, no se reescribe.
           // Uno PROVISIONAL (vacío o solo constructora, sellado antes de rellenar
           // la DF) sí se re-sella: exportar/previsualizar pronto no debe clavar una

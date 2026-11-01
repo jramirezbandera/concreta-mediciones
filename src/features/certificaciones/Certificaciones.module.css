@@ -1507,3 +1507,80 @@
 .cardDetail {
   border-top: 1px solid var(--border-main);
 }
+
+/* Emitir certificaciones (T-2). El fieldset desactiva lo editable sin caja propia. */
+.lectura {
+  display: contents;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.estado {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-8);
+}
+.estadoChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: 2px var(--sp-8);
+  border-radius: 999px;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--state-ok);
+  background: color-mix(in srgb, var(--state-ok) 12%, transparent);
+  white-space: nowrap;
+}
+.estadoBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-4) var(--sp-10);
+  border: 1px solid var(--border-main);
+  border-radius: 8px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  cursor: pointer;
+}
+.estadoBtn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.estadoBtn:disabled,
+.estadoLink:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.estadoLink {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-size: var(--fs-caption);
+  cursor: pointer;
+  text-decoration: underline;
+}
+.emitidaAviso {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-6);
+  margin: var(--sp-8) 0 0;
+  padding: var(--sp-8) var(--sp-12);
+  border-radius: 8px;
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--state-ok) 8%, transparent);
+}
+/* Emitida: las celdas editables dejan de parecer campos (no se pueden abrir). */
+.lectura[disabled] :global([data-editcell]) {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  cursor: default;
+}

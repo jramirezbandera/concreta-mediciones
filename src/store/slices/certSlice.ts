@@ -12,6 +12,9 @@ import { lineParcial, partidaCantidad } from '../../core/medicion';
 import { round2 } from '../../core/money';
 import { nextAjusteId, nextExtraId } from '../base';
 import type { ObraSlice, ObraState } from '../obraStore';
+import { composeCertFirmantes, firmaCertDefinitiva } from '../../core/listado';
+import { useToastStore } from '../toastStore';
+import { structural } from './estructuraSlice';
 
 /**
  * F7.0: congela en la cert el precio unitario VIGENTE de la partida al
@@ -136,6 +139,8 @@ type CertSlice = Pick<
   | 'uncompletePartida'
   | 'completePartidas'
   | 'addCert'
+  | 'emitirCert'
+  | 'reabrirCert'
   | 'setCertField'
   | 'addContradictorio'
   | 'editContradictorio'
@@ -146,282 +151,342 @@ type CertSlice = Pick<
   | 'deleteAjuste'
 >;
 
-export const createCertSlice: ObraSlice<CertSlice> = (set) => ({
-  onCertEdit: (partidaId, value, mode) =>
-    set((s) => {
-      const cert = s.certs[s.curCert];
-      // Partida cerrada: la cantidad queda bloqueada hasta reabrirla.
-      if (!cert || cert.cerradas?.[partidaId]) return;
-      if (mode === 'esta') {
-        const prev = prevDataOf(s.certs, s.curCert)[partidaId] ?? 0;
-        cert.data[partidaId] = estaCertToOrigen(prev, value);
-      } else {
-        // A origen: desviación CONSCIENTE del prototipo (que guardaba v crudo).
-        // La cantidad ejecutada no puede ser negativa; round2 = 2 decimales,
-        // consistente con `estaCertToOrigen` y con el seed (`makeCertsInit`),
-        // que también redondean la cantidad a origen.
-        cert.data[partidaId] = round2(Math.max(0, value));
-      }
-      // Teclear una cantidad/% es un override del total: deja de certificarse
-      // por líneas (regresión §8a) y limpia el contenedor si queda vacío.
-      dropLineQty(cert, partidaId);
-      freezePrecio(s.partidas, s.rates, cert, partidaId); // F7.0
-    }),
+/** Aviso al intentar cambiar una cert emitida (T-2). */
+function avisarEmitida(num: number): void {
+  useToastStore.getState().show(`La certificación nº ${num} está emitida: reábrela para cambiarla.`, undefined, { tone: 'warn' });
+}
 
-  setCertLine: (partidaId, lineId, qty) =>
-    set((s) => {
-      const cert = s.certs[s.curCert];
-      if (!cert || cert.cerradas?.[partidaId]) return;
-      const lineQty = (cert.lineQty ??= {});
-      const lines = (lineQty[partidaId] ??= {});
-      // E12: una línea negativa (Restar) se certifica con su cantidad negativa;
-      // solo el 0 desmarca.
-      if (qty == null || qty === 0 || !Number.isFinite(qty)) {
-        delete lines[lineId];
-        dropSnapLinea(cert, partidaId, lineId);
-      } else {
-        lines[lineId] = round2(qty);
-        const l = findPartida(s.partidas, partidaId)?.med.find((x) => x.id === lineId);
-        if (l) snapLinea(cert, partidaId, l);
-      }
-      // D-06 (suelo = lo ya certificado): si la cert ANTERIOR certificó esta
-      // partida a mano (grueso, sin líneas), marcar las primeras líneas aquí
-      // REEMPLAZABA el a-origen heredado por la Σ de líneas → cert negativa
-      // sin querer. Marcar/desmarcar nunca baja del anterior; certificar en
-      // negativo sigue siendo posible, pero solo TECLEANDO la cantidad.
-      const anterior = prevDataOf(s.certs, s.curCert)[partidaId] ?? 0;
-      if (Object.keys(lines).length === 0) {
-        // Sin líneas marcadas: la partida deja de certificarse por líneas.
+export const createCertSlice: ObraSlice<CertSlice> = (set, get) => {
+  /** Edición de la cert EN CURSO: si está emitida no cambia nada y lo avisa (T-2). */
+  const editar = (fn: (s: ObraState) => void): void => {
+    const { certs, curCert } = get();
+    const cert = certs[curCert];
+    if (cert?.emitidaAt) {
+      avisarEmitida(cert.num);
+      return;
+    }
+    set(fn);
+  };
+  return {
+    onCertEdit: (partidaId, value, mode) =>
+      editar((s) => {
+        const cert = s.certs[s.curCert];
+        // Partida cerrada: la cantidad queda bloqueada hasta reabrirla.
+        if (!cert || cert.cerradas?.[partidaId]) return;
+        if (mode === 'esta') {
+          const prev = prevDataOf(s.certs, s.curCert)[partidaId] ?? 0;
+          cert.data[partidaId] = estaCertToOrigen(prev, value);
+        } else {
+          // A origen: desviación CONSCIENTE del prototipo (que guardaba v crudo).
+          // La cantidad ejecutada no puede ser negativa; round2 = 2 decimales,
+          // consistente con `estaCertToOrigen` y con el seed (`makeCertsInit`),
+          // que también redondean la cantidad a origen.
+          cert.data[partidaId] = round2(Math.max(0, value));
+        }
+        // Teclear una cantidad/% es un override del total: deja de certificarse
+        // por líneas (regresión §8a) y limpia el contenedor si queda vacío.
         dropLineQty(cert, partidaId);
-        if (anterior > 0) {
-          cert.data[partidaId] = anterior; // el suelo también al desmarcar todo
+        freezePrecio(s.partidas, s.rates, cert, partidaId); // F7.0
+      }),
+
+    setCertLine: (partidaId, lineId, qty) =>
+      editar((s) => {
+        const cert = s.certs[s.curCert];
+        if (!cert || cert.cerradas?.[partidaId]) return;
+        const lineQty = (cert.lineQty ??= {});
+        const lines = (lineQty[partidaId] ??= {});
+        // E12: una línea negativa (Restar) se certifica con su cantidad negativa;
+        // solo el 0 desmarca.
+        if (qty == null || qty === 0 || !Number.isFinite(qty)) {
+          delete lines[lineId];
+          dropSnapLinea(cert, partidaId, lineId);
+        } else {
+          lines[lineId] = round2(qty);
+          const l = findPartida(s.partidas, partidaId)?.med.find((x) => x.id === lineId);
+          if (l) snapLinea(cert, partidaId, l);
+        }
+        // D-06 (suelo = lo ya certificado): si la cert ANTERIOR certificó esta
+        // partida a mano (grueso, sin líneas), marcar las primeras líneas aquí
+        // REEMPLAZABA el a-origen heredado por la Σ de líneas → cert negativa
+        // sin querer. Marcar/desmarcar nunca baja del anterior; certificar en
+        // negativo sigue siendo posible, pero solo TECLEANDO la cantidad.
+        const anterior = prevDataOf(s.certs, s.curCert)[partidaId] ?? 0;
+        if (Object.keys(lines).length === 0) {
+          // Sin líneas marcadas: la partida deja de certificarse por líneas.
+          dropLineQty(cert, partidaId);
+          if (anterior > 0) {
+            cert.data[partidaId] = anterior; // el suelo también al desmarcar todo
+            freezePrecio(s.partidas, s.rates, cert, partidaId); // F7.0
+          } else {
+            delete cert.data[partidaId];
+          }
+        } else {
+          cert.data[partidaId] = Math.max(sumLineQty(lines), anterior);
           freezePrecio(s.partidas, s.rates, cert, partidaId); // F7.0
+        }
+      }),
+
+    completePartida: (partidaId) =>
+      editar((s) => {
+        const p = findPartida(s.partidas, partidaId);
+        if (p) completeDraft(s, p);
+      }),
+
+    uncompletePartida: (partidaId) =>
+      editar((s) => {
+        const cert = s.certs[s.curCert];
+        if (!cert || cert.cerradas?.[partidaId]) return;
+        // Descompletar = volver al a-origen del periodo anterior (suelo D-06), no
+        // a 0 a origen (no borrar lo ya certificado). prev==0 → borra la entrada.
+        const prev = prevDataOf(s.certs, s.curCert)[partidaId] ?? 0;
+        if (prev > 0) {
+          cert.data[partidaId] = prev;
+          const p = findPartida(s.partidas, partidaId);
+          if (p) freezePrecioFor(cert, s.rates, p);
         } else {
           delete cert.data[partidaId];
         }
-      } else {
-        cert.data[partidaId] = Math.max(sumLineQty(lines), anterior);
-        freezePrecio(s.partidas, s.rates, cert, partidaId); // F7.0
-      }
-    }),
+        dropLineQty(cert, partidaId);
+      }),
 
-  completePartida: (partidaId) =>
-    set((s) => {
-      const p = findPartida(s.partidas, partidaId);
-      if (p) completeDraft(s, p);
-    }),
+    completePartidas: (partidaIds) =>
+      editar((s) => {
+        // Masiva WYSIWYG (eng review Issue 5): la UI pasa EXACTAMENTE las partidas
+        // visibles (obra / capítulo / lo visible). UN solo `set` (no N onCertEdit →
+        // N autosaves): mapa id→p una vez (O(N)) y `completeDraft` con la p resuelta.
+        const map = new Map<string, Partida>();
+        for (const chId in s.partidas) for (const p of s.partidas[chId] ?? []) map.set(p.id, p);
+        for (const id of partidaIds) {
+          const p = map.get(id);
+          if (p) completeDraft(s, p);
+        }
+      }),
 
-  uncompletePartida: (partidaId) =>
-    set((s) => {
-      const cert = s.certs[s.curCert];
-      if (!cert || cert.cerradas?.[partidaId]) return;
-      // Descompletar = volver al a-origen del periodo anterior (suelo D-06), no
-      // a 0 a origen (no borrar lo ya certificado). prev==0 → borra la entrada.
-      const prev = prevDataOf(s.certs, s.curCert)[partidaId] ?? 0;
-      if (prev > 0) {
-        cert.data[partidaId] = prev;
-        const p = findPartida(s.partidas, partidaId);
-        if (p) freezePrecioFor(cert, s.rates, p);
-      } else {
-        delete cert.data[partidaId];
-      }
-      dropLineQty(cert, partidaId);
-    }),
-
-  completePartidas: (partidaIds) =>
-    set((s) => {
-      // Masiva WYSIWYG (eng review Issue 5): la UI pasa EXACTAMENTE las partidas
-      // visibles (obra / capítulo / lo visible). UN solo `set` (no N onCertEdit →
-      // N autosaves): mapa id→p una vez (O(N)) y `completeDraft` con la p resuelta.
-      const map = new Map<string, Partida>();
-      for (const chId in s.partidas) for (const p of s.partidas[chId] ?? []) map.set(p.id, p);
-      for (const id of partidaIds) {
-        const p = map.get(id);
-        if (p) completeDraft(s, p);
-      }
-    }),
-
-  addCert: () =>
-    set((s) => {
-      const last = s.certs.at(-1);
-      const num = (last?.num ?? 0) + 1;
-      // Clonado superficial por nivel (no `structuredClone`: los valores son
-      // drafts de Immer y el proxy no es clonable). data es plano; lineQty
-      // tiene un nivel de anidación.
-      const data: Record<string, number> = { ...(last?.data ?? {}) };
-      let lineQty: Record<string, Record<string, number>> | undefined;
-      if (last?.lineQty) {
-        lineQty = {};
-        for (const pid in last.lineQty) lineQty[pid] = { ...last.lineQty[pid] };
-      }
-      // Lo que era cada línea viaja con su cantidad (v12): dos niveles, valores planos.
-      let lineSnap: Cert['lineSnap'];
-      if (last?.lineSnap) {
-        lineSnap = {};
-        for (const pid in last.lineSnap) {
-          lineSnap[pid] = {};
-          for (const lid in last.lineSnap[pid]) {
-            const x = last.lineSnap[pid]![lid]!;
-            lineSnap[pid]![lid] = { comment: x.comment, dims: [...x.dims] };
+    addCert: () =>
+      set((s) => {
+        const last = s.certs.at(-1);
+        const num = (last?.num ?? 0) + 1;
+        // Clonado superficial por nivel (no `structuredClone`: los valores son
+        // drafts de Immer y el proxy no es clonable). data es plano; lineQty
+        // tiene un nivel de anidación.
+        const data: Record<string, number> = { ...(last?.data ?? {}) };
+        let lineQty: Record<string, Record<string, number>> | undefined;
+        if (last?.lineQty) {
+          lineQty = {};
+          for (const pid in last.lineQty) lineQty[pid] = { ...last.lineQty[pid] };
+        }
+        // Lo que era cada línea viaja con su cantidad (v12): dos niveles, valores planos.
+        let lineSnap: Cert['lineSnap'];
+        if (last?.lineSnap) {
+          lineSnap = {};
+          for (const pid in last.lineSnap) {
+            lineSnap[pid] = {};
+            for (const lid in last.lineSnap[pid]) {
+              const x = last.lineSnap[pid]![lid]!;
+              lineSnap[pid]![lid] = { comment: x.comment, dims: [...x.dims] };
+            }
           }
         }
-      }
-      // Los contradictorios se heredan a-origen (mismo id → "anterior" cuadra).
-      const extras = last?.extras?.map((e) => ({ ...e }));
-      // Las partidas cerradas siguen cerradas (lo que no se ejecuta no vuelve solo).
-      const cerradas = last?.cerradas ? { ...last.cerradas } : undefined;
-      // Ajustes: solo los recurrentes (pago adelantado, retención extra…), con
-      // id nuevo por cert (no tienen enlace inter-cert, a diferencia de extras).
-      // Los puntuales (una corrección de una cert concreta) NO se arrastran.
-      const recurrentes = last?.ajustes
-        ?.filter((a) => a.recurrente)
-        .map((a) => ({ ...a, id: nextAjusteId() }));
-      const ajustes = recurrentes && recurrentes.length > 0 ? recurrentes : undefined;
-      // F7.0: la cert nace con TODOS los precios congelados ("hereda/congela").
-      // Hereda los de la última cert (así su "anterior" reproduce al céntimo lo
-      // ya certificado) y congela al precio vivo los que falten (partidas nuevas
-      // o última cert legada sin snapshot). El K congelado se hereda igual.
-      const precios: Record<string, number> = {};
-      for (const chId in s.partidas)
-        for (const p of s.partidas[chId] ?? [])
-          precios[p.id] = last?.priceSnapshot?.[p.id] ?? p.precio;
-      s.certs.push({
-        id: `c${num}`,
-        num,
-        period: '',
-        retencion: last?.retencion ?? 0,
-        data,
-        lineQty,
-        lineSnap,
-        extras,
-        cerradas,
-        ajustes,
-        priceSnapshot: precios,
-        coefK: last?.coefK ?? s.rates.coefK,
-        snapshotAt: new Date().toISOString(),
-      });
-      s.curCert = s.certs.length - 1;
-    }),
+        // Los contradictorios se heredan a-origen (mismo id → "anterior" cuadra).
+        const extras = last?.extras?.map((e) => ({ ...e }));
+        // Las partidas cerradas siguen cerradas (lo que no se ejecuta no vuelve solo).
+        const cerradas = last?.cerradas ? { ...last.cerradas } : undefined;
+        // Ajustes: solo los recurrentes (pago adelantado, retención extra…), con
+        // id nuevo por cert (no tienen enlace inter-cert, a diferencia de extras).
+        // Los puntuales (una corrección de una cert concreta) NO se arrastran.
+        const recurrentes = last?.ajustes
+          ?.filter((a) => a.recurrente)
+          .map((a) => ({ ...a, id: nextAjusteId() }));
+        const ajustes = recurrentes && recurrentes.length > 0 ? recurrentes : undefined;
+        // F7.0: la cert nace con TODOS los precios congelados ("hereda/congela").
+        // Hereda los de la última cert (así su "anterior" reproduce al céntimo lo
+        // ya certificado) y congela al precio vivo los que falten (partidas nuevas
+        // o última cert legada sin snapshot). El K congelado se hereda igual.
+        const precios: Record<string, number> = {};
+        for (const chId in s.partidas)
+          for (const p of s.partidas[chId] ?? [])
+            precios[p.id] = last?.priceSnapshot?.[p.id] ?? p.precio;
+        s.certs.push({
+          id: `c${num}`,
+          num,
+          period: '',
+          retencion: last?.retencion ?? 0,
+          data,
+          lineQty,
+          lineSnap,
+          extras,
+          cerradas,
+          ajustes,
+          priceSnapshot: precios,
+          coefK: last?.coefK ?? s.rates.coefK,
+          snapshotAt: new Date().toISOString(),
+        });
+        s.curCert = s.certs.length - 1;
+      }),
 
-  setCertField: (field, value) =>
-    set((s) => {
-      const cert = s.certs[s.curCert];
-      if (!cert) return;
-      if (field === 'period') {
-        if (typeof value === 'string') cert.period = value;
-      } else if (typeof value === 'number' && Number.isFinite(value)) {
-        cert.retencion = Math.min(1, Math.max(0, value)); // retención ∈ [0,1]
-      }
-    }),
+    setCertField: (field, value) =>
+      editar((s) => {
+        const cert = s.certs[s.curCert];
+        if (!cert) return;
+        if (field === 'period') {
+          if (typeof value === 'string') cert.period = value;
+        } else if (typeof value === 'number' && Number.isFinite(value)) {
+          cert.retencion = Math.min(1, Math.max(0, value)); // retención ∈ [0,1]
+        }
+      }),
 
-  addContradictorio: (chapterId) =>
-    set((s) => {
-      const cert = s.certs[s.curCert];
-      if (!cert) return;
-      const extras = (cert.extras ??= []);
-      const n = extras.filter((e) => e.chapterId === chapterId).length + 1;
-      extras.push({
-        id: nextExtraId(),
-        chapterId,
-        pos: `C${n}`,
-        title: '',
-        ud: '',
-        cantidad: 0,
-        precio: 0,
-      });
-    }),
+    addContradictorio: (chapterId) =>
+      editar((s) => {
+        const cert = s.certs[s.curCert];
+        if (!cert) return;
+        const extras = (cert.extras ??= []);
+        const n = extras.filter((e) => e.chapterId === chapterId).length + 1;
+        extras.push({
+          id: nextExtraId(),
+          chapterId,
+          pos: `C${n}`,
+          title: '',
+          ud: '',
+          cantidad: 0,
+          precio: 0,
+        });
+      }),
 
-  editContradictorio: (extraId, field, value) =>
-    set((s) => {
-      const e = s.certs[s.curCert]?.extras?.find((x) => x.id === extraId);
-      if (!e) return;
-      if (field === 'title' || field === 'ud') {
-        if (typeof value === 'string') e[field] = value;
-      } else if (typeof value === 'number' && Number.isFinite(value)) {
-        // cantidad/precio no pueden ser negativos; cantidad a 2 dec, precio
-        // (dinero) a 2 dec también (coherente con el banco de precios).
-        e[field] = round2(Math.max(0, value));
-      }
-    }),
+    editContradictorio: (extraId, field, value) =>
+      editar((s) => {
+        const e = s.certs[s.curCert]?.extras?.find((x) => x.id === extraId);
+        if (!e) return;
+        if (field === 'title' || field === 'ud') {
+          if (typeof value === 'string') e[field] = value;
+        } else if (typeof value === 'number' && Number.isFinite(value)) {
+          // cantidad/precio no pueden ser negativos; cantidad a 2 dec, precio
+          // (dinero) a 2 dec también (coherente con el banco de precios).
+          e[field] = round2(Math.max(0, value));
+        }
+      }),
 
-  deleteContradictorio: (extraId) =>
-    set((s) => {
-      const cert = s.certs[s.curCert];
-      if (!cert?.extras) return;
-      cert.extras = cert.extras.filter((e) => e.id !== extraId);
-      if (cert.extras.length === 0) cert.extras = undefined;
-    }),
+    deleteContradictorio: (extraId) =>
+      editar((s) => {
+        const cert = s.certs[s.curCert];
+        if (!cert?.extras) return;
+        cert.extras = cert.extras.filter((e) => e.id !== extraId);
+        if (cert.extras.length === 0) cert.extras = undefined;
+      }),
 
-  toggleCerrada: (partidaId) =>
-    set((s) => {
-      const cert = s.certs[s.curCert];
-      if (!cert) return;
-      if (cert.cerradas?.[partidaId]) {
-        delete cert.cerradas[partidaId];
-        if (Object.keys(cert.cerradas).length === 0) cert.cerradas = undefined;
-      } else {
-        (cert.cerradas ??= {})[partidaId] = true;
-      }
-    }),
+    toggleCerrada: (partidaId) =>
+      editar((s) => {
+        const cert = s.certs[s.curCert];
+        if (!cert) return;
+        if (cert.cerradas?.[partidaId]) {
+          delete cert.cerradas[partidaId];
+          if (Object.keys(cert.cerradas).length === 0) cert.cerradas = undefined;
+        } else {
+          (cert.cerradas ??= {})[partidaId] = true;
+        }
+      }),
 
-  addAjuste: (preset) =>
-    set((s) => {
-      const cert = s.certs[s.curCert];
-      if (!cert) return;
-      const ajustes = (cert.ajustes ??= []);
-      if (preset === 'retencion') {
-        // Retención de garantía predefinida: % recurrente (se hereda cert a cert)
-        // que RESTA. Precarga el último % de retención usado en la obra (ajuste o
-        // legacy) o el 5% estándar (obra privada / LCSP) si es la primera vez.
+    addAjuste: (preset) =>
+      editar((s) => {
+        const cert = s.certs[s.curCert];
+        if (!cert) return;
+        const ajustes = (cert.ajustes ??= []);
+        if (preset === 'retencion') {
+          // Retención de garantía predefinida: % recurrente (se hereda cert a cert)
+          // que RESTA. Precarga el último % de retención usado en la obra (ajuste o
+          // legacy) o el 5% estándar (obra privada / LCSP) si es la primera vez.
+          ajustes.push({
+            id: nextAjusteId(),
+            concepto: 'Retención garantía',
+            tipo: 'pct',
+            valor: lastRetencionRate(s) ?? 0.05,
+            signo: -1,
+            recurrente: true,
+            preset: 'retencion',
+          });
+          return;
+        }
+        // Por defecto: descuento fijo puntual (el caso más común: una corrección).
         ajustes.push({
           id: nextAjusteId(),
-          concepto: 'Retención garantía',
-          tipo: 'pct',
-          valor: lastRetencionRate(s) ?? 0.05,
+          concepto: '',
+          tipo: 'fijo',
+          valor: 0,
           signo: -1,
-          recurrente: true,
-          preset: 'retencion',
+          recurrente: false,
         });
-        return;
-      }
-      // Por defecto: descuento fijo puntual (el caso más común: una corrección).
-      ajustes.push({
-        id: nextAjusteId(),
-        concepto: '',
-        tipo: 'fijo',
-        valor: 0,
-        signo: -1,
-        recurrente: false,
-      });
-    }),
+      }),
 
-  editAjuste: (id, field, value) =>
-    set((s) => {
-      const a = s.certs[s.curCert]?.ajustes?.find((x) => x.id === id);
-      if (!a) return;
-      if (field === 'concepto') {
-        if (typeof value === 'string') a.concepto = value;
-      } else if (field === 'tipo') {
-        if ((value === 'pct' || value === 'fijo') && value !== a.tipo) {
-          a.tipo = value;
-          a.valor = 0; // fracción ⇄ euros no son intercambiables → resetear
+    editAjuste: (id, field, value) =>
+      editar((s) => {
+        const a = s.certs[s.curCert]?.ajustes?.find((x) => x.id === id);
+        if (!a) return;
+        if (field === 'concepto') {
+          if (typeof value === 'string') a.concepto = value;
+        } else if (field === 'tipo') {
+          if ((value === 'pct' || value === 'fijo') && value !== a.tipo) {
+            a.tipo = value;
+            a.valor = 0; // fracción ⇄ euros no son intercambiables → resetear
+          }
+        } else if (field === 'signo') {
+          if (value === -1 || value === 1) a.signo = value;
+        } else if (field === 'recurrente') {
+          if (typeof value === 'boolean') a.recurrente = value;
+        } else if (field === 'valor') {
+          if (typeof value === 'number' && Number.isFinite(value)) {
+            a.valor = a.tipo === 'pct' ? Math.min(1, Math.max(0, value)) : round2(Math.max(0, value));
+          }
         }
-      } else if (field === 'signo') {
-        if (value === -1 || value === 1) a.signo = value;
-      } else if (field === 'recurrente') {
-        if (typeof value === 'boolean') a.recurrente = value;
-      } else if (field === 'valor') {
-        if (typeof value === 'number' && Number.isFinite(value)) {
-          a.valor = a.tipo === 'pct' ? Math.min(1, Math.max(0, value)) : round2(Math.max(0, value));
-        }
-      }
-    }),
+      }),
 
-  deleteAjuste: (id) =>
-    set((s) => {
-      const cert = s.certs[s.curCert];
-      if (!cert?.ajustes) return;
-      cert.ajustes = cert.ajustes.filter((a) => a.id !== id);
-      if (cert.ajustes.length === 0) cert.ajustes = undefined;
-    }),
-});
+    deleteAjuste: (id) =>
+      editar((s) => {
+        const cert = s.certs[s.curCert];
+        if (!cert?.ajustes) return;
+        cert.ajustes = cert.ajustes.filter((a) => a.id !== id);
+        if (cert.ajustes.length === 0) cert.ajustes = undefined;
+      }),
+
+    emitirCert: (index) => {
+      const s0 = get();
+      const c = s0.certs[index];
+      // En orden: no se emite la nº 3 con la nº 2 en borrador (su «anterior» podría cambiar).
+      if (!c || c.emitidaAt || s0.certs.slice(0, index).some((x) => !x.emitidaAt)) return false;
+      structural(() =>
+        set((s) => {
+          const cert = s.certs[index]!;
+          const fecha = new Date().toISOString();
+          // Precios: los que aún se leían en vivo (cert legada o partida añadida
+          // después) se congelan ahora al precio vivo, que es con el que se
+          // valoraba: la emisión no mueve ningún importe.
+          const precios = (cert.priceSnapshot ??= {});
+          for (const ps of Object.values(s.partidas)) for (const p of ps ?? []) precios[p.id] ??= p.precio;
+          cert.coefK ??= s.rates.coefK;
+          cert.snapshotAt ??= fecha;
+          // Firma: la que haya ahora, aunque sea provisional (la emitida no se re-sella).
+          if (!firmaCertDefinitiva(cert.firmantesSnapshot)) {
+            cert.firmantesSnapshot = composeCertFirmantes(s.obra);
+            cert.firmadoAt = fecha;
+          }
+          cert.emitidaAt = fecha;
+          (cert.historial ??= []).push({ accion: 'emitida', fecha });
+        }),
+      );
+      return true;
+    },
+
+    reabrirCert: (index) => {
+      const s0 = get();
+      const c = s0.certs[index];
+      // Solo la última emitida: reabrir una del medio cambiaría el «anterior» de las emitidas después.
+      if (!c?.emitidaAt || s0.certs[index + 1]?.emitidaAt) return false;
+      structural(() =>
+        set((s) => {
+          const cert = s.certs[index]!;
+          delete cert.emitidaAt;
+          (cert.historial ??= []).push({ accion: 'reabierta', fecha: new Date().toISOString() });
+        }),
+      );
+      return true;
+    },
+  };
+};

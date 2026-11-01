@@ -242,3 +242,27 @@ describe('partidas cerradas («No se ejecuta»)', () => {
     expect(screen.queryByText('PEM vigente')).not.toBeInTheDocument();
   });
 });
+
+describe('emitir certificaciones (T-2)', () => {
+  it('«Emitir» va en orden; emitida, lo editable queda desactivado y se puede reabrir', () => {
+    useObraStore.getState().setCurCert(1);
+    const { rerender } = render(<CertificacionesView compact={false} />);
+    expect(screen.getByRole('button', { name: /Emitir/ })).toBeDisabled(); // la nº 1 sigue en borrador
+    useObraStore.getState().setCurCert(0);
+    rerender(<CertificacionesView compact={false} />);
+    fireEvent.click(screen.getByRole('button', { name: /Emitir/ }));
+    expect(useObraStore.getState().certs[0]!.emitidaAt).toBeTruthy();
+    expect(screen.getByText(/Emitida el/)).toBeInTheDocument();
+    expect(screen.getByText(/Certificación emitida: no se puede cambiar/)).toBeInTheDocument();
+    // El periodo (texto editable, no un control nativo) no entra en edición.
+    fireEvent.click(screen.getByLabelText('Periodo de la certificación'));
+    expect(screen.queryByRole('textbox', { name: 'Periodo de la certificación' })?.tagName).toBe('SPAN');
+    // Desplegar una partida para leerla sigue funcionando (la fila no es un control).
+    fireEvent.click(screen.getByText('E02EM030'));
+    expect(screen.getByText('Zanjas de saneamiento')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Reabrir' }));
+    expect(useObraStore.getState().certs[0]!.emitidaAt).toBeUndefined();
+    fireEvent.click(screen.getByLabelText('Periodo de la certificación'));
+    expect(screen.getByRole('textbox', { name: 'Periodo de la certificación' }).tagName).toBe('TEXTAREA');
+  });
+});

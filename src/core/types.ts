@@ -261,6 +261,15 @@ export interface Cert {
   firmantesSnapshot?: Firmante[];
   /** Fecha ISO de firma, congelada junto a `firmantesSnapshot` (línea «En X, a Y»). */
   firmadoAt?: string;
+  /**
+   * Emitida (v13, T-2): fecha ISO. Mientras lo esté, nada de la cert cambia
+   * (cantidades, líneas, contradictorios, cerradas, ajustes, periodo,
+   * retención): el store lo rechaza. Se emite en orden y solo se reabre la
+   * última emitida, dejando rastro en `historial`. Ausente = borrador.
+   */
+  emitidaAt?: string;
+  /** Rastro de emisiones y reaperturas (v13), en orden. */
+  historial?: { accion: 'emitida' | 'reabierta'; fecha: string }[];
 }
 
 /**

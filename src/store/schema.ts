@@ -90,8 +90,12 @@ import { nextAgenteId } from './base';
  *   Migración: `migrarLineSnap` lo rellena con las líneas marcadas que aún
  *   existen en la medición (las ya borradas siguen sin nombre). Mismo espacio
  *   de claves `concreta6.*`.
+ *
+ *   v12 → v13 (2026-11-01, emitir certificaciones, T-2): `Cert.emitidaAt` y
+ *   `Cert.historial`, opcionales. Migración: solo sube la versión (las certs
+ *   de antes son borradores). Mismo espacio de claves `concreta6.*`.
  */
-export const SCHEMA_VERSION = 12;
+export const SCHEMA_VERSION = 13;
 
 /** Estado de dominio de la obra (lo que persistiría en F6). Serializable. */
 export interface ObraData {
@@ -302,6 +306,8 @@ const MIGRATIONS: Record<number, (d: ObraData) => ObraData> = {
   10: (d) => ({ ...d, schemaVersion: 11 }),
   // v11 → v12 (certificar por líneas): `Cert.lineSnap` desde la medición actual.
   11: (d) => ({ ...migrarLineSnap(d), schemaVersion: 12 }),
+  // v12 → v13 (emitir certificaciones): las certs de antes son borradores.
+  12: (d) => ({ ...d, schemaVersion: 13 }),
 };
 
 /**

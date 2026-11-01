@@ -158,7 +158,7 @@ export function firmaCertDefinitiva(firmantes: readonly Firmante[] | undefined):
 export function firmaFor(
   kind: 'presupuesto' | 'mediciones' | 'resumen' | 'cert' | 'liquidacion',
   obra: Obra,
-  cert?: Pick<Cert, 'firmantesSnapshot' | 'firmadoAt'>,
+  cert?: Pick<Cert, 'firmantesSnapshot' | 'firmadoAt' | 'emitidaAt'>,
   nowIso = '',
 ): Firma {
   if (kind === 'mediciones') return { firmantes: [], lugar: '', fecha: '' };
@@ -175,9 +175,12 @@ export function firmaFor(
       ? // Solo un snapshot DEFINITIVO (con DF) fija la firma; uno provisional
         // (vacío o solo constructora, sellado antes de rellenar la DF) se compone
         // en vivo para que los directores añadidos después sí aparezcan.
-        (firmaCertDefinitiva(cert?.firmantesSnapshot)
-          ? cert!.firmantesSnapshot!
-          : composeCertFirmantes(obra))
+        // Emitida (T-2): la firma que se congeló al emitir, aunque fuera provisional.
+        (cert?.emitidaAt
+          ? (cert.firmantesSnapshot ?? [])
+          : firmaCertDefinitiva(cert?.firmantesSnapshot)
+            ? cert!.firmantesSnapshot!
+            : composeCertFirmantes(obra))
       : [
           firmanteConstructora(obra),
           { rol: 'La Propiedad', nombre: str(obra, 'promotor.nombre') },
@@ -385,6 +388,14 @@ export function buildResumen(
   return { rows, cd, ci, pem, gg, bi, pec, iva, total: pec + iva, rates };
 }
 
+/** Estado de una cert para la cabecera de sus documentos (T-2): «Emitida el
+ *  1/11/2026» o «Borrador» (una cert en borrador todavía puede cambiar). */
+export function estadoCertTexto(emitidaAt?: string): string {
+  if (!emitidaAt) return 'Borrador';
+  const d = new Date(emitidaAt);
+  return Number.isNaN(d.getTime()) ? 'Emitida' : `Emitida el ${d.toLocaleDateString('es-ES')}`;
+}
+
 /* ---- Certificación (con snapshot de precios F7.0 + contradictorios) ------- */
 
 export interface CertListadoRow {
@@ -451,6 +462,8 @@ export interface CertListado {
   retencion: number;
   /** Fecha del snapshot de precios (F7.0) — el doc la estampa (trazabilidad). */
   snapshotAt?: string;
+  /** Emitida (T-2): fecha ISO; ausente = borrador. Los documentos lo dicen. */
+  emitidaAt?: string;
   capitulos: CertCapituloListado[];
   totals: CertTotals;
   /** Tasas con las que se calcularon los totales (GG+BI e IVA): las fórmulas
@@ -610,6 +623,7 @@ export function buildCertListado(
     period: cert.period,
     retencion: cert.retencion,
     snapshotAt: cert.snapshotAt,
+    emitidaAt: cert.emitidaAt,
     capitulos,
     totals: certTotals(
       allPartidas,

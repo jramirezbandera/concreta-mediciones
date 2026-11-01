@@ -4,6 +4,7 @@ import {
   buildCertListado,
   buildPresupuestoListado,
   firmaFor,
+  estadoCertTexto,
   firmaLugarFecha,
   medicionesMeta,
   obraMeta,
@@ -139,6 +140,9 @@ export function PrintDoc({ target, onDone }: { target: PrintTarget; onDone: () =
               <b>Precios a fecha</b> {congelados}
             </span>
           )}
+          <span>
+            <b>Estado</b> {estadoCertTexto(cl.emitidaAt)}
+          </span>
         </>
       );
       body = <PrintCert data={cl} />;

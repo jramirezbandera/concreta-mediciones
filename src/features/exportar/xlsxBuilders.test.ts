@@ -495,3 +495,12 @@ describe('buildLiquidacionXlsx', () => {
     expect((fila[2] as CellObject).value).toBe('Huérfana · Exceso');
   });
 });
+
+describe('buildCertXlsx — estado (T-2)', () => {
+  it('el título dice si es borrador o emitida', () => {
+    const certs: Cert[] = [{ id: 'c1', num: 1, period: '', retencion: 0, data: { pa: 1 } }];
+    const titulo = (c: Cert[]) => cells(buildCertXlsx(buildCertListado(chapters, partidas, c, 0, rates)!, meta, { firmantes: [], lugar: '', fecha: '' }).rows)[0]!.value;
+    expect(titulo(certs)).toBe('CERTIFICACIÓN DE OBRA Nº 1 · BORRADOR');
+    expect(titulo([{ ...certs[0]!, emitidaAt: '2026-11-01T10:00:00.000Z' }])).toBe('CERTIFICACIÓN DE OBRA Nº 1 · EMITIDA EL 1/11/2026');
+  });
+});

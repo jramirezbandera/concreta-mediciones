@@ -28,6 +28,7 @@ import {
   buildCertListado,
   buildPresupuestoListado,
   buildResumen,
+  estadoCertTexto,
   firmaFor,
   firmaLugarFecha,
   medicionesMeta,
@@ -1146,6 +1147,7 @@ export async function docxFor(target: PrintTarget, s: DocxState): Promise<DocxRe
         ['Periodo', cl.period],
         ['Ejecución global', `${fmtNum(cl.totals.pctGlobal, 1)}%`],
         ['Precios a fecha', fechaCorta(cl.snapshotAt)],
+        ['Estado', estadoCertTexto(cl.emitidaAt)],
       ] as [string, string][]
     ).filter((p) => Boolean(p[1]));
     bloques = certBloques(cl);

@@ -34,7 +34,7 @@ import type { MedLineListado } from '../../core/listado';
 import type { CuadroPartidaRow, CuadrosPrecios } from '../../core/cuadrosPrecios';
 import type { Comparativo } from '../../core/ofertas';
 import { ESTADO_LIQUIDACION, LINEAS_RESUMEN_LIQUIDACION, type Liquidacion } from '../../core/liquidacion';
-import { firmaLugarFecha } from '../../core/listado';
+import { estadoCertTexto, firmaLugarFecha } from '../../core/listado';
 import { cerradaLabel } from '../../core/certificacion';
 import { fmtNum, toEur, type Cents } from '../../core/money';
 import { docFileName } from './fileName';
@@ -583,7 +583,8 @@ export function buildCertXlsx(data: CertListado, meta: ObraMeta, firma: Firma): 
     ['Periodo', data.period],
     ['Precios a fecha', congelados],
   ];
-  const rows: Row[] = metaRows(`Certificación de obra nº ${data.num}`, meta, extra);
+  // El estado (T-2) va en la línea del título: así no mueve las filas de las fórmulas.
+  const rows: Row[] = metaRows(`Certificación de obra nº ${data.num} · ${estadoCertTexto(data.emitidaAt)}`, meta, extra);
   const header: Row = [
     'Nº',
     'Código',

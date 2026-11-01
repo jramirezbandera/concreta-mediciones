@@ -70,6 +70,7 @@ export function CertSelector() {
                   <span className={styles.selTitle}>Certificación nº {c.num}</span>
                   <span className={styles.selSub}>
                     {c.period || 'sin periodo'} · {fmtNum(tot.pctGlobal, 0)}% ejecución
+                    {c.emitidaAt ? ' · emitida' : ''}
                   </span>
                 </span>
                 <span className={`mono ${styles.selLiq}`}>{fmtCents(tot.liquido)}</span>

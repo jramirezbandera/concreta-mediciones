@@ -65,6 +65,9 @@ export function EditableText({
     });
 
   function start() {
+    // Dentro de un <fieldset disabled> (una cert emitida, T-2) no se edita, como
+    // los controles nativos, que el fieldset ya desactiva solo.
+    if (displayRef.current?.closest('fieldset[disabled]')) return;
     begin(value || '');
   }
   function commit() {

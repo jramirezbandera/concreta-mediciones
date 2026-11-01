@@ -27,6 +27,7 @@ import { CertChapterCards } from './CertChapterCards';
 import { CertChapterTable, CertDeletedTable, CertHead } from './CertTable';
 import { CertChapterSummary, CertSummary } from './CertSummary';
 import { CertSelector } from './CertSelector';
+import { EstadoCert } from './EstadoCert';
 import { MassComplete } from './MassComplete';
 import { completeScope } from './completeScope';
 import { certPctState } from './certPctState';
@@ -81,6 +82,7 @@ export function CertificacionesView({
 
   const cur = certs[curCert];
   if (!cur) return <div className={styles.view} />;
+  const emitida = Boolean(cur.emitidaAt);
 
   // Obra sin partidas: no hay nada que certificar (journey §4 — siguiente paso
   // sutil, sin wizard). El estado vacío manda al presupuesto.
@@ -135,16 +137,19 @@ export function CertificacionesView({
         <div className={styles.headerTop}>
           <div className={styles.headerLeft}>
             <CertSelector />
-            <span className={styles.period}>
-              <Icon name="doc" size={14} style={{ color: 'var(--text-disabled)' }} />
-              <EditableText
-                value={cur.period}
-                ariaLabel="Periodo de la certificación"
-                placeholder="Periodo…"
-                style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}
-                onCommit={(v) => setCertField('period', v)}
-              />
-            </span>
+            <fieldset disabled={emitida} className={styles.lectura}>
+              <span className={styles.period}>
+                <Icon name="doc" size={14} style={{ color: 'var(--text-disabled)' }} />
+                <EditableText
+                  value={cur.period}
+                  ariaLabel="Periodo de la certificación"
+                  placeholder="Periodo…"
+                  style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}
+                  onCommit={(v) => setCertField('period', v)}
+                />
+              </span>
+            </fieldset>
+            <EstadoCert />
           </div>
           <div>
             <div className={`caps ${styles.liqLabel}`}>Líquido a abonar</div>
@@ -165,12 +170,14 @@ export function CertificacionesView({
             ))}
           </div>
           <div className={styles.headerBottomRight}>
-            <MassComplete
-              scopeName={scopeName}
-              scope={scope}
-              onConfirm={completePartidas}
-              compact={compact}
-            />
+            <fieldset disabled={emitida} className={styles.lectura}>
+              <MassComplete
+                scopeName={scopeName}
+                scope={scope}
+                onConfirm={completePartidas}
+                compact={compact}
+              />
+            </fieldset>
             <span
               className={styles.globalPct}
               title={
@@ -195,7 +202,20 @@ export function CertificacionesView({
         />
       )}
 
+      {emitida && (
+        <p className={styles.emitidaAviso}>
+          <Icon name="check" size={14} /> Certificación emitida: no se puede cambiar. Para corregirla, reábrela
+          (queda constancia en su historial).
+        </p>
+      )}
+
       {!compact && <CertHead mode={mode} />}
+
+      {/* Emitida (T-2): todo lo editable de abajo queda desactivado de forma nativa
+          (celdas, casillas y botones son <button>/<input>); desplegar una partida
+          para leerla sigue funcionando (la fila no es un control). El store,
+          además, rechaza cualquier cambio de una cert emitida. */}
+      <fieldset disabled={emitida} className={styles.lectura}>
 
       {/* Grid de edición (Tab/Enter) SOLO en modo tabla: en tarjetas no hay
           navegación de teclado, y montar `data-editgrid` allí engañaría a
@@ -365,6 +385,7 @@ export function CertificacionesView({
         <CertChapterSummary rows={chapterRows} />
         <CertSummary totals={totals} retencion={cur.retencion} retenidoAcumulado={retenidoAcumulado} />
       </div>
+      </fieldset>
     </div>
   );
 }

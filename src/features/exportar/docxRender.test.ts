@@ -217,3 +217,11 @@ describe('docxFor — liquidación final', () => {
     expect(await docxFor({ kind: 'liquidacion' }, { ...seedState, certs: [] })).toBeNull();
   });
 });
+
+describe('docxFor — estado de la certificación (T-2)', () => {
+  it('borrador o emitida en la cabecera', async () => {
+    expect(await xmlOf({ kind: 'cert', index: 0 }, seedState)).toContain('Borrador');
+    const certs = seedState.certs.map((c, i) => (i === 0 ? { ...c, emitidaAt: '2026-11-01T10:00:00.000Z' } : c));
+    expect(await xmlOf({ kind: 'cert', index: 0 }, { ...seedState, certs })).toContain('Emitida el 1/11/2026');
+  });
+});

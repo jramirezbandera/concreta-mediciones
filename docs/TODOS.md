@@ -14,7 +14,15 @@ Origen: revisión de ingeniería (`/plan-eng-review`) + voz externa Codex, 2026-
 - **Depende de / bloqueado por:** F5 (Referencia) e import multi-base. Aplazado tras el Hito 1.
 - **DISPARADO por multi-obra (eng-review 2026-06-13):** copiar partidas ENTRE TUS PROPIAS obras hace la colisión de código mucho más probable (el mismo estudio reusa `mo113`, `mt10haf010`… con precios que derivan año a año). `copyRefPartidas` con `if(!recursos[code])` se queda con el existente → el descompuesto copiado calcula con el precio equivocado en silencio. **Mitigación v1 (no T-1 completo):** AVISO interactivo de colisión al copiar (detectar código existente con precio/desc distinto, con tolerancia/normalización para no avisar por redondeo/espacios/mayúsculas) + opción fusionar vs **bifurcar** (crear el recurso entrante bajo código derivado y reescribir `item.code` de forma consistente en todas las partidas copiadas, con id único estable). La **clave compuesta `{source,code}` completa SIGUE aplazada** aquí; v1 resuelve el caso de copia sin rehacer el modelo del banco.
 
-## T-2 · Inmutabilidad y auditoría de certificaciones
+## ~~T-2 · Inmutabilidad y auditoría de certificaciones~~ — HECHO (2026-11-01)
+
+Esquema v13: `Cert.emitidaAt` y `Cert.historial`. «Emitir» en la cabecera de la cert
+(en orden: antes las anteriores) congela los precios que aún se leían en vivo y la
+firma; desde entonces el store rechaza cualquier cambio de esa cert y la vista la
+deja en solo lectura (`<fieldset disabled>`). Solo se reabre la última emitida, y
+queda en su historial. Los documentos dicen «Borrador» o «Emitida el …». Lo de abajo
+es el contexto original.
+
 - **Qué:** al emitir una certificación debería quedar "congelada" (snapshot). Hoy editar una cert antigua recalcula en silencio las siguientes vía el encadenado "anterior".
 - **Por qué:** la certificación es un documento de cobro. Alterar importes ya certificados/cobrados sin rastro es inaceptable ante propiedad/constructora.
 - **Pros:** trazabilidad de cobro; certs reproducibles; export con snapshot.
