@@ -284,8 +284,10 @@ export interface ServiciosHigienicosDatos {
 }
 
 /**
- * Lo que el proyecto guarda para el estudio básico (`Proyecto.seguridadSalud`).
- * Opcional y sin schema nuevo: los expedientes guardados se siguen leyendo.
+ * El estudio tal como lo leen el art. 4 y el documento (la forma de
+ * concreta-instalaciones). Aquí no se guarda: lo arma `core/ess/obra`
+ * (`estudioDe`) con lo que guarda la obra (`EstudioSsDatos`) y lo que ya sabe
+ * el presupuesto (PEM, GG, BI, IVA) y el estudio de residuos (amianto, tipo de obra).
  */
 export interface EstudioSeguridadSalud {
   presupuesto?: PresupuestoObra;
@@ -393,4 +395,38 @@ export interface FichaCatalogo {
   fuentes: string[];
   /** Hueco del análisis §4.8 redactado por la app (decisión 11): el proyectista la revisa. */
   redactadaPorApp?: true;
+}
+
+// ── Lo que guarda la obra (`ObraData.seguridadSalud`, esquema v11) ─────────────
+
+/** Técnico que redacta y firma el estudio. */
+export interface RedactorEss {
+  nombre: string;
+  titulacion: string;
+  colegiado: string;
+}
+
+/** Tipo de obra, el mismo que el del estudio de residuos (`TipoObraRcd`). */
+export type TipoObraEss = 'nueva' | 'reforma' | 'demolicion';
+
+/**
+ * Lo que guarda la obra para el estudio de seguridad y salud
+ * (docs/plan-seguridad-salud.md, §Datos). Sin presupuesto: el PEM, GG, BI e
+ * IVA salen de la obra. El amianto y el tipo de obra solo se leen de aquí si la
+ * obra no tiene estudio de residuos (D4); de aquí sale siempre la friabilidad.
+ */
+export interface EstudioSsDatos extends Omit<
+  EstudioSeguridadSalud,
+  'presupuesto' | 'demolicionPrevia'
+> {
+  version: 1;
+  /** Fecha del estudio (ISO). */
+  fecha: string | null;
+  /** Solo sin estudio de residuos (D4). */
+  tipos?: TipoObraEss[];
+  /** El promotor encarga el estudio completo aunque baste el básico (Guía folio 24). */
+  forzarCompleto?: boolean;
+  redactor: RedactorEss | null;
+  /** Fase 2: id del capítulo o subcapítulo de seguridad y salud del presupuesto. */
+  capituloSs?: string | null;
 }

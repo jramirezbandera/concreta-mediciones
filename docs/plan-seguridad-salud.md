@@ -101,16 +101,18 @@ interface EstudioSsDatos {
     (`estudioRcd.amianto`, `amiantoElementos`, `tipos`); si no, se declaran aquí. Ver D4.
   - Superficie y plantas: la ficha de la obra (`core/edificio`, TD2).
   - Redactor: se propone el del estudio de residuos.
-- Esquema: la siguiente versión libre (v10, o v11 si el plan de ofertas entra antes). Migración:
-  solo sube la versión, como v7 y v8. Clave en `DOMAIN_KEYS`.
+- Esquema **v11** (la v10 es la de ofertas, ab1f92f). Migración: solo sube la versión, como v7 y
+  v8. Clave en `DOMAIN_KEYS`.
 
 ### Reglas: qué ficha proponen las partidas (`core/ess/reglas.ts`)
 
 Leen título, descripción, unidad y código, como `rcd/reglas` y `pcc/reglas` (mismo `textoDe`).
 Cada regla da fichas y su motivo con la partida («02.03 Excavación en zanja…»).
 
-- **Siempre** (toda obra con presupuesto): F0, IP1, IP4, IP6, IP7, M13, M22, MA5.
-- **Por partidas** (orientativo; se cierra en E3 contra las obras reales de los tests):
+- **Siempre** (toda obra con presupuesto): la lista común de instalaciones, F0, IP1, IP3, IP4,
+  IP5, IP6, IP7, MA2, MA5, M13, M22 (`COMUNES`).
+- **Por partidas** (`REGLAS_PARTIDA`; cotejado en E2 con las cinco obras de
+  `ejemplos pdf/Gestion de residuos/bc3/`, CYPE y Presto):
   - demolición/levantado/picado → F1 (reforma) o F2 (demolición), F3, MA10, M2, M14; amianto en
     la partida → aviso de amianto;
   - excavación/vaciado → F4, M1, M2; zanja → F5; pozo → F6; relleno → F7, M20;
@@ -127,9 +129,12 @@ Cada regla da fichas y su motivo con la partida («02.03 Excavación en zanja…
   - urbanización/firmes → F39; apertura de huecos/recalces → F40, MA6;
   - andamio en una partida → MA1/MA2/MA3/MA4 según el tipo; grúa → M7 o M6; plataforma
     elevadora → MA14; montacargas → M8.
-- **Por datos del estudio**: vía pública → IP2; edificio en uso → IP9; servicios afectados → IP3;
-  grúa torre → M7, F36; cubierta en el presupuesto → TP1; fachada → TP2.
-- **Por la obra**: plantas sobre rasante ≥ 2 → MA7, MA1; sótano → F8.
+- **Por ficha** (`DERIVADAS`): lo que trae una fase. Demoliciones → MA10, M2, M14; hormigón →
+  M4, M16; forjado → MA6, MA7; cubiertas → MA7, MA9, TP1; fachada y vidrio → TP2; instalaciones
+  → M12, TP3; grúas → F36, MA15.
+- **Por datos del estudio y de la obra**: vía pública → IP2 (y MA11 con andamio, F41, F42);
+  edificio en uso → IP9; grúa torre → M7, F36, MA15, MA12; fachada o forjado con plantas sobre
+  rasante ≥ 2 → MA1, MA8.
 - Los bancos con capítulos conocidos (BCCA, Precio Centro, CYPE, Extremadura) refuerzan la regla
   por código, como en `rcd/reglas`.
 - Nada se da por bueno solo: la ficha propuesta se imprime, pero la pantalla muestra el motivo y
@@ -169,8 +174,10 @@ medido desde la mano de obra, coordinación, entorno, medios, servicios higiéni
 - **E1 · Datos de la obra.** `EstudioSsDatos`, `datos.ts` sobre `ObraData`: PEC desde el
   presupuesto, jornadas desde la mano de obra, amianto y tipos desde residuos, pendientes.
   Esquema nuevo, slice (`essSlice`: iniciar, set, quitar), migración y tests de esquema.
+  Hecho lo puro (`core/ess/obra.ts`); el esquema y el slice van con la vista (E4), para no pisar
+  la sesión de ofertas en `schema.ts` y `obraStore.ts`.
 - **E2 · Reglas y selección.** `reglas.ts` (propuesta con motivos), `seleccion.ts` (diferencia,
-  ediciones, fichas del estudio). Tests con las obras de `__fixtures__` (qué proponen y qué no).
+  ediciones, fichas del estudio). Tests con obras inventadas (qué proponen y qué no). HECHO.
 - **E3 · Documento y Word.** `documento.ts`, `{kind:'sub'}`, `docxEss.ts`, test de prohibidos y
   golden del Word. El golden de residuos sigue igual.
 - **E4 · Vista.** Pestaña, estado vacío, Fichas, Datos, Antes de entregar, Exportar.
