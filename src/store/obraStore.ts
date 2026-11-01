@@ -693,6 +693,10 @@ export interface ObraState extends ObraData {
   confirmarResiduos: (refs: RefPartidaRcd[]) => number;
   /** Propone residuo en las partidas sin asignar. Devuelve cuántas. */
   proponerResiduos: () => number;
+  /** Pone las propuestas de «Sugerir con IA» (E6) en las partidas que SIGUEN sin
+   *  residuo (lo asignado mientras tanto no se pisa). UN paso de Deshacer.
+   *  Devuelve cuántas. */
+  aplicarSugerenciasIa: (propuestas: Record<string, ResiduoPartida>) => number;
   /** Copia el residuo de una partida a las de su mismo código. Devuelve cuántas. */
   aplicarResiduoAHomonimos: (chapterId: string, partidaId: string) => number;
   /** Crea el capítulo «Gestión de residuos» con las partidas propuestas desde la

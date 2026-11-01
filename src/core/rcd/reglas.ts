@@ -285,6 +285,39 @@ export function proponerResiduo(p: Pick<Partida, 'code' | 'title' | 'desc' | 'ud
   };
 }
 
+/* ---- plantillas para «Sugerir con IA» (E6, D15) ---------------------------- */
+
+/** Plantillas que la IA puede elegir: las reglas de material más la excavación.
+ *  La IA solo dice CUÁL; el código LER, la densidad y la conversión los pone la
+ *  regla, como cuando la reconoce el texto (lección del commit 8136865). */
+export const PLANTILLAS_IA: ReadonlyArray<{ id: string; motivo: string }> = [
+  ...REGLAS.map((r) => ({ id: r.id, motivo: r.motivo })),
+  { id: 'excavacion', motivo: 'Excavación: tierras y piedras (17 05 04)' },
+];
+
+/**
+ * Propuesta con la plantilla que eligió la IA, o `null` si no existe. Queda
+ * como `propuesta` (no suma hasta confirmarla) con el origen que se le pase.
+ */
+export function proponerConPlantilla(
+  p: Pick<Partida, 'code' | 'title' | 'desc' | 'ud'>,
+  plantilla: string,
+  origen: ResiduoPartida['origen'],
+): ResiduoPartida | null {
+  const t = textoDe(p);
+  const transporte = transporteDe(t);
+  if (plantilla === 'excavacion')
+    return {
+      estado: 'propuesta',
+      origen,
+      componentes: [porPeso({ t, u: unidadRcd(p.ud), tipo: 'excavacion' }, '17 05 04')],
+      transporte,
+    };
+  const regla = REGLAS.find((r) => r.id === plantilla);
+  if (!regla) return null;
+  return { estado: 'propuesta', origen, componentes: regla.propone({ t, u: unidadRcd(p.ud), tipo: 'demolicion' }), transporte };
+}
+
 /** Estado legible de la propuesta: «noGenera» cuando no trae componentes. */
 export function estadoTrasConfirmar(r: ResiduoPartida): ResiduoPartida['estado'] {
   return r.componentes.length ? 'confirmada' : 'noGenera';

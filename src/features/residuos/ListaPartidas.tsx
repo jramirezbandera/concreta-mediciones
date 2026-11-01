@@ -7,6 +7,7 @@ import type { Chapter, Partida } from '../../core/types';
 import { useObraStore, useToastStore } from '../../store';
 import { getDomainRevision, undo } from '../../store/temporal';
 import { ChipEstado, type EstadoVisibleRcd } from './ChipEstado';
+import { BotonSugerirIa } from './BotonSugerirIa';
 import { EditorResiduo } from './EditorResiduo';
 import styles from './Residuos.module.css';
 
@@ -106,6 +107,7 @@ export function ListaPartidas({ abrir, onAbrir }: { abrir: string | null; onAbri
           >
             <Icon name="target" size={14} /> Proponer en las sin asignar
           </button>
+          <BotonSugerirIa />
         </div>
       </div>
       <div className={styles.filters} role="group" aria-label="Filtrar partidas">

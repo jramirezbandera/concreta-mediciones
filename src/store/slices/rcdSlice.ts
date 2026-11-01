@@ -33,6 +33,7 @@ type RcdActions = Pick<
   | 'setResiduoPartida'
   | 'confirmarResiduos'
   | 'proponerResiduos'
+  | 'aplicarSugerenciasIa'
   | 'aplicarResiduoAHomonimos'
   | 'crearCapituloGestionRcd'
 >;
@@ -150,6 +151,23 @@ export const createRcdSlice: ObraSlice<RcdActions> = (set, get) => ({
     structural(() =>
       set((s) => {
         n = proponerEn(s);
+      }),
+    );
+    return n;
+  },
+
+  aplicarSugerenciasIa: (propuestas: Record<string, ResiduoPartida>) => {
+    let n = 0;
+    if (!get().estudioRcd) return 0;
+    structural(() =>
+      set((s) => {
+        for (const ps of Object.values(s.partidas))
+          for (const p of ps ?? []) {
+            const r = propuestas[p.id];
+            if (!r || p.rcd || r.estado !== 'propuesta') continue;
+            p.rcd = structuredClone(r);
+            n += 1;
+          }
       }),
     );
     return n;

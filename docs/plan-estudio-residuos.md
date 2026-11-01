@@ -8,8 +8,11 @@
 > E2 (esquema v7, store, vista «Residuos» y pestaña en el detalle de la partida; la vista y
 > el editor van en chunks aparte), E3 (Word, avisos de coherencia y «Crear capítulo de
 > gestión») y la IMPORTACIÓN de E4 (`~R`/`~X`, contrastada con el estudio impreso de una
-> obra real de CYPE). Falta: la exportación de `~R` (E4, tras probarla en Presto y
-> Arquímedes), E5 (tabla propia o permiso de ECO-ARQ), E6 («Sugerir con IA») y E7.
+> obra real de CYPE) y E6 («Sugerir con IA», 2026-11-01: la IA elige una plantilla de las
+> reglas, «no genera» o «no lo sé» por partida sin asignar, y todo queda como propuesta;
+> `core/rcd/ia.ts`, eval en `ia.eval.ts`: 18/19 con gemini-3.1-flash-lite, falla el picado de
+> enfoscado porque no hay plantilla de mortero). Falta: la exportación de `~R` (E4, tras
+> probarla en Presto y Arquímedes), E5 (tabla propia o permiso de ECO-ARQ) y E7.
 > La verificación normativa NO se rehace: se cita la de Instalaciones,
 > `D:\PROGRAMACION\Instalaciones\research\verificacion-residuos.md` (criterios K-RCD.1–17,
 > 2026-10-16). El contexto del otro proyecto está en `D:\PROGRAMACION\Instalaciones\PLAN-MEMORIA.md`,

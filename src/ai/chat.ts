@@ -23,6 +23,20 @@ export async function runChatTurn(
   apiKey: string,
   req: ChatRequest,
 ): Promise<ChatEnvelope> {
+  return parseChatEnvelope(await runJsonTurn(provider, apiKey, req));
+}
+
+/**
+ * Un turno con el esquema que traiga `req` y el JSON crudo de vuelta, sin el
+ * envelope del chat: para las sugerencias con esquema cerrado de las vistas
+ * («Sugerir con IA» de residuos). Quien llama valida lo que recibe.
+ */
+export async function runJsonTurn(provider: AiProviderId, apiKey: string, req: ChatRequest): Promise<unknown> {
+  const mod = await cargarProveedor(provider);
+  return mod.chatRaw(req, apiKey, AI_MODELS[provider]);
+}
+
+async function cargarProveedor(provider: AiProviderId): Promise<{ chatRaw: ProviderChatFn }> {
   let mod: { chatRaw: ProviderChatFn };
   try {
     switch (provider) {
@@ -48,6 +62,5 @@ export async function runChatTurn(
     if (err instanceof AiError) throw err; // rama anthropic/exhaustiva, no un fallo de import
     throw new AiError('network', 'No se pudo cargar el módulo del proveedor (¿sin conexión?).');
   }
-  const raw = await mod.chatRaw(req, apiKey, AI_MODELS[provider]);
-  return parseChatEnvelope(raw);
+  return mod;
 }
