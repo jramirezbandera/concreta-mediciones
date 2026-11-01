@@ -6,7 +6,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { coefKPct, encodeCp1252, obraToBc3, type Bc3ExportObra } from './bc3export';
+import { bc3CodigosPartidas, coefKPct, encodeCp1252, obraToBc3, type Bc3ExportObra } from './bc3export';
 import { bc3ToObra } from './bc3import';
 import { buildRecursos, precioCuadraDescompuesto } from './banco';
 import { partidaCantidad } from './medicion';
@@ -724,5 +724,47 @@ describe('obraToBc3 — dimensiones hasta 4 decimales', () => {
     expect(rec(o, '~M|1#')).toContain('\\x\\2\\1.2345\\0.5\\2.6\\');
     const back = bc3ToObra(obraToBc3(o));
     expect(Object.values(back.data.partidas).flat()[0]!.med[0]!.largo).toBe(1.2345);
+  });
+});
+
+describe('obraToBc3 — sin precios (plan de ofertas, O1)', () => {
+  const sin = (o: Bc3ExportObra) =>
+    decode(obraToBc3(o, { sinPrecios: true })).split('\r\n').filter(Boolean);
+
+  it('partidas, capítulos y raíz a 0, sin descomposición ni recursos, y ~K sin CI', () => {
+    const o = mini({}, { rates: { ...DEFAULT_RATES, coefK: 1.1, ci: 0.05 } });
+    const r = sin(o);
+    expect(r.find((x) => x.startsWith('~C|D01|'))).toBe('~C|D01|m²|Demolición de tabique|0||0|');
+    expect(r.find((x) => x.startsWith('~C|1#'))!.split('|')[4]).toBe('0');
+    expect(r.find((x) => x.startsWith('~C|OBRA##'))!.split('|')[4]).toBe('0');
+    expect(r.some((x) => x.startsWith('~D|D01|'))).toBe(false);
+    expect(r.some((x) => x.startsWith('~C|mo001'))).toBe(false);
+    expect(r.find((x) => x.startsWith('~K|'))!.split('|')[2]!.split('\\')[0]).toBe('0');
+  });
+
+  it('reimporta con las mismas partidas, textos y mediciones, y PEM 0', () => {
+    const { data, report } = bc3ToObra(
+      obraToBc3(
+        { chapters: CHAPTERS, partidas: PARTIDAS, recursos: buildRecursos(PARTIDAS), rates: DEFAULT_RATES, obra: DEFAULT_OBRA },
+        { sinPrecios: true },
+      ),
+    );
+    expect(report.pemCents).toBe(0);
+    const orig = Object.values(PARTIDAS).flat();
+    const back = Object.values(data.partidas).flat();
+    expect(back.map((p) => [p.code, p.title, p.desc, partidaCantidad(p)])).toEqual(
+      orig.map((p) => [p.code, p.title, p.desc, partidaCantidad(p)]),
+    );
+    expect(back.every((p) => p.precio === 0)).toBe(true);
+  });
+
+  it('bc3CodigosPartidas da el código con el que viaja cada partida (homónimos .2)', () => {
+    const o = mini();
+    const otra: Partida = { ...o.partidas['01']![0]!, id: 'p2', pos: '1.2', title: 'Otro título' };
+    o.partidas['01']!.push(otra);
+    const codigos = bc3CodigosPartidas(o);
+    expect(codigos.get('p1')).toBe('D01');
+    expect(codigos.get('p2')).toBe('D01.2');
+    expect(sin(o).some((x) => x.startsWith('~C|D01.2|'))).toBe(true);
   });
 });

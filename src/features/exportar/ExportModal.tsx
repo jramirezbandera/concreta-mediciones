@@ -47,6 +47,7 @@ function Row({
   onPdf,
   onXlsx,
   onDocx,
+  onBc3,
 }: {
   icon: IconName;
   accent?: boolean;
@@ -55,6 +56,8 @@ function Row({
   onPdf: () => void;
   onXlsx: () => void;
   onDocx: () => void;
+  /** Solo las filas que también salen en .bc3 (las mediciones sin precios). */
+  onBc3?: () => void;
 }) {
   return (
     <div className={styles.row}>
@@ -69,6 +72,7 @@ function Row({
         <Chip label="PDF" fmt="PDF" doc={title} style={CHIP_PDF} onClick={onPdf} />
         <Chip label="Word" fmt="Word" doc={title} style={CHIP_DOCX} onClick={onDocx} />
         <Chip label="Excel" fmt="Excel" doc={title} style={CHIP_XLSX} onClick={onXlsx} />
+        {onBc3 && <Chip label="BC3" fmt="BC3 (FIEBDC-3)" doc={title} style={CHIP_BC3} onClick={onBc3} />}
       </div>
     </div>
   );
@@ -95,7 +99,8 @@ export function ExportModal({
   onExportPdf: (target: PrintTarget) => void;
   onExportXlsx: (target: PrintTarget) => void;
   onExportDocx: (target: PrintTarget) => void;
-  onExportBc3: () => void;
+  /** `sinPrecios`: las mediciones para pedir ofertas (docs/plan-ofertas.md). */
+  onExportBc3: (sinPrecios?: boolean) => void;
 }): ReactNode {
   const certs = useObraStore((s) => s.certs);
   const doPdf = (target: PrintTarget) => {
@@ -110,9 +115,9 @@ export function ExportModal({
     onClose();
     onExportDocx(target);
   };
-  const doBc3 = () => {
+  const doBc3 = (sinPrecios = false) => {
     onClose();
-    onExportBc3();
+    onExportBc3(sinPrecios);
   };
   return (
     <Modal
@@ -139,7 +144,7 @@ export function ExportModal({
           <div className={styles.rowSub}>Presupuesto y mediciones en FIEBDC-3 (.bc3)</div>
         </div>
         <div className={styles.chips}>
-          <Chip label="BC3" fmt="BC3 (FIEBDC-3)" doc="Obra completa" style={CHIP_BC3} onClick={doBc3} />
+          <Chip label="BC3" fmt="BC3 (FIEBDC-3)" doc="Obra completa" style={CHIP_BC3} onClick={() => doBc3()} />
         </div>
       </div>
       <Row
@@ -149,6 +154,15 @@ export function ExportModal({
         onPdf={() => doPdf({ kind: 'presupuesto' })}
         onXlsx={() => doXlsx({ kind: 'presupuesto' })}
         onDocx={() => doDocx({ kind: 'presupuesto' })}
+      />
+      <Row
+        icon="send"
+        title="Mediciones sin precios"
+        sub="Para pedir ofertas: el Excel y el BC3 llevan el precio en blanco para rellenar"
+        onPdf={() => doPdf({ kind: 'mediciones' })}
+        onXlsx={() => doXlsx({ kind: 'mediciones' })}
+        onDocx={() => doDocx({ kind: 'mediciones' })}
+        onBc3={() => doBc3(true)}
       />
       <Row
         icon="list"

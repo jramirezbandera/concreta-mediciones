@@ -416,3 +416,27 @@ describe('xlsxFileName', () => {
     expect(xlsxFileName('Resumen', '')).toBe('Resumen.xlsx');
   });
 });
+
+describe('buildPresupuestoXlsx sin precios (plan de ofertas, O1)', () => {
+  const doc = buildPresupuestoXlsx(
+    buildPresupuestoListado(chapters, partidas),
+    meta,
+    { firmantes: [], lugar: '', fecha: '' },
+    true,
+  );
+
+  it('título, hoja y fichero propios', () => {
+    expect(doc.fileName).toBe('Mediciones sin precios - Reforma X.xlsx');
+    expect(doc.sheet).toBe('Mediciones');
+    expect(cells(doc.rows)[0]!.value).toBe('MEDICIONES SIN PRECIOS');
+  });
+
+  it('la columna Precio va vacía y el importe sigue siendo fórmula', () => {
+    const fila = doc.rows.find((r) => (r[1] as CellObject | null)?.value === 'C')!;
+    const precio = fila[5] as CellObject;
+    expect(precio.value).toBeUndefined();
+    expect(precio.type).toBe(Number);
+    expect((fila[6] as CellObject).type).toBe('Formula');
+    expect(cells(doc.rows).some((c) => c.value === 7.77)).toBe(false);
+  });
+});

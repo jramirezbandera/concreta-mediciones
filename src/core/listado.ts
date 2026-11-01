@@ -64,6 +64,12 @@ export function obraMeta(obra: Obra): ObraMeta {
   };
 }
 
+/** Cabecera de las mediciones sin precios (docs/plan-ofertas.md): sin
+ *  constructora, porque se mandan a varias para que oferten. */
+export function medicionesMeta(obra: Obra): ObraMeta {
+  return { ...obraMeta(obra), constructora: '' };
+}
+
 /* ---- Pies de firma por rol (eng-review OV1/OV2/OV3) ----------------------- */
 
 /**
@@ -144,14 +150,16 @@ export function firmaCertDefinitiva(firmantes: readonly Firmante[] | undefined):
  *   cert                → DF (0..n) + Constructora, con el snapshot congelado si
  *                         es DEFINITIVO (OV1) o compuesto en vivo si no (snapshot
  *                         provisional —solo constructora/vacío— o cert legada)
+ *   mediciones          → sin firma (van a varias constructoras para ofertar)
  * `nowIso` es la fecha de presupuesto/resumen (la de la cert va en `cert.firmadoAt`).
  */
 export function firmaFor(
-  kind: 'presupuesto' | 'resumen' | 'cert',
+  kind: 'presupuesto' | 'mediciones' | 'resumen' | 'cert',
   obra: Obra,
   cert?: Pick<Cert, 'firmantesSnapshot' | 'firmadoAt'>,
   nowIso = '',
 ): Firma {
+  if (kind === 'mediciones') return { firmantes: [], lugar: '', fecha: '' };
   const firmantes =
     kind === 'cert'
       ? // Solo un snapshot DEFINITIVO (con DF) fija la firma; uno provisional

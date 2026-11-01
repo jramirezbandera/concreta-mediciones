@@ -35,12 +35,25 @@ describe('ExportModal (F7.1–F7.4) — "mostrar solo lo que funciona"', () => {
 
   it('chips PDF + Word + Excel por fila y UN chip BC3 de cabecera (F7.4)', () => {
     render(abierto());
-    // 4 docs (presupuesto, resumen, cuadros nº 1 y nº 2) + 3 certs del seed = 7
-    // chips de cada formato por-listado.
-    expect(screen.getAllByRole('button', { name: /a PDF$/ })).toHaveLength(7);
-    expect(screen.getAllByRole('button', { name: /a Word$/ })).toHaveLength(7);
-    expect(screen.getAllByRole('button', { name: /a Excel$/ })).toHaveLength(7);
-    expect(screen.getAllByRole('button', { name: /BC3/ })).toHaveLength(1);
+    // 5 docs (presupuesto, mediciones sin precios, resumen, cuadros nº 1 y nº 2)
+    // + 3 certs del seed = 8 chips de cada formato por-listado.
+    expect(screen.getAllByRole('button', { name: /a PDF$/ })).toHaveLength(8);
+    expect(screen.getAllByRole('button', { name: /a Word$/ })).toHaveLength(8);
+    expect(screen.getAllByRole('button', { name: /a Excel$/ })).toHaveLength(8);
+    // BC3: la obra completa y las mediciones sin precios.
+    expect(screen.getAllByRole('button', { name: /BC3/ })).toHaveLength(2);
+  });
+
+  it('las mediciones sin precios salen en los cuatro formatos (plan de ofertas, O1)', () => {
+    const onExportBc3 = vi.fn();
+    const onExportXlsx = vi.fn();
+    render(abierto({ onExportBc3, onExportXlsx }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Exportar «Mediciones sin precios» a BC3 (FIEBDC-3)' }),
+    );
+    expect(onExportBc3).toHaveBeenCalledWith(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Exportar «Mediciones sin precios» a Excel' }));
+    expect(onExportXlsx).toHaveBeenCalledWith({ kind: 'mediciones' });
   });
 
   it('el chip BC3 dispara onExportBc3 y cierra el modal (F7.4)', () => {
@@ -50,7 +63,7 @@ describe('ExportModal (F7.1–F7.4) — "mostrar solo lo que funciona"', () => {
     fireEvent.click(
       screen.getByRole('button', { name: 'Exportar «Obra completa» a BC3 (FIEBDC-3)' }),
     );
-    expect(onExportBc3).toHaveBeenCalledTimes(1);
+    expect(onExportBc3).toHaveBeenCalledWith(false);
     expect(onClose).toHaveBeenCalled();
   });
 

@@ -310,9 +310,9 @@ export default function App() {
     exportDocx(target).catch(exportFailed('Word'));
   }, []);
   // BC3 (F7.4): writer propio síncrono, sin librería (FIEBDC-3 para Presto y cía).
-  const exportObraBc3 = useCallback(() => {
+  const exportObraBc3 = useCallback((sinPrecios?: boolean) => {
     try {
-      exportBc3();
+      exportBc3(sinPrecios);
     } catch (err: unknown) {
       exportFailed('.bc3')(err);
     }

@@ -30,6 +30,7 @@ import {
   buildResumen,
   firmaFor,
   firmaLugarFecha,
+  medicionesMeta,
   obraMeta,
   type CertListado,
   type Firma,
@@ -267,6 +268,8 @@ export function firma(f: Firma): (Paragraph | Table)[] {
 
 // Nº·Código · Descripción · Ud. · Cantidad · Precio · Importe = 10546 twips.
 const W_PRES = [1100, 5100, 480, 1100, 1100, 1666];
+// Sin precios (docs/plan-ofertas.md): Nº·Código · Descripción · Ud. · Cantidad.
+const W_MED = [1100, 7646, 600, 1200];
 
 /** Sangría de cabecera de grupo por profundidad (NBSP: Word no la recorta). */
 function sangria(depth: number): string {
@@ -282,19 +285,24 @@ function medLinea(l: MedLineListado): Paragraph {
   return new Paragraph({ children: [run(texto, { color: GRIS, size: T_TINY })] });
 }
 
-function presupuestoBloques(data: PresupuestoListado): (Paragraph | Table)[] {
+/** `sinPrecios`: las mediciones para pedir ofertas, sin precio, importe ni
+ *  totales (docs/plan-ofertas.md). */
+function presupuestoBloques(data: PresupuestoListado, sinPrecios = false): (Paragraph | Table)[] {
   const out: (Paragraph | Table)[] = [];
+  const W = sinPrecios ? W_MED : W_PRES;
   for (const c of data.capitulos) {
     const rows: TableRow[] = [
       // Banda de capítulo + cabecera de columnas: tableHeader → se repiten por página.
       new TableRow({
         tableHeader: true,
         cantSplit: true,
-        children: [
-          cell(c.code, { width: W_PRES[0]!, bold: true }),
-          cell(c.title, { width: 0, span: 4, bold: true }),
-          cell(fmtCents(c.total), { width: W_PRES[5]!, right: true, bold: true }),
-        ],
+        children: sinPrecios
+          ? [cell(c.code, { width: W[0]!, bold: true }), cell(c.title, { width: 0, span: 3, bold: true })]
+          : [
+              cell(c.code, { width: W[0]!, bold: true }),
+              cell(c.title, { width: 0, span: 4, bold: true }),
+              cell(fmtCents(c.total), { width: W[5]!, right: true, bold: true }),
+            ],
       }),
       new TableRow({
         tableHeader: true,
@@ -304,11 +312,10 @@ function presupuestoBloques(data: PresupuestoListado): (Paragraph | Table)[] {
           'Descripción y mediciones',
           'Ud.',
           'Cantidad',
-          'Precio',
-          'Importe',
+          ...(sinPrecios ? [] : ['Precio', 'Importe']),
         ].map((h, i) =>
           cell(h, {
-            width: W_PRES[i]!,
+            width: W[i]!,
             right: i >= 3,
             bold: true,
             color: GRIS,
@@ -325,7 +332,7 @@ function presupuestoBloques(data: PresupuestoListado): (Paragraph | Table)[] {
             cantSplit: true,
             children: [
               cell(sangria(g.depth) + g.sub.code, {
-                width: W_PRES[0]!,
+                width: W[0]!,
                 bold: true,
                 color: GRIS,
                 size: T_SMALL,
@@ -333,19 +340,23 @@ function presupuestoBloques(data: PresupuestoListado): (Paragraph | Table)[] {
               }),
               cell(g.sub.title.toUpperCase(), {
                 width: 0,
-                span: 4,
+                span: sinPrecios ? 3 : 4,
                 bold: true,
                 color: GRIS,
                 size: T_SMALL,
                 fill: BANDA,
               }),
-              cell(fmtNum(g.total / 100), {
-                width: W_PRES[5]!,
-                right: true,
-                color: GRIS,
-                size: T_SMALL,
-                fill: BANDA,
-              }),
+              ...(sinPrecios
+                ? []
+                : [
+                    cell(fmtNum(g.total / 100), {
+                      width: W[5]!,
+                      right: true,
+                      color: GRIS,
+                      size: T_SMALL,
+                      fill: BANDA,
+                    }),
+                  ]),
             ],
           }),
         );
@@ -360,17 +371,25 @@ function presupuestoBloques(data: PresupuestoListado): (Paragraph | Table)[] {
             children: [
               cellPars(
                 [paraRuns([run(r.pos)]), paraRuns([run(r.code, { color: GRIS, size: T_TINY })])],
-                { width: W_PRES[0]! },
+                { width: W[0]! },
               ),
-              cellPars(desc, { width: W_PRES[1]! }),
-              cell(r.ud, { width: W_PRES[2]! }),
-              cell(fmtNum(r.cantidad), { width: W_PRES[3]!, right: true }),
-              cell(fmtNum(r.precio), { width: W_PRES[4]!, right: true }),
-              cell(fmtNum(r.importe / 100), { width: W_PRES[5]!, right: true }),
+              cellPars(desc, { width: W[1]! }),
+              cell(r.ud, { width: W[2]! }),
+              cell(fmtNum(r.cantidad), { width: W[3]!, right: true }),
+              ...(sinPrecios
+                ? []
+                : [
+                    cell(fmtNum(r.precio), { width: W[4]!, right: true }),
+                    cell(fmtNum(r.importe / 100), { width: W[5]!, right: true }),
+                  ]),
             ],
           }),
         );
       }
+    }
+    if (sinPrecios) {
+      out.push(tabla(W, rows), vacio(160));
+      continue;
     }
     rows.push(
       new TableRow({
@@ -393,6 +412,7 @@ function presupuestoBloques(data: PresupuestoListado): (Paragraph | Table)[] {
     );
     out.push(tabla(W_PRES, rows), vacio(160));
   }
+  if (sinPrecios) return out;
   out.push(
     tabla(W_PRES, [
       new TableRow({
@@ -967,7 +987,7 @@ export interface DocxResult {
 
 /** Documento Word del listado pedido (`null` si la cert no existe). */
 export async function docxFor(target: PrintTarget, s: DocxState): Promise<DocxResult | null> {
-  const meta = obraMeta(s.obra);
+  const meta = target.kind === 'mediciones' ? medicionesMeta(s.obra) : obraMeta(s.obra);
   let titulo: string;
   let bloques: (Paragraph | Table)[];
   let extra: [string, string][] = [];
@@ -976,6 +996,10 @@ export async function docxFor(target: PrintTarget, s: DocxState): Promise<DocxRe
     titulo = 'Presupuesto y mediciones';
     bloques = presupuestoBloques(buildPresupuestoListado(s.chapters, s.partidas, s.rates.coefK));
     firmaDoc = firmaFor('presupuesto', s.obra, undefined, new Date().toISOString());
+  } else if (target.kind === 'mediciones') {
+    titulo = 'Mediciones sin precios';
+    bloques = presupuestoBloques(buildPresupuestoListado(s.chapters, s.partidas, s.rates.coefK), true);
+    firmaDoc = firmaFor('mediciones', s.obra);
   } else if (target.kind === 'resumen') {
     titulo = 'Resumen de presupuesto';
     bloques = resumenBloques(buildResumen(s.chapters, s.partidas, s.rates));

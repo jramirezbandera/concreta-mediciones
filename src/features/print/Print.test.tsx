@@ -73,3 +73,14 @@ describe('PrintDoc (F7.1) — doc de impresión bajo demanda', () => {
     await waitFor(() => expect(window.print).toHaveBeenCalled());
   });
 });
+
+describe('PrintDoc — mediciones sin precios (plan de ofertas, O1)', () => {
+  it('sin columnas de precio ni totales, y sin firma', async () => {
+    render(<PrintDoc target={{ kind: 'mediciones' }} onDone={vi.fn()} />);
+    await waitFor(() => expect(window.print).toHaveBeenCalled());
+    const doc = document.body.querySelector('.print-doc')!;
+    expect(doc.textContent).toContain('Mediciones sin precios');
+    expect(doc.textContent).not.toContain('Importe');
+    expect(doc.querySelector('.pd-grand, .pd-chaptotal, .pd-band-total, .pd-sign')).toBeNull();
+  });
+});

@@ -5,6 +5,7 @@ import {
   buildPresupuestoListado,
   firmaFor,
   firmaLugarFecha,
+  medicionesMeta,
   obraMeta,
   type Firma,
 } from '../../core/listado';
@@ -20,6 +21,8 @@ import './print.css';
 /** Qué documento se imprime (chooser del ExportModal). */
 export type PrintTarget =
   | { kind: 'presupuesto' }
+  /** Mediciones sin precios, para pedir ofertas (docs/plan-ofertas.md). */
+  | { kind: 'mediciones' }
   | { kind: 'resumen' }
   | { kind: 'cuadro1' }
   | { kind: 'cuadro2' }
@@ -51,7 +54,7 @@ export function PrintDoc({ target, onDone }: { target: PrintTarget; onDone: () =
   const bajas = useObraStore((s) => s.bajas);
   const obra = useObraStore((s) => s.obra);
   const resumen = useObraStore(selectResumen);
-  const meta = obraMeta(obra);
+  const meta = target.kind === 'mediciones' ? medicionesMeta(obra) : obraMeta(obra);
 
   // Mientras el doc está montado, al imprimir se oculta la app (print.css).
   useEffect(() => {
@@ -90,6 +93,9 @@ export function PrintDoc({ target, onDone }: { target: PrintTarget; onDone: () =
   if (target.kind === 'presupuesto') {
     titulo = 'Presupuesto y mediciones';
     body = <PrintPresupuesto data={buildPresupuestoListado(chapters, partidas, rates.coefK)} />;
+  } else if (target.kind === 'mediciones') {
+    titulo = 'Mediciones sin precios';
+    body = <PrintPresupuesto data={buildPresupuestoListado(chapters, partidas, rates.coefK)} sinPrecios />;
   } else if (target.kind === 'resumen') {
     titulo = 'Resumen de presupuesto';
     body = <PrintResumen data={resumen} />;
@@ -130,7 +136,12 @@ export function PrintDoc({ target, onDone }: { target: PrintTarget; onDone: () =
   const firmaDoc: Firma =
     target.kind === 'cert'
       ? firmaFor('cert', obra, certs[target.index])
-      : firmaFor(target.kind === 'resumen' ? 'resumen' : 'presupuesto', obra, undefined, new Date().toISOString());
+      : firmaFor(
+          target.kind === 'resumen' || target.kind === 'mediciones' ? target.kind : 'presupuesto',
+          obra,
+          undefined,
+          new Date().toISOString(),
+        );
   const firmaLF = firmaLugarFecha(firmaDoc);
 
   return createPortal(

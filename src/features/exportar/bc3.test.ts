@@ -22,3 +22,12 @@ describe('bc3FileFor (estado → .bc3, F7.4)', () => {
     expect(new TextDecoder('windows-1252').decode(bytes)).toContain('|Obra nueva: fase 2|');
   });
 });
+
+describe('bc3FileFor sin precios (plan de ofertas, O1)', () => {
+  it('nombre propio y todas las partidas a 0 €', () => {
+    const { bytes, fileName } = bc3FileFor(true);
+    expect(fileName).toBe('Mediciones sin precios - Reforma vivienda C Mayor 14.bc3');
+    const text = new TextDecoder('windows-1252').decode(bytes);
+    expect(text).toContain('~C|OBRA##||Reforma vivienda C/ Mayor 14|0||0|');
+  });
+});

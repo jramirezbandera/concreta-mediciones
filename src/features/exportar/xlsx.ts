@@ -10,6 +10,7 @@ import {
   buildPresupuestoListado,
   buildResumen,
   firmaFor,
+  medicionesMeta,
   obraMeta,
 } from '../../core/listado';
 import { buildCuadrosPrecios } from '../../core/cuadrosPrecios';
@@ -33,6 +34,14 @@ export function xlsxDocFor(target: PrintTarget): XlsxDoc | null {
       buildPresupuestoListado(s.chapters, s.partidas, s.rates.coefK),
       meta,
       firmaFor('presupuesto', s.obra, undefined, new Date().toISOString()),
+    );
+  }
+  if (target.kind === 'mediciones') {
+    return buildPresupuestoXlsx(
+      buildPresupuestoListado(s.chapters, s.partidas, s.rates.coefK),
+      medicionesMeta(s.obra),
+      firmaFor('mediciones', s.obra),
+      true,
     );
   }
   if (target.kind === 'resumen') {

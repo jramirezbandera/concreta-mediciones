@@ -13,8 +13,12 @@ function dimsOf(l: MedLineListado): string {
 /**
  * Doc "Presupuesto y mediciones" (combinado, eng-review F7 §7): cada partida
  * con su precio y sus líneas de medición debajo. Solo lectura, paginado.
+ * `sinPrecios`: las mediciones para pedir ofertas, sin precio, importe ni
+ * totales (docs/plan-ofertas.md).
  */
-export function PrintPresupuesto({ data }: { data: PresupuestoListado }) {
+export function PrintPresupuesto({ data, sinPrecios = false }: { data: PresupuestoListado; sinPrecios?: boolean }) {
+  /** Columnas que abarca el título de un grupo o de un total (todas menos el importe). */
+  const span = sinPrecios ? 4 : 5;
   return (
     <div>
       {data.capitulos.map((c) => (
@@ -22,7 +26,7 @@ export function PrintPresupuesto({ data }: { data: PresupuestoListado }) {
           <div className="pd-band">
             <span className="mono pd-band-code">{c.code}</span>
             <span className="pd-band-title">{c.title}</span>
-            <span className="mono pd-band-total">{fmtCents(c.total)}</span>
+            {!sinPrecios && <span className="mono pd-band-total">{fmtCents(c.total)}</span>}
           </div>
           <table className="pd-table">
             <thead>
@@ -33,12 +37,16 @@ export function PrintPresupuesto({ data }: { data: PresupuestoListado }) {
                 <th className="pd-num" style={{ width: 60 }}>
                   Cantidad
                 </th>
-                <th className="pd-num" style={{ width: 60 }}>
-                  Precio
-                </th>
-                <th className="pd-num" style={{ width: 70 }}>
-                  Importe
-                </th>
+                {!sinPrecios && (
+                  <>
+                    <th className="pd-num" style={{ width: 60 }}>
+                      Precio
+                    </th>
+                    <th className="pd-num" style={{ width: 70 }}>
+                      Importe
+                    </th>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -47,10 +55,10 @@ export function PrintPresupuesto({ data }: { data: PresupuestoListado }) {
                   {g.sub && (
                     <tr className="pd-sub">
                       {/* sangría por profundidad (N niveles); total ACUMULADO */}
-                      <td colSpan={5} style={{ paddingLeft: 6 + (g.depth - 1) * 14 }}>
+                      <td colSpan={span} style={{ paddingLeft: 6 + (g.depth - 1) * 14 }}>
                         {g.sub.code} · {g.sub.title}
                       </td>
-                      <td className="mono pd-num">{fmtNum(toEur(g.total))}</td>
+                      {!sinPrecios && <td className="mono pd-num">{fmtNum(toEur(g.total))}</td>}
                     </tr>
                   )}
                   {g.rows.map((r) => (
@@ -85,24 +93,32 @@ export function PrintPresupuesto({ data }: { data: PresupuestoListado }) {
                       </td>
                       <td className="mono">{r.ud}</td>
                       <td className="mono pd-num">{fmtNum(r.cantidad)}</td>
-                      <td className="mono pd-num">{fmtNum(r.precio)}</td>
-                      <td className="mono pd-num">{fmtNum(toEur(r.importe))}</td>
+                      {!sinPrecios && (
+                        <>
+                          <td className="mono pd-num">{fmtNum(r.precio)}</td>
+                          <td className="mono pd-num">{fmtNum(toEur(r.importe))}</td>
+                        </>
+                      )}
                     </tr>
                   ))}
                 </Fragment>
               ))}
-              <tr className="pd-chaptotal">
-                <td colSpan={5}>Total capítulo {c.code} · {c.title}</td>
-                <td className="mono pd-num">{fmtNum(toEur(c.total))}</td>
-              </tr>
+              {!sinPrecios && (
+                <tr className="pd-chaptotal">
+                  <td colSpan={span}>Total capítulo {c.code} · {c.title}</td>
+                  <td className="mono pd-num">{fmtNum(toEur(c.total))}</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </section>
       ))}
-      <div className="pd-grand">
-        <span>Presupuesto de Ejecución Material (PEM)</span>
-        <span className="mono">{fmtCents(data.pem)}</span>
-      </div>
+      {!sinPrecios && (
+        <div className="pd-grand">
+          <span>Presupuesto de Ejecución Material (PEM)</span>
+          <span className="mono">{fmtCents(data.pem)}</span>
+        </div>
+      )}
     </div>
   );
 }

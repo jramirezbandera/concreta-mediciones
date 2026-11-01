@@ -185,9 +185,36 @@ function partidaSig(p: Partida): string {
    =========================================================================== */
 const ROOT_CODE = 'OBRA';
 
-export function obraToBc3(input: Bc3ExportObra): Uint8Array {
+export interface Bc3ExportOpts {
+  /** Mediciones para pedir ofertas: partidas a 0 € SIN descomposición (Presto
+   *  recalcularía el padre desde los hijos), contenedores y raíz a 0 y el `~K`
+   *  sin CI (Presto se lo sumaría a los precios de la constructora). Textos,
+   *  mediciones y códigos viajan igual que en el .bc3 completo. */
+  sinPrecios?: boolean;
+}
+
+export function obraToBc3(input: Bc3ExportObra, opts: Bc3ExportOpts = {}): Uint8Array {
+  return obraToBc3Detalle(input, opts).bytes;
+}
+
+/**
+ * Código BC3 con el que viaja cada partida en el .bc3 sin precios, por id. Es
+ * la MISMA asignación que `obraToBc3` (homónimos `.2` incluidos): con ella se
+ * casa la oferta que devuelve la constructora (docs/plan-ofertas.md, O2).
+ */
+export function bc3CodigosPartidas(input: Bc3ExportObra): Map<string, string> {
+  return obraToBc3Detalle(input, { sinPrecios: true }).codigos;
+}
+
+function obraToBc3Detalle(
+  input: Bc3ExportObra,
+  { sinPrecios = false }: Bc3ExportOpts,
+): { bytes: Uint8Array; codigos: Map<string, string> } {
   const { chapters, partidas, recursos, rates, obra } = input;
   const k = rates.coefK || 1;
+  /** Importe de un contenedor o de la raíz (0 en las mediciones sin precios). */
+  const importe = (cents: number): string => (sinPrecios ? '0' : num(toEur(pem(cents, rates)), 2));
+  const codigos = new Map<string, string>();
   // El `~K` tiene UN solo hueco de porcentaje (campo CI) y al reimportar se
   // hornea en los precios como línea «Costes indirectos». Ahí viaja el efecto
   // COMBINADO de las dos palancas que multiplican a los precios de esta obra: el
@@ -255,7 +282,7 @@ export function obraToBc3(input: Bc3ExportObra): Uint8Array {
   // campo 2 es CI\GG\BI\BAJA\IVA. En CI viaja el pct del K (como antes); GG/BI/
   // IVA en % para que el destinatario reconstruya el mismo PEC (antes solo se
   // emitía con K≠1 y sin tasas → el otro extremo recuperaba los defaults).
-  const pct = coefKPct(k * (1 + rates.ci));
+  const pct = sinPrecios ? 0 : coefKPct(k * (1 + rates.ci));
   recs.push(
     `~K|\\2\\2\\3\\2\\2\\2\\2\\EUR\\|${num(pct, 4)}\\${num(rates.gg * 100, 2)}\\${num(rates.bi * 100, 2)}\\\\${num(rates.iva * 100, 2)}\\|`,
   );
@@ -266,7 +293,7 @@ export function obraToBc3(input: Bc3ExportObra): Uint8Array {
     assign(sanCode(ch.code) || `C${String(ci + 1).padStart(2, '0')}`, `CH|${ch.id}`),
   );
   recs.push(
-    `~C|${rootCode}##||${field(obra.denominacion)}|${num(toEur(pem(costesDirectos(partidas, k), rates)), 2)}||0|`,
+    `~C|${rootCode}##||${field(obra.denominacion)}|${importe(costesDirectos(partidas, k))}||0|`,
   );
   recs.push(`~D|${rootCode}##|${chCodes.map((c) => `${c}\\1\\1\\`).join('')}|`);
 
@@ -278,11 +305,11 @@ export function obraToBc3(input: Bc3ExportObra): Uint8Array {
     // Precio con hasta 6 dec (auditoría C-05): los bancos traen precios
     // elementales de 3+ dec y truncar a 2 los alteraba al re-exportar; `num`
     // recorta ceros finales, así que un precio de 2 dec emite idéntico que antes.
-    recs.push(`~C|${code}|${field(p.ud)}|${field(p.title)}|${num(p.precio, 6)}||0|`);
+    recs.push(`~C|${code}|${field(p.ud)}|${field(p.title)}|${sinPrecios ? '0' : num(p.precio, 6)}||0|`);
     if (p.desc) recs.push(`~T|${code}|${ttext(p.desc)}|`);
     // La ~D solo si el precio ES su descompuesto: Presto recalcula el padre
     // desde los hijos, así que una justificación que no cuadra movería el PEM.
-    if (p.items.length && precioCuadraDescompuesto(p, recursos)) {
+    if (!sinPrecios && p.items.length && precioCuadraDescompuesto(p, recursos)) {
       recs.push(`~D|${code}|${p.items.map((it) => itemLine(it, recursoCode(it))).join('')}|`);
     }
   }
@@ -308,6 +335,7 @@ export function obraToBc3(input: Bc3ExportObra): Uint8Array {
     (function assignTree(node: TreeNode): void {
       for (const p of node.partidas) {
         pCode.set(p, conceptCode(p.code, partidaSig(p)));
+        codigos.set(p.id, pCode.get(p)!);
         ordered.push(p);
       }
       for (const c of kidsOf(node)) {
@@ -330,7 +358,7 @@ export function obraToBc3(input: Bc3ExportObra): Uint8Array {
       const kids = kidsOf(node);
       // Precio del contenedor CON el CI de obra, como la raíz: si el ~K declara
       // indirectos, los importes del fichero son PEM, no costes directos.
-      recs.push(`~C|${code}#||${field(title)}|${num(toEur(pem(node.total, rates)), 2)}||0|`);
+      recs.push(`~C|${code}#||${field(title)}|${importe(node.total)}||0|`);
       const entries = [
         ...node.partidas.map((p) => `${pCode.get(p)}\\1\\${num(partidaCantidad(p), 2)}\\`),
         ...kids.map((c) => `${contCode.get(c)}\\1\\1\\`),
@@ -361,7 +389,7 @@ export function obraToBc3(input: Bc3ExportObra): Uint8Array {
     }
   }
 
-  return encodeCp1252(recs.join('\r\n') + '\r\n');
+  return { bytes: encodeCp1252(recs.join('\r\n') + '\r\n'), codigos };
 }
 
 /** Línea de descomposición `código\factor\rendimiento\` (rendimiento hasta

@@ -191,3 +191,15 @@ describe('docxFor — cuadros de precios', () => {
     expect(out!.fileName).toBe('Cuadro de precios nº 2 - Reforma vivienda C Mayor 14.docx');
   });
 });
+
+describe('docxFor — mediciones sin precios (plan de ofertas, O1)', () => {
+  it('sin precio, importe, totales, PEM, constructora ni firma', async () => {
+    const xml = await xmlOf({ kind: 'mediciones' }, seedState);
+    expect(xml).toContain('MEDICIONES SIN PRECIOS');
+    expect(xml).toContain(PARTIDAS['01']![0]!.title);
+    expect(xml).not.toContain('Importe');
+    expect(xml).not.toContain('Presupuesto de Ejecución Material');
+    expect(xml).not.toContain('Total capítulo');
+    expect(xml).not.toContain('Constructora');
+  });
+});

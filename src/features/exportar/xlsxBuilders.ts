@@ -44,6 +44,8 @@ export const FMT_PCT = '#,##0.0"%"';
 
 const GRIS = '#64748b';
 const BANDA = '#eef1f6';
+/** Fondo de las celdas que rellena la constructora (precio de las mediciones sin precios). */
+const RELLENAR = '#fff7d6';
 
 /** Documento XLSX listo para `writeXlsxFile` (una hoja). */
 export interface XlsxDoc {
@@ -160,12 +162,21 @@ function sangria(depth: number): string {
   return '   '.repeat(Math.max(0, depth - 1));
 }
 
+/**
+ * Hoja «Presupuesto y mediciones». Con `sinPrecios`, las mediciones para pedir
+ * ofertas (docs/plan-ofertas.md): la columna Precio va VACÍA y resaltada, y el
+ * importe, los subtotales y el PEM siguen siendo fórmulas — la constructora
+ * teclea sus precios y la hoja suma sola. Código (B) y Precio (F) son lo que lee
+ * la importación de la oferta (O3): no moverlos.
+ */
 export function buildPresupuestoXlsx(
   data: PresupuestoListado,
   meta: ObraMeta,
   firma: Firma,
+  sinPrecios = false,
 ): XlsxDoc {
-  const rows: Row[] = metaRows('Presupuesto y mediciones', meta);
+  const titulo = sinPrecios ? 'Mediciones sin precios' : 'Presupuesto y mediciones';
+  const rows: Row[] = metaRows(titulo, meta);
   const header: Row = [
     txt('Nº', { fontWeight: 'bold', backgroundColor: BANDA }),
     txt('Código', { fontWeight: 'bold', backgroundColor: BANDA }),
@@ -223,7 +234,9 @@ export function buildPresupuestoXlsx(
           txt(r.title, { wrap: true }),
           txt(r.ud),
           cantidad,
-          num(r.precioExacto),
+          sinPrecios
+            ? { type: Number, format: FMT_NUM, align: 'right', backgroundColor: RELLENAR }
+            : num(r.precioExacto),
           fx(`ROUND(E${fila}*F${fila},2)`),
         ]);
         if (r.desc) {
@@ -282,8 +295,8 @@ export function buildPresupuestoXlsx(
   ]);
   rows.push(...firmaRows(firma));
   return {
-    fileName: xlsxFileName('Presupuesto y mediciones', meta.denominacion),
-    sheet: 'Presupuesto',
+    fileName: xlsxFileName(titulo, meta.denominacion),
+    sheet: sinPrecios ? 'Mediciones' : 'Presupuesto',
     orientation: 'portrait',
     columns: [
       { width: 9 },
