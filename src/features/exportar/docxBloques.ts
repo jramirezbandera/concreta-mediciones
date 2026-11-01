@@ -4,8 +4,8 @@
    los listados (`docxRender`: página A4, cabecera de obra, tablas con
    cabecera repetida y filas que no parten, firma). Añade estilos de título de
    Word (Título 1) para que el índice de la memoria recoja cada apartado. Lo
-   usan el estudio de residuos (`docxRcd`) y el plan de control de calidad
-   (`docxPcc`). Solo se alcanza por import dinámico (chunk aparte).
+   usan el estudio de residuos (`docxRcd`), el plan de control de calidad
+   (`docxPcc`) y el estudio de seguridad y salud (`docxEss`, con Título 2). Solo se alcanza por import dinámico (chunk aparte).
    =========================================================================== */
 import { AlignmentType, BorderStyle, Document, HeadingLevel, Packer, Paragraph, Table, TableRow, TextRun } from 'docx';
 import type { Documento, Parrafo, TablaDoc, Trozo } from '../../core/documento/tipos';
@@ -76,6 +76,8 @@ export function bloques(doc: Pick<Documento, 'secciones'>): (Paragraph | Table)[
     for (const b of s.bloques) {
       if (b.kind === 'p') out.push(parrafo(b.p));
       else if (b.kind === 'lista') for (const i of b.items) out.push(parrafo(i, { bullet: true }));
+      else if (b.kind === 'sub')
+        out.push(new Paragraph({ heading: HeadingLevel.HEADING_2, spacing: { before: 200, after: 80 }, keepNext: true, children: [new TextRun({ text: b.texto })] }));
       else {
         out.push(tablaDoc(b.t));
         out.push(new Paragraph({ spacing: { after: 120 }, children: [] }));
@@ -102,6 +104,7 @@ export async function documentoDocx(doc: Documento, meta: ObraMeta, fecha: strin
       default: {
         document: { run: { font: 'Calibri', size: T_BODY, color: NEGRO } },
         heading1: { run: { font: 'Calibri', size: 24, bold: true, color: NEGRO }, paragraph: { spacing: { before: 280, after: 120 }, keepNext: true } },
+        heading2: { run: { font: 'Calibri', size: 21, bold: true, color: NEGRO }, paragraph: { spacing: { before: 200, after: 80 }, keepNext: true } },
       },
     },
     sections: [{ properties: { page: { size: PAGE, margin: MARGIN } }, children: [...cabecera(doc.titulo, meta), ...bloques(doc), ...pie] }],

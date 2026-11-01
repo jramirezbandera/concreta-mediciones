@@ -12,9 +12,9 @@
 import { partidaCantidad, partidaImporte } from '../medicion';
 import type { EstudioRcdDatos } from '../rcd/tipos';
 import { costesDirectos, pem as pemDe } from '../totales';
-import { findNode, subtreeIds } from '../tree';
-import type { Banco, Chapter, Obra, Partida, PartidasMap, Rates } from '../types';
+import type { Banco, Chapter, Obra, PartidasMap, Rates } from '../types';
 import { HORAS_JORNADA, type PendienteDato, pideJornadas, jornadasDeclaradas } from './datos';
+import { enCapitulo } from './guardado';
 import {
   SERVICIOS_AFECTADOS,
   type Amianto,
@@ -25,6 +25,8 @@ import {
   type TipoObraEss,
 } from './tipos';
 
+export { capituloSsPropuesto, enCapitulo, estudioSsVacio } from './guardado';
+
 /** Lo que lee el estudio de la obra abierta. */
 export interface EntradaEss {
   chapters: Chapter[];
@@ -34,41 +36,6 @@ export interface EntradaEss {
   obra: Obra;
   estudioRcd?: EstudioRcdDatos;
   datos: EstudioSsDatos;
-}
-
-/** Estudio recién empezado: nada supuesto (lo que falta sale pendiente). */
-export function estudioSsVacio(over: Partial<EstudioSsDatos> = {}): EstudioSsDatos {
-  return { version: 1, fecha: null, redactor: null, ...over };
-}
-
-const RE_CAPITULO_SS = /seguridad y salud|seguridad e higiene/i;
-
-/** Capítulo de seguridad y salud que se propone al empezar: el que se llame así. */
-export function capituloSsPropuesto(chapters: Chapter[]): string | null {
-  for (const ch of chapters) {
-    if (RE_CAPITULO_SS.test(ch.title)) return ch.id;
-    const stack = [...(ch.children ?? [])];
-    while (stack.length) {
-      const sub = stack.shift()!;
-      if (RE_CAPITULO_SS.test(sub.title)) return sub.id;
-      stack.push(...(sub.children ?? []));
-    }
-  }
-  return null;
-}
-
-/** ¿La partida está en el capítulo (o subcapítulo) enlazado `id`? */
-export function enCapitulo(
-  chapters: Chapter[],
-  id: string | null | undefined,
-  chapterId: string,
-  p: Pick<Partida, 'sub'>,
-): boolean {
-  if (!id) return false;
-  const f = findNode(chapters, id);
-  if (!f || f.chapter.id !== chapterId) return false;
-  if (f.depth === 0) return true;
-  return subtreeIds(f.node as Parameters<typeof subtreeIds>[0]).has(p.sub ?? chapterId);
 }
 
 // ── Presupuesto (art. 4.1 a) ─────────────────────────────────────────────────

@@ -84,7 +84,7 @@ describe('documento del estudio', () => {
   it('lo que falta sale como «Pendiente», marcado', () => {
     const d = docA();
     const trozos = d.secciones.flatMap((s) =>
-      s.bloques.flatMap((b) => (b.kind === 'p' ? b.p : b.kind === 'lista' ? b.items.flat() : b.t.filas.flat().filter((x) => typeof x !== 'string'))),
+      s.bloques.flatMap((b) => (b.kind === 'p' ? b.p : b.kind === 'lista' ? b.items.flat() : b.kind === 'sub' ? [] : b.t.filas.flat().filter((x) => typeof x !== 'string'))),
     );
     const pendientes = trozos.filter((x) => typeof x !== 'string' && x.pendiente).map((x) => (typeof x === 'string' ? x : x.texto));
     expect(pendientes).toEqual(expect.arrayContaining(['Pendiente: importe de la fianza según la ordenanza municipal.']));

@@ -19,7 +19,13 @@ export interface TablaDoc {
   pie?: Array<string | Trozo>;
 }
 
-export type BloqueDoc = { kind: 'p'; p: Parrafo } | { kind: 'lista'; items: Parrafo[] } | { kind: 'tabla'; t: TablaDoc };
+/** `sub`: título de un subapartado (Título 2 en Word; lo usa el estudio de
+ *  seguridad y salud para sus fichas). */
+export type BloqueDoc =
+  | { kind: 'p'; p: Parrafo }
+  | { kind: 'lista'; items: Parrafo[] }
+  | { kind: 'tabla'; t: TablaDoc }
+  | { kind: 'sub'; texto: string };
 
 export interface SeccionDoc {
   id: string;
@@ -44,6 +50,7 @@ export function textoPlano(doc: Pick<Documento, 'titulo' | 'secciones'>): string
     for (const b of sec.bloques) {
       if (b.kind === 'p') out.push(b.p.map(t).join(''));
       else if (b.kind === 'lista') for (const i of b.items) out.push(i.map(t).join(''));
+      else if (b.kind === 'sub') out.push(b.texto);
       else {
         out.push(b.t.columnas.map((c) => c.titulo).join(' | '));
         for (const f of b.t.filas) out.push(f.map(t).join(' | '));
