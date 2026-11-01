@@ -41,6 +41,8 @@ import type { EstudioRcdDatos, ResiduoPartida } from '../core/rcd/tipos';
 import { createPccSlice, type RefPartidaPcc } from './slices/pccSlice';
 import type { ControlPartida, PlanCalidadDatos, PrecioCopiado } from '../core/pcc/tipos';
 import type { PartidaControlPropuesta } from '../core/pcc/capitulo';
+import type { Oferta } from '../core/ofertas';
+import { createOfertasSlice } from './slices/ofertasSlice';
 import {
   createPlanosSlice,
   type DestinoPlano,
@@ -715,6 +717,14 @@ export interface ObraState extends ObraData {
    *  CAMBIA EL PEM: un paso de Deshacer. Devuelve cuántas partidas creó. */
   crearCapituloControl: (partidas: PartidaControlPropuesta[]) => number;
 
+  /* ---- ofertas de las constructoras (v10, `slices/ofertasSlice`) ---- */
+  /** Guarda una oferta ya casada con las partidas. No toca el presupuesto. */
+  addOferta: (oferta: Oferta) => void;
+  /** Cambia el nombre de la constructora de una oferta. */
+  renombrarOferta: (id: string, empresa: string) => void;
+  /** Quita una oferta de la obra. */
+  quitarOferta: (id: string) => void;
+
   /** Restaura el estado sembrado (datos + UI). Útil en tests y para "nueva obra". */
   reset: () => void;
 }
@@ -894,6 +904,7 @@ export const useObraStore = create<ObraState>()(
               planos: [],
               estudioRcd: undefined,
               planCalidad: undefined,
+              ofertas: undefined,
               _ilegible: undefined,
               ...data,
             });
@@ -984,6 +995,7 @@ export const useObraStore = create<ObraState>()(
       ...createPlanosSlice(set, get, store),
       ...createRcdSlice(set, get, store),
       ...createPccSlice(set, get, store),
+      ...createOfertasSlice(set, get, store),
     };
   }),
   ),

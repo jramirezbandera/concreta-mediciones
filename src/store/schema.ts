@@ -15,6 +15,7 @@ import { opcionPorDefecto, plantasEco, plantasEcoBasico } from '../core/rcd/ecoe
 import type { EstudioRcdDatos } from '../core/rcd/tipos';
 import { apartarPccIlegibles } from '../core/pcc/datos';
 import type { PlanCalidadDatos } from '../core/pcc/tipos';
+import { apartarOfertasIlegibles, type Oferta } from '../core/ofertas';
 import { buildRecursos, precioCuadraDescompuesto, recursoUsage } from '../core/banco';
 import { CHAPTERS, DEFAULT_OBRA, DEFAULT_RATES, PARTIDAS, makeCertsInit } from '../core/seed';
 import { nextAgenteId } from './base';
@@ -71,8 +72,13 @@ import { nextAgenteId } from './base';
  *   si residuos y calidad no coinciden, manda residuos (calidad avisa al
  *   reabrir el plan si su Word ya salió con otro número; residuos no guarda lo
  *   emitido). Mismo espacio de claves `concreta6.*`.
+ *
+ *   v9 → v10 (2026-11-01, comparativo de ofertas): `ofertas` (las de las
+ *   constructoras, casadas con las partidas), opcional (docs/plan-ofertas.md).
+ *   Migración: solo sube la versión, por la regla de v6. Mismo espacio de
+ *   claves `concreta6.*`.
  */
-export const SCHEMA_VERSION = 9;
+export const SCHEMA_VERSION = 10;
 
 /** Estado de dominio de la obra (lo que persistiría en F6). Serializable. */
 export interface ObraData {
@@ -97,6 +103,8 @@ export interface ObraData {
   /** Plan de control de calidad (v8): los datos que no son de una partida.
    *  Ausente = la obra no tiene plan. Ver `core/pcc/tipos`. */
   planCalidad?: PlanCalidadDatos;
+  /** Ofertas de las constructoras (v10). Ausente = ninguna. Ver `core/ofertas`. */
+  ofertas?: Oferta[];
   /** Datos de planos que romperían el render y se apartaron al cargar, con su
    *  valor crudo y su ruta. Se escriben de vuelta tal cual (ver
    *  `core/planoDatos.apartarIlegibles`). Ausente = ninguno. */
@@ -122,6 +130,7 @@ export const DOMAIN_KEYS = [
   'planos',
   'estudioRcd',
   'planCalidad',
+  'ofertas',
   '_ilegible',
 ] as const satisfies readonly (keyof ObraData)[];
 export type DomainKey = (typeof DOMAIN_KEYS)[number];
@@ -166,6 +175,7 @@ export function seedObraData(): ObraData {
     // campo ausente no borraría el estudio de la obra anterior.
     estudioRcd: undefined,
     planCalidad: undefined,
+    ofertas: undefined,
   };
 }
 
@@ -188,6 +198,7 @@ export function blankObraData(name = 'Obra nueva'): ObraData {
     planos: [],
     estudioRcd: undefined,
     planCalidad: undefined,
+    ofertas: undefined,
   };
 }
 
@@ -218,6 +229,7 @@ export function toSerializable(s: ObraData): ObraData {
     planos: s.planos ?? [],
     ...(s.estudioRcd ? { estudioRcd: s.estudioRcd } : {}),
     ...(s.planCalidad ? { planCalidad: s.planCalidad } : {}),
+    ...(s.ofertas?.length ? { ofertas: s.ofertas } : {}),
     ...(s._ilegible?.length ? { _ilegible: s._ilegible } : {}),
   };
 }
@@ -264,6 +276,8 @@ const MIGRATIONS: Record<number, (d: ObraData) => ObraData> = {
   7: (d) => ({ ...d, schemaVersion: 8 }),
   // v8 → v9 (TD2): superficie construida y plantas, de los anejos a la ficha.
   8: (d) => ({ ...migrarEdificio(d), schemaVersion: 9 }),
+  // v9 → v10 (comparativo de ofertas): `ofertas` es opcional.
+  9: (d) => ({ ...d, schemaVersion: 10 }),
 };
 
 /**
@@ -337,5 +351,5 @@ export function fromSerializable(data: ObraData): ObraData {
       `schemaVersion ${data.schemaVersion} no soportada (esperada ≤ ${SCHEMA_VERSION}); sin ruta de migración.`,
     );
   }
-  return apartarPccIlegibles(apartarRcdIlegibles(apartarIlegibles(d)));
+  return apartarOfertasIlegibles(apartarPccIlegibles(apartarRcdIlegibles(apartarIlegibles(d))));
 }
