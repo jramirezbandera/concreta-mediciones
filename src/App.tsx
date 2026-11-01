@@ -36,6 +36,7 @@ const Sandbox = lazy(() => import('./features/sandbox/Sandbox').then((m) => ({ d
 const ImportarView = lazy(() => import('./features/importar').then((m) => ({ default: m.ImportarView })));
 // Los anejos (residuos y calidad: vistas, motores y tablas) solo los carga quien los abre.
 const AnejosView = lazy(() => import('./features/anejos/AnejosView').then((m) => ({ default: m.AnejosView })));
+const OfertasView = lazy(() => import('./features/ofertas/OfertasView').then((m) => ({ default: m.OfertasView })));
 const ReferenciaImportModal = lazy(() =>
   import('./features/importar').then((m) => ({ default: m.ReferenciaImportModal })),
 );
@@ -443,6 +444,10 @@ export default function App() {
           ) : view === 'anejos' ? (
             <Suspense fallback={<div style={{ padding: 24, color: 'var(--text-disabled)' }}>Cargando…</div>}>
               <AnejosView compact={bp.isMobile} onGoPresupuesto={() => changeView('presupuesto')} />
+            </Suspense>
+          ) : view === 'ofertas' ? (
+            <Suspense fallback={<div style={{ padding: 24, color: 'var(--text-disabled)' }}>Cargando…</div>}>
+              <OfertasView compact={bp.isMobile} onGoPresupuesto={() => changeView('presupuesto')} />
             </Suspense>
           ) : (
             <ResumenView compact={bp.isMobile} />

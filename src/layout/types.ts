@@ -1,7 +1,7 @@
 import type { IconName } from '../components/Icon';
 
 /** Las vistas principales de la app. */
-export type View = 'import' | 'presupuesto' | 'resumen' | 'certificaciones' | 'anejos';
+export type View = 'import' | 'presupuesto' | 'resumen' | 'ofertas' | 'certificaciones' | 'anejos';
 
 export interface TabDef {
   k: View;
@@ -18,6 +18,9 @@ export const TABS: TabDef[] = [
   { k: 'import', label: 'Importar', short: 'Importar', icon: 'upload' },
   { k: 'presupuesto', label: 'Presupuesto', short: 'Presup.', icon: 'list' },
   { k: 'resumen', label: 'Resumen', short: 'Resumen', icon: 'grid' },
+  // Comparativo de las ofertas de las constructoras (docs/plan-ofertas.md); en el
+  // móvil va al menú «Más», como Anejos.
+  { k: 'ofertas', label: 'Ofertas', short: 'Ofertas', icon: 'send', enBarraInferior: false },
   { k: 'certificaciones', label: 'Certificaciones', short: 'Certif.', icon: 'clipboardCheck' },
   // Anejos de la memoria (estudio de residuos y plan de control de calidad), con
   // sus pestañas dentro: una sola pestaña en la barra para no apretar la obra (D6).
@@ -29,6 +32,7 @@ export const VIEW_LABEL: Record<View, string> = {
   import: 'Importar',
   presupuesto: 'Presupuesto',
   resumen: 'Resumen',
+  ofertas: 'Ofertas',
   certificaciones: 'Certificaciones',
   anejos: 'Anejos',
 };

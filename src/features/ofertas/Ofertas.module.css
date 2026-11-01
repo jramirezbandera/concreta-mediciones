@@ -1,0 +1,307 @@
+/* Comparativo de ofertas (docs/plan-ofertas.md, O2). */
+
+.view {
+  flex: 1;
+  overflow-y: auto;
+}
+.page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: var(--sp-24) 32px;
+}
+.compact .page {
+  padding: var(--sp-16) var(--gutter-compact);
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-16);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-16);
+}
+.kicker {
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  letter-spacing: 0.11em;
+  color: var(--accent);
+  margin-bottom: var(--sp-6);
+}
+.title {
+  font-size: var(--fs-hero);
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+.compact .title {
+  font-size: var(--fs-lg);
+}
+.sub {
+  font-size: var(--fs-body);
+  color: var(--text-secondary);
+  margin: var(--sp-6) 0 0;
+}
+
+.primary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-6);
+  padding: var(--sp-8) var(--sp-16);
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font: inherit;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  cursor: pointer;
+}
+.primary:hover {
+  background: var(--accent-hover);
+}
+.primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* tarjetas de resumen */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--sp-12);
+  margin-bottom: var(--sp-20);
+}
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+  min-width: 0;
+  padding: var(--sp-12) var(--sp-16);
+  border-radius: 12px;
+  border: 1px solid var(--border-main);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-panel);
+}
+.cardPres {
+  background: var(--bg-elevated);
+}
+.cardMejor {
+  border-color: var(--state-ok);
+  box-shadow: 0 0 0 1px var(--state-ok), var(--shadow-panel);
+}
+.cardKicker {
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  letter-spacing: 0.11em;
+  color: var(--text-secondary);
+  padding: var(--sp-4) 0;
+}
+.cardTop {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-6);
+}
+.empresa {
+  flex: 1;
+  min-width: 0;
+  padding: var(--sp-4) var(--sp-6);
+  margin-left: calc(-1 * var(--sp-6));
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  text-overflow: ellipsis;
+}
+.empresa:hover {
+  border-color: var(--border-main);
+}
+.empresa:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--ring-accent);
+}
+.quitar {
+  flex-shrink: 0;
+  display: inline-flex;
+  padding: var(--sp-6);
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.quitar:hover {
+  color: var(--state-danger);
+  background: color-mix(in srgb, var(--state-danger) 10%, transparent);
+}
+.cardTotal {
+  font-size: var(--fs-title);
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+.cardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4) var(--sp-10);
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+}
+.mejor {
+  font-weight: 600;
+  color: var(--state-ok);
+}
+.avisos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  font-size: var(--fs-caption);
+  color: var(--state-warn);
+}
+.avisos li {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+}
+.fichero {
+  font-size: var(--fs-micro);
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* cuadro */
+.tableWrap {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid var(--border-main);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-panel);
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-table);
+  color: var(--text-primary);
+}
+.table th,
+.table td {
+  padding: var(--sp-6) var(--sp-8);
+  border-bottom: 1px solid var(--border-sub);
+  vertical-align: top;
+}
+.table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-elevated);
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-align: left;
+  white-space: nowrap;
+}
+.grupoHead {
+  text-align: center !important;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-left: 1px solid var(--border-main);
+  color: var(--text-primary) !important;
+}
+.colDesc {
+  min-width: 240px;
+}
+.colNum,
+.num {
+  text-align: right !important;
+  white-space: nowrap;
+}
+.sep {
+  border-left: 1px solid var(--border-main);
+}
+.pos {
+  color: var(--text-secondary);
+  margin-right: var(--sp-4);
+}
+.ud {
+  color: var(--text-secondary);
+  font-size: var(--fs-caption);
+}
+.capRow td {
+  background: var(--bg-elevated);
+  font-weight: 600;
+}
+.subRow td {
+  color: var(--text-secondary);
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.table tfoot td {
+  font-weight: 600;
+  border-top: 2px solid var(--border-main);
+  border-bottom: 0;
+}
+
+.minima {
+  color: var(--state-ok);
+  font-weight: 600;
+}
+.caro {
+  color: var(--state-danger);
+}
+.barato {
+  color: var(--state-ok);
+}
+.falta {
+  color: var(--text-secondary);
+  font-style: italic;
+  text-align: center !important;
+}
+.otraCant {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: var(--sp-6);
+  color: var(--state-warn);
+  font-size: var(--fs-caption);
+  cursor: help;
+}
+
+/* partidas sin casar */
+.sinCasar {
+  margin-top: var(--sp-24);
+}
+.detalle {
+  margin-top: var(--sp-10);
+  padding: var(--sp-10) var(--sp-12);
+  border: 1px solid var(--border-main);
+  border-radius: 8px;
+  background: var(--bg-surface);
+  font-size: var(--fs-body);
+}
+.detalle summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.detalle ul {
+  margin: var(--sp-8) 0 0;
+  padding-left: var(--sp-16);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.spacer {
+  height: var(--sp-24);
+}
