@@ -4,6 +4,7 @@ import {
   FMT_NUM,
   FMT_PCT,
   buildCertXlsx,
+  buildComparativoXlsx,
   buildCuadro1Xlsx,
   buildCuadro2Xlsx,
   buildPresupuestoXlsx,
@@ -18,6 +19,7 @@ import {
   type Firma,
 } from '../../core/listado';
 import { buildCuadrosPrecios } from '../../core/cuadrosPrecios';
+import { compararOfertas, type Oferta } from '../../core/ofertas';
 import type { Banco, Cert, Chapter, Partida, PartidasMap, Rates } from '../../core/types';
 
 const partida = (over: Partial<Partida>): Partida => ({
@@ -438,5 +440,34 @@ describe('buildPresupuestoXlsx sin precios (plan de ofertas, O1)', () => {
     expect(precio.type).toBe(Number);
     expect((fila[6] as CellObject).type).toBe('Formula');
     expect(cells(doc.rows).some((c) => c.value === 7.77)).toBe(false);
+  });
+});
+
+describe('buildComparativoXlsx (plan de ofertas, O4)', () => {
+  const ofertas: Oferta[] = [
+    { id: 'o1', empresa: 'Pérez', fecha: '', fichero: '', precios: { pa: 9, pb: 6, pc: 8 }, cantidades: {}, sinCasar: [] },
+    { id: 'o2', empresa: 'García', fecha: '', fichero: '', precios: { pa: 11 }, cantidades: {}, sinCasar: [] },
+  ];
+  const doc = buildComparativoXlsx(compararOfertas(chapters, partidas, ofertas), meta);
+
+  it('una columna triple por oferta y fórmulas para importes, desviación y totales', () => {
+    expect(doc.fileName).toBe('Comparativo de ofertas - Reforma X.xlsx');
+    expect(doc.orientation).toBe('landscape');
+    expect(doc.columns).toHaveLength(7 + 3 * 2);
+    const fs = formulas(doc.rows);
+    expect(fs.some((f) => /^ROUND\(E\d+\*H\d+,2\)$/.test(f))).toBe(true); // importe de Pérez
+    expect(fs.some((f) => /^ROUND\(E\d+\*K\d+,2\)$/.test(f))).toBe(true); // importe de García
+    expect(fs.some((f) => /^IF\(G\d+=0,"",\(I\d+-G\d+\)\/G\d+\*100\)$/.test(f))).toBe(true);
+    expect(fs.some((f) => /^SUBTOTAL\(9,I\d+:I\d+\)$/.test(f))).toBe(true);
+  });
+
+  it('el precio más bajo de la fila va marcado y lo que falta dice «sin precio»', () => {
+    const fila = doc.rows.find((r) => (r[1] as CellObject | null)?.value === 'A')!;
+    expect((fila[7] as CellObject).value).toBe(9);
+    expect((fila[7] as CellObject).fontWeight).toBe('bold');
+    expect((fila[10] as CellObject).fontWeight).toBeUndefined();
+    const filaC = doc.rows.find((r) => (r[1] as CellObject | null)?.value === 'C')!;
+    expect((filaC[10] as CellObject).value).toBe('sin precio');
+    expect(cells(doc.rows).some((c) => typeof c.value === 'string' && c.value.startsWith('García: 2 sin precio'))).toBe(true);
   });
 });

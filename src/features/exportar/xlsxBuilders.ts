@@ -32,6 +32,7 @@ import type {
 } from '../../core/listado';
 import type { MedLineListado } from '../../core/listado';
 import type { CuadroPartidaRow, CuadrosPrecios } from '../../core/cuadrosPrecios';
+import type { Comparativo } from '../../core/ofertas';
 import { firmaLugarFecha } from '../../core/listado';
 import { cerradaLabel } from '../../core/certificacion';
 import { fmtNum, toEur, type Cents } from '../../core/money';
@@ -798,6 +799,167 @@ export function buildCertXlsx(data: CertListado, meta: ObraMeta, firma: Firma): 
       { width: 12 },
       { width: 12 },
       { width: 12 },
+    ],
+    rows,
+  };
+}
+
+/* ---- Comparativo de ofertas (docs/plan-ofertas.md, O4) --------------------- */
+
+/** Letra de columna (0 → A, 26 → AA). */
+function colLetra(i: number): string {
+  let s = '';
+  for (let n = i + 1; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + ((n - 1) % 26)) + s;
+  return s;
+}
+
+/**
+ * Cuadro comparativo de las ofertas frente al presupuesto, en ejecución
+ * material y con NUESTRAS cantidades (como la vista «Ofertas»). Precios y
+ * cantidades son datos; importes, desviaciones y totales, fórmulas: quien lo
+ * reciba puede retocar un precio y la hoja recalcula. El precio más bajo de
+ * cada fila va en verde y negrita.
+ */
+export function buildComparativoXlsx(data: Comparativo, meta: ObraMeta): XlsxDoc {
+  const titulo = 'Comparativo de ofertas';
+  const rows: Row[] = metaRows(titulo, meta);
+  const n = data.ofertas.length;
+  const base = 7; // A..G: Nº, Código, Descripción, Ud., Cantidad, Precio, Importe
+  const cols = base + 3 * n;
+  const colPrecio = (i: number) => colLetra(base + 3 * i);
+  const colImporte = (i: number) => colLetra(base + 3 * i + 1);
+  const desvFx = (imp: string, ref: string, over: Partial<CellObject> = {}) =>
+    fx(`IF(${ref}=0,"",(${imp}-${ref})/${ref}*100)`, { format: FMT_PCT, ...over });
+  const cab = (value: string, over: Partial<CellObject> = {}) =>
+    txt(value, { fontWeight: 'bold', backgroundColor: BANDA, ...over });
+
+  rows.push([
+    ...Array.from({ length: 5 }, () => cab('')),
+    cab('Presupuesto', { columnSpan: 2, align: 'center' }),
+    null,
+    ...data.ofertas.flatMap((o) => [cab(o.empresa, { columnSpan: 3, align: 'center' }), null, null]),
+  ]);
+  rows.push([
+    cab('Nº'),
+    cab('Código'),
+    cab('Descripción'),
+    cab('Ud.'),
+    cab('Cantidad', { align: 'right' }),
+    cab('Precio', { align: 'right' }),
+    cab('Importe', { align: 'right' }),
+    ...data.ofertas.flatMap(() => [
+      cab('Precio', { align: 'right' }),
+      cab('Importe', { align: 'right' }),
+      cab('Desv.', { align: 'right' }),
+    ]),
+  ]);
+
+  /** Filas de capítulo (para el total): su fila y las celdas que rellenar al cerrarlo. */
+  const capFilas: number[] = [];
+  for (const c of data.capitulos) {
+    const capRow = rows.length + 1;
+    capFilas.push(capRow);
+    const capPres = bold(fx(''));
+    const capOfertas = data.ofertas.map(() => bold(fx('')));
+    rows.push([
+      txt(c.code, { fontWeight: 'bold' }),
+      txt(c.title, { fontWeight: 'bold', columnSpan: 5 }),
+      null,
+      null,
+      null,
+      null,
+      capPres,
+      ...capOfertas.flatMap((cell, i) => [null, cell, desvFx(`${colImporte(i)}${capRow}`, `G${capRow}`, { fontWeight: 'bold' })]),
+    ]);
+    const inicio = rows.length + 1;
+    for (const g of c.grupos) {
+      if (g.sub) {
+        rows.push([
+          txt(sangria(g.depth) + g.sub.code, { textColor: GRIS, fontWeight: 'bold' }),
+          txt(g.sub.title.toUpperCase(), { textColor: GRIS, fontWeight: 'bold', columnSpan: 5 }),
+          ...Array<null>(cols - 2).fill(null),
+        ]);
+      }
+      for (const r of g.rows) {
+        const f = rows.length + 1;
+        rows.push([
+          txt(r.pos),
+          txt(r.code),
+          txt(r.title, { wrap: true }),
+          txt(r.ud),
+          num(r.cantidad),
+          num(r.precio),
+          fx(`ROUND(E${f}*F${f},2)`),
+          ...r.ofertas.flatMap((o, i): Row => {
+            if (!o) return [txt('sin precio', { textColor: GRIS, align: 'right' }), null, null];
+            const marca: Partial<CellObject> = o.minima ? { textColor: '#15803d', fontWeight: 'bold' } : {};
+            return [
+              num(o.precio, marca),
+              fx(`ROUND(E${f}*${colPrecio(i)}${f},2)`, marca),
+              desvFx(`${colImporte(i)}${f}`, `G${f}`, { textColor: GRIS }),
+            ];
+          }),
+        ]);
+      }
+    }
+    const fin = rows.length;
+    capPres.value = `SUBTOTAL(9,G${inicio}:G${fin})`;
+    capOfertas.forEach((cell, i) => (cell.value = `SUBTOTAL(9,${colImporte(i)}${inicio}:${colImporte(i)}${fin})`));
+  }
+
+  const totRow = rows.length + 2;
+  const suma = (col: string) => (capFilas.length ? capFilas.map((r) => `${col}${r}`).join('+') : '0');
+  rows.push([]);
+  rows.push([
+    null,
+    null,
+    txt('Total ejecución material', { fontWeight: 'bold', columnSpan: 4 }),
+    null,
+    null,
+    null,
+    bold(fx(suma('G'), { topBorderStyle: 'medium' })),
+    ...data.ofertas.flatMap((o, i) => [
+      txt(o.sinPrecio ? `Faltan ${o.sinPrecio}` : '', { textColor: GRIS, fontSize: 9, topBorderStyle: 'medium' }),
+      bold(fx(suma(colImporte(i)), { topBorderStyle: 'medium' })),
+      o.sinPrecio
+        ? txt('', { topBorderStyle: 'medium' })
+        : desvFx(`${colImporte(i)}${totRow}`, `G${totRow}`, { fontWeight: 'bold', topBorderStyle: 'medium' }),
+    ]),
+  ]);
+  if (data.ofertas.some((o) => o.sinPrecio > 0 || o.cantidadesDistintas > 0 || o.sinCasar > 0)) {
+    rows.push([]);
+    for (const o of data.ofertas) {
+      const avisos = [
+        o.sinPrecio ? `${o.sinPrecio} sin precio (el total suma solo lo que lo trae)` : '',
+        o.cantidadesDistintas ? `${o.cantidadesDistintas} con otra cantidad (se compara con la nuestra)` : '',
+        o.sinCasar ? `${o.sinCasar} que no son del presupuesto (fuera del total)` : '',
+      ].filter(Boolean);
+      if (avisos.length)
+        rows.push([null, null, txt(`${o.empresa}: ${avisos.join(' · ')}`, { textColor: GRIS, fontSize: 9, columnSpan: 5 })]);
+    }
+  }
+  rows.push([], [
+    null,
+    null,
+    txt('Ejecución material, con las cantidades del presupuesto. Desviación sobre el importe del presupuesto.', {
+      textColor: GRIS,
+      fontSize: 9,
+      columnSpan: 5,
+    }),
+  ]);
+  return {
+    fileName: xlsxFileName(titulo, meta.denominacion),
+    sheet: 'Comparativo',
+    orientation: 'landscape',
+    columns: [
+      { width: 8 },
+      { width: 11 },
+      { width: 40 },
+      { width: 5 },
+      { width: 10 },
+      { width: 10 },
+      { width: 12 },
+      ...data.ofertas.flatMap(() => [{ width: 10 }, { width: 12 }, { width: 8 }]),
     ],
     rows,
   };

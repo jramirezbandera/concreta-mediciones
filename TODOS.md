@@ -268,8 +268,11 @@ puerta cronometrada se anuló (2026-09-27): entran si el uso en obra lo pide.
 Hoy se exportan presupuesto, resumen y certificaciones (`ExportModal`). Los datos de
 estos ya están calculados:
 
-- **Mediciones sin precios** para pedir ofertas, y **comparativo de ofertas** por
-  partida: importar el .bc3 o el Excel de cada constructora y ver dónde se desvía.
+- ~~**Mediciones sin precios** y **comparativo de ofertas**.~~ HECHO (2026-11-01):
+  `docs/plan-ofertas.md`. «Mediciones sin precios» en PDF, Word, Excel y .bc3; las
+  ofertas entran en .bc3 o en ese Excel, se casan con las partidas (esquema v10) y la
+  vista «Ofertas» las compara con el presupuesto, también en Excel. Aplazado:
+  pasar los precios de la oferta elegida al presupuesto («adjudicar»).
 - ~~**Cuadro de precios nº 1 (en letra) y nº 2 (descompuestos).**~~ HECHO (2026-10-24):
   `core/cuadrosPrecios`, en PDF, Word y Excel. Un precio puesto a mano (no sigue a su
   justificación) sale «Sin descomposición» en el nº 2: no tiene descompuesto.

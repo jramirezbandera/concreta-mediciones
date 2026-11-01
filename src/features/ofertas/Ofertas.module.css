@@ -44,6 +44,29 @@
   margin: var(--sp-6) 0 0;
 }
 
+.acciones {
+  display: flex;
+  gap: var(--sp-8);
+}
+.secundario {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-6);
+  padding: var(--sp-8) var(--sp-12);
+  border: 1px solid var(--border-main);
+  border-radius: 8px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--fs-body);
+  font-weight: 500;
+  cursor: pointer;
+}
+.secundario:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .primary {
   display: inline-flex;
   align-items: center;

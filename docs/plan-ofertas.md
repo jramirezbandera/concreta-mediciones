@@ -1,8 +1,9 @@
 # Plan · Mediciones sin precios y comparativo de ofertas
 
-> Estado: EN CURSO (2026-11-01). Sale de `TODOS.md`, «Documentos que aún obligan a volver a
-> Presto o a Excel». Obra privada: se piden ofertas a constructoras, no hay licitación ni baja
-> de adjudicación.
+> Estado: HECHO (2026-11-01), O1–O4. Sale de `TODOS.md`, «Documentos que aún obligan a volver
+> a Presto o a Excel». Obra privada: se piden ofertas a constructoras, no hay licitación ni baja
+> de adjudicación. Falta probar en Presto que el .bc3 sin precios se abre con todo a 0 y que
+> el que devuelve una constructora casa (los tests lo hacen con nuestro propio lector).
 
 ## Petición
 

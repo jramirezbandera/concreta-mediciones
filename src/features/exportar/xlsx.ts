@@ -14,10 +14,12 @@ import {
   obraMeta,
 } from '../../core/listado';
 import { buildCuadrosPrecios } from '../../core/cuadrosPrecios';
+import { compararOfertas } from '../../core/ofertas';
 import { useObraStore } from '../../store';
 import type { PrintTarget } from '../print';
 import {
   buildCertXlsx,
+  buildComparativoXlsx,
   buildCuadro1Xlsx,
   buildCuadro2Xlsx,
   buildPresupuestoXlsx,
@@ -99,6 +101,21 @@ export function printSetupFeature(
 export async function exportXlsx(target: PrintTarget): Promise<void> {
   const doc = xlsxDocFor(target);
   if (!doc) return;
+  const { default: writeXlsxFile } = await import('write-excel-file/browser');
+  await writeXlsxFile(
+    doc.rows,
+    { sheet: doc.sheet, columns: doc.columns },
+    { features: [printSetupFeature(doc.orientation)] },
+  ).toFile(doc.fileName);
+}
+
+/** Genera y DESCARGA el comparativo de ofertas (docs/plan-ofertas.md, O4). */
+export async function exportComparativoXlsx(): Promise<void> {
+  const s = useObraStore.getState();
+  const doc = buildComparativoXlsx(
+    compararOfertas(s.chapters, s.partidas, s.ofertas ?? [], s.rates.coefK),
+    medicionesMeta(s.obra),
+  );
   const { default: writeXlsxFile } = await import('write-excel-file/browser');
   await writeXlsxFile(
     doc.rows,

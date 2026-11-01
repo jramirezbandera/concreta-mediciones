@@ -4,6 +4,7 @@ import { fmtCents, fmtNum, toEur } from '../../core/money';
 import { compararOfertas, type CeldaOferta, type Oferta, type ResumenOferta } from '../../core/ofertas';
 import { useObraStore, useToastStore } from '../../store';
 import { getDomainRevision, undo } from '../../store/temporal';
+import { exportComparativoXlsx } from '../exportar';
 import { ofertaDesdeFichero } from './importarOferta';
 import styles from './Ofertas.module.css';
 
@@ -125,9 +126,24 @@ export function OfertasView({ compact, onGoPresupuesto }: { compact: boolean; on
             <h1 className={styles.title}>{obraName}</h1>
             <p className={styles.sub}>Ejecución material, con las cantidades de tu presupuesto.</p>
           </div>
-          <button type="button" className={styles.primary} onClick={elegir} disabled={leyendo}>
-            <Icon name="upload" size={15} /> {leyendo ? 'Leyendo…' : 'Añadir oferta'}
-          </button>
+          <div className={styles.acciones}>
+            <button
+              type="button"
+              className={styles.secundario}
+              title="Exportar el comparativo a Excel"
+              aria-label="Exportar el comparativo a Excel"
+              onClick={() =>
+                exportComparativoXlsx().catch(() =>
+                  useToastStore.getState().show('No se pudo generar el Excel. Reintenta o recarga la página.', undefined, { tone: 'error' }),
+                )
+              }
+            >
+              <Icon name="download" size={15} /> Excel
+            </button>
+            <button type="button" className={styles.primary} onClick={elegir} disabled={leyendo}>
+              <Icon name="upload" size={15} /> {leyendo ? 'Leyendo…' : 'Añadir oferta'}
+            </button>
+          </div>
           {fileInput}
         </div>
 
