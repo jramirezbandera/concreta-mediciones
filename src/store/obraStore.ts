@@ -540,6 +540,13 @@ export interface ObraState extends ObraData {
    */
   createPartida: (chapterId: string, subId: string | null) => string;
   /**
+   * Duplica una partida CON su medición justo detrás de ella, en su mismo
+   * contenedor: mismo código y definición, ids nuevos (partida y líneas) y
+   * formas de plano nuevas. Nada de certificación viaja (va por id). UN paso de
+   * Deshacer. Devuelve el id de la copia ('' si la partida no existe).
+   */
+  duplicarPartida: (chapterId: string, partidaId: string) => string;
+  /**
    * Añade VARIAS líneas de medición con valores en una sola acción (dictado del
    * asistente, F-A3). Reúne lo que la UI hace con `addMedLine`+`editMedLine`
    * repetidos en un único `set`; partida inexistente o lista vacía = no-op.

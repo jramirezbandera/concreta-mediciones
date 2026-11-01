@@ -102,7 +102,12 @@ otros textos auxiliares (códigos, separadores, contadores): revisarlos en el pr
 Contexto común: plan `docs/plan-lineas-medicion-orden-copiar.md`. Son las
 expansiones que las revisiones CEO, diseño e ingeniería dejaron fuera a propósito.
 
-### Copiar o duplicar una partida CON su medición (P2)
+### ~~Copiar o duplicar una partida CON su medición (P2)~~ — HECHO (2026-11-01)
+
+«Duplicar con medición» en el menú ⋮ de la partida (`duplicarPartida`): la copia va
+justo debajo, con el mismo código y definición, ids nuevos para la partida y sus
+líneas, formas de plano nuevas y sin nada de certificación; se abre para retocarla.
+«Copiar partida» sigue copiando solo la definición (sin medición), como antes.
 
 - **Qué:** decidir el contrato de «Copiar partida». Hoy copia la definición de
   precio con `med: []` (`copySlice.ts`, `applyCopy`); `RefPartida` no lleva medición.

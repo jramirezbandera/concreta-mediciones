@@ -4,11 +4,12 @@ import { flattenContainers } from '../../core/tree';
 import type { Partida } from '../../core/types';
 import { usePartidaClipboard } from '../../hooks/usePartidaClipboard';
 import { deletePartidaWithUndo } from '../../hooks/usePartidaDelete';
-import { useObraStore } from '../../store';
+import { useObraStore, useToastStore } from '../../store';
+import { getDomainRevision, undo } from '../../store/temporal';
 import styles from './Presupuesto.module.css';
 
 /**
- * Menú ⋮ de una partida (F2.4): subir/bajar, copiar, mover a otro
+ * Menú ⋮ de una partida (F2.4): subir/bajar, copiar, duplicar con medición, mover a otro
  * capítulo/subcapítulo o eliminar. «Subir/Bajar» es la vía de reordenar en
  * táctil y con teclado (el arrastre de la fila es sólo de ratón); `canUp`/
  * `canDown` los da la tabla, que ya conoce el grupo, en vez de suscribir cada
@@ -28,6 +29,8 @@ export function PartidaMenu({
   const chapters = useObraStore((s) => s.chapters);
   const movePartida = useObraStore((s) => s.movePartida);
   const movePartidaBy = useObraStore((s) => s.movePartidaBy);
+  const duplicarPartida = useObraStore((s) => s.duplicarPartida);
+  const togglePartida = useObraStore((s) => s.togglePartida);
   const { copy } = usePartidaClipboard();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -117,6 +120,22 @@ export function PartidaMenu({
             }}
           >
             <Icon name="copy" size={15} /> Copiar partida
+          </button>
+          <button
+            type="button"
+            title="Una copia justo debajo, con sus líneas de medición"
+            className={`tcol ${styles.menuCopy}`}
+            onClick={() => {
+              const nueva = duplicarPartida(chapterId, p.id);
+              setOpen(false);
+              if (!nueva) return;
+              togglePartida(nueva); // abre la copia para retocarla
+              useToastStore
+                .getState()
+                .show('Partida duplicada con su medición', { label: 'Deshacer', run: () => undo() }, { rev: getDomainRevision() });
+            }}
+          >
+            <Icon name="layers" size={15} /> Duplicar con medición
           </button>
           <div className={styles.menuDivider} />
           <div className={`sec-head ${styles.menuHead}`}>Mover a</div>

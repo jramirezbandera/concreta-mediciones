@@ -25,6 +25,7 @@ import { rawUuid } from '../../core/id';
 import { ALL, nextFormaId, nextMedLineId, nextPartidaId, nextRecursoCode, subIn } from '../base';
 import type { MedResult, ObraSlice, ObraState } from '../obraStore';
 import { historyCheckpoint } from '../temporal';
+import { current } from 'immer';
 
 /**
  * Siguiente índice libre entre los hijos de un contenedor: max(último segmento
@@ -344,6 +345,7 @@ type EstructuraSlice = Pick<
   | 'moveSubtree'
   | 'addPartida'
   | 'createPartida'
+  | 'duplicarPartida'
   | 'addMedLines'
   | 'moveMedLine'
   | 'moveMedLinesBy'
@@ -690,6 +692,28 @@ export const createEstructuraSlice: ObraSlice<EstructuraSlice> = (set, get) => (
     set((s) => {
       ok = insertPartida(s, chapterId, subId, id);
     });
+    return ok ? id : '';
+  },
+
+  duplicarPartida: (chapterId, partidaId) => {
+    const id = nextPartidaId();
+    let ok = false;
+    structural(() =>
+      set((s) => {
+        const list = s.partidas[chapterId];
+        const idx = list?.findIndex((p) => p.id === partidaId) ?? -1;
+        if (!list || idx < 0) return;
+        const copia: Partida = structuredClone(current(list[idx]!));
+        copia.id = id;
+        copia.med = conFormasNuevas(copia.med.map((l) => ({ ...l, id: nextMedLineId() })));
+        list.splice(idx + 1, 0, copia);
+        renumberInPlace(
+          s.chapters.find((c) => c.id === chapterId),
+          list,
+        );
+        ok = true;
+      }),
+    );
     return ok ? id : '';
   },
 
