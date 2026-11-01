@@ -15,6 +15,13 @@ export type MedDim = 'uds' | 'largo' | 'ancho' | 'alto';
 
 /** Línea de medición: uds × largo × ancho × alto. Dimensión vacía = factor 1;
  *  las CUATRO vacías = línea de comentario, parcial 0 (ver `lineParcial`). */
+/** Lo que era una línea de medición al certificarla (`Cert.lineSnap`, v12). */
+export interface LineaCertificada {
+  comment: string;
+  /** uds · largo · ancho · alto, como en la línea ('' = vacía). */
+  dims: (number | '')[];
+}
+
 export interface MedLine {
   /**
    * Id estable de la línea (F4): la certificación por líneas guarda un SNAPSHOT
@@ -206,6 +213,14 @@ export interface Cert {
    * frente a editar la medición después (la cert no cambia sola).
    */
   lineQty?: Record<string, Record<string, number>>;
+  /**
+   * Qué era cada línea certificada (v12), CONGELADO al marcarla como `lineQty`:
+   * `lineSnap[partidaId][lineId]`. Si después se borra o se cambia la línea, la
+   * cert sigue diciendo qué se certificó (es un documento de cobro, T-2). Va y
+   * viene con `lineQty`; las certs anteriores a v12 lo traen de la migración
+   * solo para las líneas que aún existían.
+   */
+  lineSnap?: Record<string, Record<string, LineaCertificada>>;
   /** Precios contradictorios de ESTA cert (F4.4). Ver `CertExtra`. */
   extras?: CertExtra[];
   /**

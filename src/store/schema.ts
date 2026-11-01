@@ -7,7 +7,7 @@
    la capa de persistencia (`persist/`) lo consume sin arrastrar las ~53
    acciones del store.
    =========================================================================== */
-import type { Banco, Cert, Chapter, Ilegible, Obra, PartidaBaja, PartidasMap, PlanoMeta, Rates } from '../core/types';
+import type { Banco, Cert, Chapter, Ilegible, LineaCertificada, MedLine, Obra, PartidaBaja, PartidasMap, PlanoMeta, Rates } from '../core/types';
 import { apartarIlegibles } from '../core/planoDatos';
 import { numeroEdificio } from '../core/edificio';
 import { apartarRcdIlegibles } from '../core/rcd/datos';
@@ -84,8 +84,14 @@ import { nextAgenteId } from './base';
  *   (datos del estudio; las fichas se proponen desde las partidas y solo se
  *   guarda lo que cambia el técnico), opcional (docs/plan-seguridad-salud.md).
  *   Migración: solo sube la versión. Mismo espacio de claves `concreta6.*`.
+ *
+ *   v11 → v12 (2026-11-01, certificar por líneas): `Cert.lineSnap` guarda el
+ *   comentario y las dimensiones de cada línea certificada al marcarla.
+ *   Migración: `migrarLineSnap` lo rellena con las líneas marcadas que aún
+ *   existen en la medición (las ya borradas siguen sin nombre). Mismo espacio
+ *   de claves `concreta6.*`.
  */
-export const SCHEMA_VERSION = 11;
+export const SCHEMA_VERSION = 12;
 
 /** Estado de dominio de la obra (lo que persistiría en F6). Serializable. */
 export interface ObraData {
@@ -294,7 +300,35 @@ const MIGRATIONS: Record<number, (d: ObraData) => ObraData> = {
   9: (d) => ({ ...d, schemaVersion: 10 }),
   // v10 → v11 (estudio de seguridad y salud): `seguridadSalud` es opcional.
   10: (d) => ({ ...d, schemaVersion: 11 }),
+  // v11 → v12 (certificar por líneas): `Cert.lineSnap` desde la medición actual.
+  11: (d) => ({ ...migrarLineSnap(d), schemaVersion: 12 }),
 };
+
+/**
+ * v11 → v12: congela comentario y dimensiones de las líneas certificadas que
+ * aún existen. Es lo que hay ahora, no lo que había al marcar, pero es lo más
+ * cercano que queda y protege de un borrado futuro. Datos sin tipar: son de la
+ * versión anterior, y lo que no se entienda se deja como está.
+ */
+function migrarLineSnap(d: ObraData): ObraData {
+  if (!Array.isArray(d.certs) || !d.partidas || typeof d.partidas !== 'object') return d;
+  const lineas = new Map<string, Map<string, MedLine>>();
+  for (const ps of Object.values(d.partidas))
+    for (const p of Array.isArray(ps) ? ps : [])
+      if (p && Array.isArray(p.med)) lineas.set(p.id, new Map(p.med.filter(Boolean).map((l) => [l.id, l])));
+  const certs = d.certs.map((c) => {
+    if (!c || !c.lineQty || typeof c.lineQty !== 'object') return c;
+    const snap: Record<string, Record<string, LineaCertificada>> = {};
+    for (const [pid, qs] of Object.entries(c.lineQty)) {
+      for (const lid of Object.keys(qs ?? {})) {
+        const l = lineas.get(pid)?.get(lid);
+        if (l) (snap[pid] ??= {})[lid] = { comment: l.comment ?? '', dims: [l.uds, l.largo, l.ancho, l.alto] };
+      }
+    }
+    return Object.keys(snap).length ? { ...c, lineSnap: snap } : c;
+  });
+  return { ...d, certs };
+}
 
 /**
  * v8 → v9: la superficie construida y las plantas de los anejos pasan a la

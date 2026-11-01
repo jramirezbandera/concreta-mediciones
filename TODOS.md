@@ -118,7 +118,12 @@ líneas, formas de plano nuevas y sin nada de certificación; se abre para retoc
   la última copia pisa a la primera.
 - **Depende de:** el portapapeles de líneas del plan citado.
 
-### Guardar comentario y dimensiones al certificar por líneas (P2)
+### ~~Guardar comentario y dimensiones al certificar por líneas (P2)~~ — HECHO (2026-11-01)
+
+`Cert.lineSnap` (esquema v12) congela comentario y dimensiones al marcar, al
+completar y al crear la cert siguiente, y se va con `lineQty`. Una línea borrada
+dice qué era. La migración lo rellena con las líneas marcadas que aún existían; las
+borradas antes de v12 siguen con el texto genérico.
 
 - **Qué:** al marcar una línea en la certificación (`setCertLine`), congelar también
   su comentario y sus dimensiones, no solo la cantidad (`Cert.lineQty`).

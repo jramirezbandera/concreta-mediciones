@@ -154,9 +154,21 @@ describe('CertificacionesView (F4.1)', () => {
     fireEvent.click(screen.getByText('E02EM030')); // despliega p111
     // Antes no había fila: el importe quedaba sostenido por una línea invisible
     // y la única salida era el override manual (que arrasa todo el lineQty).
-    expect(screen.getByText(/Línea eliminada de la medición/)).toBeInTheDocument();
+    // v12: la fila dice qué era la línea (comentario y dimensiones congelados).
+    expect(screen.getByText(/Zanjas de saneamiento · eliminada de la medición/)).toBeInTheDocument();
     fireEvent.click(screen.getByLabelText('Desmarcar línea eliminada de la medición'));
     expect(useObraStore.getState().certs[0]!.lineQty?.p111).toBeUndefined();
+    expect(useObraStore.getState().certs[0]!.lineSnap?.p111).toBeUndefined();
+  });
+
+  it('una línea borrada certificada antes de v12 (sin congelado) sale con el texto genérico', () => {
+    useObraStore.getState().setCurCert(0);
+    useObraStore.getState().setCertLine('p111', 'p111-m1', 61.2);
+    useObraStore.setState((s) => ({ certs: s.certs.map((c, i) => (i === 0 ? { ...c, lineSnap: undefined } : c)) }));
+    useObraStore.getState().deleteMedLine('01', 'p111', 0);
+    render(<CertificacionesView compact={false} />);
+    fireEvent.click(screen.getByText('E02EM030'));
+    expect(screen.getByText('Línea eliminada de la medición (certificada en su día)')).toBeInTheDocument();
   });
 
   it('marcar una línea suma su parcial a la cantidad ejecutada (F4.3 #3)', () => {

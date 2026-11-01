@@ -452,7 +452,8 @@ describe('borrar líneas', () => {
 
     document.body.innerHTML = '';
     render(<CertDetail p={P('p111')} />);
-    expect(screen.getByText('Línea eliminada de la medición (certificada en su día)')).toBeInTheDocument();
+    // v12: dice qué era la línea (su comentario, congelado al certificarla).
+    expect(screen.getByText(/· eliminada de la medición \(certificada en su día\)$/)).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: 'Desmarcar línea eliminada de la medición' })).toBeInTheDocument();
   });
 

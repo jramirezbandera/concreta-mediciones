@@ -5,7 +5,7 @@
    creación y campos de cert, contradictorios y ajustes del resumen. La lógica
    es idéntica a la del store monolítico; solo cambia de fichero.
    =========================================================================== */
-import type { Cert, Partida, PartidasMap, Rates } from '../../core/types';
+import type { Cert, MedLine, Partida, PartidasMap, Rates } from '../../core/types';
 import { ajusteEsRetencion, estaCertToOrigen, prevDataOf, sumLineQty } from '../../core/certificacion';
 import { findPartidaById } from '../../core/tree';
 import { lineParcial, partidaCantidad } from '../../core/medicion';
@@ -61,9 +61,27 @@ function findPartida(partidas: PartidasMap, id: string): Partida | undefined {
  *  `lineQty` si queda vacío (convención de `setCertLine`). Un solo sitio para
  *  esta regla, compartido por onCertEdit/setCertLine/completar (eng review Issue 2). */
 function dropLineQty(cert: Cert, partidaId: string): void {
+  if (cert.lineSnap?.[partidaId]) {
+    delete cert.lineSnap[partidaId];
+    if (Object.keys(cert.lineSnap).length === 0) cert.lineSnap = undefined;
+  }
   if (!cert.lineQty?.[partidaId]) return;
   delete cert.lineQty[partidaId];
   if (Object.keys(cert.lineQty).length === 0) cert.lineQty = undefined;
+}
+
+/** Congela qué era la línea al certificarla (v12, `Cert.lineSnap`). */
+function snapLinea(cert: Cert, partidaId: string, l: MedLine): void {
+  ((cert.lineSnap ??= {})[partidaId] ??= {})[l.id] = { comment: l.comment, dims: [l.uds, l.largo, l.ancho, l.alto] };
+}
+
+/** Suelta el congelado de una línea desmarcada (y los contenedores vacíos). */
+function dropSnapLinea(cert: Cert, partidaId: string, lineId: string): void {
+  const lines = cert.lineSnap?.[partidaId];
+  if (!lines) return;
+  delete lines[lineId];
+  if (Object.keys(lines).length === 0) delete cert.lineSnap![partidaId];
+  if (Object.keys(cert.lineSnap!).length === 0) cert.lineSnap = undefined;
 }
 
 /**
@@ -93,9 +111,13 @@ function completeDraft(s: ObraState, p: Partida): void {
     // (parcial < 0) se certifica también, así +100 y −10 certifican 90. Solo la
     // de parcial 0 se queda sin marcar, como en `setCertLine`.
     const lines: Record<string, number> = {};
+    if (cert.lineSnap?.[p.id]) delete cert.lineSnap[p.id];
     for (const l of med) {
       const parcial = lineParcial(l);
-      if (parcial !== 0) lines[l.id] = parcial;
+      if (parcial !== 0) {
+        lines[l.id] = parcial;
+        snapLinea(cert, p.id, l);
+      }
     }
     (cert.lineQty ??= {})[p.id] = lines;
     cert.data[p.id] = round2(Math.max(sumLineQty(lines), current, prev));
@@ -156,8 +178,11 @@ export const createCertSlice: ObraSlice<CertSlice> = (set) => ({
       // solo el 0 desmarca.
       if (qty == null || qty === 0 || !Number.isFinite(qty)) {
         delete lines[lineId];
+        dropSnapLinea(cert, partidaId, lineId);
       } else {
         lines[lineId] = round2(qty);
+        const l = findPartida(s.partidas, partidaId)?.med.find((x) => x.id === lineId);
+        if (l) snapLinea(cert, partidaId, l);
       }
       // D-06 (suelo = lo ya certificado): si la cert ANTERIOR certificó esta
       // partida a mano (grueso, sin líneas), marcar las primeras líneas aquí
@@ -229,6 +254,18 @@ export const createCertSlice: ObraSlice<CertSlice> = (set) => ({
         lineQty = {};
         for (const pid in last.lineQty) lineQty[pid] = { ...last.lineQty[pid] };
       }
+      // Lo que era cada línea viaja con su cantidad (v12): dos niveles, valores planos.
+      let lineSnap: Cert['lineSnap'];
+      if (last?.lineSnap) {
+        lineSnap = {};
+        for (const pid in last.lineSnap) {
+          lineSnap[pid] = {};
+          for (const lid in last.lineSnap[pid]) {
+            const x = last.lineSnap[pid]![lid]!;
+            lineSnap[pid]![lid] = { comment: x.comment, dims: [...x.dims] };
+          }
+        }
+      }
       // Los contradictorios se heredan a-origen (mismo id → "anterior" cuadra).
       const extras = last?.extras?.map((e) => ({ ...e }));
       // Las partidas cerradas siguen cerradas (lo que no se ejecuta no vuelve solo).
@@ -255,6 +292,7 @@ export const createCertSlice: ObraSlice<CertSlice> = (set) => ({
         retencion: last?.retencion ?? 0,
         data,
         lineQty,
+        lineSnap,
         extras,
         cerradas,
         ajustes,

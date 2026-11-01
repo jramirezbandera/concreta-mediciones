@@ -30,7 +30,7 @@ describe('v10 → v11 (estudio de seguridad y salud)', () => {
       ...v10,
       schemaVersion: SCHEMA_VERSION,
     });
-    expect(SCHEMA_VERSION).toBe(11);
+    expect(SCHEMA_VERSION).toBeGreaterThanOrEqual(11);
   });
 
   it('toSerializable lleva el estudio solo si lo hay', () => {

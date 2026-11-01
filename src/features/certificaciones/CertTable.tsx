@@ -17,7 +17,7 @@ import { groupsForFocus } from '../../core/grouping';
 import { rollupByDepth } from '../../core/tree';
 import { lineParcial } from '../../core/medicion';
 import { fmtNum, round2, sumCents, toEur, type Cents } from '../../core/money';
-import type { CertExtra, MedLine, Partida, Chapter } from '../../core/types';
+import type { CertExtra, LineaCertificada, MedLine, Partida, Chapter } from '../../core/types';
 import { useObraStore, type CertMode } from '../../store';
 import { PctBar } from './PctBar';
 import check from '../../styles/lineCheck.module.css';
@@ -28,12 +28,24 @@ function stop(e: MouseEvent) {
   e.stopPropagation();
 }
 
-/** Factores no vacíos de una línea, en formato "1 × 85,00 × 0,60". */
-function dimsOf(l: MedLine): string {
-  return [l.uds, l.largo, l.ancho, l.alto]
-    .filter((v) => v !== '' && v != null)
+/** Factores no vacíos, en formato "1 × 85,00 × 0,60". */
+function dimsTexto(dims: readonly unknown[]): string {
+  return dims
+    .filter((v) => v !== '' && v != null && Number.isFinite(Number(v)))
     .map((v) => fmtNum(Number(v)))
     .join(' × ');
+}
+
+function dimsOf(l: MedLine): string {
+  return dimsTexto([l.uds, l.largo, l.ancho, l.alto]);
+}
+
+/** El congelado de una línea certificada (v12), si se puede leer: viene
+ *  guardado y no se valida al cargar, así que aquí no se fía de su forma. */
+function lineaCertificada(x: unknown): LineaCertificada | null {
+  if (!x || typeof x !== 'object') return null;
+  const { comment, dims } = x as Partial<LineaCertificada>;
+  return { comment: typeof comment === 'string' ? comment : '', dims: Array.isArray(dims) ? dims : [] };
 }
 
 /** Desplegable por partida (F4.2 lectura + F4.3 marcar líneas): descripción +
@@ -42,6 +54,8 @@ function dimsOf(l: MedLine): string {
 export function CertDetail({ p }: { p: Partida }) {
   const med = p.med ?? [];
   const lineQty = useObraStore((s) => s.certs[s.curCert]?.lineQty?.[p.id]);
+  // v12: qué era cada línea al certificarla, para las que ya no están.
+  const lineSnap = useObraStore((s) => s.certs[s.curCert]?.lineSnap?.[p.id]);
   const setCertLine = useObraStore((s) => s.setCertLine);
   // Cerrada: las líneas quedan bloqueadas como la cantidad (hasta reabrirla).
   const cerrada = useObraStore((s) => Boolean(s.certs[s.curCert]?.cerradas?.[p.id]));
@@ -85,26 +99,31 @@ export function CertDetail({ p }: { p: Partida }) {
               </div>
             );
           })}
-          {deletedMarked.map(([id, qty]) => (
-            <div key={id} className={`${styles.detailMedRow} ${styles.lineOn}`}>
-              <button
-                type="button"
-                role="checkbox"
-                aria-checked
-                aria-label="Desmarcar línea eliminada de la medición"
-                disabled={cerrada}
-                className={`tap-target ${check.lineCheck} ${check.on}`}
-                onClick={() => setCertLine(p.id, id, null)}
-              >
-                <Icon name="check" size={12} />
-              </button>
-              <span className={`${styles.detailMedComment} ${styles.empty}`}>
-                Línea eliminada de la medición (certificada en su día)
-              </span>
-              <span className={`mono ${styles.detailMedDims}`}>—</span>
-              <span className={`mono ${styles.detailMedParcial}`}>{fmtNum(qty)}</span>
-            </div>
-          ))}
+          {deletedMarked.map(([id, qty]) => {
+            const era = lineaCertificada(lineSnap?.[id]);
+            return (
+              <div key={id} className={`${styles.detailMedRow} ${styles.lineOn}`}>
+                <button
+                  type="button"
+                  role="checkbox"
+                  aria-checked
+                  aria-label="Desmarcar línea eliminada de la medición"
+                  disabled={cerrada}
+                  className={`tap-target ${check.lineCheck} ${check.on}`}
+                  onClick={() => setCertLine(p.id, id, null)}
+                >
+                  <Icon name="check" size={12} />
+                </button>
+                <span className={`${styles.detailMedComment} ${styles.empty}`}>
+                  {era
+                    ? `${era.comment || 'Sin comentario'} · eliminada de la medición (certificada en su día)`
+                    : 'Línea eliminada de la medición (certificada en su día)'}
+                </span>
+                <span className={`mono ${styles.detailMedDims}`}>{(era && dimsTexto(era.dims)) || '—'}</span>
+                <span className={`mono ${styles.detailMedParcial}`}>{fmtNum(qty)}</span>
+              </div>
+            );
+          })}
         </div>
       ) : (
         <p className={styles.detailEmpty}>Sin líneas de medición.</p>
