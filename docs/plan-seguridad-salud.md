@@ -179,10 +179,14 @@ medido desde la mano de obra, coordinación, entorno, medios, servicios higiéni
 - **E2 · Reglas y selección.** `reglas.ts` (propuesta con motivos), `seleccion.ts` (diferencia,
   ediciones, fichas del estudio). Tests con obras inventadas (qué proponen y qué no). HECHO.
 - **E3 · Documento y Word.** `documento.ts`, `{kind:'sub'}`, `docxEss.ts`, test de prohibidos y
-  golden del Word. El golden de residuos sigue igual.
-- **E4 · Vista.** Pestaña, estado vacío, Fichas, Datos, Antes de entregar, Exportar.
+  golden del Word. El golden de residuos sigue igual. HECHO (51324e8).
+- **E4 · Vista.** Pestaña, estado vacío, Fichas, Datos, Antes de entregar, Exportar. HECHO
+  (f9958a9), con el esquema v11 y el slice.
 - **E5 · QA.** En el navegador con una obra real; comparar con 2–3 estudios de
-  `ejemplos/seguridad y salud/` de instalaciones.
+  `ejemplos/seguridad y salud/` de instalaciones. EN CURSO: la obra 2025-011 (CYPE) carga,
+  propone 61 fichas y da **completo** por el supuesto a) (PEC 567.116,58 € con IVA del 21 %;
+  su estudio de ejemplo, «2025-011 EBSyS.pdf», es un básico). Falta cotejar las fichas con
+  ese estudio y sacar el Word de una obra que dé básico.
 
 ### Fase 2 · Completo
 
