@@ -78,7 +78,7 @@ export function OfertasView({ compact, onGoPresupuesto }: { compact: boolean; on
     <input
       ref={input}
       type="file"
-      accept=".bc3"
+      accept=".bc3,.xlsx"
       multiple
       hidden
       aria-label="Elegir ficheros de oferta"
@@ -109,7 +109,7 @@ export function OfertasView({ compact, onGoPresupuesto }: { compact: boolean; on
         }
       >
         <EmptyAction primary onClick={elegir}>
-          <Icon name="upload" size={15} /> {leyendo ? 'Leyendo…' : 'Añadir oferta (.bc3)'}
+          <Icon name="upload" size={15} /> {leyendo ? 'Leyendo…' : 'Añadir oferta (.bc3 o Excel)'}
         </EmptyAction>
         {fileInput}
       </EmptyState>

@@ -15,7 +15,8 @@
    =========================================================================== */
 import type { ImportedObra } from './bc3import';
 import { buildPresupuestoListado, type PresupuestoListado } from './listado';
-import { importeCents, round2, sumCents, type Cents } from './money';
+import { importeCents, parseEsNumber, round2, sumCents, type Cents } from './money';
+import type { FilaXlsx, ValorCelda } from './xlsxLeer';
 import type { Chapter, Ilegible, PartidasMap, SubChapter } from './types';
 
 /** Una partida tal como viene en la oferta (del .bc3 o del Excel). */
@@ -23,6 +24,7 @@ export interface OfertaFila {
   code: string;
   title: string;
   ud: string;
+  /** `NaN` si la oferta no la deja leer (fórmula sin resultado en el Excel). */
   cantidad: number;
   /** Precio unitario ofertado (€). 0 = sin precio. */
   precio: number;
@@ -93,7 +95,8 @@ export function casarOferta(filas: OfertaFila[], nuestras: PartidaCasable[]): Ca
       return;
     }
     precios[p.id] = f.precio;
-    if (Math.abs(f.cantidad - p.cantidad) > TOL_CANTIDAD) cantidades[p.id] = f.cantidad;
+    // Sin cantidad legible (fórmula sin resultado en el Excel) no hay nada que comparar.
+    if (Number.isFinite(f.cantidad) && Math.abs(f.cantidad - p.cantidad) > TOL_CANTIDAD) cantidades[p.id] = f.cantidad;
   };
 
   // 1) Por código, en orden.
@@ -150,6 +153,45 @@ export function filasDeObra(data: Pick<ImportedObra, 'chapters' | 'partidas' | '
       g.rows.map((r) => ({ code: r.code, title: r.title, ud: r.ud, cantidad: r.cantidad, precio: round2(r.precioExacto) })),
     ),
   );
+}
+
+/** Columnas que se buscan en las cabeceras del Excel de mediciones (O1). */
+const CABECERAS = { code: 'codigo', title: 'descripcion', ud: 'ud', cantidad: 'cantidad', precio: 'precio' } as const;
+
+/**
+ * Filas de una oferta que vuelve en el Excel de «Mediciones sin precios» (O3).
+ * Las columnas salen de las cabeceras de cada capítulo (Código, Descripción,
+ * Ud., Cantidad, Precio), así sobrevive a que la constructora añada o mueva
+ * columnas. Una partida es una fila con código y unidad; las de descripción,
+ * medición y totales no los tienen. La cantidad que es una fórmula sin
+ * resultado guardado sale `NaN` (no se compara); el precio vacío, 0.
+ */
+export function filasDeExcel(filas: FilaXlsx[]): OfertaFila[] {
+  let col: Partial<Record<keyof typeof CABECERAS, number>> | null = null;
+  const out: OfertaFila[] = [];
+  const texto = (v: ValorCelda | undefined) => (v == null ? '' : String(v).trim());
+  for (const f of filas) {
+    const etiquetas = new Map([...f].map(([c, v]) => [normalizar(texto(v)), c]));
+    if (etiquetas.has(CABECERAS.code) && etiquetas.has(CABECERAS.precio)) {
+      col = Object.fromEntries(Object.entries(CABECERAS).map(([k, e]) => [k, etiquetas.get(e)]));
+      continue;
+    }
+    if (!col || col.code == null || col.precio == null) continue;
+    const code = texto(f.get(col.code));
+    const ud = col.ud != null ? texto(f.get(col.ud)) : '';
+    if (!code || !ud) continue;
+    const num = (v: ValorCelda | undefined) => (typeof v === 'number' ? v : (parseEsNumber(texto(v)) ?? NaN));
+    const precio = num(f.get(col.precio));
+    out.push({
+      code,
+      title: col.title != null ? texto(f.get(col.title)) : '',
+      ud,
+      cantidad: col.cantidad != null ? num(f.get(col.cantidad)) : NaN,
+      precio: Number.isFinite(precio) ? round2(precio) : 0,
+    });
+  }
+  if (!col) throw new Error('no parece el Excel de «Mediciones sin precios» (no hay columnas Código y Precio)');
+  return out;
 }
 
 /** Partidas del presupuesto listas para casar, con el código con el que
