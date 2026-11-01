@@ -23,7 +23,7 @@
 .label {
   font-size: var(--fs-badge);
   font-weight: 600;
-  color: var(--text-disabled);
+  color: var(--text-secondary);
 }
 .value {
   font-weight: 500;

@@ -81,7 +81,11 @@ la tarjeta Resumen al pie), porque ahí viven el coeficiente K y «Ajusta».
 
 Informe completo: `~/.gstack/projects/jramirezbandera-concreta-mediciones/designs/design-audit-20260924/`.
 
-## Contraste de textos que aún van en `--text-disabled` (P3)
+## ~~Contraste de textos que aún van en `--text-disabled` (P3)~~ — HECHO (2026-11-01)
+
+Los seis pasan a `--text-secondary` (7,6:1 en tema claro). Quedan en `--text-disabled`
+otros textos auxiliares (códigos, separadores, contadores): revisarlos en el próximo
+`/design-review` si alguno se lee como texto.
 
 - **Qué:** en tema claro, `#94a3b8` sobre blanco da 2,6:1 (AA pide 4,5:1). Lo usan
   textos que se leen: «Mediciones» junto a la marca, «Medir por», «Cantidad total» y

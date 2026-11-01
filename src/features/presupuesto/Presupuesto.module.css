@@ -546,7 +546,7 @@
 .detailQtyLabel {
   font-size: var(--fs-badge);
   font-weight: 600;
-  color: var(--text-disabled);
+  color: var(--text-secondary);
 }
 .detailQtyVal {
   font-size: var(--fs-lg);
@@ -555,7 +555,7 @@
 }
 .detailQtyUd {
   font-size: var(--fs-table);
-  color: var(--text-disabled);
+  color: var(--text-secondary);
 }
 
 /* ---- tabla de medición ---- */
@@ -638,7 +638,7 @@
   padding: var(--sp-24) var(--sp-16);
   text-align: center;
   font-size: var(--fs-table);
-  color: var(--text-disabled);
+  color: var(--text-secondary);
 }
 
 /* ---- líneas: asa, casilla, selección, arrastre ---------------------------- */
