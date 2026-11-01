@@ -77,7 +77,7 @@ export function leerEstudioSs(x: unknown): EstudioSsDatos | null {
   if (Array.isArray(x.tipos))
     out.tipos = x.tipos.filter((t): t is TipoObraEss => TIPOS.has(t as TipoObraEss));
   if (typeof x.forzarCompleto === 'boolean') out.forzarCompleto = x.forzarCompleto;
-  if (typeof x.capituloSs === 'string') out.capituloSs = x.capituloSs;
+  if (typeof x.capituloSs === 'string' || x.capituloSs === null) out.capituloSs = x.capituloSs;
   return out;
 }
 

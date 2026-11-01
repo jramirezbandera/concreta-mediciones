@@ -43,6 +43,8 @@ import type { ControlPartida, PlanCalidadDatos, PrecioCopiado } from '../core/pc
 import type { PartidaControlPropuesta } from '../core/pcc/capitulo';
 import type { Oferta } from '../core/ofertas';
 import { createOfertasSlice } from './slices/ofertasSlice';
+import { createEssSlice } from './slices/essSlice';
+import type { EstudioSsDatos } from '../core/ess/tipos';
 import {
   createPlanosSlice,
   type DestinoPlano,
@@ -725,6 +727,16 @@ export interface ObraState extends ObraData {
   /** Quita una oferta de la obra. */
   quitarOferta: (id: string) => void;
 
+  /* ---- estudio de seguridad y salud (v11, `slices/essSlice`) ---- */
+  /** Empieza el estudio: datos vacíos, el capítulo de seguridad y salud
+   *  propuesto por el título, y el redactor y la fecha del estudio de residuos
+   *  si lo hay. UN paso de Deshacer. No-op si ya hay estudio. */
+  iniciarEstudioSs: () => void;
+  /** Cambia datos del estudio (merge superficial). */
+  setEstudioSs: (patch: Partial<EstudioSsDatos>) => void;
+  /** Quita el estudio de la obra. */
+  quitarEstudioSs: () => void;
+
   /** Restaura el estado sembrado (datos + UI). Útil en tests y para "nueva obra". */
   reset: () => void;
 }
@@ -905,6 +917,7 @@ export const useObraStore = create<ObraState>()(
               estudioRcd: undefined,
               planCalidad: undefined,
               ofertas: undefined,
+              seguridadSalud: undefined,
               _ilegible: undefined,
               ...data,
             });
@@ -996,6 +1009,7 @@ export const useObraStore = create<ObraState>()(
       ...createRcdSlice(set, get, store),
       ...createPccSlice(set, get, store),
       ...createOfertasSlice(set, get, store),
+      ...createEssSlice(set, get, store),
     };
   }),
   ),

@@ -16,6 +16,8 @@ import type { EstudioRcdDatos } from '../core/rcd/tipos';
 import { apartarPccIlegibles } from '../core/pcc/datos';
 import type { PlanCalidadDatos } from '../core/pcc/tipos';
 import { apartarOfertasIlegibles, type Oferta } from '../core/ofertas';
+import { apartarEssIlegible } from '../core/ess/guardado';
+import type { EstudioSsDatos } from '../core/ess/tipos';
 import { buildRecursos, precioCuadraDescompuesto, recursoUsage } from '../core/banco';
 import { CHAPTERS, DEFAULT_OBRA, DEFAULT_RATES, PARTIDAS, makeCertsInit } from '../core/seed';
 import { nextAgenteId } from './base';
@@ -77,8 +79,13 @@ import { nextAgenteId } from './base';
  *   constructoras, casadas con las partidas), opcional (docs/plan-ofertas.md).
  *   Migración: solo sube la versión, por la regla de v6. Mismo espacio de
  *   claves `concreta6.*`.
+ *
+ *   v10 → v11 (2026-11-01, estudio de seguridad y salud): `seguridadSalud`
+ *   (datos del estudio; las fichas se proponen desde las partidas y solo se
+ *   guarda lo que cambia el técnico), opcional (docs/plan-seguridad-salud.md).
+ *   Migración: solo sube la versión. Mismo espacio de claves `concreta6.*`.
  */
-export const SCHEMA_VERSION = 10;
+export const SCHEMA_VERSION = 11;
 
 /** Estado de dominio de la obra (lo que persistiría en F6). Serializable. */
 export interface ObraData {
@@ -105,6 +112,9 @@ export interface ObraData {
   planCalidad?: PlanCalidadDatos;
   /** Ofertas de las constructoras (v10). Ausente = ninguna. Ver `core/ofertas`. */
   ofertas?: Oferta[];
+  /** Estudio de seguridad y salud (v11): los datos que no salen del presupuesto.
+   *  Ausente = la obra no tiene estudio. Ver `core/ess/tipos`. */
+  seguridadSalud?: EstudioSsDatos;
   /** Datos de planos que romperían el render y se apartaron al cargar, con su
    *  valor crudo y su ruta. Se escriben de vuelta tal cual (ver
    *  `core/planoDatos.apartarIlegibles`). Ausente = ninguno. */
@@ -131,6 +141,7 @@ export const DOMAIN_KEYS = [
   'estudioRcd',
   'planCalidad',
   'ofertas',
+  'seguridadSalud',
   '_ilegible',
 ] as const satisfies readonly (keyof ObraData)[];
 export type DomainKey = (typeof DOMAIN_KEYS)[number];
@@ -176,6 +187,7 @@ export function seedObraData(): ObraData {
     estudioRcd: undefined,
     planCalidad: undefined,
     ofertas: undefined,
+    seguridadSalud: undefined,
   };
 }
 
@@ -199,6 +211,7 @@ export function blankObraData(name = 'Obra nueva'): ObraData {
     estudioRcd: undefined,
     planCalidad: undefined,
     ofertas: undefined,
+    seguridadSalud: undefined,
   };
 }
 
@@ -230,6 +243,7 @@ export function toSerializable(s: ObraData): ObraData {
     ...(s.estudioRcd ? { estudioRcd: s.estudioRcd } : {}),
     ...(s.planCalidad ? { planCalidad: s.planCalidad } : {}),
     ...(s.ofertas?.length ? { ofertas: s.ofertas } : {}),
+    ...(s.seguridadSalud ? { seguridadSalud: s.seguridadSalud } : {}),
     ...(s._ilegible?.length ? { _ilegible: s._ilegible } : {}),
   };
 }
@@ -278,6 +292,8 @@ const MIGRATIONS: Record<number, (d: ObraData) => ObraData> = {
   8: (d) => ({ ...migrarEdificio(d), schemaVersion: 9 }),
   // v9 → v10 (comparativo de ofertas): `ofertas` es opcional.
   9: (d) => ({ ...d, schemaVersion: 10 }),
+  // v10 → v11 (estudio de seguridad y salud): `seguridadSalud` es opcional.
+  10: (d) => ({ ...d, schemaVersion: 11 }),
 };
 
 /**
@@ -351,5 +367,5 @@ export function fromSerializable(data: ObraData): ObraData {
       `schemaVersion ${data.schemaVersion} no soportada (esperada ≤ ${SCHEMA_VERSION}); sin ruta de migración.`,
     );
   }
-  return apartarOfertasIlegibles(apartarPccIlegibles(apartarRcdIlegibles(apartarIlegibles(d))));
+  return apartarEssIlegible(apartarOfertasIlegibles(apartarPccIlegibles(apartarRcdIlegibles(apartarIlegibles(d)))));
 }

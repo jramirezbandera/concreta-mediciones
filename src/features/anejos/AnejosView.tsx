@@ -6,16 +6,18 @@ import styles from './Anejos.module.css';
 // Cada anejo trae su motor y sus tablas: se carga el que se abre.
 const ResiduosView = lazy(() => import('../residuos/ResiduosView').then((m) => ({ default: m.ResiduosView })));
 const CalidadView = lazy(() => import('../calidad/CalidadView').then((m) => ({ default: m.CalidadView })));
+const SeguridadView = lazy(() => import('../seguridad/SeguridadView').then((m) => ({ default: m.SeguridadView })));
 
 const ANEJOS: Array<[Anejo, string, IconName]> = [
   ['residuos', 'Residuos', 'recycle'],
   ['calidad', 'Control de calidad', 'flask'],
+  ['seguridad', 'Seguridad y salud', 'hardhat'],
 ];
 
 /**
  * Vista «Anejos»: los anejos de la memoria que salen del presupuesto, cada uno
- * en su pestaña (D6 del plan de control): el estudio de gestión de residuos y
- * el plan de control de calidad.
+ * en su pestaña (D6 del plan de control): el estudio de gestión de residuos,
+ * el plan de control de calidad y el estudio de seguridad y salud.
  */
 export function AnejosView({ compact, onGoPresupuesto }: { compact: boolean; onGoPresupuesto: () => void }) {
   const anejo = useAnejoStore((s) => s.anejo);
@@ -41,8 +43,10 @@ export function AnejosView({ compact, onGoPresupuesto }: { compact: boolean; onG
       <Suspense fallback={<div style={{ padding: 24, color: 'var(--text-disabled)' }}>Cargando…</div>}>
         {anejo === 'residuos' ? (
           <ResiduosView compact={compact} onGoPresupuesto={onGoPresupuesto} />
-        ) : (
+        ) : anejo === 'calidad' ? (
           <CalidadView compact={compact} onGoPresupuesto={onGoPresupuesto} />
+        ) : (
+          <SeguridadView compact={compact} onGoPresupuesto={onGoPresupuesto} />
         )}
       </Suspense>
     </div>

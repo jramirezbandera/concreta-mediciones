@@ -1,0 +1,75 @@
+/* Lo propio de la vista de seguridad y salud; el resto es de Residuos.module.css. */
+
+.fila {
+  cursor: default;
+}
+
+.tituloBtn {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.tituloBtn:hover {
+  color: var(--accent);
+}
+
+.etiqueta {
+  margin-left: 8px;
+}
+
+.bloque {
+  margin-top: var(--sp-12);
+}
+
+.items {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: var(--fs-table);
+  line-height: 1.45;
+}
+.item > span {
+  flex: 1;
+}
+
+.quitado > span {
+  text-decoration: line-through;
+  color: var(--text-disabled);
+}
+
+.anadido > span::before {
+  content: '+ ';
+  color: var(--state-ok);
+  font-weight: 700;
+}
+
+.anadir {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+.anadir input {
+  flex: 1;
+}
+
+.partidas {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-size: var(--fs-table);
+  color: var(--text-secondary);
+}

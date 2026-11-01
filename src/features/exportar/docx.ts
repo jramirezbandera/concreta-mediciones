@@ -31,3 +31,11 @@ export async function exportDocxPcc(hoy: string): Promise<void> {
   downloadBlob(out.blob, out.fileName);
   useObraStore.getState().setPlanCalidad({ emitido: out.emitido });
 }
+
+/** Genera y DESCARGA el estudio básico de seguridad y salud en Word. `hoy`
+ *  (ISO) es la fecha del estudio si no tiene una. */
+export async function exportDocxEss(hoy: string): Promise<void> {
+  const { docxEssFor } = await import('./docxEss');
+  const out = await docxEssFor(useObraStore.getState(), hoy);
+  if (out) downloadBlob(out.blob, out.fileName);
+}

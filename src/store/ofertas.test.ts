@@ -30,7 +30,7 @@ describe('v9 → v10 (comparativo de ofertas)', () => {
     delete v9.ofertas;
     const d = fromSerializable(structuredClone(v9));
     expect(d).toEqual({ ...v9, schemaVersion: SCHEMA_VERSION });
-    expect(SCHEMA_VERSION).toBe(10);
+    expect(SCHEMA_VERSION).toBeGreaterThanOrEqual(10);
   });
 
   it('toSerializable lleva `ofertas` solo si hay alguna', () => {
