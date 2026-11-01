@@ -15,11 +15,13 @@ import {
 } from '../../core/listado';
 import { buildCuadrosPrecios } from '../../core/cuadrosPrecios';
 import { compararOfertas } from '../../core/ofertas';
+import { buildLiquidacion } from '../../core/liquidacion';
 import { useObraStore } from '../../store';
 import type { PrintTarget } from '../print';
 import {
   buildCertXlsx,
   buildComparativoXlsx,
+  buildLiquidacionXlsx,
   buildCuadro1Xlsx,
   buildCuadro2Xlsx,
   buildPresupuestoXlsx,
@@ -57,6 +59,10 @@ export function xlsxDocFor(target: PrintTarget): XlsxDoc | null {
     const cuadros = buildCuadrosPrecios(s.chapters, s.partidas, s.recursos, s.rates.coefK);
     const firma = firmaFor('presupuesto', s.obra, undefined, new Date().toISOString());
     return (target.kind === 'cuadro1' ? buildCuadro1Xlsx : buildCuadro2Xlsx)(cuadros, meta, firma);
+  }
+  if (target.kind === 'liquidacion') {
+    const liq = buildLiquidacion(s.chapters, s.partidas, s.certs, s.rates, s.bajas);
+    return liq && buildLiquidacionXlsx(liq, meta, firmaFor('liquidacion', s.obra, undefined, new Date().toISOString()));
   }
   const cl = buildCertListado(s.chapters, s.partidas, s.certs, target.index, s.rates, s.bajas);
   return cl && buildCertXlsx(cl, meta, firmaFor('cert', s.obra, s.certs[target.index]));

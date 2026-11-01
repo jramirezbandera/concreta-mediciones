@@ -14,6 +14,8 @@ import { fmtNum } from '../../core/money';
 import { selectResumen, useObraStore } from '../../store';
 import { PrintCert } from './PrintCert';
 import { PrintCuadro1, PrintCuadro2 } from './PrintCuadros';
+import { PrintLiquidacion } from './PrintLiquidacion';
+import { buildLiquidacion } from '../../core/liquidacion';
 import { PrintPresupuesto } from './PrintPresupuesto';
 import { PrintResumen } from './PrintResumen';
 import './print.css';
@@ -26,7 +28,9 @@ export type PrintTarget =
   | { kind: 'resumen' }
   | { kind: 'cuadro1' }
   | { kind: 'cuadro2' }
-  | { kind: 'cert'; index: number };
+  | { kind: 'cert'; index: number }
+  /** Liquidación final con la última certificación (docs/plan-liquidacion.md). */
+  | { kind: 'liquidacion' };
 
 /** Fecha ISO → "11 de junio de 2026" ('' si falta). */
 function fmtFecha(iso?: string): string {
@@ -103,6 +107,18 @@ export function PrintDoc({ target, onDone }: { target: PrintTarget; onDone: () =
     const cuadros = buildCuadrosPrecios(chapters, partidas, recursos, rates.coefK);
     titulo = target.kind === 'cuadro1' ? 'Cuadro de precios nº 1' : 'Cuadro de precios nº 2';
     body = target.kind === 'cuadro1' ? <PrintCuadro1 data={cuadros} /> : <PrintCuadro2 data={cuadros} />;
+  } else if (target.kind === 'liquidacion') {
+    const liq = buildLiquidacion(chapters, partidas, certs, rates, bajas);
+    titulo = 'Liquidación final';
+    if (liq) {
+      extraMeta = (
+        <span>
+          <b>Según la certificación nº</b> {liq.certNum}
+          {liq.certPeriod ? ` (${liq.certPeriod})` : ''}
+        </span>
+      );
+    }
+    body = liq ? <PrintLiquidacion data={liq} /> : null;
   } else {
     const cl = buildCertListado(chapters, partidas, certs, target.index, rates, bajas);
     titulo = cl ? `Certificación de obra nº ${cl.num}` : 'Certificación de obra';
@@ -137,7 +153,7 @@ export function PrintDoc({ target, onDone }: { target: PrintTarget; onDone: () =
     target.kind === 'cert'
       ? firmaFor('cert', obra, certs[target.index])
       : firmaFor(
-          target.kind === 'resumen' || target.kind === 'mediciones' ? target.kind : 'presupuesto',
+          target.kind === 'resumen' || target.kind === 'mediciones' || target.kind === 'liquidacion' ? target.kind : 'presupuesto',
           obra,
           undefined,
           new Date().toISOString(),

@@ -151,15 +151,25 @@ export function firmaCertDefinitiva(firmantes: readonly Firmante[] | undefined):
  *                         es DEFINITIVO (OV1) o compuesto en vivo si no (snapshot
  *                         provisional —solo constructora/vacío— o cert legada)
  *   mediciones          → sin firma (van a varias constructoras para ofertar)
+ *   liquidacion         → DF (0..n) + Constructora + Propiedad, en vivo y con la
+ *                         fecha de hoy (cierra la obra: firman todas las partes)
  * `nowIso` es la fecha de presupuesto/resumen (la de la cert va en `cert.firmadoAt`).
  */
 export function firmaFor(
-  kind: 'presupuesto' | 'mediciones' | 'resumen' | 'cert',
+  kind: 'presupuesto' | 'mediciones' | 'resumen' | 'cert' | 'liquidacion',
   obra: Obra,
   cert?: Pick<Cert, 'firmantesSnapshot' | 'firmadoAt'>,
   nowIso = '',
 ): Firma {
   if (kind === 'mediciones') return { firmantes: [], lugar: '', fecha: '' };
+  if (kind === 'liquidacion')
+    return {
+      firmantes: [...composeCertFirmantes(obra), { rol: 'La Propiedad', nombre: str(obra, 'promotor.nombre') }].filter((f) =>
+        f.nombre.trim(),
+      ),
+      lugar: str(obra, 'localidad'),
+      fecha: nowIso,
+    };
   const firmantes =
     kind === 'cert'
       ? // Solo un snapshot DEFINITIVO (con DF) fija la firma; uno provisional

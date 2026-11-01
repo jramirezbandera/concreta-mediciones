@@ -33,6 +33,7 @@ import type {
 import type { MedLineListado } from '../../core/listado';
 import type { CuadroPartidaRow, CuadrosPrecios } from '../../core/cuadrosPrecios';
 import type { Comparativo } from '../../core/ofertas';
+import { ESTADO_LIQUIDACION, LINEAS_RESUMEN_LIQUIDACION, type Liquidacion } from '../../core/liquidacion';
 import { firmaLugarFecha } from '../../core/listado';
 import { cerradaLabel } from '../../core/certificacion';
 import { fmtNum, toEur, type Cents } from '../../core/money';
@@ -960,6 +961,159 @@ export function buildComparativoXlsx(data: Comparativo, meta: ObraMeta): XlsxDoc
       { width: 10 },
       { width: 12 },
       ...data.ofertas.flatMap(() => [{ width: 10 }, { width: 12 }, { width: 8 }]),
+    ],
+    rows,
+  };
+}
+
+/* ---- Liquidación final (docs/plan-liquidacion.md) --------------------------- */
+
+/**
+ * Liquidación final: por partida, presupuestado y ejecutado a origen (la última
+ * certificación) con la diferencia y el %; y el resumen de los dos lados.
+ * Cantidades y precios son datos; importes, diferencias, subtotales y resumen,
+ * fórmulas. El precio va EXACTO (con K ≠ 1 es el que da el céntimo del motor).
+ */
+export function buildLiquidacionXlsx(data: Liquidacion, meta: ObraMeta, firma: Firma): XlsxDoc {
+  const titulo = 'Liquidación final';
+  const rows: Row[] = metaRows(titulo, meta, [
+    ['Certificación', `nº ${data.certNum}${data.certPeriod ? ` (${data.certPeriod})` : ''}`],
+  ]);
+  const cab = (value: string, over: Partial<CellObject> = {}) =>
+    txt(value, { fontWeight: 'bold', backgroundColor: BANDA, ...over });
+  const derecha = { align: 'right' as const };
+  rows.push([
+    ...Array.from({ length: 4 }, () => cab('')),
+    cab('Presupuestado', { columnSpan: 3, align: 'center' }),
+    null,
+    null,
+    cab('Ejecutado a origen', { columnSpan: 3, align: 'center' }),
+    null,
+    null,
+    cab(''),
+    cab(''),
+  ]);
+  rows.push([
+    cab('Nº'),
+    cab('Código'),
+    cab('Descripción'),
+    cab('Ud.'),
+    cab('Cantidad', derecha),
+    cab('Precio', derecha),
+    cab('Importe', derecha),
+    cab('Cantidad', derecha),
+    cab('Precio', derecha),
+    cab('Importe', derecha),
+    cab('Diferencia', derecha),
+    cab('%', derecha),
+  ]);
+  const capFilas: number[] = [];
+  for (const c of data.capitulos) {
+    const capRow = rows.length + 1;
+    capFilas.push(capRow);
+    const capPres = bold(fx(''));
+    const capEjec = bold(fx(''));
+    rows.push([
+      txt(c.code, { fontWeight: 'bold' }),
+      txt(c.title, { fontWeight: 'bold', columnSpan: 5 }),
+      null,
+      null,
+      null,
+      null,
+      capPres,
+      null,
+      null,
+      capEjec,
+      bold(fx(`J${capRow}-G${capRow}`)),
+      null,
+    ]);
+    const inicio = rows.length + 1;
+    for (const g of c.grupos) {
+      if (g.sub) {
+        rows.push([
+          txt(sangria(g.depth) + g.sub.code, { textColor: GRIS, fontWeight: 'bold' }),
+          txt(g.sub.title.toUpperCase(), { textColor: GRIS, fontWeight: 'bold', columnSpan: 5 }),
+        ]);
+      }
+      for (const r of g.rows) {
+        const f = rows.length + 1;
+        const estado = ESTADO_LIQUIDACION[r.estado];
+        rows.push([
+          txt(r.pos),
+          txt(r.code),
+          txt(estado ? `${r.title} · ${estado}` : r.title, { wrap: true }),
+          txt(r.ud),
+          num(r.presCant),
+          num(r.presPrecioExacto),
+          fx(`ROUND(E${f}*F${f},2)`),
+          num(r.ejecCant),
+          num(r.ejecPrecioExacto),
+          fx(`ROUND(H${f}*I${f},2)`),
+          fx(`J${f}-G${f}`),
+          fx(`IF(E${f}=0,"",H${f}/E${f}*100)`, { format: FMT_PCT, textColor: GRIS }),
+        ]);
+      }
+    }
+    const fin = rows.length;
+    capPres.value = `SUBTOTAL(9,G${inicio}:G${fin})`;
+    capEjec.value = `SUBTOTAL(9,J${inicio}:J${fin})`;
+  }
+
+  // Resumen: presupuestado (G) | ejecutado (J) | diferencia (K), encadenado por fórmulas.
+  rows.push([]);
+  rows.push([null, null, cab('Resumen', { columnSpan: 4 }), null, null, null, cab('Presupuestado', derecha), null, null, cab('Ejecutado', derecha), cab('Diferencia', derecha)]);
+  const r0 = rows.length + 1;
+  const suma = (col: string) => (capFilas.length ? capFilas.map((n) => `${col}${n}`).join('+') : '0');
+  const lineaFx: Record<string, (col: string, fila: (k: string) => number) => string> = {
+    cd: (col) => suma(col),
+    ci: (col, fila) => `ROUND(${col}${fila('cd')}*${rateLit(data.rates.ci)},2)`,
+    pem: (col, fila) => `${col}${fila('cd')}+${col}${fila('ci')}`,
+    ggbi: (col, fila) => `ROUND(${col}${fila('pem')}*${rateLit(data.rates.gg + data.rates.bi)},2)`,
+    pec: (col, fila) => `${col}${fila('pem')}+${col}${fila('ggbi')}`,
+    iva: (col, fila) => `ROUND(${col}${fila('pec')}*${rateLit(data.rates.iva)},2)`,
+    total: (col, fila) => `${col}${fila('pec')}+${col}${fila('iva')}`,
+  };
+  const orden = LINEAS_RESUMEN_LIQUIDACION.map((l) => l.k);
+  const fila = (k: string) => r0 + orden.indexOf(k as (typeof orden)[number]);
+  for (const l of LINEAS_RESUMEN_LIQUIDACION) {
+    const n = fila(l.k);
+    const estilo: Partial<CellObject> = l.fuerte ? { fontWeight: 'bold', topBorderStyle: 'thin' } : {};
+    rows.push([
+      null,
+      null,
+      txt(l.label, { columnSpan: 4, ...estilo }),
+      null,
+      null,
+      null,
+      fx(lineaFx[l.k]!('G', fila), estilo),
+      null,
+      null,
+      fx(lineaFx[l.k]!('J', fila), estilo),
+      fx(`J${n}-G${n}`, estilo),
+    ]);
+  }
+  if (data.retenido != null) {
+    rows.push([]);
+    rows.push([null, null, txt(`Garantía retenida acumulada hasta la certificación nº ${data.certNum}`, { textColor: GRIS, columnSpan: 4 }), null, null, null, null, null, null, eur(data.retenido, { textColor: GRIS })]);
+  }
+  rows.push(...firmaRows(firma));
+  return {
+    fileName: xlsxFileName(titulo, meta.denominacion),
+    sheet: 'Liquidación',
+    orientation: 'landscape',
+    columns: [
+      { width: 8 },
+      { width: 11 },
+      { width: 40 },
+      { width: 5 },
+      { width: 10 },
+      { width: 9 },
+      { width: 12 },
+      { width: 10 },
+      { width: 9 },
+      { width: 12 },
+      { width: 12 },
+      { width: 7 },
     ],
     rows,
   };

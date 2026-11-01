@@ -84,3 +84,16 @@ describe('PrintDoc — mediciones sin precios (plan de ofertas, O1)', () => {
     expect(doc.querySelector('.pd-grand, .pd-chaptotal, .pd-band-total, .pd-sign')).toBeNull();
   });
 });
+
+describe('PrintDoc — liquidación final', () => {
+  it('presupuestado frente a ejecutado, resumen y firma de todas las partes', async () => {
+    useObraStore.getState().setObraPath('promotor.nombre', 'Promociones Sur');
+    render(<PrintDoc target={{ kind: 'liquidacion' }} onDone={vi.fn()} />);
+    await waitFor(() => expect(window.print).toHaveBeenCalled());
+    const doc = document.body.querySelector('.print-doc')!;
+    expect(doc.textContent).toContain('Liquidación final');
+    expect(doc.textContent).toContain('Según la certificación nº 3');
+    expect(doc.querySelector('.pd-liq-resumen')!.textContent).toContain('Ejecución por contrata');
+    expect(doc.querySelector('.pd-sign')!.textContent).toContain('Promociones Sur');
+  });
+});

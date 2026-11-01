@@ -5,6 +5,7 @@ import {
   FMT_PCT,
   buildCertXlsx,
   buildComparativoXlsx,
+  buildLiquidacionXlsx,
   buildCuadro1Xlsx,
   buildCuadro2Xlsx,
   buildPresupuestoXlsx,
@@ -20,6 +21,7 @@ import {
 } from '../../core/listado';
 import { buildCuadrosPrecios } from '../../core/cuadrosPrecios';
 import { compararOfertas, type Oferta } from '../../core/ofertas';
+import { buildLiquidacion } from '../../core/liquidacion';
 import type { Banco, Cert, Chapter, Partida, PartidasMap, Rates } from '../../core/types';
 
 const partida = (over: Partial<Partida>): Partida => ({
@@ -469,5 +471,27 @@ describe('buildComparativoXlsx (plan de ofertas, O4)', () => {
     const filaC = doc.rows.find((r) => (r[1] as CellObject | null)?.value === 'C')!;
     expect((filaC[10] as CellObject).value).toBe('sin precio');
     expect(cells(doc.rows).some((c) => typeof c.value === 'string' && c.value.startsWith('García: 2 sin precio'))).toBe(true);
+  });
+});
+
+describe('buildLiquidacionXlsx', () => {
+  const certs: Cert[] = [{ id: 'c1', num: 1, period: 'Junio', retencion: 0, data: { pa: 3, pc: 2 } }];
+  const liq = buildLiquidacion(chapters, partidas, certs, rates)!;
+  const doc = buildLiquidacionXlsx(liq, meta, { firmantes: [], lugar: '', fecha: '' });
+
+  it('fórmulas para importes, diferencia, % y el resumen encadenado', () => {
+    expect(doc.fileName).toBe('Liquidación final - Reforma X.xlsx');
+    expect(doc.orientation).toBe('landscape');
+    const fs = formulas(doc.rows);
+    expect(fs.some((f) => /^ROUND\(E\d+\*F\d+,2\)$/.test(f))).toBe(true);
+    expect(fs.some((f) => /^ROUND\(H\d+\*I\d+,2\)$/.test(f))).toBe(true);
+    expect(fs.some((f) => /^J\d+-G\d+$/.test(f))).toBe(true);
+    expect(fs.some((f) => /^IF\(E\d+=0,"",H\d+\/E\d+\*100\)$/.test(f))).toBe(true);
+    expect(fs.some((f) => /^ROUND\(G\d+\*0\.19,2\)$/.test(f))).toBe(true); // GG + BI
+  });
+
+  it('el estado va junto al título', () => {
+    const fila = doc.rows.find((r) => (r[1] as CellObject | null)?.value === 'A')!;
+    expect((fila[2] as CellObject).value).toBe('Huérfana · Exceso');
   });
 });

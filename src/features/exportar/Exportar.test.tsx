@@ -36,10 +36,10 @@ describe('ExportModal (F7.1–F7.4) — "mostrar solo lo que funciona"', () => {
   it('chips PDF + Word + Excel por fila y UN chip BC3 de cabecera (F7.4)', () => {
     render(abierto());
     // 5 docs (presupuesto, mediciones sin precios, resumen, cuadros nº 1 y nº 2)
-    // + 3 certs del seed = 8 chips de cada formato por-listado.
-    expect(screen.getAllByRole('button', { name: /a PDF$/ })).toHaveLength(8);
-    expect(screen.getAllByRole('button', { name: /a Word$/ })).toHaveLength(8);
-    expect(screen.getAllByRole('button', { name: /a Excel$/ })).toHaveLength(8);
+    // + liquidación final + 3 certs del seed = 9 chips de cada formato por-listado.
+    expect(screen.getAllByRole('button', { name: /a PDF$/ })).toHaveLength(9);
+    expect(screen.getAllByRole('button', { name: /a Word$/ })).toHaveLength(9);
+    expect(screen.getAllByRole('button', { name: /a Excel$/ })).toHaveLength(9);
     // BC3: la obra completa y las mediciones sin precios.
     expect(screen.getAllByRole('button', { name: /BC3/ })).toHaveLength(2);
   });
@@ -110,5 +110,21 @@ describe('ExportModal (F7.1–F7.4) — "mostrar solo lo que funciona"', () => {
     useObraStore.getState().addCert(); // nace congelada, con snapshotAt
     render(abierto());
     expect(screen.getByText(/precios congelados/)).toBeInTheDocument();
+  });
+});
+
+describe('ExportModal — liquidación final', () => {
+  it('sale con las certificaciones y lleva su target', () => {
+    const onExportPdf = vi.fn();
+    render(<ExportModal open onClose={() => {}} onExportPdf={onExportPdf} onExportXlsx={() => {}} onExportDocx={() => {}} onExportBc3={() => {}} />);
+    expect(screen.getByText(/según la certificación nº 3/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Exportar «Liquidación final» a PDF' }));
+    expect(onExportPdf).toHaveBeenCalledWith({ kind: 'liquidacion' });
+  });
+
+  it('sin certificaciones no sale', () => {
+    useObraStore.setState({ certs: [] });
+    render(<ExportModal open onClose={() => {}} onExportPdf={() => {}} onExportXlsx={() => {}} onExportDocx={() => {}} onExportBc3={() => {}} />);
+    expect(screen.queryByText('Liquidación final')).toBeNull();
   });
 });

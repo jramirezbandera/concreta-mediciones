@@ -203,3 +203,17 @@ describe('docxFor — mediciones sin precios (plan de ofertas, O1)', () => {
     expect(xml).not.toContain('Constructora');
   });
 });
+
+describe('docxFor — liquidación final', () => {
+  it('con las columnas de los dos lados y el resumen', async () => {
+    const xml = await xmlOf({ kind: 'liquidacion' }, seedState);
+    expect(xml).toContain('LIQUIDACIÓN FINAL');
+    expect(xml).toContain('Ejecutada');
+    expect(xml).toContain('Presupuestado');
+    expect(xml).toContain('Ejecución por contrata');
+  });
+
+  it('sin certificaciones no hay documento', async () => {
+    expect(await docxFor({ kind: 'liquidacion' }, { ...seedState, certs: [] })).toBeNull();
+  });
+});

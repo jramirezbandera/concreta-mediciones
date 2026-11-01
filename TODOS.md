@@ -290,8 +290,10 @@ estos ya están calculados:
 - ~~**Cuadro de precios nº 1 (en letra) y nº 2 (descompuestos).**~~ HECHO (2026-10-24):
   `core/cuadrosPrecios`, en PDF, Word y Excel. Un precio puesto a mano (no sigue a su
   justificación) sale «Sin descomposición» en el nº 2: no tiene descompuesto.
-- **Liquidación final:** presupuestado frente a ejecutado a origen, con exceso o
-  defecto por partida. El exceso ya lo detecta `certPctState`.
+- ~~**Liquidación final.**~~ HECHO (2026-11-01): `docs/plan-liquidacion.md`. En
+  Exportar (PDF, Word y Excel) con la última certificación: por partida, presupuestado,
+  ejecutado a origen, diferencia, % y estado (exceso, defecto, no ejecutada, P.C.,
+  eliminada), y el resumen de los dos lados con la garantía retenida.
 
 ---
 

@@ -238,6 +238,11 @@
 }
 
 /* resumen económico (cert y resumen) */
+/* Resumen de la liquidación: presupuestado | ejecutado | diferencia. */
+.pd-liq-resumen {
+  margin-top: 16px;
+  break-inside: avoid;
+}
 .pd-summary {
   margin-top: 16px;
   width: 380px;

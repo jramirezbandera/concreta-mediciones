@@ -40,6 +40,7 @@ import {
   type ResumenListado,
 } from '../../core/listado';
 import { cerradaLabel } from '../../core/certificacion';
+import { ESTADO_LIQUIDACION, LINEAS_RESUMEN_LIQUIDACION, buildLiquidacion, type Liquidacion } from '../../core/liquidacion';
 import {
   buildCuadrosPrecios,
   type CuadroPartidaRow,
@@ -959,6 +960,126 @@ function cuadro2Bloques(data: CuadrosPrecios): (Paragraph | Table)[] {
   );
 }
 
+/* ---- Liquidación final (docs/plan-liquidacion.md) --------------------------- */
+
+// Nº·Código · Descripción · Ud. · Presup. · Importe · Ejecutada · Importe · Diferencia · % = 10546.
+const W_LIQ = [1000, 3046, 420, 880, 1100, 880, 1100, 1300, 820];
+
+/** «+1.234,56» / «−12,00»; «—» si es 0. */
+function conSigno(c: number): string {
+  if (c === 0) return '—';
+  return `${c > 0 ? '+' : '−'}${fmtNum(Math.abs(c) / 100)}`;
+}
+
+function liquidacionBloques(data: Liquidacion): (Paragraph | Table)[] {
+  const out: (Paragraph | Table)[] = [];
+  const t = (text: string, i: number, o: Omit<CellOpts, 'width'> = {}) =>
+    cell(text, { width: W_LIQ[i]!, size: T_SMALL, right: i >= 3, ...o });
+  for (const c of data.capitulos) {
+    const rows: TableRow[] = [
+      new TableRow({
+        tableHeader: true,
+        cantSplit: true,
+        children: [
+          cell(c.code, { width: W_LIQ[0]!, bold: true, size: T_SMALL }),
+          cell(c.title, { width: 0, span: 7, bold: true, size: T_SMALL }),
+          cell(conSigno(c.ejec - c.pres), { width: W_LIQ[8]!, right: true, bold: true, size: T_SMALL }),
+        ],
+      }),
+      new TableRow({
+        tableHeader: true,
+        cantSplit: true,
+        children: ['Nº · Código', 'Descripción', 'Ud.', 'Presup.', 'Importe', 'Ejecutada', 'Importe', 'Diferencia', '%'].map((h, i) =>
+          t(h, i, { bold: true, color: GRIS, size: T_TINY, fill: BANDA }),
+        ),
+      }),
+    ];
+    for (const g of c.grupos) {
+      if (g.sub) {
+        rows.push(
+          new TableRow({
+            cantSplit: true,
+            children: [
+              t(sangria(g.depth) + g.sub.code, 0, { bold: true, color: GRIS, fill: BANDA }),
+              cell(g.sub.title.toUpperCase(), { width: 0, span: 8, bold: true, color: GRIS, size: T_SMALL, fill: BANDA }),
+            ],
+          }),
+        );
+      }
+      for (const r of g.rows) {
+        const estado = ESTADO_LIQUIDACION[r.estado];
+        rows.push(
+          new TableRow({
+            cantSplit: true,
+            children: [
+              cellPars([paraRuns([run(r.pos, { size: T_SMALL })]), paraRuns([run(r.code, { color: GRIS, size: T_TINY })])], { width: W_LIQ[0]! }),
+              cellPars(
+                [paraRuns([...(estado ? [run(`${estado} · `, { bold: true, color: WARN, size: T_TINY })] : []), run(r.title, { size: T_SMALL })])],
+                { width: W_LIQ[1]! },
+              ),
+              t(r.ud, 2, { right: false }),
+              t(r.presCant ? fmtNum(r.presCant) : '—', 3),
+              t(r.presImporte ? fmtNum(r.presImporte / 100) : '—', 4),
+              t(fmtNum(r.ejecCant), 5),
+              t(fmtNum(r.ejecImporte / 100), 6),
+              t(conSigno(r.difImporte), 7),
+              t(r.pct == null ? '—' : fmtNum(r.pct, 0), 8),
+            ],
+          }),
+        );
+      }
+    }
+    rows.push(
+      new TableRow({
+        cantSplit: true,
+        children: [
+          cell(`Total capítulo ${c.code}`, { width: 0, span: 4, bold: true, topBorder: true, size: T_SMALL }),
+          t(fmtNum(c.pres / 100), 4, { bold: true, topBorder: true }),
+          t('', 5, { topBorder: true }),
+          t(fmtNum(c.ejec / 100), 6, { bold: true, topBorder: true }),
+          t(conSigno(c.ejec - c.pres), 7, { bold: true, topBorder: true }),
+          t('', 8, { topBorder: true }),
+        ],
+      }),
+    );
+    out.push(tabla(W_LIQ, rows), vacio(160));
+  }
+
+  // Resumen: presupuestado | ejecutado | diferencia.
+  const W_RES = [5146, 1800, 1800, 1800];
+  const conCi = data.pres.ci > 0 || data.ejec.ci > 0;
+  const resumen: TableRow[] = [
+    new TableRow({
+      cantSplit: true,
+      children: ['Resumen', 'Presupuestado', 'Ejecutado', 'Diferencia'].map((h, i) =>
+        cell(h, { width: W_RES[i]!, right: i > 0, bold: true, color: GRIS, size: T_TINY, fill: BANDA }),
+      ),
+    }),
+    ...LINEAS_RESUMEN_LIQUIDACION.filter((l) => conCi || (l.k !== 'cd' && l.k !== 'ci')).map(
+      (l) =>
+        new TableRow({
+          cantSplit: true,
+          children: [
+            cell(l.label, { width: W_RES[0]!, bold: l.fuerte, topBorder: l.fuerte }),
+            cell(fmtCents(data.pres[l.k]), { width: W_RES[1]!, right: true, bold: l.fuerte, topBorder: l.fuerte }),
+            cell(fmtCents(data.ejec[l.k]), { width: W_RES[2]!, right: true, bold: l.fuerte, topBorder: l.fuerte }),
+            cell(conSigno(data.ejec[l.k] - data.pres[l.k]), { width: W_RES[3]!, right: true, bold: l.fuerte, topBorder: l.fuerte }),
+          ],
+        }),
+    ),
+  ];
+  out.push(tabla(W_RES, resumen));
+  if (data.retenido != null) {
+    out.push(
+      new Paragraph({
+        spacing: { before: 160 },
+        children: [run(`Garantía retenida acumulada hasta la certificación nº ${data.certNum}: ${fmtCents(data.retenido)}`, { color: GRIS, size: T_SMALL })],
+      }),
+    );
+  }
+  return out;
+}
+
 /* ---- documento + API -------------------------------------------------------- */
 
 function makeDoc(children: (Paragraph | Table)[]): Document {
@@ -1009,6 +1130,13 @@ export async function docxFor(target: PrintTarget, s: DocxState): Promise<DocxRe
     titulo = target.kind === 'cuadro1' ? 'Cuadro de precios nº 1' : 'Cuadro de precios nº 2';
     bloques = target.kind === 'cuadro1' ? cuadro1Bloques(cuadros) : cuadro2Bloques(cuadros);
     firmaDoc = firmaFor('presupuesto', s.obra, undefined, new Date().toISOString());
+  } else if (target.kind === 'liquidacion') {
+    const liq = buildLiquidacion(s.chapters, s.partidas, s.certs, s.rates, s.bajas ?? {});
+    if (!liq) return null;
+    titulo = 'Liquidación final';
+    extra = [['Según la certificación', `nº ${liq.certNum}${liq.certPeriod ? ` (${liq.certPeriod})` : ''}`]];
+    bloques = liquidacionBloques(liq);
+    firmaDoc = firmaFor('liquidacion', s.obra, undefined, new Date().toISOString());
   } else {
     const cl = buildCertListado(s.chapters, s.partidas, s.certs, target.index, s.rates, s.bajas);
     if (!cl) return null;

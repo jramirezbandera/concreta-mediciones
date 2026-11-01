@@ -191,6 +191,15 @@ export function ExportModal({
       {certs.length > 0 && (
         <>
           <div className={`sec-head ${styles.secHead}`}>Certificaciones de obra</div>
+          <Row
+            icon="check"
+            accent
+            title="Liquidación final"
+            sub={`Presupuestado frente a ejecutado según la certificación nº ${certs[certs.length - 1]!.num}`}
+            onPdf={() => doPdf({ kind: 'liquidacion' })}
+            onXlsx={() => doXlsx({ kind: 'liquidacion' })}
+            onDocx={() => doDocx({ kind: 'liquidacion' })}
+          />
           {certs.map((c, i) => {
             const congelados = c.snapshotAt
               ? ` · precios congelados ${new Date(c.snapshotAt).toLocaleDateString('es-ES')}`
