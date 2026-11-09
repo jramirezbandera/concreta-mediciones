@@ -233,8 +233,12 @@ describe('certificación (F-A4)', () => {
     expect(plan.applied).toHaveLength(0);
     expect(plan.proposals).toHaveLength(1);
     expect(plan.proposals[0]!.certDest).toEqual({ num: 1, period: 'junio 2026', firmado: false });
-    applyProposals(plan.proposals, currentSeal());
+    const res = applyProposals(plan.proposals, currentSeal());
     expect(useObraStore.getState().certs[0]!.data.p1).toBe(6);
+    // Regresión: la postcondición leía la cert de ANTES del cambio y decía «omitida»
+    // aunque la cantidad sí se había registrado.
+    expect(res.applied.map((r) => r.detail)).toEqual(['certificado a origen → 6,00 m³']);
+    expect(res.skipped).toEqual([]);
   });
 
   it('certificar_100 ámbito capítulo → un scope; aplica al 100% en un solo set', () => {
