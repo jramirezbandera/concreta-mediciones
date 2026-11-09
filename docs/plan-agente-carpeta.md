@@ -419,12 +419,104 @@ Las pruebas están junto a cada uno. Además:
   da ok;
 - aún sin vista en vivo: se ve importando el fichero.
 
+**F2 hecha (2026-11-09), salvo probar el `.mcpb` en Claude Desktop, que necesita al usuario.**
+
+- **El código** (`src/agente/`):
+
+  | Fichero | Qué hace |
+  |---|---|
+  | `ordenes.ts` | Las 10 órdenes (`guia`, `obra`, `nueva_obra`, `resumen`, `arbol`, `partida`, `buscar`, `validar`, `editar`, `abrir_app`): entrada, salida JSON, si solo leen |
+  | `mcp.ts` | El servidor, con el SDK 1.32 |
+  | `cli.ts` | La CLI |
+  | `bin.ts` | Sin argumentos, MCP por stdio; con una orden, CLI |
+  | `guia.md` | La skill, y la guía en las instrucciones, en el recurso y en la herramienta `guia` |
+
+- **El empaquetado:** `scripts/mcp/empaquetar.mjs`, que `npm run build` ejecuta tras la app.
+  Deja en `dist/mcp/`:
+  - el `.mjs`: 1,2 MB, sin `node_modules`;
+  - el `.mcpb`: `manifest_version` 0.3, unos 260 KB;
+  - el zip del plugin;
+  - `marketplace.json`, con `source: archive`, la URL de Pages y el sha256 del zip;
+  - `version.json`.
+
+  Antes de dar el build por bueno, arranca el `.mjs` por stdio con el cliente del SDK y crea y
+  edita una obra. Si el paquete sale roto, el despliegue falla.
+- **La versión:** `<APP_VERSION>.<aaaammddhhmm>`. Sube en cada build, que es lo que hace que
+  Claude Code ofrezca actualizar el plugin.
+- **Comprobado:**
+  - `mcpb validate`: el manifiesto pasa;
+  - `claude plugin validate`: pasan el plugin y el marketplace;
+  - una sesión de Claude Code 2.1.231 con el plugin cargado solo para ella (`--plugin-dir`), sin
+    tocar la configuración del usuario: usó
+    `mcp__plugin_concreta-mediciones_concreta-mediciones__obra` y dio la obra y su PEM.
+- **Lo que vio la investigación de F2:**
+  - Claude Desktop trae Node en Windows y macOS.
+  - Claude Code no trae Node: el plugin y el `.mjs` necesitan Node en el PATH.
+  - Un marketplace en GitHub obliga a subir el build al repo. Un marketplace servido desde Pages
+    con `source: archive` no, y es lo que se usa (Claude Code ≥ 2.1.224).
+- **Cómo se instala**, cuando esté desplegado:
+  - **Claude Code:**
+    `claude plugin marketplace add https://jramirezbandera.github.io/concreta-mediciones/mcp/marketplace.json`
+    y luego `claude plugin install concreta-mediciones@concreta`;
+  - **Claude Desktop:** descargar `mcp/concreta-mediciones.mcpb` y abrirlo.
+
+  La pantalla «Trabajar con Claude» de la app pasa a la F3: no tiene sentido ofrecerla antes de que
+  la app abra carpetas.
+
 **F3 — La app sobre la carpeta.** Todo §8 salvo la repetición del diario. Pruebas con una File
 System Access API en memoria, como `aCarpeta.test.tsx` de FEM.
 
 *Criterios — hito:* con la obra abierta en Chrome desde su carpeta, cada lote del agente aparece
 en ≤ 2 s, resaltado, sin mover lo abierto, y Ctrl+Z lo quita. Un cambio sin guardar del técnico
 nunca se pierde.
+
+**F3 hecha (2026-11-09).**
+
+- **Cambio de arquitectura respecto a §8 (decisión de Claude).** El fichero no sustituye a
+  IndexedDB: una capa nueva, `src/persist/carpeta.ts`, sincroniza la obra activa con su carpeta
+  en los dos sentidos, e IndexedDB sigue como siempre, como caché. Hacer que el fichero
+  sustituyera a IndexedDB obligaba a reescribir la hidratación, el cambio de obra, el candado
+  entre pestañas, las migraciones y la recuperación. Así no se toca nada de eso.
+  - «Mover» (§10, punto 1) queda así: una sola entrada en la lista, y la copia del navegador es
+    la caché de la carpeta, no una copia oculta 30 días.
+  - «Dejar de usar la carpeta» devuelve la obra al navegador; el fichero se queda en la carpeta.
+- **Los vínculos:** se guardan en IndexedDB (`concreta6.carpetas`): el handle de la carpeta, el
+  fichero, la huella del último texto en común y si hay cambios pendientes. Sobreviven a
+  recargar; tras cerrar el navegador, un clic («Conectar»).
+- **Hacia la carpeta:** cada cambio de dominio se escribe 600 ms después. Solo si el fichero
+  sigue como se dejó.
+- **Desde la carpeta:**
+  - el fichero se mira cada segundo (fecha y tamaño) y al volver a la pestaña;
+  - lo de fuera entra con la acción nueva `aplicarExterno`: un paso de Deshacer, sin mover la
+    interfaz;
+  - `core/reusar` reaprovecha lo que no cambió, así que solo se repinta lo tocado;
+  - sale un aviso con su resumen (`agente/cambios`) y «Deshacer», y las partidas tocadas se
+    resaltan 6 s.
+- **Conflicto** (había cambios pendientes cuando cambió fuera): el chip «Revisar» y un diálogo.
+  - «Usar la de la carpeta»: lo propio queda en el Deshacer.
+  - «Quedarme con la mía»: la de la carpeta se guarda en
+    `.mediciones/<obra>.conflicto-<fecha>.mediciones.json`.
+- **Seguridad entre obras:** `sync.ts` expone dos cosas.
+  - `generacionCarga()`: un vínculo armado con otra generación ya no escribe, porque el store se
+    carga con la obra nueva antes de cambiar la activa.
+  - `alSustituirObra`: lo pendiente se lleva a la carpeta antes de conmutar o crear otra obra.
+- **Planos:** al llevar la obra a la carpeta se escriben en `planos/<huella>.pdf` los que falten;
+  al traerla, los que no estén en el navegador se leen de allí.
+- **Interfaz:**
+  - un chip junto al nombre de la obra: solo el icono si está al día, «Conectar» o «Revisar» si
+    hay que actuar;
+  - en el selector de obras: «Abrir carpeta…», «Pasar a una carpeta…», «Dejar de usar la
+    carpeta» y «Trabajar con Claude…»;
+  - esa pantalla tiene tres pasos: la carpeta, el conector (`.mcpb` y las órdenes del plugin) y
+    qué pedirle.
+- **Comprobado:**
+  - 13 pruebas con una File System Access API en memoria (`src/test/fsMemoria.ts`), más las de
+    `reusar`, `cambios` y `aplicarExterno`;
+  - en un Chromium de verdad, con OPFS en lugar del selector de carpetas: pasar a carpeta,
+    recargar, el MCP empaquetado edita el fichero y la app lo muestra en menos de 2 s con su
+    aviso, y el conflicto con su diálogo.
+- **Visto de paso, y ya pasaba antes:** a 1280 px de ancho el nombre de la obra no cabe en el
+  selector (mide 0 px, con o sin el chip). A 1440 px se ve.
 
 **F4 — Trabajar a la vez.** `app.json` y `seleccion`; el diario con autor (cada sesión); la
 repetición automática sobre cambios sin guardar.

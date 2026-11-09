@@ -31,7 +31,7 @@ import { REF_SOURCES, type RefCopyItem, type RefDrag, type Resolution } from '..
 import type { View } from '../layout/types';
 import { useToastStore } from './toastStore';
 import { ALL, nextAgenteId } from './base';
-import { DOMAIN_KEYS, SCHEMA_VERSION, blankObraData, seedObraData, type ObraData } from './schema';
+import { DOMAIN_KEYS, SCHEMA_VERSION, blankObraData, seedObraData, type DomainKey, type ObraData } from './schema';
 import { createCertSlice } from './slices/certSlice';
 import { createCopySlice, type PendingCopy } from './slices/copySlice';
 import { createEstructuraSlice } from './slices/estructuraSlice';
@@ -59,7 +59,8 @@ import type { NewPlanoLine } from '../core/planoMedida';
 // su `set` en `pauseHistory` para NO registrar la carga y vaciar el historial (un
 // undo no cruza obras, análogo D-08). Import de un solo sentido: `temporal` solo
 // importa el TIPO de este módulo (se borra en compilación) → sin ciclo runtime.
-import { pauseHistory } from './temporal';
+import { historyCheckpoint, pauseHistory, reconcileUi } from './temporal';
+import { reusar } from '../core/reusar';
 // Pestaña de solo lectura (T-19): el `set` rechaza los cambios de la obra.
 import { guardaSoloLectura } from './soloLectura';
 
@@ -339,6 +340,16 @@ export interface ObraState extends ObraData {
    * capítulo activo. Igual que `reset` pero con datos importados en vez de seed.
    */
   loadObra: (data: ImportedObra) => void;
+  /**
+   * La MISMA obra, cambiada fuera de la app (el fichero de su carpeta, que cambió
+   * un agente; docs/plan-agente-carpeta.md D3). A diferencia de `loadObra`:
+   *   · es UN paso de Deshacer (no vacía el historial): Ctrl+Z quita lo de fuera;
+   *   · no mueve la UI (vista, capítulo, partida abierta, cert en curso), salvo
+   *     las referencias que queden colgando (`reconcileUi`);
+   *   · reaprovecha lo que no cambió (`core/reusar`): solo se repinta lo tocado.
+   * En solo lectura no hace nada (lo para `guardaSoloLectura`).
+   */
+  aplicarExterno: (data: ObraData) => void;
   /**
    * Copia partidas de una fuente de referencia al presupuesto (F5). Integra los
    * recursos de su descomposición en el banco SIN pisar los homónimos (coherencia);
@@ -948,6 +959,18 @@ export const useObraStore = create<ObraState>()(
             s.expanded = {}; // árbol colapsado: una obra recién importada se explora
           }),
         );
+      },
+
+      aplicarExterno: (data) => {
+        const s0 = get();
+        const parche = {} as Record<DomainKey, unknown>;
+        for (const k of DOMAIN_KEYS) parche[k] = reusar(s0[k], data[k]);
+        if (DOMAIN_KEYS.every((k) => parche[k] === s0[k])) return; // nada nuevo
+        historyCheckpoint(); // lo de fuera nunca se funde con una edición contigua
+        set(parche as Partial<ObraState>);
+        const fix = reconcileUi(get());
+        if (fix) set(fix);
+        historyCheckpoint();
       },
 
       setObraPath: (path, value) =>

@@ -115,7 +115,7 @@ function suspend<T>(fn: () => T): T {
  * deshacer un `addCert` deja `curCert` fuera del array; una partida abierta
  * puede haber desaparecido. Devuelve el parche de UI o `null` si todo es válido.
  */
-function reconcileUi(s: ObraState): Partial<ObraState> | null {
+export function reconcileUi(s: ObraState): Partial<ObraState> | null {
   const fix: Partial<ObraState> = {};
   const activeOk =
     s.active === ALL ||

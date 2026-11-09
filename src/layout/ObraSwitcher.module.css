@@ -170,6 +170,27 @@
 .new:hover {
   background: var(--accent-soft);
 }
+/* Las acciones de carpeta y Claude: el acento queda para «Nueva obra». */
+.new.accion {
+  color: var(--text-primary);
+}
+.new.accion .newIcon {
+  color: var(--text-secondary);
+}
+/* Obra en carpeta, en la lista. */
+.rowCarpeta {
+  display: inline-flex;
+  margin-left: auto;
+  padding-left: var(--sp-6);
+  color: var(--text-disabled);
+  flex-shrink: 0;
+}
+/* Elegir entre las obras de una carpeta. */
+.elegir {
+  display: grid;
+  gap: var(--sp-2);
+}
+
 .newIcon {
   display: inline-flex;
   align-items: center;

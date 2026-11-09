@@ -4,6 +4,7 @@ import { fmtNum, toEur } from '../../core/money';
 import type { Partida } from '../../core/types';
 import { armNextEdit, neighborEditCell } from '../../hooks/editGridNav';
 import { useJustRevealed } from '../../hooks/useJustRevealed';
+import { useCambiadaFuera } from '../../hooks/useCambiadaFuera';
 import { usePartidaRow } from '../../hooks/usePartidaRow';
 import { useReorderSource, useReorderTarget, type ReorderDrag } from '../../hooks/useReorderDrag';
 import { useObraStore } from '../../store';
@@ -83,6 +84,7 @@ export const PartidaRow = memo(function PartidaRow({
   const togglePartida = useObraStore((s) => s.togglePartida);
   const reorderPartida = useObraStore((s) => s.reorderPartida);
   const justRevealed = useJustRevealed(p.id);
+  const cambiadaFuera = useCambiadaFuera(p.id);
 
   // Arrastrar para reordenar dentro del capítulo (el asa vive en la columna Nº).
   const drag = useReorderSource(
@@ -113,7 +115,7 @@ export const PartidaRow = memo(function PartidaRow({
         id={`partida-${p.id}`}
         data-editgrid=""
         data-editrow=""
-        className={`tcol ${styles.row} ${open ? `${styles.expanded} ${styles.selected}` : ''} ${justRevealed ? styles.justRevealed : ''} ${drag.dragging ? styles.dragging : ''} ${drop.place === 'before' ? styles.dropBefore : ''} ${drop.place === 'after' ? styles.dropAfter : ''}`}
+        className={`tcol ${styles.row} ${open ? `${styles.expanded} ${styles.selected}` : ''} ${justRevealed ? styles.justRevealed : ''} ${cambiadaFuera ? styles.cambiadaFuera : ''} ${drag.dragging ? styles.dragging : ''} ${drop.place === 'before' ? styles.dropBefore : ''} ${drop.place === 'after' ? styles.dropAfter : ''}`}
         aria-selected={open}
         onClick={() => togglePartida(p.id)}
         onKeyDown={tabEditCells}

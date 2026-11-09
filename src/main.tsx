@@ -5,6 +5,7 @@ import './styles/base.css';
 import App from './App';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { watchDurability } from './persist/durability';
+import { armarCarpeta, hayCarpetas } from './persist/carpeta';
 import { hydrate } from './persist/sync';
 import { useObraStore } from './store';
 import { initHistory } from './store/temporal';
@@ -25,6 +26,9 @@ void hydrate().finally(() => {
   // Que el navegador no borre las obras por su cuenta: se pide con el primer
   // guardado de la sesión, nunca al cargar (Firefox pregunta al usuario).
   watchDurability();
+  // La obra en su carpeta (Chrome y Edge): la sincroniza con su fichero mientras
+  // es la activa, en los dos sentidos (docs/plan-agente-carpeta.md F3).
+  if (hayCarpetas()) armarCarpeta();
   createRoot(root).render(
     <StrictMode>
       <AppErrorBoundary>

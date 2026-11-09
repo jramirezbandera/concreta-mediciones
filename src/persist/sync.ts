@@ -315,11 +315,34 @@ export function cancelPending(): void {
 }
 
 /* ---- carga de una obra en el store de dominio ----------------------------- */
+/** Cuántas veces se ha cargado una obra en el store (`loadDataIntoStore`). La
+ *  sincronización con la carpeta (`persist/carpeta`) la mira: el store se carga
+ *  con la obra NUEVA antes de cambiar la activa, y un guardado pendiente de la
+ *  anterior no debe escribir la nueva en la carpeta de la anterior. */
+let generacion = 0;
+export function generacionCarga(): number {
+  return generacion;
+}
+/** true mientras se carga una obra en el store (el autosave está suprimido). */
+export function cargandoObra(): boolean {
+  return suppress;
+}
+/** Lo que hay que hacer con la obra en pantalla ANTES de sustituirla (conmutar,
+ *  crear otra): la carpeta lleva lo pendiente a su fichero. Sin import circular:
+ *  `persist/carpeta` se apunta aquí. Un fallo no impide conmutar. */
+const antesDeSustituir: (() => Promise<void>)[] = [];
+export function alSustituirObra(fn: () => Promise<void>): void {
+  antesDeSustituir.push(fn);
+}
+async function prepararSustitucion(): Promise<void> {
+  for (const fn of antesDeSustituir) await fn().catch(() => undefined);
+}
 /** Vuelca un `ObraData` ya decodificado en el store con el autosave SUPRIMIDO
  *  durante la mutación (loadObra muta el dominio y no debe disparar guardado).
  *  También en una pestaña de solo lectura: cargar lo de disco no es editar.
  *  Con `v5`, la obra salió de su clave v5 y queda «por migrar». */
 function loadDataIntoStore(data: ObraData, v5?: { id: string; savedAt: string; indiceSavedAt: string }): void {
+  generacion++;
   suppress = true;
   try {
     permitirCarga(() => useObraStore.getState().loadObra(data));
@@ -446,6 +469,7 @@ async function switchObraImpl(id: string): Promise<void> {
   if (id === activeId()) return;
   useSessionStore.getState().setSwitching(true);
   try {
+    await prepararSustitucion();
     // A-04 (decisión: BLOQUEAR): si el guardado de la obra actual no aterriza
     // (cuota llena, IDB caído), NO se conmuta — la edición en riesgo se queda a
     // la vista en vez de esfumarse tras el cambio. Antes `flushPending` tragaba
@@ -507,6 +531,7 @@ export function newObra(name?: string): Promise<string | null> {
 async function newObraImpl(name?: string): Promise<string | null> {
   // Como al conmutar (A-04): si la actual no llega a disco, no se sustituye en
   // pantalla por una obra en blanco (sus cambios se perderían sin aviso).
+  await prepararSustitucion();
   if (!(await flushPending())) {
     useToastStore.getState().show(NO_GUARDADA);
     return null;

@@ -1,0 +1,86 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-4);
+  flex-shrink: 0;
+  margin-left: var(--sp-4);
+  padding: 2px 7px;
+  border: 1px solid var(--border-sub);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--fs-caption);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+/* Al día: solo el icono, en acento (es la obra «viva» con su carpeta). */
+.quieto {
+  padding: 2px 5px;
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  color: var(--accent);
+  cursor: default;
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.aviso {
+  border-color: color-mix(in srgb, var(--state-warn) 55%, transparent);
+  color: var(--state-warn);
+  cursor: pointer;
+}
+.aviso:hover {
+  background: color-mix(in srgb, var(--state-warn) 10%, transparent);
+}
+/* En teléfono, solo el icono: el nombre de la obra pesa más. */
+@media (max-width: 479px) {
+  .texto {
+    display: none;
+  }
+}
+
+.conflicto {
+  display: grid;
+  gap: var(--sp-12);
+  color: var(--text-primary);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+}
+.conflicto p,
+.conflicto ul {
+  margin: 0;
+}
+.conflicto ul {
+  display: grid;
+  gap: var(--sp-8);
+  padding-left: var(--sp-20);
+  color: var(--text-secondary);
+}
+
+.primario,
+.secundario {
+  padding: var(--sp-8) var(--sp-12);
+  border-radius: 8px;
+  font-size: var(--fs-body);
+  cursor: pointer;
+}
+.primario {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--bg-primary);
+}
+.primario:hover {
+  background: var(--accent-hover);
+}
+.secundario {
+  border: 1px solid var(--border-main);
+  background: transparent;
+  color: var(--text-primary);
+}
+.secundario:hover {
+  background: var(--bg-surface);
+}

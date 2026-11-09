@@ -11,8 +11,25 @@ import { Icon } from '../components/Icon';
 import { Modal } from '../components/Modal';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import { deleteObraById, newObra, switchObra, useSessionStore } from '../persist';
+import {
+  abrirCarpeta,
+  abrirObraDeCarpeta,
+  dejarLaCarpeta,
+  hayCarpetas,
+  pasarACarpeta,
+  useCarpetaStore,
+  type Directorio,
+  type ResultadoCarpeta,
+} from '../persist/carpeta';
+import { CarpetaChip } from '../features/carpeta/CarpetaChip';
+import { TrabajarConClaude } from '../features/carpeta/TrabajarConClaude';
 import { useObraStore, useToastStore } from '../store';
 import styles from './ObraSwitcher.module.css';
+
+/** El resultado de pasar, abrir o dejar una carpeta, en un aviso (nada si se canceló). */
+const avisar = (r: ResultadoCarpeta): void => {
+  if (r.mensaje) useToastStore.getState().show(r.mensaje, undefined, { tone: r.ok ? 'ok' : 'warn' });
+};
 
 /** Un fallo de persistencia (cuota llena, IndexedDB caído) al crear/conmutar/
  *  borrar rechazaba ANTES de tocar el chip de guardado: el clic simplemente no
@@ -36,6 +53,11 @@ export function ObraSwitcher() {
   // "Obra nueva", pregunta el nombre antes (el usuario suele quererlo nombrado ya).
   const [naming, setNaming] = useState(false);
   const [newName, setNewName] = useState('');
+  const carpetas = useCarpetaStore((s) => s.carpetas);
+  const enCarpeta = !!(activeId && carpetas[activeId]);
+  const [conClaude, setConClaude] = useState(false);
+  /** «Abrir carpeta» con varias obras dentro: cuál. */
+  const [eligiendo, setEligiendo] = useState<{ dir: Directorio; ficheros: string[] } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
@@ -77,6 +99,28 @@ export function ObraSwitcher() {
     setNaming(false);
   };
 
+  const onAbrirCarpeta = () => {
+    close();
+    abrirCarpeta()
+      .then((r) => {
+        if ('varias' in r) setEligiendo({ dir: r.dir, ficheros: r.ficheros });
+        else avisar(r);
+      })
+      .catch(opFailed);
+  };
+  const onPasarACarpeta = () => {
+    close();
+    pasarACarpeta().then(avisar).catch(opFailed);
+  };
+  const onDejarCarpeta = () => {
+    close();
+    dejarLaCarpeta()
+      .then(() =>
+        useToastStore.getState().show('La obra ya no usa su carpeta: sigue en el navegador, y el fichero, en la carpeta.'),
+      )
+      .catch(opFailed);
+  };
+
   return (
     <div ref={ref} className={styles.wrap}>
       <button
@@ -92,6 +136,7 @@ export function ObraSwitcher() {
         <span className={styles.triggerName}>{activeName}</span>
         <Icon name="chevronDown" size={14} style={{ color: 'var(--text-disabled)', flexShrink: 0 }} />
       </button>
+      <CarpetaChip />
 
       {open && (
         <div className={styles.menu} role="menu">
@@ -113,6 +158,11 @@ export function ObraSwitcher() {
                   >
                     <span className={styles.rowCheck}>{on && <Icon name="check" size={13} />}</span>
                     <span className={styles.rowName}>{o.name}</span>
+                    {carpetas[o.id] && (
+                      <span className={styles.rowCarpeta} title={`En la carpeta ${carpetas[o.id]!.carpeta}`}>
+                        <Icon name="folder" size={12} />
+                      </span>
+                    )}
                   </button>
                   {confirming ? (
                     <span className={styles.confirm}>
@@ -158,7 +208,79 @@ export function ObraSwitcher() {
             </span>
             Nueva obra
           </button>
+          {hayCarpetas() && (
+            <>
+              <button type="button" onClick={onAbrirCarpeta} className={`tcol ${styles.new} ${styles.accion}`}>
+                <span className={styles.newIcon}>
+                  <Icon name="folder" size={14} />
+                </span>
+                Abrir carpeta…
+              </button>
+              {enCarpeta ? (
+                <button type="button" onClick={onDejarCarpeta} className={`tcol ${styles.new} ${styles.accion}`}>
+                  <span className={styles.newIcon}>
+                    <Icon name="x" size={14} />
+                  </span>
+                  Dejar de usar la carpeta
+                </button>
+              ) : (
+                <button type="button" onClick={onPasarACarpeta} className={`tcol ${styles.new} ${styles.accion}`}>
+                  <span className={styles.newIcon}>
+                    <Icon name="upload" size={14} />
+                  </span>
+                  Pasar a una carpeta…
+                </button>
+              )}
+            </>
+          )}
+          <div className={styles.divider} />
+          <button
+            type="button"
+            onClick={() => {
+              close();
+              setConClaude(true);
+            }}
+            className={`tcol ${styles.new}`}
+          >
+            <span className={styles.newIcon}>
+              <Icon name="assistant" size={14} />
+            </span>
+            Trabajar con Claude…
+          </button>
         </div>
+      )}
+
+      {conClaude && <TrabajarConClaude compact={bp.isMobile} onClose={() => setConClaude(false)} />}
+
+      {eligiendo && (
+        <Modal
+          open
+          onClose={() => setEligiendo(null)}
+          compact={bp.isMobile}
+          icon="folder"
+          title="¿Qué obra abres?"
+          subtitle={`La carpeta ${eligiendo.dir.name} tiene ${eligiendo.ficheros.length} obras`}
+        >
+          <div className={styles.elegir}>
+            {eligiendo.ficheros.map((f) => (
+              <button
+                key={f}
+                type="button"
+                className={`tcol ${styles.new}`}
+                onClick={() => {
+                  const { dir } = eligiendo;
+                  setEligiendo(null);
+                  abrirObraDeCarpeta(dir, f).then(avisar).catch(opFailed);
+                }}
+              >
+                <span className={styles.newIcon}>
+                  <Icon name="doc" size={14} />
+                </span>
+                {f}
+              </button>
+            ))}
+          </div>
+        </Modal>
       )}
 
       {naming && (

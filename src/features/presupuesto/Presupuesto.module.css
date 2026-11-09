@@ -1890,6 +1890,32 @@
   }
 }
 
+/* ---- lo que acaba de cambiar fuera (el fichero de la carpeta: el agente) ------
+   Más largo y más suave que el pulso del buscador: el técnico puede estar mirando
+   otra cosa cuando llega; la raya a la izquierda dice «esto es nuevo» sin color. */
+@keyframes cambioFuera {
+  0%,
+  60% {
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+  100% {
+    background: transparent;
+    box-shadow: inset 3px 0 0 transparent;
+  }
+}
+.row.cambiadaFuera,
+.pCard.cambiadaFuera {
+  animation: cambioFuera 6s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .row.cambiadaFuera,
+  .pCard.cambiadaFuera {
+    animation: none;
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+}
+
 /* ---- marcador de origen (líneas medidas en un plano, §5.6) ------------------- */
 .medThOrigen {
   width: 28px;

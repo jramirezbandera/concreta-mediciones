@@ -3,6 +3,7 @@ import { Badge, CiChip, ContraChip, EditableNum, EditableText, Icon, UdSelect } 
 import { fmtNum, toEur } from '../../core/money';
 import type { Partida } from '../../core/types';
 import { useJustRevealed } from '../../hooks/useJustRevealed';
+import { useCambiadaFuera } from '../../hooks/useCambiadaFuera';
 import { usePartidaRow } from '../../hooks/usePartidaRow';
 import { useObraStore } from '../../store';
 import { necesitaRevision as necesitaRevisionRcd } from '../../core/rcd/reglas';
@@ -47,11 +48,12 @@ export const PartidaCard = memo(function PartidaCard({
   const conPlan = useObraStore((s) => !!s.planCalidad);
   const togglePartida = useObraStore((s) => s.togglePartida);
   const justRevealed = useJustRevealed(p.id);
+  const cambiadaFuera = useCambiadaFuera(p.id);
 
   return (
     <div
       id={`partida-${p.id}`}
-      className={`${styles.pCard} ${open ? `${styles.open} ${styles.selected}` : ''} ${justRevealed ? styles.justRevealed : ''}`}
+      className={`${styles.pCard} ${open ? `${styles.open} ${styles.selected}` : ''} ${justRevealed ? styles.justRevealed : ''} ${cambiadaFuera ? styles.cambiadaFuera : ''}`}
       aria-selected={open}
     >
       {/* Tres líneas que se leen de arriba abajo como la fila de la tabla:
