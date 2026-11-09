@@ -6,7 +6,8 @@
   "description": "Concreta · Mediciones — mediciones, presupuesto y certificación de obra",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/mcp/empaquetar.mjs",
+    "mcp": "node scripts/mcp/empaquetar.mjs",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
@@ -32,6 +33,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@testing-library/user-event": "^14.5.2",
@@ -50,6 +52,7 @@
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.18.1",
     "vite": "^7.0.0",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.8",
+    "zod": "^4.6.7"
   }
 }
