@@ -4,11 +4,24 @@
 import 'fake-indexeddb/auto';
 import { clear } from 'idb-keyval';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { leerTextoObra, textoObra } from '../agente/formato';
-import { blankObraData, useObraStore, useToastStore, type ObraData } from '../store';
+import { VERSION_DIARIO, nombreEntrada, type EntradaDiario } from '../agente/diario';
+import { huellaTexto, leerTextoObra, textoObra } from '../agente/formato';
+import { aplicarLote } from '../agente/motor';
+import { leerOperaciones } from '../agente/operaciones';
+import { leerEstadoApp, seleccionPara } from '../agente/seleccion';
+import {
+  blankObraData,
+  tiendaAparte,
+  toSerializable,
+  useObraStore,
+  useToastStore,
+  type ObraData,
+} from '../store';
+import { useMedUiStore } from '../store/medUiStore';
 import { __resetHistoryForTests, initHistory, undo } from '../store/temporal';
 import { CarpetaMem } from '../test/fsMemoria';
 import {
+  __escribirAppAhoraForTests,
   __esperarCarpetaForTests,
   __mirarAhoraForTests,
   __resetCarpetaForTests,
@@ -205,11 +218,137 @@ describe('conflicto', () => {
     await conflicto();
     await quedarmeConLaMia();
     expect(enElFichero().chapters.map((c) => c.title)).toEqual(['Mío']);
-    const copias = [...(dir.carpetas.get('.mediciones')?.ficheros.values() ?? [])];
+    const copias = [...(dir.carpetas.get('.mediciones')?.ficheros.values() ?? [])].filter((f) =>
+      f.name.includes('.conflicto-'),
+    );
     expect(copias).toHaveLength(1);
     expect(copias[0]!.name).toMatch(/^Vivienda Mayor 12\.conflicto-.*\.mediciones\.json$/);
     expect(copias[0]!.texto()).toContain('Suyo');
     expect(estado().tipo).toBe('al-dia');
+  });
+});
+
+describe('trabajar a la vez (F4)', () => {
+  /** Lo que hace el MCP con `editar`: aplicar el lote, escribir el fichero y su entrada del diario. */
+  function agenteEdita(ops: unknown[], sesion = 's1'): void {
+    const antes = dir.leer(F)!;
+    const l = leerTextoObra(antes);
+    if (!l.ok) throw new Error(l.mensaje);
+    const lo = leerOperaciones(ops);
+    if (!lo.ok) throw new Error(JSON.stringify(lo.errores));
+    const t = tiendaAparte(l.data);
+    const r = aplicarLote(t, lo.ops);
+    if (!r.ok) throw new Error(JSON.stringify(r.recibos.at(-1)));
+    const despues = textoObra(toSerializable(t.getState()));
+    dir.escribirFuera(F, despues);
+    const e: EntradaDiario = {
+      version: VERSION_DIARIO,
+      fichero: F,
+      fecha: new Date().toISOString(),
+      autor: { sesion },
+      antes: huellaTexto(antes),
+      despues: huellaTexto(despues),
+      pasos: r.pasos,
+    };
+    const md = dir.carpetas.get('.mediciones') ?? new CarpetaMem('.mediciones');
+    dir.carpetas.set('.mediciones', md);
+    const diario = md.carpetas.get('diario') ?? new CarpetaMem('diario');
+    md.carpetas.set('diario', diario);
+    diario.escribirFuera(nombreEntrada(e), JSON.stringify(e));
+  }
+
+  /** La obra con la partida 1.1 «Excavación» sin precio, ya en la carpeta. */
+  async function conPartida() {
+    await obraEnCarpeta();
+    st().addChapter('Movimiento de tierras');
+    const chId = st().chapters[0]!.id;
+    const pid = st().createPartida(chId, null);
+    st().editPartidaField(chId, pid, 'title', 'Excavación');
+    await llevarYa();
+    expect(estado().tipo).toBe('al-dia');
+    return { chId, pid };
+  }
+
+  const partida = (d: ObraData, chId: string, pid: string) =>
+    d.partidas[chId]!.find((p) => p.id === pid)!;
+
+  it('el técnico pone precios mientras el agente mete líneas: no se pierde nada ni se pregunta', async () => {
+    const { chId, pid } = await conPartida();
+    st().setPrecio(chId, pid, 18.5); // sin llevar aún a la carpeta
+    agenteEdita([
+      { op: 'agregar_lineas', ref: '1.1', lineas: [{ comentario: 'Zanja A', uds: 1, largo: 10 }] },
+    ]);
+    await __mirarAhoraForTests();
+    expect(estado().tipo).toBe('al-dia');
+    // En la app, las dos cosas…
+    const p = partida(toSerializable(st()), chId, pid);
+    expect(p.precio).toBe(18.5);
+    expect(p.med.map((l) => l.comment)).toEqual(['Zanja A']);
+    // …y en la carpeta también, con la línea con el mismo id que le dio el agente.
+    const f = partida(enElFichero(), chId, pid);
+    expect(f.precio).toBe(18.5);
+    expect(f.med.map((l) => l.id)).toEqual(p.med.map((l) => l.id));
+    expect(useToastStore.getState().msg).toBe('Claude: +1 línea, sobre tus cambios');
+    expect([...useCarpetaStore.getState().resaltadas.ids]).toEqual([pid]);
+    // Ctrl+Z quita lo del agente y deja lo mío.
+    undo();
+    const q = partida(toSerializable(st()), chId, pid);
+    expect(q.med).toEqual([]);
+    expect(q.precio).toBe(18.5);
+  });
+
+  it('dos lotes seguidos, de dos sesiones, se repiten en orden', async () => {
+    const { chId, pid } = await conPartida();
+    st().editPartidaField(chId, pid, 'ud', 'm³');
+    agenteEdita([{ op: 'agregar_lineas', ref: '1.1', lineas: [{ comentario: 'A', largo: 2 }] }], 's1');
+    agenteEdita([{ op: 'editar_linea', ref: '1.1', indice: 1, campo: 'largo', valor: 3 }], 's2');
+    await __mirarAhoraForTests();
+    expect(estado().tipo).toBe('al-dia');
+    const p = partida(enElFichero(), chId, pid);
+    expect(p.ud).toBe('m³');
+    expect(p.med.map((l) => l.largo)).toEqual([3]);
+    expect(useToastStore.getState().msg).toMatch(/^Claude \(2 sesiones\): /);
+  });
+
+  it('si el técnico borró lo que tocaba el agente, pregunta y dice por qué', async () => {
+    const { chId, pid } = await conPartida();
+    st().deletePartida(chId, pid);
+    agenteEdita([{ op: 'set_precio', ref: '1.1', valor: 20 }]);
+    await __mirarAhoraForTests();
+    expect(estado()).toMatchObject({
+      tipo: 'conflicto',
+      motivo: expect.stringContaining('no se pudo repetir lo de Claude'),
+    });
+  });
+
+  it('un cambio del agente sin cambios aquí lleva su nombre en el aviso', async () => {
+    await conPartida();
+    agenteEdita([{ op: 'set_precio', ref: '1.1', valor: 20 }]);
+    await __mirarAhoraForTests();
+    expect(useToastStore.getState().msg).toBe('Claude: 1 partida cambiada');
+  });
+
+  it('deja en app.json lo que el técnico tiene abierto, con la versión que enseña', async () => {
+    const { chId, pid } = await conPartida();
+    st().addMedLines(chId, pid, [{ comment: 'A' }, { comment: 'B' }]);
+    await llevarYa();
+    const lineas = partida(toSerializable(st()), chId, pid).med.map((l) => l.id);
+    useObraStore.setState({ openPartidaId: pid, active: chId });
+    useMedUiStore.setState({ partidaId: pid, selected: [lineas[1]!] });
+    await __escribirAppAhoraForTests();
+    const texto = dir.carpetas.get('.mediciones')!.ficheros.get('Vivienda Mayor 12.app.json')!.texto();
+    const e = leerEstadoApp(texto)!;
+    expect(e).toMatchObject({
+      fichero: F,
+      partida: pid,
+      capitulo: chId,
+      lineas: [lineas[1]],
+      cambiosSinGuardar: false,
+      huella: huellaTexto(dir.leer(F)!),
+    });
+    // Lo resuelve el agente, con la obra del fichero.
+    const s = seleccionPara(enElFichero(), e, huellaTexto(dir.leer(F)!));
+    expect(s).toMatchObject({ alDia: true, partida: { ref: '1.1', lineasElegidas: [2] } });
   });
 });
 

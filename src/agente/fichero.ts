@@ -24,9 +24,12 @@ import {
 } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import type { ObraData } from '../store';
+import { ENTRADAS_DIARIO, nombreEntrada, type EntradaDiario } from './diario';
 import {
   CARPETA_DERIVADOS,
+  CARPETA_DIARIO,
   SUFIJO_OBRA,
+  huellaTexto,
   leerTextoObra,
   textoObra,
   type MotivoLectura,
@@ -81,7 +84,15 @@ export function resolverObra(ruta: string): Resolucion {
 }
 
 export type LecturaFichero =
-  | { ok: true; fichero: string; data: ObraData; versionFichero: number; sello: string }
+  | {
+      ok: true;
+      fichero: string;
+      data: ObraData;
+      versionFichero: number;
+      sello: string;
+      /** `huellaTexto` del texto: la que usan la app y el diario. */
+      huella: string;
+    }
   | { ok: false; fichero: string; motivo: MotivoLectura | 'no-existe'; mensaje: string };
 
 /** Lee y valida el fichero de una obra (migrada en memoria; el disco no cambia). */
@@ -89,13 +100,21 @@ export function leerObra(fichero: string): LecturaFichero {
   if (!existsSync(fichero))
     return { ok: false, fichero, motivo: 'no-existe', mensaje: `no existe ${fichero}` };
   const bytes = readFileSync(fichero);
-  const l = leerTextoObra(bytes.toString('utf8'));
+  const texto = bytes.toString('utf8');
+  const l = leerTextoObra(texto);
   if (!l.ok) return { ok: false, fichero, motivo: l.motivo, mensaje: l.mensaje };
-  return { ok: true, fichero, data: l.data, versionFichero: l.versionFichero, sello: sello(bytes) };
+  return {
+    ok: true,
+    fichero,
+    data: l.data,
+    versionFichero: l.versionFichero,
+    sello: sello(bytes),
+    huella: huellaTexto(texto),
+  };
 }
 
 export type Escritura =
-  | { ok: true; sello: string }
+  | { ok: true; sello: string; huella: string }
   | { ok: false; conflicto: boolean; mensaje: string };
 
 /**
@@ -138,5 +157,38 @@ export function escribirObra(
       mensaje: `no se pudo escribir ${fichero}: ${e instanceof Error ? e.message : String(e)}`,
     };
   }
-  return { ok: true, sello: sello(texto) };
+  return { ok: true, sello: sello(texto), huella: huellaTexto(texto) };
+}
+
+/** La carpeta del diario de una obra: `.mediciones/diario/`. */
+export const carpetaDiario = (fichero: string): string =>
+  join(dirname(fichero), CARPETA_DERIVADOS, CARPETA_DIARIO);
+
+/**
+ * Deja una entrada en el diario (D4) y borra las más viejas de esa obra, para
+ * que no crezca sin fin. Si no se puede escribir, la obra ya está guardada: la
+ * app, sin la entrada, preguntará en vez de repetir. Devuelve si se escribió.
+ */
+export function escribirDiario(fichero: string, e: EntradaDiario): boolean {
+  const dir = carpetaDiario(fichero);
+  try {
+    mkdirSync(dir, { recursive: true });
+    const destino = join(dir, nombreEntrada(e));
+    const tmp = `${destino}.${process.pid}.tmp`;
+    writeFileSync(tmp, `${JSON.stringify(e, null, 2)}\n`, 'utf8');
+    renameSync(tmp, destino);
+  } catch {
+    return false;
+  }
+  try {
+    const viejas = readdirSync(dir)
+      .filter((n) => n.endsWith('.json'))
+      .sort()
+      .reverse()
+      .slice(ENTRADAS_DIARIO);
+    for (const n of viejas) unlinkSync(join(dir, n));
+  } catch {
+    // borrar las viejas es limpieza: si falla, se intenta en la próxima
+  }
+  return true;
 }

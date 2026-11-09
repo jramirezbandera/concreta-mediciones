@@ -357,7 +357,7 @@ deshacer en la app). Es el catálogo de `ai/ops.ts`, ampliado:
 | F1 | Motor y fichero | M |
 | F2 | MCP, CLI y guía; paquetes `.mcpb`, plugin y `.mjs` | M |
 | F3 | La app sobre la carpeta, en vivo | L |
-| F4 | Trabajar a la vez | M |
+| F4 | Trabajar a la vez | Hecho |
 | F5 | Bases de precios: del disco y oficiales | M |
 | F6 | Extras | — |
 
@@ -523,6 +523,55 @@ repetición automática sobre cambios sin guardar.
 
 *Criterios:* el técnico edita precios mientras el agente mete líneas, y no se pierde nada ni se
 pregunta nada. «Pon medición a esta partida» va a la que tiene abierta.
+
+**F4 hecha (2026-11-09).**
+
+- **Ids que se repiten** (`core/id.ts`, `conIds`). Todos los ids del store salen de `rawUuid`,
+  así que basta con grabar los que salen al aplicar cada operación y darlos otra vez al repetirla.
+  Sirve para cualquier acción, sin tocarlas una a una.
+- **Operaciones ancladas** (`agente/anclas.ts`). El agente nombra las partidas por su número
+  («1.2.3») y las líneas por su posición, que dejan de valer si el técnico mete una partida
+  delante o borra una línea. El diario guarda cada operación con sus destinos por id (partidas y
+  contenedores) y los ids de las líneas que toca; al repetirla, las líneas se vuelven a contar.
+- **El diario** (`agente/diario.ts`; lo escribe `editar` desde `agente/fichero.ts`):
+  `.mediciones/diario/<fecha>-<sesión>-<huella>.json`, una entrada por lote. Cada entrada lleva:
+  - la `huellaTexto` del fichero de antes y de después (la misma huella que usa la app, que se
+    movió a `agente/formato.ts`);
+  - el autor: la sesión del MCP, su cliente (`clientInfo` de `initialize`) y su carpeta;
+  - el resumen y los pasos (operación anclada e ids).
+
+  Se guardan las 60 últimas. Sin autor (llamadas internas, pruebas) no se escribe.
+- **En la app** (`persist/carpeta.ts`), cuando el fichero cambia y hay cambios pendientes:
+  1. busca en el diario la cadena de lotes que va de la versión en común a la de ahora;
+  2. la repite sobre la obra de la app, en una tienda aparte (`tiendaAparte`, de la nueva factoría
+     `crearTiendaObra`), así que no se tocan ni el historial ni lo que hay abierto;
+  3. aplica el resultado con `aplicarExterno` (un paso de Deshacer) y lo lleva a la carpeta.
+
+  El aviso dice «Claude: +2 líneas, sobre tus cambios», o «Claude (2 sesiones): …». Sin cambios
+  pendientes, el aviso también lleva el nombre de Claude si el cambio está en el diario.
+- **Solo se pregunta** si no hay cadena (cambió alguien que no deja diario) o si una operación ya
+  no se puede repetir (el técnico borró esa partida o esa línea). El diálogo de F3 dice entonces
+  por qué. Descartado: aplicar a medias los lotes que sí se pueden. Uno puede depender de otro, y
+  el técnico no sabría qué entró.
+- **Lo que tiene abierto** (D7): `.mediciones/<obra>.app.json`, por obra y no un `app.json` único,
+  porque una carpeta puede tener varias. Lo escribe la app 300 ms después de cada cambio de vista,
+  capítulo, partida abierta, líneas elegidas, certificación, plano o estado de la carpeta, y solo
+  si cambió algo. La orden nueva **`seleccion`** lo traduce con la obra del fichero: el número, el
+  id, el título y la cantidad de la partida, y los números de las líneas elegidas. Da también
+  `alDia` y avisos si la app tiene cambios sin llevar o si la partida aún no está en el fichero.
+- **La guía** dice que «esta partida» se resuelve con `seleccion` y se nombra por su id, y que el
+  técnico puede trabajar a la vez. La pantalla «Trabajar con Claude» lo cuenta.
+- **Comprobado:**
+  - `agente/diario.test.ts` (11): ids, diario, cadena, poda, repetir con la partida renumerada,
+    y los fallos por línea o partida borradas; también `seleccion`;
+  - `carpeta.test.ts` (5 más): el criterio de F4 (precio en la app mientras el agente mete líneas,
+    sin preguntar, con los mismos ids en los dos lados, y Ctrl+Z quita solo lo del agente), dos
+    sesiones seguidas, el conflicto con su motivo, el aviso con autor y `app.json`;
+  - la suite entera, 2571 pruebas, y el build con el MCP empaquetado;
+  - en un Chromium de verdad (OPFS, el `.mjs` empaquetado): el técnico pone el precio, el agente
+    mete dos líneas a la vez, y se queda todo, en la app y en el fichero, con los ids del agente.
+    Después, `seleccion` sobre el `app.json` que dejó el navegador da `alDia: true` y la partida
+    1.1 con su línea 2 elegida.
 
 **F5 — Bases de precios.**
 - `bases`, `descargar_base`, `buscar_precio` y `copiar_de_base`;

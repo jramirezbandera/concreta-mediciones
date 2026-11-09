@@ -96,6 +96,32 @@ export function leerTextoObra(texto: string): LecturaObra {
   }
 }
 
+/** Huella rápida de un texto (cyrb53 + longitud): para saber si cambió, no para
+ *  seguridad. Síncrona y sin `crypto.subtle`, que no está en todos los entornos.
+ *  La calculan igual la app y el MCP: el diario y `app.json` la usan para saber
+ *  de qué versión del fichero hablan. */
+export function huellaTexto(t: string): string {
+  let h1 = 0xdeadbeef;
+  let h2 = 0x41c6ce57;
+  for (let i = 0; i < t.length; i++) {
+    const c = t.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 2654435761);
+    h2 = Math.imul(h2 ^ c, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return `${(h2 >>> 0).toString(16).padStart(8, '0')}${(h1 >>> 0).toString(16).padStart(8, '0')}-${t.length}`;
+}
+
+/** Nombre de la obra sin el sufijo («Vivienda.mediciones.json» → «Vivienda»). */
+export const baseFicheroObra = (fichero: string): string =>
+  fichero.toLowerCase().endsWith(SUFIJO_OBRA) ? fichero.slice(0, -SUFIJO_OBRA.length) : fichero;
+
+/** Lo que el técnico tiene abierto: `.mediciones/<obra>.app.json` (D7). */
+export const nombreAppJson = (fichero: string): string => `${baseFicheroObra(fichero)}.app.json`;
+/** La carpeta del diario de lotes del agente, dentro de `.mediciones/` (D4). */
+export const CARPETA_DIARIO = 'diario';
+
 /** Caracteres que Windows no admite en un nombre de fichero (y los de control). */
 // eslint-disable-next-line no-control-regex -- los de control son justo los que hay que quitar
 const PROHIBIDOS = /[<>:"/\\|?*\u0000-\u001f]/g;

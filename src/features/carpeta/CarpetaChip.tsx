@@ -4,7 +4,8 @@
 
      · al día / guardando: «En carpeta»; el título dice cuál y qué fichero.
      · sin permiso: «Conectar la carpeta» (el navegador pide el permiso con un clic).
-     · conflicto: «Cambió en la carpeta» → el técnico elige (ConflictoCarpeta).
+     · conflicto: «Revisar» → el técnico elige (ConflictoCarpeta). Desde la F4
+       solo sale si lo de Claude no se pudo repetir sobre sus cambios.
      · error: el aviso, al pulsar.
    =========================================================================== */
 import { useState } from 'react';
@@ -57,6 +58,7 @@ export function CarpetaChip() {
           <ConflictoCarpeta
             carpeta={estado.carpeta}
             resumen={estado.resumen}
+            motivo={estado.motivo}
             compact={bp.isMobile}
             onClose={() => setViendoConflicto(false)}
           />
@@ -95,11 +97,13 @@ export function CarpetaChip() {
 function ConflictoCarpeta({
   carpeta,
   resumen,
+  motivo,
   compact,
   onClose,
 }: {
   carpeta: string;
   resumen: string;
+  motivo?: string;
   compact: boolean;
   onClose: () => void;
 }) {
@@ -131,8 +135,9 @@ function ConflictoCarpeta({
       }
     >
       <div className={styles.conflicto}>
+        {motivo && <p>Normalmente se junta solo, pero esta vez {motivo}.</p>}
         <p>
-          La de la carpeta la habrá cambiado Claude. Si la usas, lo que ves aquí cambiaría en:{' '}
+          Si usas la de la carpeta, lo que ves aquí cambiaría en:{' '}
           <strong>{resumen || 'detalles'}</strong>.
         </p>
         <ul>

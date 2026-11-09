@@ -811,7 +811,45 @@ function seedUi(certs: Cert[]) {
   };
 }
 
-export const useObraStore = create<ObraState>()(
+/** Lo que deja `loadObra`: el dominio de `data` y la interfaz de una obra recién abierta. */
+function estadoAlCargar(data: ObraData | ImportedObra) {
+  const first = data.chapters[0]?.id;
+  return {
+    // `bajas: {}` y `planos: []` por delante: un `ImportedObra` (.bc3) no
+    // trae tombstones ni planos, y sin el default arrastraría los de la
+    // obra ANTERIOR (v3, v6). Lo apartado por ilegible, el estudio de
+    // residuos (v7) y el plan de calidad (v8) tampoco se heredan.
+    schemaVersion: SCHEMA_VERSION,
+    bajas: {},
+    planos: [],
+    estudioRcd: undefined,
+    planCalidad: undefined,
+    ofertas: undefined,
+    seguridadSalud: undefined,
+    _ilegible: undefined,
+    ...data,
+    ...seedUi(data.certs),
+    view: 'presupuesto' as View,
+    active: first ?? ALL,
+    expanded: {}, // árbol colapsado: una obra recién importada se explora
+  };
+}
+
+/**
+ * Una obra cargada en una tienda APARTE, como la dejaría `loadObra`, pero sin
+ * tocar el historial ni los avisos de la app (`loadObra` vacía los dos). Para
+ * repetir sobre los cambios del técnico un lote del agente sin mover nada de lo
+ * que tiene abierto (docs/plan-agente-carpeta.md D4, F4).
+ */
+export function tiendaAparte(data: ObraData): ObraStore {
+  const t = crearTiendaObra();
+  t.setState(estadoAlCargar(data) as Partial<ObraState>);
+  return t;
+}
+
+/** Una tienda de obra: la de la app es `useObraStore`; `tiendaAparte` crea otras. */
+function crearTiendaObra() {
+  return create<ObraState>()(
   subscribeWithSelector(
   guardaSoloLectura(
   immer((set, get, store) => {
@@ -937,26 +975,7 @@ export const useObraStore = create<ObraState>()(
         // importar/restaurar/conmutar no debe resucitar la obra anterior — D-08).
         pauseHistory(() =>
           set((s) => {
-            // `bajas: {}` y `planos: []` por delante: un `ImportedObra` (.bc3) no
-            // trae tombstones ni planos, y sin el default arrastraría los de la
-            // obra ANTERIOR (v3, v6). Lo apartado por ilegible, el estudio de
-            // residuos (v7) y el plan de calidad (v8) tampoco se heredan.
-            Object.assign(s, {
-              schemaVersion: SCHEMA_VERSION,
-              bajas: {},
-              planos: [],
-              estudioRcd: undefined,
-              planCalidad: undefined,
-              ofertas: undefined,
-              seguridadSalud: undefined,
-              _ilegible: undefined,
-              ...data,
-            });
-            Object.assign(s, seedUi(data.certs));
-            const first = data.chapters[0]?.id;
-            s.view = 'presupuesto';
-            s.active = first ?? ALL;
-            s.expanded = {}; // árbol colapsado: una obra recién importada se explora
+            Object.assign(s, estadoAlCargar(data));
           }),
         );
       },
@@ -1057,7 +1076,10 @@ export const useObraStore = create<ObraState>()(
   }),
   ),
   ),
-);
+  );
+}
+
+export const useObraStore = crearTiendaObra();
 
 /** Tipo del store completo (con la pila de middleware subscribeWithSelector +
  *  immer). Lo consume `store/temporal` (solo como TIPO) para tipar el store que

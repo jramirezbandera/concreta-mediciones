@@ -11,16 +11,19 @@
    Cada orden que lee la obra la lee del disco en ese momento (regla 3 de la
    guía): nunca se trabaja con una copia vieja en memoria.
    =========================================================================== */
-import { existsSync, mkdirSync, statSync } from 'node:fs';
-import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
+import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
 import { APP_VERSION } from '../persist/persist';
 import { SCHEMA_VERSION, selectCounts, selectPem, useObraStore } from '../store';
 import { toEur } from '../core/money';
+import { rawUuid } from '../core/id';
 import { arbolObra, buscarEnObra, partidaObra, resumenObra } from './consultas';
 import { cargarEnStore, editarObra, nuevaObra } from './editar';
 import { leerObra, obrasEnCarpeta, resolverObra } from './fichero';
-import { SUFIJO_OBRA, nombreFicheroObra } from './formato';
+import { CARPETA_DERIVADOS, SUFIJO_OBRA, nombreAppJson, nombreFicheroObra } from './formato';
+import type { Autor } from './diario';
+import { leerEstadoApp, seleccionPara } from './seleccion';
 import { TODAS_LAS_OPS } from './operaciones';
 import { validarObra } from './validar';
 import GUIA from './guia.md?raw';
@@ -40,13 +43,26 @@ type Args = Record<string, unknown>;
 /** Lo que devuelve una orden: `ok: false` con su motivo es un error para el cliente. */
 export type Salida = Record<string, unknown> & { ok: boolean };
 
+/** La sesión de este proceso: un MCP es una sesión del agente; una llamada de la CLI, otra. */
+const SESION = rawUuid().replace(/-/g, '').slice(0, 10);
+
+/** El autor de los lotes de este proceso, para el diario. */
+export function autorDeEstaSesion(cliente?: string): Autor {
+  return { sesion: SESION, ...(cliente ? { cliente } : {}), carpeta: process.cwd() };
+}
+
+/** Quién llama: el MCP lo saca de su cliente; la CLI se presenta como «cli». */
+export interface Contexto {
+  autor?: Autor;
+}
+
 export interface Orden {
   nombre: string;
   descripcion: string;
   entrada: Esquema;
   /** true si no cambia nada (el cliente puede no pedir permiso). */
   soloLectura: boolean;
-  ejecutar(a: Args): Salida;
+  ejecutar(a: Args, ctx: Contexto): Salida;
 }
 
 const obj = (properties: Record<string, Esquema>, required: string[] = []): Esquema => ({
@@ -320,13 +336,14 @@ export const ORDENES: Orden[] = [
       ['obra', 'operaciones'],
     ),
     soloLectura: false,
-    ejecutar: (a) => {
+    ejecutar: (a, ctx) => {
       const r0 = resolverObra(ruta(a, 'obra'));
       if (!r0.ok)
         throw new Fallo('obra', r0.mensaje, r0.candidatos ? { candidatos: r0.candidatos } : {});
       const r = editarObra(r0.fichero, a.operaciones, {
         sello: textoArg(a, 'sello', true),
         subirVersion: a.subirVersion === true,
+        autor: ctx.autor,
       });
       if (!r.ok) {
         // `resto` lleva también `ok: false`: es lo que devuelve `ejecutar` de todos modos.
@@ -339,6 +356,37 @@ export const ORDENES: Orden[] = [
         recibos: r.recibos.map(({ status: _s, ...x }) => x),
         sello: r.sello,
         ...estado(),
+      };
+    },
+  },
+  {
+    nombre: 'seleccion',
+    descripcion:
+      'Lo que el técnico tiene abierto ahora en la app: la vista, el capítulo, la partida abierta (su número, id, título, cantidad y las líneas que ha elegido), la certificación en curso y el plano. Úsala cuando diga «esta partida», «aquí», «estas líneas». `alDia` dice si la app enseña la versión del fichero de ahora; si no, nombra la partida por su id.',
+    entrada: obj({ obra: OBRA }, ['obra']),
+    soloLectura: true,
+    ejecutar: (a) => {
+      const r = resolverObra(ruta(a, 'obra'));
+      if (!r.ok) throw new Fallo('obra', r.mensaje, r.candidatos ? { candidatos: r.candidatos } : {});
+      const l = leerObra(r.fichero);
+      if (!l.ok) throw new Fallo('lectura', l.mensaje);
+      const ruta_app = join(dirname(r.fichero), CARPETA_DERIVADOS, nombreAppJson(basename(r.fichero)));
+      const e = existsSync(ruta_app) ? leerEstadoApp(readFileSync(ruta_app, 'utf8')) : null;
+      if (!e)
+        return {
+          ok: true,
+          fichero: r.fichero,
+          abierta: false,
+          mensaje:
+            'la app no ha dejado lo que tiene abierto: la obra no está abierta en la app desde esta carpeta (en Chrome o Edge, con «Abrir carpeta» o «Pasar a una carpeta»), o el técnico aún no la ha tocado. Pregúntale a qué partida se refiere.',
+        };
+      cargarEnStore(l.data);
+      return {
+        ok: true,
+        fichero: r.fichero,
+        abierta: true,
+        sello: l.sello,
+        ...seleccionPara(useObraStore.getState(), e, l.huella),
       };
     },
   },
@@ -357,7 +405,7 @@ export const ORDENES: Orden[] = [
 const POR_NOMBRE = new Map(ORDENES.map((o) => [o.nombre, o]));
 
 /** Ejecuta una orden. Nunca lanza: un fallo es `{ ok: false, motivo, mensaje }`. */
-export function ejecutar(nombre: string, args: unknown): Salida {
+export function ejecutar(nombre: string, args: unknown, ctx: Contexto = {}): Salida {
   const o = POR_NOMBRE.get(nombre);
   if (!o)
     return {
@@ -367,7 +415,7 @@ export function ejecutar(nombre: string, args: unknown): Salida {
     };
   const a = (typeof args === 'object' && args !== null && !Array.isArray(args) ? args : {}) as Args;
   try {
-    return o.ejecutar(a);
+    return o.ejecutar(a, ctx);
   } catch (e) {
     if (e instanceof Fallo) return { ok: false, motivo: e.motivo, mensaje: e.message, ...e.extra };
     return { ok: false, motivo: 'interno', mensaje: e instanceof Error ? e.message : String(e) };

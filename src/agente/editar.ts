@@ -16,6 +16,8 @@
      interfaz, así que cargar una obra en él no pisa nada de nadie.
    =========================================================================== */
 import { existsSync } from 'node:fs';
+import { basename } from 'node:path';
+import { APP_VERSION } from '../persist/persist';
 import {
   SCHEMA_VERSION,
   blankObraData,
@@ -25,7 +27,9 @@ import {
 } from '../store';
 import { aplicarLote, type ReciboLote } from './motor';
 import { leerOperaciones, type ErrorForma } from './operaciones';
-import { escribirObra, leerObra } from './fichero';
+import { escribirDiario, escribirObra, leerObra } from './fichero';
+import { compararObras } from './cambios';
+import { VERSION_DIARIO, type Autor } from './diario';
 
 /** Veces que se repite un lote si el fichero cambia entre leer y escribir. */
 export const INTENTOS = 3;
@@ -35,6 +39,8 @@ export interface OpcionesEditar {
   sello?: string;
   /** Permite escribir una obra de una versión de esquema anterior en la actual. */
   subirVersion?: boolean;
+  /** Quién hace el lote: va al diario (F4). Sin autor, no se deja diario. */
+  autor?: Autor;
 }
 
 export type ResultadoEditar =
@@ -45,6 +51,8 @@ export type ResultadoEditar =
       sello: string;
       selloAnterior: string;
       intentos: number;
+      /** Si quedó en el diario: sin él, la app pregunta en vez de repetir. */
+      diario: boolean;
     }
   | {
       ok: false;
@@ -115,8 +123,22 @@ export function editarObra(
         sinIntentar: r.sinIntentar,
       };
     }
-    const w = escribirObra(fichero, toSerializable(useObraStore.getState()), l.sello);
-    if (w.ok)
+    const nueva = toSerializable(useObraStore.getState());
+    const w = escribirObra(fichero, nueva, l.sello);
+    if (w.ok) {
+      const diario =
+        !!opciones.autor &&
+        escribirDiario(fichero, {
+          version: VERSION_DIARIO,
+          fichero: basename(fichero),
+          fecha: new Date().toISOString(),
+          autor: opciones.autor,
+          mcp: APP_VERSION,
+          antes: l.huella,
+          despues: w.huella,
+          resumen: compararObras(l.data, nueva).texto,
+          pasos: r.pasos,
+        });
       return {
         ok: true,
         fichero,
@@ -124,7 +146,9 @@ export function editarObra(
         sello: w.sello,
         selloAnterior: l.sello,
         intentos: intento,
+        diario,
       };
+    }
     if (!w.conflicto) return { ok: false, fichero, motivo: 'escritura', mensaje: w.mensaje };
     // Conflicto: otro guardó entre leer y escribir. Se repite el lote sobre lo nuevo.
   }

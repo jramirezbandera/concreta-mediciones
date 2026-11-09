@@ -10,7 +10,7 @@
    PowerShell). Sin valor, la clave vale true.
    =========================================================================== */
 import { readFileSync } from 'node:fs';
-import { ORDENES, ejecutar } from './ordenes';
+import { ORDENES, autorDeEstaSesion, ejecutar } from './ordenes';
 
 /** Lee los argumentos de la CLI. */
 export function argumentosCli(argv: string[]): Record<string, unknown> {
@@ -70,6 +70,6 @@ export function cli(
   } catch (e) {
     return { codigo: 2, salida: '', errores: `${e instanceof Error ? e.message : String(e)}\n` };
   }
-  const s = ejecutar(orden, args);
+  const s = ejecutar(orden, args, { autor: autorDeEstaSesion('cli') });
   return { codigo: s.ok ? 0 : 1, salida: `${JSON.stringify(s, null, 2)}\n`, errores: '' };
 }

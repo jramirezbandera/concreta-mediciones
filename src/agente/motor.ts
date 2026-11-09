@@ -35,6 +35,8 @@ import {
 import type { MedLine, Partida, Rates, SubChapter } from '../core/types';
 import type { NewMedLine, ObraState } from '../store';
 import type { CertModo, LineaField, OpLinea, PartidaField } from '../ai/ops';
+import { conIds } from '../core/id';
+import { anclar, type Ancla } from './anclas';
 import { CAMPOS_OBRA_NUMERO, type OperacionAgente } from './operaciones';
 
 /** El store sobre el que se opera (`useObraStore` en la app y en Node). */
@@ -380,12 +382,25 @@ export interface ReciboLote extends OpReceipt {
   ref?: string;
 }
 
+/** Lo que hace falta para repetir una op aplicada sobre otra versión de la obra (F4). */
+export interface PasoLote extends Ancla {
+  /** Los ids que salieron al aplicarla, en orden: al repetirla salen los mismos. */
+  ids: string[];
+}
+
 export interface ResultadoLote {
   /** true si se aplicaron todas. Si no, el llamador no guarda nada. */
   ok: boolean;
   recibos: ReciboLote[];
   /** Ops que no se intentaron porque el lote se paró antes. */
   sinIntentar: number;
+  /** Cada op aplicada, anclada y con sus ids: lo que va al diario. */
+  pasos: PasoLote[];
+}
+
+export interface OpcionesLote {
+  /** Los ids que tiene que sacar cada op (por su posición en el lote). */
+  ids?: readonly (readonly string[] | undefined)[];
 }
 
 /** Contenedor por código, título exacto o id. */
@@ -696,14 +711,21 @@ function aplicarUna(t: Tienda, op: OperacionAgente): Omit<ReciboLote, 'indice' |
  * (todo o nada: el llamador no guarda si `ok` es false). Las siguientes no se
  * intentan, porque podían depender de ella.
  */
-export function aplicarLote(t: Tienda, ops: OperacionAgente[]): ResultadoLote {
+export function aplicarLote(
+  t: Tienda,
+  ops: OperacionAgente[],
+  opciones: OpcionesLote = {},
+): ResultadoLote {
   const recibos: ReciboLote[] = [];
+  const pasos: PasoLote[] = [];
   for (let indice = 0; indice < ops.length; indice++) {
     const op = ops[indice]!;
-    const r = aplicarUna(t, op);
+    const ancla = anclar(t.getState(), op);
+    const { valor: r, ids } = conIds(opciones.ids?.[indice], () => aplicarUna(t, op));
     recibos.push({ ...r, indice, op: op.op });
     if (r.status !== 'aplicada')
-      return { ok: false, recibos, sinIntentar: ops.length - indice - 1 };
+      return { ok: false, recibos, sinIntentar: ops.length - indice - 1, pasos };
+    pasos.push({ ...ancla, ids });
   }
-  return { ok: true, recibos, sinIntentar: 0 };
+  return { ok: true, recibos, sinIntentar: 0, pasos };
 }

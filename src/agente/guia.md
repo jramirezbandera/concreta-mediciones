@@ -11,7 +11,7 @@ Trabajas sobre **un fichero `<obra>.mediciones.json`** en la carpeta de la obra.
 
 1. **Los precios no salen de tu memoria.** Un precio lo da el técnico o sale de una base de precios que te haya pasado. Si no lo tienes, crea la partida sin precio y dilo al final: `validar` la lista como «sin precio».
 2. **Las mediciones no se inventan.** Cada línea sale de una cota que te da el técnico o de un documento que has leído, y su `comentario` dice de dónde: «Planta baja · eje A (plano A-02)». Si una cifra no se lee o falta, pregunta. Medir sobre el plano calibrado lo hace el técnico en la app.
-3. **Lee justo antes de cambiar.** El técnico puede haber cambiado la obra desde la app: no trabajes de memoria con números de partida o de línea de hace un rato.
+3. **Lee justo antes de cambiar.** El técnico puede haber cambiado la obra desde la app: no trabajes de memoria con números de partida o de línea de hace un rato. «Esta partida», «aquí» o «estas líneas» se resuelven con `seleccion`, nunca adivinando.
 4. **El fichero no se toca a mano.** Ni con herramientas de ficheros ni con scripts: solo con `editar`. Tiene datos que dependen unos de otros (la numeración, el precio del descompuesto, lo certificado) y una edición a mano los rompe sin aviso.
 5. **Lo certificado no se toca sin que lo pida el técnico.** Cambiar la medición o la cantidad de una partida certificada, o borrarla, exige `forzar: true`, y eso solo cuando él lo ha pedido. Una certificación emitida está cerrada: solo él puede reabrirla.
 6. **Lotes pequeños.** Una partida con sus líneas, o unas pocas, por cada `editar`. El técnico ve crecer la obra y cada lote se deshace por separado.
@@ -20,9 +20,10 @@ Trabajas sobre **un fichero `<obra>.mediciones.json`** en la carpeta de la obra.
 ## Cómo se trabaja
 
 1. **La obra.** `obra` con la carpeta te dice qué fichero es, cómo se llama y qué tiene. Si no hay ninguno, `nueva_obra` lo crea; si hay varios, pregunta cuál.
-2. **Lo que hay.** `resumen` (importes y capítulos) y `arbol` (capítulos, subcapítulos y partidas con su cantidad, precio e importe). Para una partida concreta, `partida`, con sus líneas una a una y su descompuesto. `buscar` encuentra partidas por texto o código.
-3. **Cambiarlo.** `editar` con una lista de operaciones. Van en orden, todas o ninguna: si una falla, no se guarda nada y el resultado dice cuál y por qué. Corrígela y repite el lote.
-4. **Comprobarlo.** `validar` da los errores (no debería haber ninguno) y los avisos de lo que falta (partidas sin precio, sin medición, sin unidad, capítulos vacíos). Al terminar, cuenta al técnico lo que has hecho y lo que queda.
+2. **Lo que tiene abierto el técnico.** Si habla de «esta partida», «este capítulo» o «estas líneas», `seleccion` te da la partida abierta (su número, su `id`, su título y las líneas que tiene elegidas), el capítulo, la certificación en curso y el plano. Nombra la partida por su `id`: vale aunque la numeración cambie. Si `alDia` es false o trae `avisos`, el técnico tiene cambios que aún no han llegado al fichero; si la partida no está en el fichero (`enElFichero: false`), espera un par de segundos y vuelve a pedirla. Con `abierta: false`, pregúntale a cuál se refiere.
+3. **Lo que hay.** `resumen` (importes y capítulos) y `arbol` (capítulos, subcapítulos y partidas con su cantidad, precio e importe). Para una partida concreta, `partida`, con sus líneas una a una y su descompuesto. `buscar` encuentra partidas por texto o código.
+4. **Cambiarlo.** `editar` con una lista de operaciones. Van en orden, todas o ninguna: si una falla, no se guarda nada y el resultado dice cuál y por qué. Corrígela y repite el lote.
+5. **Comprobarlo.** `validar` da los errores (no debería haber ninguno) y los avisos de lo que falta (partidas sin precio, sin medición, sin unidad, capítulos vacíos). Al terminar, cuenta al técnico lo que has hecho y lo que queda.
 
 ## Las referencias
 
@@ -80,5 +81,6 @@ La app es <https://jramirezbandera.github.io/concreta-mediciones/>, y `abrir_app
 - **Si la obra está abierta en la app desde su carpeta**, cada `editar` aparece allí en uno o dos segundos, resaltado y con un aviso. El técnico lo deshace con Ctrl+Z.
 - **Si la obra está en la app pero no en una carpeta**, tú no la ves. Pídele que la pase a la carpeta de la obra: en el selector de obras, «Pasar a una carpeta». Allí queda su `<obra>.mediciones.json`. Si no, crea una con `nueva_obra`.
 - **Para abrir en la app una obra que has creado tú**, el técnico usa «Abrir carpeta» en el selector de obras y elige su carpeta. Por seguridad, el navegador no deja abrirla por su ruta.
-- **Si el técnico tiene cambios sin guardar en la carpeta** cuando escribes, la app no pisa nada: le pregunta con qué versión se queda. Si te dice que no ve tus cambios, que mire el aviso «Revisar» junto al nombre de la obra.
+- **Podéis trabajar a la vez.** Si el técnico tiene cambios que aún no están en el fichero cuando escribes, la app repite tus operaciones sobre los suyos y guarda las dos cosas: no se pierde nada ni se le pregunta. Por eso cada lote queda en el diario de la carpeta (`.mediciones/diario/`), con lo que creó con el mismo `id` en los dos lados.
+- **Solo se le pregunta** si una operación tuya ya no se puede repetir, porque él acaba de borrar la partida o la línea que tocabas. Si te dice que no ve tus cambios, que mire el aviso «Revisar» junto al nombre de la obra, y vuelve a leerla antes de repetir nada.
 - **Tras volver a abrir el navegador**, la app pide un clic para usar otra vez la carpeta: «Conectar», junto al nombre de la obra.

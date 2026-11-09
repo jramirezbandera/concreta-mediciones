@@ -147,6 +147,11 @@ export function TrabajarConClaude({ onClose, compact }: { onClose: () => void; c
             excavación de zanjas y el hormigón de limpieza. Las zanjas son de 0,60 × 0,80 m: 12 m en
             el eje A y 2 × 8 m en el eje B.
           </blockquote>
+          <p>
+            Claude ve qué partida tienes abierta: con la obra abierta aquí, basta con «ponle a esta
+            partida la medición del plano A-02». Puedes seguir trabajando mientras tanto: lo suyo y
+            lo tuyo se juntan sin preguntarte.
+          </p>
         </section>
       </div>
     </Modal>

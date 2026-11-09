@@ -15,10 +15,19 @@
        cambió fuera (lo cambió el agente por el MCP), se lee, se valida y entra
        en el store con `aplicarExterno`: un paso de Deshacer, sin mover lo que
        el técnico tiene abierto, con un aviso y las partidas resaltadas.
-     · CONFLICTO: si el fichero cambió fuera mientras aquí había cambios sin
-       llevar a la carpeta, no se elige solo: el técnico decide (usar la de la
-       carpeta, o quedarse con la suya, que deja la de la carpeta en
-       `.mediciones/`). La F4 lo resolverá sin preguntar.
+     · A LA VEZ (F4): si el fichero cambió fuera mientras aquí había cambios
+       sin llevar a la carpeta, se buscan en el diario del agente
+       (`.mediciones/diario/`) los lotes que llevan de la versión en común a
+       la de ahora y se REPITEN sobre lo de aquí, con los mismos ids
+       (`agente/diario`). Lo fusionado se lleva a la carpeta. No se pregunta
+       nada ni se pierde nada; Ctrl+Z quita lo del agente y deja lo propio.
+     · CONFLICTO: si no hay diario que lo explique (lo cambió otra app, o a
+       mano) o un lote no se puede repetir (el técnico borró lo que tocaba),
+       decide el técnico: usar la de la carpeta, o quedarse con la suya, que
+       deja la de la carpeta en `.mediciones/`.
+     · LO QUE TIENE ABIERTO (D7): la vista, el capítulo, la partida, las líneas
+       elegidas, la certificación y el plano van a `.mediciones/<obra>.app.json`
+       poco después de cada cambio, para la orden `seleccion` del agente.
 
    «Mover» a la carpeta (decisión del usuario): la obra sigue siendo UNA en la
    lista; la copia de IndexedDB es su caché y su red de seguridad.
@@ -37,13 +46,27 @@ import { create } from 'zustand';
 import { huellasEnUso } from '../core/planoDatos';
 import { compararObras } from '../agente/cambios';
 import {
+  autoria,
+  cadena,
+  leerEntrada,
+  repetirCadena,
+  type EntradaDiario,
+} from '../agente/diario';
+import {
   CARPETA_DERIVADOS,
+  CARPETA_DIARIO,
   SUFIJO_OBRA,
+  huellaTexto,
   leerTextoObra,
+  nombreAppJson,
   nombreFicheroObra,
   textoObra,
 } from '../agente/formato';
+import { VERSION_APP_JSON, claveEstadoApp, type EstadoApp } from '../agente/seleccion';
+import { useMedUiStore } from '../store/medUiStore';
+import { usePlanoUiStore } from '../store/planoUiStore';
 import {
+  ALL,
   toSerializable,
   useObraStore,
   useToastStore,
@@ -52,6 +75,7 @@ import {
 } from '../store';
 import { DOMAIN_KEYS } from '../store/schema';
 import { getDomainRevision, undo } from '../store/temporal';
+import { APP_VERSION } from './persist';
 import { createObra, metaOf } from './registry';
 import { guardarPlano, leerBytes, tienePlano } from './planos';
 import { useSessionStore } from './sessionStore';
@@ -90,22 +114,7 @@ const selector = (): Selector | undefined =>
 /** ¿Tiene este navegador carpetas? (Chrome y Edge sí; Firefox y Safari, no.) */
 export const hayCarpetas = (): boolean => typeof selector() === 'function';
 
-/* ---- huella de un texto ------------------------------------------------------ */
-
-/** Huella rápida de un texto (cyrb53 + longitud): para saber si cambió, no para
- *  seguridad. Síncrona y sin `crypto.subtle`, que no está en todos los entornos. */
-export function huellaTexto(t: string): string {
-  let h1 = 0xdeadbeef;
-  let h2 = 0x41c6ce57;
-  for (let i = 0; i < t.length; i++) {
-    const c = t.charCodeAt(i);
-    h1 = Math.imul(h1 ^ c, 2654435761);
-    h2 = Math.imul(h2 ^ c, 1597334677);
-  }
-  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
-  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-  return `${(h2 >>> 0).toString(16).padStart(8, '0')}${(h1 >>> 0).toString(16).padStart(8, '0')}-${t.length}`;
-}
+export { huellaTexto };
 
 /* ---- el registro de vínculos (IndexedDB) ------------------------------------ */
 
@@ -173,7 +182,14 @@ export type EstadoCarpeta =
   | { tipo: 'sin-permiso'; carpeta: string }
   | { tipo: 'al-dia'; carpeta: string; fichero: string }
   | { tipo: 'guardando'; carpeta: string; fichero: string }
-  | { tipo: 'conflicto'; carpeta: string; fichero: string; resumen: string }
+  | {
+      tipo: 'conflicto';
+      carpeta: string;
+      fichero: string;
+      resumen: string;
+      /** Por qué no se pudo resolver solo (F4). */
+      motivo?: string;
+    }
   | { tipo: 'error'; carpeta: string; mensaje: string };
 
 interface CarpetaUi {
@@ -213,6 +229,8 @@ interface Activo {
   marca: string | null;
   /** La obra de la carpeta en conflicto, a la espera de que decida el técnico. */
   ajena?: { data: ObraData; texto: string; huella: string };
+  /** Lo último escrito en `app.json` (sin la fecha), para no reescribirlo igual. */
+  claveApp?: string;
 }
 
 let activo: Activo | null = null;
@@ -222,6 +240,7 @@ let enganchada = false;
 /** Lo que hay que soltar al desarmar (pruebas). */
 const soltar: (() => void)[] = [];
 let temporizador: ReturnType<typeof setTimeout> | null = null;
+let temporizadorApp: ReturnType<typeof setTimeout> | null = null;
 let vigilancia: ReturnType<typeof setInterval> | null = null;
 /** Mientras se aplica lo de fuera, sus cambios de dominio no son «pendientes». */
 let aplicando = false;
@@ -299,12 +318,28 @@ export function armarCarpeta(): void {
       () => alCambiarDominio(),
       { equalityFn: shallow },
     ),
+    // Lo que tiene abierto (D7): a `app.json`.
+    useObraStore.subscribe(
+      (s: ObraState) => [s.view, s.active, s.openPartidaId, s.curCert],
+      () => programarApp(),
+      { equalityFn: shallow },
+    ),
+    useMedUiStore.subscribe((s, p) => {
+      if (s.partidaId !== p.partidaId || s.selected !== p.selected) programarApp();
+    }),
+    usePlanoUiStore.subscribe((s, p) => {
+      if (s.planoId !== p.planoId || s.pagina !== p.pagina) programarApp();
+    }),
+    useCarpetaStore.subscribe((s, p) => {
+      if (s.estado !== p.estado) programarApp();
+    }),
   );
   vigilancia = setInterval(() => void mirar(), VIGILANCIA_MS);
   if (typeof document !== 'undefined') {
     const alVer = () => {
       if (document.visibilityState === 'visible') void mirar();
       else void llevarYa(); // al irse de la pestaña, lo pendiente a la carpeta
+      programarApp();
     };
     document.addEventListener('visibilitychange', alVer);
     soltar.push(() => document.removeEventListener('visibilitychange', alVer));
@@ -325,7 +360,9 @@ export function armarCarpeta(): void {
 /** La obra activa cambió: suelta el vínculo anterior y arma el de la nueva. */
 async function retarget(id: string | null): Promise<void> {
   if (temporizador) clearTimeout(temporizador);
+  if (temporizadorApp) clearTimeout(temporizadorApp);
   temporizador = null;
+  temporizadorApp = null;
   activo = null;
   if (!id) return ui().setEstado({ tipo: 'sin-carpeta' });
   const v = (await leerVinculos())[id];
@@ -405,7 +442,29 @@ function mirar(): Promise<void> {
   });
 }
 
-/** El fichero trae otra versión: se aplica, o es un conflicto. */
+/** Las entradas del diario del agente para el fichero de la obra (las ilegibles, fuera). */
+async function leerDiario(a: Activo): Promise<EntradaDiario[]> {
+  let d: Directorio;
+  try {
+    const derivados = await a.v.dir.getDirectoryHandle(CARPETA_DERIVADOS);
+    d = await derivados.getDirectoryHandle(CARPETA_DIARIO);
+  } catch {
+    return [];
+  }
+  const r: EntradaDiario[] = [];
+  for await (const e of d.values()) {
+    if (e.kind !== 'file' || !e.name.endsWith('.json')) continue;
+    try {
+      const x = leerEntrada(await (await (await d.getFileHandle(e.name)).getFile()).text());
+      if (x && x.fichero === a.v.fichero) r.push(x);
+    } catch {
+      // una entrada borrada entre medias: se salta
+    }
+  }
+  return r;
+}
+
+/** El fichero trae otra versión: se aplica, se repite sobre lo de aquí, o es un conflicto. */
 async function deFuera(a: Activo, texto: string, h: string): Promise<void> {
   const l = leerTextoObra(texto);
   if (!l.ok) {
@@ -415,7 +474,18 @@ async function deFuera(a: Activo, texto: string, h: string): Promise<void> {
       mensaje: `${a.v.fichero} cambió y no se puede usar (${l.mensaje}): no se aplica. La obra sigue como estaba.`,
     });
   }
+  // Los lotes del agente que llevan de lo que había en común a lo de ahora.
+  const base = a.v.huella;
+  const lotes = base ? cadena(await leerDiario(a), base, h) : null;
+  if (!valido(a)) return;
   if (a.v.pendiente) {
+    let motivo =
+      'no se sabe qué cambió en la carpeta: no lo hizo Claude, o lo hizo una versión del conector que no deja diario';
+    if (lotes) {
+      const r = await repetir(a, lotes, h);
+      if (r === true) return;
+      motivo = `no se pudo repetir lo de Claude sobre tus cambios: ${r}`;
+    }
     a.ajena = { data: l.data, texto, huella: h };
     const c = compararObras(toSerializable(useObraStore.getState()), l.data);
     return ui().setEstado({
@@ -423,13 +493,62 @@ async function deFuera(a: Activo, texto: string, h: string): Promise<void> {
       carpeta: a.v.dir.name,
       fichero: a.v.fichero,
       resumen: c.texto,
+      motivo,
     });
   }
-  await aplicar(a, l.data, h);
+  await aplicar(a, l.data, h, lotes ? autoria(lotes) : undefined);
+}
+
+/**
+ * F4: repite los lotes del agente sobre la obra de aquí, que tiene cambios sin
+ * llevar a la carpeta, y lleva lo fusionado. Un paso de Deshacer: quita lo del
+ * agente y deja lo propio. Devuelve true, o por qué no se pudo.
+ */
+async function repetir(a: Activo, lotes: EntradaDiario[], h: string): Promise<true | string> {
+  if (useSessionStore.getState().readonly) return 'esta pestaña está en solo lectura';
+  // Síncrono desde leer lo de aquí hasta meter lo fusionado: nada se cuela entre medias.
+  const mia = toSerializable(useObraStore.getState());
+  const r = repetirCadena(mia, lotes);
+  if (!r.ok) return r.motivo;
+  aplicando = true;
+  try {
+    useObraStore.getState().aplicarExterno(r.data);
+  } finally {
+    aplicando = false;
+  }
+  // Lo de la carpeta ya está visto (`huella`); lo fusionado, por llevar (`pendiente`).
+  a.v.huella = h;
+  a.v.pendiente = true;
+  a.ajena = undefined;
+  avisar(autoria(lotes), mia, r.data, ', sobre tus cambios');
+  await cambiarVinculos((x) => {
+    if (x[a.v.obraId]) Object.assign(x[a.v.obraId]!, { huella: h, pendiente: true });
+  });
+  if (temporizador) clearTimeout(temporizador);
+  temporizador = null;
+  await guardar(a);
+  void traerPlanos(a, r.data);
+  return true;
+}
+
+/** El aviso de lo que cambió fuera, con «Deshacer», y las partidas tocadas resaltadas. */
+function avisar(autor: string | undefined, antes: ObraData, despues: ObraData, coletilla = ''): void {
+  const c = compararObras(antes, despues);
+  if (!c.hayCambios) return;
+  useToastStore
+    .getState()
+    .show(
+      `${autor ? `${autor}: ` : 'La obra cambió en su carpeta: '}${c.texto}${coletilla}`,
+      { label: 'Deshacer', run: () => undo() },
+      { rev: getDomainRevision() },
+    );
+  useCarpetaStore.setState({
+    resaltadas: { ids: new Set(c.partidasTocadas), hasta: Date.now() + RESALTE_MS },
+  });
 }
 
 /** Mete en el store la obra que viene de la carpeta (un paso de Deshacer). */
-async function aplicar(a: Activo, data: ObraData, h: string): Promise<void> {
+async function aplicar(a: Activo, data: ObraData, h: string, autor?: string): Promise<void> {
   // Otra pestaña es la dueña de la obra: ella lo aplica; esta no lo da por visto.
   if (useSessionStore.getState().readonly) return;
   const antes = toSerializable(useObraStore.getState());
@@ -446,19 +565,7 @@ async function aplicar(a: Activo, data: ObraData, h: string): Promise<void> {
     if (x[a.v.obraId]) Object.assign(x[a.v.obraId]!, { huella: h, pendiente: false });
   });
   ui().setEstado({ tipo: 'al-dia', carpeta: a.v.dir.name, fichero: a.v.fichero });
-  const c = compararObras(antes, data);
-  if (c.hayCambios) {
-    useToastStore
-      .getState()
-      .show(
-        `La obra cambió en su carpeta: ${c.texto}`,
-        { label: 'Deshacer', run: () => undo() },
-        { rev: getDomainRevision() },
-      );
-    useCarpetaStore.setState({
-      resaltadas: { ids: new Set(c.partidasTocadas), hasta: Date.now() + RESALTE_MS },
-    });
-  }
+  avisar(autor, antes, data);
   void traerPlanos(a, data);
 }
 
@@ -472,6 +579,7 @@ function alCambiarDominio(): void {
     void cambiarVinculos((x) => {
       if (x[a.v.obraId]) x[a.v.obraId]!.pendiente = true;
     });
+    programarApp();
   }
   if (temporizador) clearTimeout(temporizador);
   temporizador = setTimeout(() => {
@@ -529,6 +637,66 @@ async function guardar(a: Activo, forzar = false): Promise<void> {
   });
   ui().setEstado({ tipo: 'al-dia', carpeta, fichero });
   void llevarPlanos(a);
+}
+
+/* ---- lo que el técnico tiene abierto (app.json) ------------------------------------ */
+
+/** Pausa entre un cambio de lo abierto y escribirlo (D7). */
+export const PAUSA_APP_MS = 300;
+/** Una escritura de `app.json` a la vez. */
+let colaApp: Promise<void> = Promise.resolve();
+
+function estadoApp(a: Activo): EstadoApp {
+  const s = useObraStore.getState();
+  const m = useMedUiStore.getState();
+  const pl = usePlanoUiStore.getState();
+  return {
+    version: VERSION_APP_JSON,
+    fichero: a.v.fichero,
+    fecha: new Date().toISOString(),
+    app: APP_VERSION,
+    huella: a.v.huella,
+    cambiosSinGuardar: a.v.pendiente,
+    visible: typeof document === 'undefined' || document.visibilityState !== 'hidden',
+    vista: s.view,
+    capitulo: s.active === ALL ? null : s.active,
+    partida: s.openPartidaId,
+    lineas: s.openPartidaId && m.partidaId === s.openPartidaId ? [...m.selected] : [],
+    certificacion: s.certs[s.curCert]?.num ?? null,
+    plano: pl.planoId ? { id: pl.planoId, pagina: pl.pagina } : null,
+  };
+}
+
+function programarApp(): void {
+  if (!activo) return;
+  if (temporizadorApp) clearTimeout(temporizadorApp);
+  temporizadorApp = setTimeout(() => {
+    temporizadorApp = null;
+    void escribirApp();
+  }, PAUSA_APP_MS);
+}
+
+/** Escribe `app.json`, si hay permiso (nunca lo pide por esto) y si cambió algo. */
+function escribirApp(): Promise<void> {
+  const a = activo;
+  const r = colaApp.then(async () => {
+    if (!valido(a)) return;
+    const e = ui().estado.tipo;
+    if (e === 'sin-permiso' || e === 'conectando' || e === 'error') return;
+    if (!(await permiso(a.v.dir, false))) return;
+    const est = estadoApp(a);
+    const clave = claveEstadoApp(est);
+    if (clave === a.claveApp) return;
+    a.claveApp = clave;
+    try {
+      const d = await a.v.dir.getDirectoryHandle(CARPETA_DERIVADOS, { create: true });
+      await escribirTexto(d, nombreAppJson(a.v.fichero), `${JSON.stringify(est, null, 2)}\n`);
+    } catch {
+      a.claveApp = undefined; // se intenta en el próximo cambio
+    }
+  });
+  colaApp = r.catch(() => undefined);
+  return r;
 }
 
 /* ---- conflicto ------------------------------------------------------------------ */
@@ -776,8 +944,11 @@ export function __resetCarpetaForTests(): void {
   for (const s of soltar.splice(0)) s();
   if (vigilancia) clearInterval(vigilancia);
   if (temporizador) clearTimeout(temporizador);
+  if (temporizadorApp) clearTimeout(temporizadorApp);
   vigilancia = null;
   temporizador = null;
+  temporizadorApp = null;
+  colaApp = Promise.resolve();
   activo = null;
   armada = false;
   aplicando = false;
@@ -794,6 +965,12 @@ export function __resetCarpetaForTests(): void {
 /** Solo para pruebas: mira el fichero ahora y espera a que termine. */
 export function __mirarAhoraForTests(): Promise<void> {
   return mirar();
+}
+/** Solo para pruebas: escribe ya `app.json` y espera a que termine. */
+export function __escribirAppAhoraForTests(): Promise<void> {
+  if (temporizadorApp) clearTimeout(temporizadorApp);
+  temporizadorApp = null;
+  return escribirApp();
 }
 /** Solo para pruebas: espera a la cola de operaciones con el fichero. */
 export function __esperarCarpetaForTests(): Promise<void> {

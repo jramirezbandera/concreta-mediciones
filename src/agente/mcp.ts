@@ -19,11 +19,11 @@ import {
   ListToolsRequestSchema,
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { NOMBRE_MCP, ORDENES, URL_APP, ejecutar, textoGuia } from './ordenes';
+import { NOMBRE_MCP, ORDENES, URL_APP, autorDeEstaSesion, ejecutar, textoGuia } from './ordenes';
 
 const RECURSO_GUIA = 'mediciones://guia';
 
-const PREAMBULO = `Concreta Mediciones por MCP: el presupuesto de una obra (capítulos, partidas, mediciones, precios y certificaciones) en un fichero <obra>.mediciones.json de su carpeta, que el técnico tiene abierto en la app (${URL_APP}). Las rutas, absolutas. Lee la obra con obra, resumen, arbol y partida; cámbiala solo con editar; comprueba con validar. Los precios y las mediciones no se inventan.
+const PREAMBULO = `Concreta Mediciones por MCP: el presupuesto de una obra (capítulos, partidas, mediciones, precios y certificaciones) en un fichero <obra>.mediciones.json de su carpeta, que el técnico tiene abierto en la app (${URL_APP}). Las rutas, absolutas. Lee la obra con obra, resumen, arbol y partida; lo que el técnico tiene abierto («esta partida»), con seleccion; cámbiala solo con editar; comprueba con validar. Los precios y las mediciones no se inventan.
 
 `;
 
@@ -44,7 +44,9 @@ export function crearServidor(version: string): Server {
   }));
 
   servidor.setRequestHandler(CallToolRequestSchema, async (req) => {
-    const salida = ejecutar(req.params.name, req.params.arguments ?? {});
+    const c = servidor.getClientVersion();
+    const autor = autorDeEstaSesion(c ? `${c.name} ${c.version}`.trim() : undefined);
+    const salida = ejecutar(req.params.name, req.params.arguments ?? {}, { autor });
     return {
       content: [{ type: 'text' as const, text: JSON.stringify(salida) }],
       isError: !salida.ok,

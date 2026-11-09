@@ -3,6 +3,7 @@ export {
   ALL,
   SCHEMA_VERSION,
   useObraStore,
+  tiendaAparte,
   seedObraData,
   blankObraData,
   toSerializable,

@@ -55,6 +55,7 @@ describe('el servidor', () => {
       'buscar',
       'validar',
       'editar',
+      'seleccion',
       'abrir_app',
     ]);
     const por = Object.fromEntries(tools.map((t) => [t.name, t]));
